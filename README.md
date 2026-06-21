@@ -75,3 +75,6 @@ The API will be available at `http://localhost:8000`.
 - Best model: **CatBoost** (Optuna-optimized), stacked ensemble
 - Features extracted via: Matminer, CBFV, JARVIS descriptors
 - Target: H₂ storage capacity (wt%)
+
+Copyright © 2026 Amirhossein Nasiri. Licensed under the MIT License.
+
