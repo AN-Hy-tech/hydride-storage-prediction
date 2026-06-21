@@ -1,0 +1,23 @@
+Feature,Mean Abs SHAP,AdaBoost Importance,CatBoost Importance,DecisionTree Importance,ExtraTrees Importance,GradientBoosting Importance,RandomForest Importance
+avg_Number_of_unfilled_s_valence_electrons,0.0083,0.0278,4.3093,0.0004,0.0391,0.0087,0.0024
+avg_is_alkaline,0.113,0.1311,9.8086,0.0856,0.262,0.0429,0.0662
+avg_polzbl_divi_atom_mass,0.0257,0.3895,18.2166,0.5963,0.1041,0.5154,0.5972
+avg_valence_d,0.1787,0.0546,16.4599,0.0279,0.2174,0.1492,0.0348
+dev_Covalent_Radius,0.0034,0.0023,4.1169,0.0084,0.0279,0.0068,0.008
+dev_Gordy_electonegativity,0.0026,0.0071,1.683,0.01,0.0147,0.0055,0.0084
+dev_Pauling_Electronegativity,0.0251,0.0184,3.6284,0.0528,0.044,0.038,0.0511
+dev_Zunger_radii_sum,0.0095,0.0859,5.9939,0.0468,0.042,0.0226,0.0428
+dev_atom_mass_mult_therm_cond,0.0175,0.0354,4.7746,0.0425,0.0147,0.0461,0.0401
+dev_bp_divi_atom_mass,0.0228,0.0268,3.6987,0.0167,0.0229,0.049,0.0271
+dev_gilmor_number_of_valence_electron,0.0057,0.0331,2.8282,0.012,0.035,0.0097,0.0122
+dev_heat_of_vaporization_(kJ/mol)_,0.0039,0.006,1.9542,0.0091,0.0153,0.01,0.0109
+dev_specific_heat_(J/g_K)_,0.0019,0.0201,1.8501,0.0095,0.0153,0.0219,0.0202
+dev_voro_coord_divi_mol_vol,0.0089,0.0004,2.7661,0.0089,0.0188,0.0059,0.0071
+range_Atomic_Weight,0.0154,0.0063,1.356,0.0021,0.0091,0.0036,0.0052
+range_Density_(g/mL),0.0218,0.0031,1.2817,0.0066,0.0084,0.0049,0.0062
+range_Mendeleev_Number,0.0227,0.0416,2.0984,0.0103,0.0217,0.0121,0.0106
+range_Mulliken_EN,0.0142,0.0475,2.2834,0.0222,0.0161,0.0131,0.0133
+range_first_ion_en_mult_X,0.0159,0.0159,2.9246,0.0095,0.0147,0.0119,0.0079
+range_heat_of_vaporization_(kJ/mol)_,0.008,0.0001,1.7976,0.0085,0.011,0.0038,0.0069
+range_specific_heat_(J/g_K)_,0.0051,0.0107,2.0388,0.0028,0.0322,0.0078,0.0106
+temperature(K),0.0054,0.0364,4.131,0.011,0.0138,0.0101,0.0106

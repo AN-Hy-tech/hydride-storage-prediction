@@ -1,0 +1,74 @@
+Split Data Summary
+
+Total rows: 1279
+Unique formulae: 1149
+
+Train shape: (896, 285)
+Val shape: (136, 285)
+Test shape: (247, 285)
+
+Train target stats:
+count    896.000000
+mean       1.022306
+std        0.339889
+min        0.095310
+25%        0.832909
+50%        0.993252
+75%        1.163151
+max        2.102914
+Name: target, dtype: float64
+
+Val target stats:
+count    136.000000
+mean       1.016587
+std        0.308581
+min        0.329304
+25%        0.832909
+50%        1.004295
+75%        1.144208
+max        1.945910
+Name: target, dtype: float64
+
+Test target stats:
+count    247.000000
+mean       1.023422
+std        0.338935
+min        0.262364
+25%        0.832909
+50%        0.993252
+75%        1.153732
+max        1.945910
+Name: target, dtype: float64
+
+Train temperature stats:
+count    896.000000
+mean     354.775670
+std      105.036487
+min      195.000000
+25%      296.000000
+50%      303.000000
+75%      353.000000
+max      703.000000
+Name: temperature(K), dtype: float64
+
+Val temperature stats:
+count    136.000000
+mean     342.985294
+std       94.968688
+min      223.000000
+25%      295.750000
+50%      300.000000
+75%      333.000000
+max      673.000000
+Name: temperature(K), dtype: float64
+
+Test temperature stats:
+count    247.000000
+mean     358.672065
+std      110.180754
+min      195.000000
+25%      296.000000
+50%      303.000000
+75%      373.000000
+max      773.000000
+Name: temperature(K), dtype: float64

@@ -1,0 +1,43 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Test cache ────────────────────────────────────────────────────────────────
+.pytest_cache/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+.conda/
+conda-meta/
+
+# ── Databases ─────────────────────────────────────────────────────────────────
+*.db
+database/storage.db
+
+# ── Feature-engineered data (derived, not source) ─────────────────────────────
+data/
+
+# ── Trained model binaries (copy from Machine_Model after training) ───────────
+backend/*.pkl
+backend/*.cbm
+
+# ── n8n workflow runtime data and logs ────────────────────────────────────────
+n8n_workflows/logs/
+n8n_workflows/data/
+
+# ── Environment variables ─────────────────────────────────────────────────────
+.env
+.env.local
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log

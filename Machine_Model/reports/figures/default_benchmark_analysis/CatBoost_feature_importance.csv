@@ -1,0 +1,14 @@
+Feature,Importance
+avg_atom_mass_divi_polzbl,23.41537792847256
+avg_polzbl_divi_atom_mass,16.88624001949675
+dev_Zunger_radii_sum,8.886097099087573
+avg_is_alkaline,7.713062804131628
+dev_bp_divi_atom_mass,6.177767548894979
+avg_hfus_add_elec_aff,5.996032256556099
+temperature(K),5.8268865768258165
+dev_atom_mass_mult_therm_cond,5.5436317922968525
+dev_Covalent_Radius,4.628227922995185
+dev_voro_coord_divi_mol_vol,3.9263892598588344
+range_first_ion_en_mult_X,3.843257453943664
+dev_specific_heat_(J/g_K)_,3.7869379718540075
+range_specific_heat_(J/g_K)_,3.3700913655860454

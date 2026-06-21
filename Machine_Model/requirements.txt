@@ -1,0 +1,45 @@
+# Core data science
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+
+# Machine learning
+scikit-learn
+catboost
+xgboost
+lightgbm
+
+# Hyperparameter optimization
+optuna
+
+# Interpretability
+shap
+
+# Model persistence
+joblib
+
+# Statistics
+statsmodels
+
+# Feature engineering
+matminer
+CBFV
+pymatgen
+
+# Feature selection
+boruta
+
+# Label quality
+cleanlab
+
+# Interactive plots
+plotly
+
+# Testing
+pytest
+
+# Notebooks
+jupyter
+ipykernel

@@ -1,0 +1,5 @@
+
+Limitations:
+- Correlation: SHAP values assume feature independence, but remaining multicollinearity (post-VIF) may distort attributions.
+- Sensitivity to background: Explanations are relative to the training data distribution used as reference.
+- If target is transformed (e.g., log-scaled), interpretations apply only to the transformed space, not the original units.

@@ -1,0 +1,41 @@
+Expanded Material Science Linkage Summary
+=========================================
+Dataset: 896 train samples, 22 features
+Target represents log-transformed hydrogen storage capacity (wt%) in metal hydrides/alloys
+
+Top Linear Correlations (Pearson):
+- avg_is_alkaline: r=0.673
+- temperature(K): r=0.500
+- avg_polzbl_divi_atom_mass: r=0.474
+- range_Density_(g/mL): r=0.161
+- range_heat_of_vaporization_(kJ/mol)_: r=0.136
+
+Top Mutual Information (potential nonlinear):
+- avg_polzbl_divi_atom_mass: MI=0.849
+- avg_valence_d: MI=0.813
+- dev_Zunger_radii_sum: MI=0.630
+- dev_specific_heat_(J/g_K)_: MI=0.515
+- range_first_ion_en_mult_X: MI=0.498
+
+Category Insights:
+- compositional: avg r=0.127 ± 0.473 (n=3)
+- density: avg r=0.161 ± nan (n=1)
+- electronegativity_ionization: avg r=-0.265 ± 0.085 (n=4)
+- electronic: avg r=0.474 ± nan (n=1)
+- experimental: avg r=0.500 ± nan (n=1)
+- structural_geometric: avg r=-0.313 ± 0.117 (n=5)
+- thermal_properties: avg r=0.083 ± 0.053 (n=4)
+- valence_electron: avg r=-0.397 ± 0.274 (n=3)
+
+Temperature Subgroup Performance (Test Set):
+- ExtraTrees in low: R²=0.865, MAE=0.142 (n=110)
+- ExtraTrees in mid: R²=0.951, MAE=0.180 (n=98)
+- ExtraTrees in high: R²=0.824, MAE=0.440 (n=39)
+- Ensemble in low: R²=0.850, MAE=0.152 (n=110)
+- Ensemble in mid: R²=0.926, MAE=0.214 (n=98)
+- Ensemble in high: R²=0.784, MAE=0.444 (n=39)
+
+Potential Nonlinear Features (high MI - |Pearson| diff):
+- dev_specific_heat_(J/g_K)_: diff=0.457
+- avg_polzbl_divi_atom_mass: diff=0.375
+- range_Mendeleev_Number: diff=0.345

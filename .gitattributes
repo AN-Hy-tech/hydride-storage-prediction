@@ -1,0 +1,34 @@
+# Normalize line endings for all text files
+* text=auto
+
+# Python / notebooks
+*.py text eol=lf
+*.ipynb text eol=lf
+
+# Web
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Docs / config
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.csv text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+
+# Binary — never diff/merge
+*.pkl binary
+*.cbm binary
+*.db binary
+*.xlsx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.svg binary
+*.pptx binary
+*.rar binary

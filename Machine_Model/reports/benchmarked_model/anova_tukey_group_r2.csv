@@ -1,0 +1,16 @@
+group1,group2,meandiff,p-adj,lower,upper,reject
+Boosting,Kernel,-0.0094,1.0,-0.3441,0.3254,False
+Boosting,Linear,-0.455,0.0,-0.6764,-0.2335,True
+Boosting,Neighbor,-0.0633,0.9934,-0.3981,0.2714,False
+Boosting,Neural,0.0001,1.0,-0.3346,0.3349,False
+Boosting,Tree,0.0018,1.0,-0.2349,0.2385,False
+Kernel,Linear,-0.4456,0.002,-0.7697,-0.1215,True
+Kernel,Neighbor,-0.054,0.9988,-0.4639,0.356,False
+Kernel,Neural,0.0095,1.0,-0.4005,0.4194,False
+Kernel,Tree,0.0112,1.0,-0.3236,0.3459,False
+Linear,Neighbor,0.3917,0.0092,0.0675,0.7158,True
+Linear,Neural,0.4551,0.0015,0.131,0.7792,True
+Linear,Tree,0.4568,0.0,0.2354,0.6782,True
+Neighbor,Neural,0.0634,0.9974,-0.3466,0.4734,False
+Neighbor,Tree,0.0652,0.9924,-0.2696,0.3999,False
+Neural,Tree,0.0017,1.0,-0.333,0.3365,False

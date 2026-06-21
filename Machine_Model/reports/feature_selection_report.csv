@@ -1,0 +1,14 @@
+Feature,SHAP_Importance
+avg_atom_mass_divi_polzbl,0.1459543531989575
+dev_Zunger_radii_sum,0.04194963484855389
+avg_polzbl_divi_atom_mass,0.03369422535427503
+dev_bp_divi_atom_mass,0.022823412280602202
+dev_Covalent_Radius,0.016912845078122483
+avg_hfus_add_elec_aff,0.015963580244669668
+dev_specific_heat_(J/g_K)_,0.011731632938200212
+dev_voro_coord_divi_mol_vol,0.011634226189573812
+range_first_ion_en_mult_X,0.009900127492864657
+avg_is_alkaline,0.007153484020500744
+dev_atom_mass_mult_therm_cond,0.0068680793941093025
+temperature(K),0.004876451618915047
+range_specific_heat_(J/g_K)_,0.004260217807367804

@@ -1,0 +1,23 @@
+[Fri 06/13/2025  1:10:20.99] Checked database integrity with check_database.py. Total rows: 1279, H2_W%% (max) stats: Min=0.1, Max=7.19, Avg=1.95, temperature(K) stats: Min=195, Max=773, Avg=354.27 
+[Fri 06/13/2025  1:10:38.17] Checked database integrity with check_database.py. Total rows: 1279, H2_W%% (max) stats: Min=0.1, Max=7.19, Avg=1.95, temperature(K) stats: Min=195, Max=773, Avg=354.27 
+[Fri 06/13/2025  1:14:17.97] Added tests folder and ran unit tests for database integrity. All 4 tests passed. 
+[Fri 06/13/2025  2:04:25.01] Performed initial data analysis with 01_data_analysis.ipynb. No missing values, 133 outliers in H2_W%% (max), 221 outliers in temperature(K). 
+[Fri 06/13/2025  3:02:30.48] Successfully preprocessed full dataset (1279 rows) with matminer. Output file: preprocessed_features_matminer.csv (1279, 167). 
+
+[Mon 06/30/2025  2:18:05.64] Decided against outlier capping as they represent data diversity. Starting log transformation for H2_W%% (max). 
+[Mon 06/30/2025 15:46:42.79] Created checkpoint v1.0-preprocessing after initial feature filtering (64 features + target + Composition)(FIRST FILTERASION: CORRELATION, PAIR_CORR, VARIANCE THRESHOLD, DATATYPE.) (selected_features_1th.csv). 
+[Mon 06/30/2025 17:08:05.67] Fixed data splitting on selected_features_1th.csv with error handling, saving to data\splits. 
+[Tue 07/01/2025 17:14:50.11] Updated feature selection with Random Forest, optimized with Optuna, using threshold 0.01 to reduce features. 
+[Tue 07/01/2025 17:34:22.21] Prepared test dataset with selected features matching train dataset structure, saved to data\processed\selected_features_test.csv. 
+[Tue 07/01/2025 17:44:16.38] Updated database with selected features from train, val, and test datasets in hydride.db. 
+[Wed 07/02/2025  1:27:28.31] Analyzed target distribution normality and outliers for test dataset, with plans to extend to train and val. 
+[Wed 07/02/2025 21:01:11.37] Identified and managed extreme outliers ( Z-score) in target distribution, prepared for model selection. 
+[Wed 07/02/2025 21:14:35.36] Analyzed capping effect on extreme outliers ( Z-score) with 85th percentile threshold, visualized changes. 
+[Wed 07/02/2025 22:43:32.77] Re-optimized Random Forest model with Optuna on capped data (85th percentile), targeting improved Rý. 
+[Thu 07/03/2025  0:39:15.88] Compiled comprehensive modeling report covering data analysis, preprocessing, and initial unscaled model results. 
+[Thu 07/03/2025 18:37:32.50] Updated modeling report with detailed benchmark results for selected models (Ridge, DT, Extra Trees, GB, XGBoost, CatBoost, KernelNN). 
+[Sat 07/05/2025  4:16:50.82] Updated documentation with CatBoost optimization results (Rý Validation 0.7570, Test 0.6944) and benchmark results, targeting Rý 
+[Sat 07/05/2025  4:17:08.89] Tested feature importance thresholds 2.0 and 3.0, removed Pool and baseline to resolve negative CV_R2. 
+[Sun 07/06/2025 23:49:55.75] Added data_augmentation.md with SMOGN augmentation analysis (75th percentile, log_H2_W% (max) , filtered H2_W% (max) , saved in reports/data_augmentation.md. 
+[Mon 07/07/2025  2:34:11.25] Trained CatBoost model with SMOGN augmented data (847 rows, threshold 0.2), achieving Cross-Validation Rý 0.8083, Validation Rý 0.7864, Test Rý 0.7312, Test MAE 0.4171%. Updated modeling_report.md with results comparison (threshold 0.3 vs 0.2). 
+[Mon 07/07/2025 23:44:43.53] Trained CatBoost on augmented data with Rý Validation 0.8003, Test 0.7417. . 

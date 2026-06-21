@@ -1,0 +1,2 @@
+Original Features,After Variance Filter(0.01),After Correlation Filter(<0.1),After RF Importance (0.005),After Collinearity Removal(0.9<)
+2629,2238,1679,16,16

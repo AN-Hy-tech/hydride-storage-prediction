@@ -1,0 +1,6 @@
+Raw Data Analysis Summary
+Shape: (1279, 6)
+Numeric Columns: 2
+Categorical Columns: 4
+Missing Values Total: 0
+Outliers Total: 36

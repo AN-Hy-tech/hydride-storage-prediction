@@ -1,0 +1,17 @@
+Feature,Importance
+avg_atom_mass_divi_polzbl,0.3303309727361142
+avg_coulmn,0.09674555287683072
+avg_polzbl_divi_atom_mass,0.07367262389948563
+dev_bp_divi_atom_mass,0.018900314439262298
+temperature(K),0.015769654548809683
+avg_is_alkaline,0.014915240448351791
+avg_first_ion_en_mult_atom_mass,0.012404533788426328
+avg_hfus_add_elec_aff,0.009993704939694682
+avg_first_ion_en_divi_mol_vol,0.007557172955897382
+dev_voro_coord_divi_mol_vol,0.006566204727569901
+range_first_ion_en_mult_X,0.0057841710553736434
+avg_first_ion_en_mult_X,0.005676178316947835
+range_hfus_add_X,0.0055252864981663015
+dev_atom_mass_mult_therm_cond,0.005171652770911803
+avg_first_ion_en_mult_therm_cond,0.005167673258413498
+avg_mp_divi_atom_mass,0.00510900464054258

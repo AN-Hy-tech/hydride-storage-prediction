@@ -1,0 +1,1 @@
+Shapiro-Wilk Test for H2_W% (max): Statistic=0.8684, p-value=0.0000

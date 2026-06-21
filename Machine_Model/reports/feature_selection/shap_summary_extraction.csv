@@ -1,0 +1,11 @@
+Feature,Rank,Direction (high values),Interaction Indicator
+avg_polzbl_divi_atom_mass,1,positive,yes
+dev_Zunger_radii_sum,2,negative,yes
+dev_Pauling_Electronegativity,3,negative,yes
+avg_valence_d,4,negative,yes
+dev_atom_mass_mult_therm_cond,5,negative,yes
+avg_is_alkaline,6,positive,yes
+dev_bp_divi_atom_mass,7,negative,yes
+dev_specific_heat_(J/g_K)_,8,positive,yes
+dev_gilmor_number_of_valence_electron,9,negative,yes
+dev_Covalent_Radius,10,negative,yes

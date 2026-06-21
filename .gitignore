@@ -1,0 +1,60 @@
+# ── Personal / thesis documents ─────────────────────────────────────────────
+Uni_Report/
+papers/
+*.pdf
+*.docx
+*.pptx
+*.rar
+Plan.docx
+
+# ── Root-level duplicate output directories (kept locally, not in repo) ─────
+/models/
+/reports/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.conda/
+conda-meta/
+
+# ── Secrets / local config ────────────────────────────────────────────────────
+.env
+.env.local
+
+# ── Databases ─────────────────────────────────────────────────────────────────
+*.db
+
+# ── ML training artifacts ─────────────────────────────────────────────────────
+catboost_info/
+temp/
+
+# ── Test cache ────────────────────────────────────────────────────────────────
+.pytest_cache/
+
+# ── IDE / tool settings ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+.claude/
+*.sublime-project
+*.sublime-workspace
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log

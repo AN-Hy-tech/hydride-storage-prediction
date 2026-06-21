@@ -1,0 +1,2 @@
+Model,LM_stat,LM_pvalue,F_stat,F_pvalue,Exog_Used
+ExtraTrees,99.5649568866227,6.659244487180132e-17,15.937411709625605,8.786613553946928e-22,avg_is_alkaline;avg_valence_d;avg_polzbl_divi_atom_mass;dev_Pauling_Electronegativity;dev_Zunger_radii_sum;avg_Number_of_unfilled_s_valence_electrons;dev_gilmor_number_of_valence_electron;range_specific_heat_(J/g_K)_;dev_Covalent_Radius;dev_bp_divi_atom_mass

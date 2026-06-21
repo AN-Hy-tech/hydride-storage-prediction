@@ -1,0 +1,19 @@
+# Web framework
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic
+
+# ML inference
+scikit-learn==1.5.1
+numpy==1.26.4
+joblib==1.4.2
+
+# Data
+pandas
+
+# Chemistry feature extraction (install via conda for best compatibility)
+# conda install -c conda-forge rdkit=2023.9.6
+rdkit
+
+# Testing
+pytest==8.3.3
