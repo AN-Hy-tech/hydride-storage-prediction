@@ -22,3 +22,8 @@ data/database/hydride.db
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# ── Intermediate report markdown files (superseded by root REPORT.md) ─────────
+reports/ashghal/*.md
+reports/comparison/*.md
+reports/markdown_report/*.md

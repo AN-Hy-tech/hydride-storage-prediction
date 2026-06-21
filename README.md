@@ -1,5 +1,7 @@
 # Hydride Hydrogen Storage Capacity Prediction
 
+**[Read the full project report →](REPORT.md)**
+
 A machine learning project for predicting the hydrogen storage capacity (wt%) of hydride materials based on chemical composition and operating temperature.
 
 ## Project Structure
