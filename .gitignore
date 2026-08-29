@@ -48,7 +48,10 @@ temp/
 # ── IDE / tool settings ───────────────────────────────────────────────────────
 .vscode/
 .idea/
-.claude/
+# Claude Code: keep skills versioned, keep local settings private
+.claude/*
+!.claude/skills/
+!.claude/skills-lock.json
 *.sublime-project
 *.sublime-workspace
 
