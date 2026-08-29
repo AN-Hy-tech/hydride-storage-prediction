@@ -24,8 +24,17 @@ The workflow that produced the current content, and the one to repeat before ext
 
 ## Provenance of the current content
 
+- `modules/metal-hydride-families.md` — rewritten from `research/hydride-domain-grounding.md` §2, researched
+  against primary literature by a dedicated agent. The most rigorously sourced module.
+- `modules/hydrogen-storage-fundamentals.md` — DOE targets from the primary EERE page, accessed 2026-08-29;
+  remainder from `research/hydride-domain-grounding.md` §1.
+- `modules/ml-for-hydrides.md` — `research/hydride-domain-grounding.md` §3.
+- `modules/computational-materials-informatics.md` — `research/hydride-domain-grounding.md` §4. **Its DFT
+  subsection is domain knowledge, not retrieved sources** — the least-sourced part of the skill.
 - `modules/generative-ai-inverse-design.md` — derived from `research/inverse-design-methods.md`,
   a DOI-cited memo written against primary sources on 2026-08-29.
 - `modules/project-context.md` — read directly from this repo's `README.md`, `REPORT.md` and
   `Machine_Model/src/` on 2026-08-29.
-- Remaining modules — see the header of each module and `known-gaps.md`.
+
+Both memos live in `research/`. They are the citation authority; these modules summarise them. When they
+disagree, the memo wins — and fix the module.

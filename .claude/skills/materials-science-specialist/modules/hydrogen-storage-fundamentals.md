@@ -52,13 +52,18 @@ and materials-based storage.
 ## Why hydrides still matter despite missing vehicular targets
 
 Intermetallic hydrides have usable capacities generally **below 2 wt%** under practical pressure/temperature
-swing constraints ([review of AB, AB2, HEA and solid-solution hydrides, *Int. J. Hydrogen Energy*](https://www.sciencedirect.com/science/article/pii/S0360319926013236)) —
-so they will not win onboard light-duty storage. They remain strongly relevant for:
+swing constraints (see `modules/metal-hydride-families.md` for the sourced per-family figures) — so they will
+not win onboard light-duty storage.
+
+The operating-window rows above disqualify materials independently of capacity: MgH₂ is excluded outright by
+its ~300 °C 1-bar plateau, not by its 7.66 wt%. And the 1,500-cycle requirement sits against AB₂ losing ~20%
+capacity in 150 cycles. Hydrides remain strongly relevant for:
 
 - **Stationary storage**, where mass is nearly free and volumetric density plus safety dominate.
   See [Wang et al. 2025, *Adv. Sci.*, technoeconomic analysis of metal hydrides for stationary storage](https://doi.org/10.1002/advs.202415736).
-- **Thermal energy storage and heat pumps** — Mg₂Ni paired with LaNi₅-type compounds reaches ~156 kWh/m³
-  with ~89.4% efficiency (per the review literature; verify the primary source before quoting in a thesis).
+- **Thermal energy storage and heat pumps** — see [Nizam et al. 2026, *Asia-Pac. J. Chem. Eng.*](https://doi.org/10.1002/apj.70161)
+  for Mg-based thermal storage. The often-quoted "~156 kWh/m³ at ~89.4% efficiency" for Mg₂Ni + LaNi₅-type
+  systems is **unverified** — search-summary only, primary source never traced. Trace it or drop it.
 - **Hydrogen compression** — thermally driven, no moving parts.
 - **Purification**, exploiting selective absorption.
 

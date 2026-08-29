@@ -65,6 +65,12 @@ For a thesis, these determine whether results survive examination.
 Experimental hydride data is noisy — different labs, methods, purities, activation states. Confident learning
 ([CleanLab](https://doi.org/10.1613/jair.1.12125), Northcutt, Jiang & Chuang 2021, *JAIR* 70, 1373) estimates
 label noise and flags suspect entries; this pipeline uses it to drop ~10 train / 5 val / 8 test samples.
+**There is a physics explanation for that noise, and it is better than "some experiments are wrong".** Sloping
+PCT plateaus make measured capacity depend on the measurement's upper pressure, and the dataset carries
+temperature but **not** pressure. Multi-element alloys — every HEA and BCC solid solution here — are
+intrinsically prone to sloping plateaus. See `modules/metal-hydride-families.md`. Activation state and
+processing history are a second unobserved confounder that composition-based features cannot see.
+
 Be careful: removing "outliers" that are actually real measurements in underrepresented regimes will flatter
 metrics while making the model worse where it matters. Report what was removed and why.
 
