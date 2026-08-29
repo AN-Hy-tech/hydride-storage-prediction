@@ -1,77 +1,134 @@
-# Hydride Hydrogen Storage Capacity Prediction
+# HydMS — Hydrogen Storage Capacity Prediction via Machine Learning
 
 **[Read the full project report →](REPORT.md)**
 
-A machine learning project for predicting the hydrogen storage capacity (wt%) of hydride materials based on chemical composition and operating temperature.
+> **Master's Thesis Project** · Faculty of Metallurgical and Materials Engineering · Shiraz University
+Researcher: Amirhossein Nasiri
+---
+
+## What is this?
+
+Metal hydrides can store hydrogen inside their crystal lattice — a promising path toward solid-state hydrogen energy storage. But measuring storage capacity experimentally is slow and expensive. This project builds a machine learning pipeline that predicts the **maximum H₂ storage capacity (wt%)** of any hydride alloy from its **chemical formula and operating temperature alone**.
+
+The pipeline covers everything from raw data ingestion through multi-library feature extraction, outlier detection, feature selection, model benchmarking (13 algorithms), Bayesian hyperparameter optimization, and a stacking ensemble.
+
+### Key results
+
+| Model | Val R² | Test R² | Test MAE |
+|-------|--------|---------|----------|
+| Stacking Ensemble *(best overall)* | **0.939** | 0.892 | 0.229 wt% |
+| ExtraTrees *(best single model)* | 0.933 | **0.916** | 0.204 wt% |
+| CatBoost Optuna-optimized | **0.969** | 0.951 | — |
+
+---
 
 ## Project Structure
 
 ```
 Hydride_Machine_learning_project/
-├── Machine_Model/      # ML training & evaluation pipeline
-└── N8N/                # FastAPI web application for serving predictions
+└── Machine_Model/              # ML pipeline (training, evaluation, analysis)
+    ├── src/                    # Source scripts — run these in order
+    │   ├── merge_datasets.py           # 1. Merge HyStor + ML-HYDPARK datasets
+    │   ├── log_transform_target.py     # 2. Log-transform the H₂ wt% target
+    │   ├── extract_features_cbfv.py    # 3. CBFV featurisation (Magpie + JARVIS)
+    │   ├── CleanLab.py                 # 4. CleanLab outlier removal
+    │   ├── Boruta_FeatEng.py           # 5a. Boruta + SHAP feature engineering
+    │   ├── Feature_selection.py        # 5b. VIF + correlation feature selection
+    │   ├── split_data.py               # 6. Stratified train/val/test split
+    │   ├── benchmark_model_selection.py # 7. 13-model benchmark + Optuna tuning
+    │   └── Catboostmodel.py            # 8. Dedicated CatBoost optimisation
+    ├── notebooks/              # Exploratory analysis & visualisation
+    ├── data/raw/               # Raw datasets (HyStor, ML-HYDPARK)
+    └── reports/                # Generated CSVs and TXT summaries
 ```
 
-## Components
-
-### Machine_Model
-End-to-end ML pipeline covering data ingestion, featurization, model benchmarking, hyperparameter optimization, and analysis. Trained on the HyStor and ML-HYDPARK datasets.
-
-See [Machine_Model/README.md](Machine_Model/README.md) for full details.
-
-### N8N
-FastAPI backend that serves the trained model via a REST API. Accepts a chemical formula and temperature, runs feature extraction, and returns a predicted storage capacity. Uses SQLite to log predictions and an n8n workflow for automation.
-
-See [N8N/docs/project_overview.md](N8N/docs/project_overview.md) for full details.
+---
 
 ## Quickstart
 
-### 1. Set up the ML environment
+### Requirements
+
+- Python 3.9+
+- [Conda](https://docs.conda.io/) recommended for scientific packages
+
+### Step 1 — Install dependencies
 
 ```bash
 cd Machine_Model
 pip install -r requirements.txt
 ```
 
-> Some packages (`matminer`, `pymatgen`, `rdkit`) are best installed via conda:
-> ```bash
-> conda install -c conda-forge matminer pymatgen rdkit
-> ```
-
-### 2. Run the pipeline
-
-Work through the notebooks in order:
-
-```
-notebooks/Raw_Data_Analysis.ipynb
-notebooks/data_preprocessed_matminer.ipynb
-notebooks/Preprocessed_Data_Analysis.ipynb
-notebooks/identify_extream_outliers.ipynb
-notebooks/optimize_catboost_model.ipynb
-```
-
-Or run the source scripts directly from `Machine_Model/src/`.
-
-### 3. Start the API server
+Some packages are best installed via conda:
 
 ```bash
-cd N8N
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
+conda install -c conda-forge matminer pymatgen rdkit
 ```
 
-The API will be available at `http://localhost:8000`.
+### Step 2 — Run the ML pipeline
+
+Execute the scripts in `Machine_Model/src/` in order:
+
+```bash
+cd Machine_Model
+
+# 1. Merge raw datasets
+python src/merge_datasets.py
+
+# 2. Log-transform the target variable
+python src/log_transform_target.py
+
+# 3. Extract compositional features (CBFV: Magpie + JARVIS)
+python src/extract_features_cbfv.py
+
+# 4. Remove label noise with CleanLab
+python src/CleanLab.py
+
+# 5. Feature engineering and selection (run both)
+python src/Boruta_FeatEng.py
+python src/Feature_selection.py
+
+# 6. Stratified train / validation / test split
+python src/split_data.py
+
+# 7. Benchmark 13 models + Optuna hyperparameter tuning
+python src/benchmark_model_selection.py
+
+# 8. Optimise CatBoost specifically
+python src/Catboostmodel.py
+```
+
+Alternatively, explore the pipeline interactively through the notebooks in `Machine_Model/notebooks/` (run them in alphabetical order).
+
+---
+
+## Methodology at a Glance
+
+| Stage | Detail |
+|-------|--------|
+| **Datasets** | HyStor + ML-HYDPARK — 1,279 samples after merging & cleaning |
+| **Featurisation** | CBFV (Magpie + JARVIS) + Matminer (Miedema + WenAlloys) → 282 features |
+| **Outlier removal** | CleanLab `CleanLearning` wrapping `HistGradientBoostingRegressor` |
+| **Feature selection** | VarianceThreshold → correlation filter → RandomForest → Boruta → SHAP → VIF → **22 features** |
+| **Data split** | Stratified 70 / 10.6 / 19.3 % (train / val / test) — 896 / 136 / 247 samples |
+| **Benchmarking** | 13 regressors + Stacking Ensemble; scored on log-scale and original wt% |
+| **Optimisation** | Optuna (100 trials, TPE sampler) for 5 top models |
+| **Ensemble** | StackingRegressor: ExtraTrees + CatBoost + GradientBoosting + RandomForest; Ridge meta-learner |
+| **Interpretability** | SHAP TreeExplainer, Pearson & MI correlations, temperature subgroup analysis |
+
+---
 
 ## Datasets
 
 | File | Description |
 |------|-------------|
-| `Machine_Model/data/raw/hydride_data.csv` | Primary hydride dataset |
+| `Machine_Model/data/raw/hydride_data.csv` | Primary merged hydride dataset |
 | `Machine_Model/data/raw/ML-HYDPARK_v0.0.5.csv` | ML-HYDPARK benchmark dataset |
 | `Machine_Model/data/raw/HyStor_27_7_24 (1).xlsx` | HyStor experimental database |
 
-## Key Results
+---
 
-- Best model: **CatBoost** (Optuna-optimized), stacked ensemble
-- Features extracted via: Matminer, CBFV, JARVIS descriptors
-- Target: H₂ storage capacity (wt%)
+## About
+
+This project was developed as a **Master's thesis** in the **Department of Metallurgy and Materials Engineering** at **Shiraz University**. It demonstrates that physics-informed compositional descriptors, combined with modern ML methods, can predict hydrogen storage capacity with high accuracy — reducing the need for costly experimental screening.
+
+For the complete methodology, results tables, statistical tests, and SHAP analysis, see **[REPORT.md](REPORT.md)**.
