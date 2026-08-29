@@ -88,12 +88,13 @@ Not optional for a thesis that makes recommendations:
 
 Dataset sizes in this field are small; be honest about it rather than implying otherwise.
 - **HyStor** — 1,282 alloys with max capacity at a given absorption temperature, 54 elements, 200–800 K,
-  adding LEA/MEA/HEA classes ([Wilson et al. 2024, *Int. J. Hydrogen Energy*](https://doi.org/10.1016/j.ijhydene.2024.09.390)).
+  adding LEA/MEA/HEA classes ([Wilson et al. 2024, *Int. J. Hydrogen Energy* **90**, 460–469](https://doi.org/10.1016/j.ijhydene.2024.09.390)).
 - **ML-HydPARK** — cleaned CSV derived from DOE's HydPARK ([Zenodo](https://zenodo.org/records/7324809)).
 - [Prediction of hydrogen storage in metal hydrides and complex hydrides, *Int. J. Hydrogen Energy* 2024](https://www.sciencedirect.com/science/article/abs/pii/S0360319924053242) — supervised ML approach.
 - [FIND platform, Lu et al. 2025, *J. Mater. Inform.*](https://doi.org/10.20517/jmi.2025.56) — forward/inverse
   navigation for hydrogen storage alloys, ~6,000 records, VAE + genetic algorithm.
-- [Machine learning-driven alloy digital design for hydrogen storage: a review (2025)](https://doi.org/10.1080/27525783.2025.2511889).
+- [Liu et al. 2025, "Machine learning-driven alloy digital design for hydrogen storage: a review",
+  *Digital Twin* **2**](https://doi.org/10.1080/27525783.2025.2511889).
 
 A test R² of ~0.9 on a formula-disjoint split is a good result at this scale — but it is a statement about
 interpolation within the sampled space, and should be presented that way.
