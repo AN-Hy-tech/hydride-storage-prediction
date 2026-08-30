@@ -55,6 +55,15 @@ temp/
 *.sublime-project
 *.sublime-workspace
 
+# ── graphify ──────────────────────────────────────────────────────────────────
+# Keep GRAPH_REPORT.md, graph.json, graph.html and cost.json: rebuilding the graph costs
+# real tokens, so the built index is worth versioning. Drop the machine-local state —
+# these hold absolute paths from whichever machine last ran the build.
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/cache/
+graphify-out/manifest.json
+
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
