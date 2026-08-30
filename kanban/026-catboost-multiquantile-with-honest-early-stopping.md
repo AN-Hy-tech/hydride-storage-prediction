@@ -44,3 +44,12 @@ python -m hydms.surrogate.train --target capacity && python -m pytest tests/surr
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- 2026-08-30: **API check before implementation.** `loss_function="MultiQuantile:alpha=0.1,0.5,0.9"`
+  returns one column per alpha, **in the order given in the string** — position is the only thing
+  identifying P10/P50/P90, so that order deserves an explicit assertion in a test rather than a
+  comment. `use_best_model=True` is validated at fit time to require a non-empty `eval_set`, which
+  is the mechanical guard this card wants against the audit's early-stopping-on-test leak: the
+  honest `eval_set` is the validation split. Note `MultiQuantile` is one of the few regression
+  losses with **no GPU support**, so this trains CPU-only — relevant to the slow lane's runtime
+  budget. Details in `docs/LIBRARY-APIS.md`. (by @assistant)

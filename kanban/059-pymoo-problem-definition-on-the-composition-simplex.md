@@ -45,3 +45,15 @@ python -m hydms.search.run --proposer evolve --family AB2 --generations 5 --dry-
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- 2026-08-30: **API check before implementation — subclass `Problem`, not `ElementwiseProblem`.**
+  pymoo's documented getting-started example uses `ElementwiseProblem`, which calls `_evaluate`
+  once per candidate. That directly violates PRD risk **R6**, which requires batched featurisation
+  and forbids per-candidate loops; NSGA-II makes far more surrogate calls than enumeration does.
+  The vectorised `Problem` base evaluates a whole population per call and is the right shape here.
+
+  Also: pymoo minimises everything, so maximising the capacity lower confidence bound means
+  returning `-lcb` — getting that backwards yields a confident, plausible, exactly wrong Pareto
+  front. Constraints are feasible when `g <= 0`, so a VEC window becomes two of them (card #60).
+  `seed=` is a `minimize()` argument, which is what card #63 varies. Details in
+  `docs/LIBRARY-APIS.md`. (by @assistant)

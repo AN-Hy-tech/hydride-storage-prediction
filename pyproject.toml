@@ -44,8 +44,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Conformal calibration of the surrogate's prediction intervals.
-uq = ["mapie>=0.8"]
+# Conformal calibration of the surrogate's prediction intervals. The >=1.0 floor is not
+# cosmetic: 0.x exposes MapieRegressor(...).predict(X, alpha=...), while 1.x replaced it with
+# fit() / conformalize() / predict_interval(confidence_level=...). See docs/LIBRARY-APIS.md.
+uq = ["mapie>=1.0"]
 
 # NSGA-II on the composition simplex, plus the hypervolume and convergence diagnostics.
 search = ["pymoo>=0.6"]
