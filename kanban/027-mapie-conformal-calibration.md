@@ -41,3 +41,16 @@ python -m hydms.surrogate.calibrate --target capacity
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- 2026-08-30: **API check before implementation — MAPIE 1.x is not 0.x.** `MapieRegressor(...)`
+  with `.predict(X, alpha=...)` is gone. Current usage is `fit(X_train, y_train)` then
+  `conformalize(X_conf, y_conf)` then `predict_interval(X_test)`, with `confidence_level=0.95`
+  rather than `alpha`. Coverage is `regression_coverage_score(y_test, y_pis)[0]`; interval width
+  is `y_pis[:, 1, 0] - y_pis[:, 0, 0]`. The `pyproject.toml` floor was corrected from `>=0.8` to
+  `>=1.0`, since 0.8 would have admitted the incompatible interface.
+
+  **Open question this card must settle first:** MAPIE's `ConformalizedQuantileRegressor` expects
+  a scikit-learn-style quantile estimator, and a single CatBoost `MultiQuantile` model emitting
+  all quantiles at once may not be that shape. Decide between CQR on the MultiQuantile model, one
+  CatBoost model per quantile, or `SplitConformalRegressor` around the median — before building
+  on either. Details in `docs/LIBRARY-APIS.md`. (by @assistant)
