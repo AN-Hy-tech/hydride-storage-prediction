@@ -132,3 +132,7 @@ Alternatively, explore the pipeline interactively through the notebooks in `Mach
 This project was developed as a **Master's thesis** in the **Department of Metallurgy and Materials Engineering** at **Shiraz University**. It demonstrates that physics-informed compositional descriptors, combined with modern ML methods, can predict hydrogen storage capacity with high accuracy — reducing the need for costly experimental screening.
 
 For the complete methodology, results tables, statistical tests, and SHAP analysis, see **[REPORT.md](REPORT.md)**.
+
+---
+
+Copyright © 2026 Amirhossein Nasiri. Licensed under the [MIT License](LICENSE).
