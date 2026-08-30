@@ -62,12 +62,23 @@ conda env create -f environment.lock.yml -n Project
 # Stage 2 — pip, WITHOUT dependency resolution (see below; --no-deps is required)
 conda run -n Project python -m pip install --no-deps -r requirements-lock.txt
 
+# Stage 3 — the project itself, editable
+conda run -n Project python -m pip install -e .
+
 # Verify the parts that matter
 conda run -n Project python -c "import CBFV, catboost, sklearn, numpy; print(numpy.__version__)"
 
 # Run anything in it
 conda run -n Project python scripts/spike_feature_provenance.py --check-all-22
 ```
+
+The whole rebuild takes about 7 minutes with a warm package cache and appreciably longer cold;
+`scripts/verify_environment.py` runs stages 1-2 and the import check in one command.
+
+**`hydms` itself must never enter the lock files.** Once `pip install -e .` has been run,
+`pip freeze` reports it as `-e git+https://…#egg=hydms`. A regenerated `requirements-lock.txt`
+would carry that line and make the environment depend on cloning itself. Delete it after any
+regeneration.
 
 ## Why two stages
 

@@ -135,4 +135,4 @@ For the complete methodology, results tables, statistical tests, and SHAP analys
 
 ---
 
-Copyright © 2026 Amirhossein Nasiri. Licensed under the [MIT License](LICENSE).
+Copyright © 2026 Amirhossein Nasiri. Licensed under the [GNU General Public License v3.0 or later](LICENSE).
