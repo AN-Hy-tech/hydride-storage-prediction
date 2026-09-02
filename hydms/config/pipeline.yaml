@@ -1,0 +1,102 @@
+# HydMS pipeline configuration — card #3.
+#
+# Every path, seed and threshold the pipeline uses. Nothing else may hard-code them.
+# Paths are relative to the repository root, which hydms.config.repo_root() locates by
+# walking up for pyproject.toml + hydms/ (override with HYDMS_ROOT).
+#
+# Unknown keys raise. So do missing ones. If you add a setting here you must add the
+# matching field in hydms/config/__init__.py, and vice versa — the loader refuses any
+# drift between the two, in either direction.
+#
+# Provenance: every value below is either read out of the archival pipeline or measured
+# against the real data. Nothing here is invented. Where a value contradicts REPORT.md,
+# the comment says so, because the code is what produced the published numbers.
+
+# The one seed. Everything stochastic derives from it: splits, folds, Boruta, Optuna,
+# CatBoost. AC-1 requires that the same seed reproduces identical metrics.
+seed: 42
+
+paths:
+  # Read-only input. Machine_Model/ is the archival tree behind REPORT.md and the Phase H
+  # freeze denies writes there; the raw dataset simply happens to live inside it.
+  raw: Machine_Model/data/raw
+
+  # Everything below is written by the new pipeline and gitignored.
+  interim: data/interim
+  processed: data/processed
+  splits: data/splits
+  artifacts: artifacts
+  reports: reports
+
+# Column names in hydride_data.csv (1279 x 6). They contain spaces, a percent sign and
+# parentheses, so they are named once here rather than re-spelled at each use.
+columns:
+  formula: Composition
+  alloy_class: Alloy_class
+  dataset: Dataset
+  target: "H2_W% (max)"
+  temperature: temperature(K)
+  citation: Citation
+
+split:
+  # split_data.py:63-64 uses 0.20 / 0.10. REPORT.md 2.6 and README.md both say "70/15/15";
+  # they are wrong, and the 896/136/247 split they report is what 0.20/0.10 produces.
+  test_fraction: 0.20
+  val_fraction: 0.10
+
+  # KBinsDiscretizer(n_bins=5, strategy='quantile') on target and temperature, combined
+  # into one stratification key (split_data.py:75-82).
+  target_bins: 5
+  temperature_bins: 5
+
+  # Strata smaller than this are merged into the nearest bin by Euclidean distance in
+  # (temperature_bin, target_bin) space (split_data.py:88-111).
+  min_stratum_size: 5
+
+selection:
+  # Boruta_FeatEng.py:57 — note the code uses 0.001 while its own comment says 0.01.
+  variance_threshold: 0.001
+
+  # Iterative VIF, dropping until the maximum falls to this (Boruta_FeatEng.py:78-112).
+  vif_threshold: 30.0
+
+  # BorutaPy over a RandomForest of this depth (Boruta_FeatEng.py:66-68).
+  boruta_max_iter: 2000
+  boruta_max_depth: 6
+
+  # Force-kept through variance filtering and VIF. The archival selector re-adds this
+  # column twice by hand; it is the only non-composition feature in the set.
+  must_keep:
+    - temperature(K)
+
+model:
+  # CatBoost MultiQuantile returns one column per alpha IN THE ORDER GIVEN. Position is the
+  # only thing identifying P10 / P50 / P90, so this order is a contract — the loader
+  # rejects an unsorted or repeating list. See docs/LIBRARY-APIS.md and card #26.
+  quantiles: [0.1, 0.5, 0.9]
+
+  # Used with use_best_model=True against the VALIDATION split. CatBoost raises at fit time
+  # on an empty eval_set, which is the mechanical guard against leak L1 — the archival code
+  # passed the test set here (Catboostmodel.py:604-606).
+  early_stopping_rounds: 5000
+
+  # Catboostmodel.py:588 used 300; benchmark_model_selection.py used 100 for the published
+  # run and 200 in its later rewrite.
+  optuna_trials: 300
+
+  # Outer folds of the nested, group-aware protocol in card #88. The archival code used a
+  # row-level StratifiedKFold with no grouping, which is leak L7.
+  cv_folds: 5
+
+conformal:
+  # MAPIE 1.x takes confidence_level, NOT alpha. 0.9 means a 90% interval; passing 0.1 here
+  # would silently produce a 10% one. The loader range-checks it for that reason.
+  confidence_level: 0.90
+
+domain:
+  # Measured span of temperature(K) across all 1279 rows: min 195, max 773. The refusal path
+  # (card #77) declines anything outside it. Coverage inside is not uniform — only 39 test
+  # rows sit above 500 K — so the learned applicability domain (card #48) does the real work
+  # and this is only the outer bound.
+  temperature_min_k: 195.0
+  temperature_max_k: 773.0

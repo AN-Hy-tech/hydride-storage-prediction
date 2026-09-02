@@ -78,6 +78,7 @@ dev = [
   "pytest-cov>=5.0",
   "httpx>=0.27",      # the FastAPI TestClient transport
   "tomli>=2.0; python_version < '3.11'",   # tomllib is 3.11+; the pinned interpreter is 3.10
+  "types-PyYAML>=6.0",                     # PyYAML is core; these are its stubs
   "ruff>=0.6",
   "mypy>=1.10",
 ]
@@ -169,6 +170,9 @@ disallow_incomplete_defs = true
 module = [
   "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*",
   "sklearn.*", "scipy.*", "streamlit.*", "shap.*", "boruta.*",
+  # PyYAML ships no inline types. types-PyYAML is in the dev extra and takes precedence
+  # when installed; this keeps mypy runnable on a bare CI interpreter when it is not.
+  "yaml",
 ]
 ignore_missing_imports = true
 
