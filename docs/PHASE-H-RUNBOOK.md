@@ -184,7 +184,7 @@ the same module as L3 (card #71).
 → #14 CleanLab, train-only (L3) → #15 golden tests
 ```
 
-- [ ] **#3** Config loader — relative paths, seeds, thresholds. No absolute path literal anywhere.
+- [x] **#3** Config loader — relative paths, seeds, thresholds. No absolute path literal anywhere.
 - [ ] **#9** Raw loaders with schema validation. Assert `len(skipped) == 0` where the legacy code
       silently discarded CBFV failures.
 - [ ] **#10** Replace the positional `concat` with a keyed merge; assert the join covers every row.
@@ -197,7 +197,13 @@ the same module as L3 (card #71).
 - [ ] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are immutable.
 - [ ] **#15** Data-layer golden tests.
 
-**Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3/L8/L9/L13 sentinels go green.
+**Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9, L10** and
+L13 sentinels go green — L10 because its subject is #14's module, and L13 because #87 owes the
+sentinel itself. Read the per-leak table with:
+
+```bash
+conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} {r.status:9} #{r.owed_by}  {r.title}') for r in audit()]"
+```
 
 ---
 
@@ -407,7 +413,7 @@ ruff check hydms/ tests/ scripts/ && mypy
 conda run -n Project python -m hydms.gates run --fast
 
 # Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical metrics
-conda run -n Project python -m hydms.pipeline run --config hydms/config/default.yaml
+conda run -n Project python -m hydms.pipeline run --config hydms/config/pipeline.yaml
 
 # API
 conda run -n Project uvicorn hydms.delivery.api:app --port 8000
