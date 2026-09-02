@@ -1,0 +1,55 @@
+---
+id: 89
+status: backlog
+priority: High
+blocked_by: [34]
+assignee: "@amirhossein"
+tags: [ph, l7, R4]
+---
+
+# REPORT.md versus the artifacts it cites: a reconciliation
+
+**Stage S8 — Evidence and close** · **L7 Evidence** · Estimate: 0.5 d
+
+> **Owns (hidden behind this module):** The record of where the published account and the committed evidence disagree, and which one to believe.
+
+## Why this exists
+
+`REPORT.md` is the archival record of the forward model as published, and it is **not
+corrected in place** — rewriting it would orphan the account it gives. But it cannot simply stand
+either, because CSVs committed in this repository contradict its headline numbers.
+
+The audit found eight disagreements. Three examples: the ensemble's claimed Val R² 0.939 / Test R² 0.892
+against `stacking_results.csv`'s CV 0.344 / Val 0.377 / Test 0.376; §4.4's paired t-test t = −2.102,
+p = 0.037 against `ttest_best_vs_ensemble_abs_error.csv`'s t = −8.168, p = 1.65e-14 for a different best
+model; and §3.2's CleanLab row counts against a test-subgroup table that sums to the full 247 rows,
+CleanLab having removed none.
+
+This document is what card #37 is written from, and what the model card links to so that a reader of the
+app does not inherit the old figures unexamined.
+
+## Done when
+
+- [ ] `docs/REPORT-RECONCILIATION.md` tabulates each disagreement: the claim, its location in
+      `REPORT.md`, the artifact that refutes it, and the artifact's value
+- [ ] Each row states which source to believe and why
+- [ ] It records that the published pipeline is not the committed pipeline, with the evidence
+- [ ] It notes `REPORT.md` is preserved unedited, and why
+- [ ] The new honest numbers from #29 and #30 are shown beside the published ones
+- [ ] Linked from the model card (#83) and from `kanban-hardening/README.md`
+
+## Runnable check
+
+```bash
+python scripts/check_board.py --root .
+```
+
+## Traces to
+
+`docs/PHASE-H-RUNBOOK.md` — S8; `docs/PRD-inverse-design.md` — R4
+
+## Narrative
+
+- 2026-09-02: Created for Phase H. The eight contradictions were found by the code audit that
+  opened this phase. This is deliberately a separate document from the Chapter 1 revision (#37): this
+  one is the evidence table, that one is the argument (by @assistant)

@@ -1,5 +1,20 @@
 # HydMS Inverse Design — Board
 
+> ## FROZEN
+>
+> **This board is not the active board.** An emergency hardening phase
+> ([docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md)) has the inverse-design programme suspended.
+> Every card here must stay `backlog`; `scripts/check_board.py` fails the build otherwise, and
+> `scripts/check_freeze.py` rejects any change under `kanban/`.
+>
+> The active board is [../kanban-hardening/](../kanban-hardening/). What is frozen, why, and the
+> exact unfreeze condition: [docs/FREEZE.md](../docs/FREEZE.md).
+>
+> **Cards 1–37, 44, 48, 49 and 68 moved to the hardening board**, ids unchanged — the two directories
+> share one id space, so the `blocked_by` edges and the layer/phase tables below still resolve. The
+> counts and day totals below describe the *original* 68-card board and are left as written; they are
+> history, not a current inventory.
+
 67 tickets decomposed from [`docs/PRD-inverse-design.md`](../docs/PRD-inverse-design.md), plus
 **#68** added since (the fast-lane seed, which the decomposition could not see until the board
 existed). Every ticket is ≤ 1 day, ends in a runnable check, and traces back to a PRD user story,

@@ -1,0 +1,103 @@
+---
+freeze: in-force
+declared: 2026-09-02
+phase: H
+---
+
+# Implementation freeze — Phase H
+
+**Status: IN FORCE.** While this file's frontmatter says `freeze: in-force`, CI rejects any change
+outside the hardening scope. To lift it, see [Unfreeze condition](#unfreeze-condition) — changing the
+frontmatter is the mechanical act, but it is only honest once every condition below is met.
+
+---
+
+## Why
+
+The forward model's published numbers cannot be defended. Three findings decided this:
+
+1. **The published numbers are contradicted by CSVs committed in this repository.**
+   [REPORT.md](../REPORT.md) claims the stacking ensemble scores Val R² 0.939 / Test R² 0.892.
+   `Machine_Model/reports/benchmarked_model/stacking_results.csv` records CV 0.344 / Val 0.377 /
+   Test 0.376. REPORT §4.4's paired t-test (t = −2.102, p = 0.037) is recorded in
+   `ttest_best_vs_ensemble_abs_error.csv` as t = −8.168, p = 1.65e-14, against a different best model.
+   §3.2's CleanLab row counts (886/131/239) are refuted by
+   `temperature_subgroup_performance_expanded.csv`, which sums to the full 247 test rows.
+   **The published pipeline is not the committed pipeline.**
+
+2. **`Machine_Model/src/CleanLab.py:90` overwrites validation and test ground-truth labels with the
+   model's own predictions.** It is inert today only because nothing reads its output. Card #14 as
+   originally written would have wired it in.
+
+3. **The pipeline cannot be run end to end.** `jarvis_filtered_features.csv` has no producer in the
+   repository or in any commit in its history; `Feature_selection.py` reads a directory whose writer
+   was deleted in `5c3bcb1`; `merge_datasets.py:46` joins three feature frames by positional `concat`
+   after `reset_index(drop=True)`, so a single skipped row silently attaches every feature to the
+   wrong composition.
+
+The stated objective for this phase is a user-facing interface that predicts gravimetric capacity.
+Building that interface on the current pipeline would take numbers optimistic by an unknown margin and
+present them to users as trustworthy. **That is the specific failure this freeze exists to prevent.**
+
+The full leak inventory is in [PHASE-H-RUNBOOK.md](PHASE-H-RUNBOOK.md) §1.
+
+---
+
+## What is frozen
+
+The inverse-design programme: thermodynamics (PT), screen-and-rank (PA) and the multi-objective EA
+(PB). Its board is [../kanban/](../kanban/) and its specification is
+[PRD-inverse-design.md](PRD-inverse-design.md). Neither is edited while this freeze holds.
+
+### Denied paths
+
+`scripts/check_freeze.py` fails the build if a change touches any of these:
+
+| Path | Why |
+|---|---|
+| `kanban/**` | The frozen board. No card may be created, edited, or moved off `backlog` |
+| `docs/PRD-inverse-design.md` | The frozen programme's specification |
+| `research/**` | New memos are research effort spent outside the phase |
+| `REPORT.md` | The archival record of the forward model *as published*. It is history, not status, and is corrected **beside** rather than in place — see `docs/REPORT-RECONCILIATION.md` (card #89) |
+| `Machine_Model/**` | The archival pipeline behind REPORT.md. Rewriting it orphans every published number (PRD §7.2) |
+
+### Allowed paths
+
+`hydms/**` · `tests/**` · `app/**` · `kanban-hardening/**` · `scripts/**` · `.github/**` ·
+`pyproject.toml` · `CLAUDE.md` · `README.md` · `docs/**` except the PRD.
+
+### Three cards were pulled out of the freeze
+
+**#44** (screen interface), **#48** (applicability-domain ceiling) and **#49** (ElMD novelty) were
+tagged `pa` but are not inverse-design work: they are what lets the interface **refuse** to answer
+instead of guessing. A predictor with no domain check is precisely the false-prediction machine this
+phase exists to remove. They live in `kanban-hardening/`.
+
+---
+
+## Unfreeze condition
+
+Fixed now, before results are seen, so it cannot be softened later. All four must hold:
+
+- [ ] **Every gate green.** HG-1 … HG-4 and the inherited AC-1, AC-2, AC-3, AC-4, AC-6.
+      (AC-5 is thermodynamic and AC-7/AC-8 are inverse-design; they stay frozen.)
+- [ ] **`artifacts/v1` promoted** — card #34. A trained model, scaler, feature contract and conformal
+      calibration on disk, reachable by manifest pointer.
+- [ ] **`docs/API.md` published** — card #80.
+- [ ] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
+
+When all four hold: set `freeze: lifted` in this file's frontmatter, record the closing date below,
+and the PA/PB board resumes.
+
+**Closed:** _(not yet)_
+
+---
+
+## For the next session
+
+If you are picking this up cold: the freeze is enforced, not remembered. `scripts/check_freeze.py`
+runs on every pull request and `scripts/check_board.py` fails if a card under `kanban/` leaves
+`backlog`. You do not need to hold this in your head — but you do need to know the freeze exists
+before you wonder why your change was rejected.
+
+The active board is [../kanban-hardening/](../kanban-hardening/). Start there.

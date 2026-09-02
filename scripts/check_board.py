@@ -9,6 +9,12 @@ What this promises, and therefore what a green run means:
     every card in it waits forever and nothing reports why.
   - No card sits in `doing` or `done` while one of its blockers is unfinished.
   - Every relative Markdown link in the prose set resolves to a real file or directory.
+  - While `docs/FREEZE.md` declares a freeze in force, no card on the frozen board has
+    left `backlog` — the freeze is enforced, not remembered.
+
+The board is split across two directories that share one id space: `kanban-hardening/`
+(active) and `kanban/` (frozen). They are a freeze boundary, not an id-space boundary, so
+blockers reach across them and are checked as a single graph.
 
 Deliberately stdlib-only and dependency-free: this is the check that must still run when
 the conda environment is broken, unbuilt, or absent — which, until the environment card
@@ -29,9 +35,15 @@ from pathlib import Path
 LEGAL_STATUSES = {"backlog", "todo", "doing", "done"}
 STARTED_STATUSES = {"doing", "done"}
 
+# The two board directories, validated as one id space. FROZEN_BOARD is the one the
+# Phase H freeze holds shut; every card in it must stay in `backlog` until the freeze lifts.
+ACTIVE_BOARD = "kanban-hardening"
+FROZEN_BOARD = "kanban"
+BOARDS = (ACTIVE_BOARD, FROZEN_BOARD)
+
 # Prose whose links are checked. Machine_Model/ is excluded on purpose: it is the frozen
 # archival record behind REPORT.md, and is not maintained.
-LINKED_PROSE = ("README.md", "CLAUDE.md", "docs", "kanban", "research")
+LINKED_PROSE = ("README.md", "CLAUDE.md", "docs", "kanban", "kanban-hardening", "research")
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 EXTERNAL = ("http://", "https://", "mailto:", "#")
@@ -98,18 +110,52 @@ def parse_frontmatter(text: str) -> dict[str, str] | None:
     return None
 
 
-def load_cards(kanban: Path) -> tuple[list[Card], list[str]]:
+def load_cards(boards: list[Path]) -> tuple[list[Card], list[str]]:
+    """Load every card across both board directories into one id space."""
     problems: list[str] = []
     cards: list[Card] = []
-    for path in sorted(kanban.rglob("*.md")):
-        if path.name == "README.md":
-            continue
-        fields = parse_frontmatter(path.read_text(encoding="utf-8"))
-        if fields is None:
-            problems.append(f"{_rel(path)}: no frontmatter block")
-            continue
-        cards.append(Card(path, fields))
+    for board in boards:
+        for path in sorted(board.rglob("*.md")):
+            if path.name == "README.md":
+                continue
+            fields = parse_frontmatter(path.read_text(encoding="utf-8"))
+            if fields is None:
+                problems.append(f"{_rel(path)}: no frontmatter block")
+                continue
+            cards.append(Card(path, fields))
     return cards, problems
+
+
+def freeze_in_force(root: Path) -> bool:
+    """Read the freeze state out of `docs/FREEZE.md`'s frontmatter."""
+    charter = root / "docs" / "FREEZE.md"
+    if not charter.is_file():
+        return False
+    fields = parse_frontmatter(charter.read_text(encoding="utf-8")) or {}
+    return fields.get("freeze", "").strip().strip('"') == "in-force"
+
+
+def check_freeze(root: Path, cards: list[Card]) -> list[str]:
+    """No card on the frozen board may leave `backlog` while the freeze holds.
+
+    This is the half of the freeze that reads the board. The other half reads the diff
+    and lives in `check_freeze.py`; neither subsumes the other, because a card can be
+    moved off backlog in a commit that touches nothing else the diff check would notice.
+    """
+    if not freeze_in_force(root):
+        return []
+    frozen_dir = root / FROZEN_BOARD
+    problems = []
+    for card in cards:
+        if frozen_dir not in card.path.parents:
+            continue
+        if card.status != "backlog":
+            problems.append(
+                f"{_rel(card.path)}: status is {card.status!r}, but the Phase H freeze is in "
+                f"force and every card on the frozen board must stay 'backlog' "
+                f"(see docs/FREEZE.md)"
+            )
+    return problems
 
 
 def check_cards(cards: list[Card]) -> list[str]:
@@ -211,15 +257,17 @@ def main() -> int:
 
     root = Path(args.root).resolve()
     _ROOT = root
-    kanban = root / "kanban"
-    if not kanban.is_dir():
-        print(f"FAIL  no kanban/ directory under {root}")
+
+    boards = [root / name for name in BOARDS if (root / name).is_dir()]
+    if not boards:
+        print(f"FAIL  no board directory ({' or '.join(BOARDS)}) under {root}")
         return 1
 
-    cards, problems = load_cards(kanban)
+    cards, problems = load_cards(boards)
     problems += check_cards(cards)
     problems += check_cycles(cards)
     problems += check_links(root)
+    problems += check_freeze(root, cards)
 
     if problems:
         print(f"FAIL  {len(problems)} problem(s) in {len(cards)} cards:\n")
@@ -227,7 +275,12 @@ def main() -> int:
             print(f"  - {problem}")
         return 1
 
-    print(f"OK    {len(cards)} cards: ids unique, blockers resolve, graph acyclic, links resolve.")
+    where = ", ".join(f"{b.name}={sum(1 for c in cards if b in c.path.parents)}" for b in boards)
+    frozen = " freeze in force." if freeze_in_force(root) else ""
+    print(
+        f"OK    {len(cards)} cards ({where}): ids unique, blockers resolve, "
+        f"graph acyclic, links resolve.{frozen}"
+    )
     return 0
 
 

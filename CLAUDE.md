@@ -30,10 +30,17 @@ cross-family validation. Full statement: [docs/PRD-inverse-design.md](docs/PRD-i
 
 Read top-down. A higher row overrides a lower one **within its own subject**.
 
+> **Phase H is running.** An emergency hardening phase has the board and the repository frozen
+> against everything outside it. Read [docs/FREEZE.md](docs/FREEZE.md) before you plan any work — CI
+> will reject a change outside the allowed paths, and the active board is `kanban-hardening/`, not
+> `kanban/`.
+
 | # | Source | Authoritative for | Not authoritative for |
 |---|---|---|---|
-| 1 | `kanban/<card>.md` | What the work *is now* — status, blockers, done-criteria, `## Narrative` | Why the project exists |
-| 2 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | Scope, the claim, acceptance criteria, risks, rejected alternatives | Day-to-day state |
+| 0 | [docs/FREEZE.md](docs/FREEZE.md) | What may be worked on at all right now, and the unfreeze condition | What the work is |
+| 1 | `kanban-hardening/<card>.md`, `kanban/<card>.md` | What the work *is now* — status, blockers, done-criteria, `## Narrative` | Why the project exists |
+| 2 | [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | The current phase: the leak inventory, the stage order, the HG gates | Anything after the freeze lifts |
+| 2 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | Scope, the claim, acceptance criteria, risks, rejected alternatives — **of the frozen programme** | Day-to-day state; the current phase |
 | 3 | [research/](research/) memos | Any cited fact — physics, methods, libraries, DOIs | Decisions (the PRD decides) |
 | 4 | `.claude/skills/materials-science-specialist/` | Fast domain recall | Facts the memos corrected — see grounding memo §5 |
 | 5 | [REPORT.md](REPORT.md), [README.md](README.md) | The archival record of the forward model **as published** | Whether those numbers are *valid* — PRD §2.2 names three leaks |
@@ -50,7 +57,10 @@ current performance.
 | Document | Owns | Open it when |
 |---|---|---|
 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | The whole proposal: audit findings (§2.2), the enabling fact (§2.3), the claim (§4), user stories S1–S12 (§5), rejected alternatives (§7), risks R1–R7 (§9), acceptance criteria AC-1–AC-8 (§10) | Before any design argument, and whenever a card's *Traces to* names an S or AC |
-| [kanban/README.md](kanban/README.md) | The board's own logic: why tickets are cut by layer not phase, the 8 layers, the 5 phases, the gate→ticket map, the critical path, the two hard gates | Starting work, picking a ticket, or wondering where a change belongs |
+| [kanban-hardening/README.md](kanban-hardening/README.md) | The **active** board: the two-directory id space, the stage→card map, the eight gates, how to start | Starting any work at all right now |
+| [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | The current phase end to end: why it exists, the thirteen leaks with their exact sites, the nine stages, the verification | Before touching the pipeline, the surrogate, or the app |
+| [docs/FREEZE.md](docs/FREEZE.md) | What is frozen, the denied paths, the unfreeze condition | Before planning work, or when CI rejects a change |
+| [kanban/README.md](kanban/README.md) | The **frozen** board's logic: why tickets are cut by layer not phase, the 8 layers, the 5 phases, the gate→ticket map, the critical path | Understanding the inverse-design programme that resumes later |
 | [research/inverse-design-methods.md](research/inverse-design-methods.md) | Method landscape (what the hydride literature actually does), why not generative models, UQ and novelty tooling, library survey with pinned versions, Architectures A/B/C | Choosing or defending a method, or picking a library |
 | [research/hydride-domain-grounding.md](research/hydride-domain-grounding.md) | DOE targets and the system-vs-material distinction, hydride families, PCT and van 't Hoff, kinetics, ML validation pitfalls, databases, DFT limits | Any physics or chemistry claim that will appear in the thesis |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Which interpreter, why 3.13 is excluded, the two-stage rebuild, and the export defects that bite on re-export | Before touching any environment file, or when a rebuild fails |
@@ -65,8 +75,11 @@ current performance.
 
 | If the task is… | Read first | Use skill |
 |---|---|---|
-| Working a ticket | the card, then its *Traces to* PRD section | `kanban-ai` |
-| Board operations (list, move, unblock) | [kanban/README.md](kanban/README.md) § Using the board | `kanban-ai` |
+| **Anything at all, right now** | [docs/FREEZE.md](docs/FREEZE.md), then [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | — |
+| Working a ticket | the card, then its *Traces to* section | `kanban-ai` |
+| Board operations (list, move, unblock) | [kanban-hardening/README.md](kanban-hardening/README.md) § Using the board | `kanban-ai` |
+| Training or fitting a model | [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) §1 — the leak inventory first | `ml-model-training`, but see the caveat below |
+| The prediction API or the app | the card's *Owns* line | `backend-development`, `codebase-design`, `dataviz` |
 | "How does the existing code work?" | ask the graph (below) before opening files | `graphify` |
 | Shaping a module's interface or seam | the card's *Owns* line | `software-design-philosophy`, then `codebase-design` |
 | Naming, glossary, or an ADR (the `l7` cards) | PRD §8 (documentation) | `domain-modeling` |
@@ -79,6 +92,12 @@ current performance.
 
 **Full inventory:** `ls .claude/skills/` (project) and `ls ~/.claude/skills/` (global). The table
 above covers the ones this project actually routes to; the rest are installed but idle here.
+
+**Caveat on `ml-model-training`.** Installed for Phase H and fine for model-fitting mechanics. It is
+**silent** on group-aware splitting, nested cross-validation, and early stopping on the scoring set,
+and its worked example is a plain `train_test_split` with no `random_state` and no grouping — which
+here would reintroduce leaks L4, L7 and L8. Authority row 4 applies: on any validation question the
+[research/](research/) memos and [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) win.
 
 **Caveat on `/ask-matt`.** It routes over a skill set this repo does not have: `/to-spec`,
 `/to-tickets`, `/implement`, `/tdd`, `/handoff`, `/wayfinder`, `/triage` and `/diagnosing-bugs` are
@@ -123,6 +142,12 @@ Things that are true across every session, and expensive to rediscover.
   number (PRD §7.2).
 - **Nothing is trained.** No model, scaler or split is on disk. Any instruction to "load the model"
   means "re-run the pipeline first".
+- **Two rows describe the same material more often than the formula string admits.** 1,149 distinct
+  formula strings collapse to 1,115 canonical compositions. Grouping — for splits, for folds, for
+  anything — uses the canonical key, never the raw string. Reasoning and the measured collision count:
+  [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) §1, leak L8.
+- **A prediction without an interval and a domain verdict is not a deliverable.** Gate HG-2 makes that
+  structural: the result type cannot be constructed without them.
 - **The evaluator is the deep module; search is a seam.** Architectures A and B differ only in how
   candidates are *proposed* and *selected* — everything between is one shared evaluation path. Code
   that duplicates evaluation per architecture is the mistake the whole board is shaped to prevent.
@@ -144,20 +169,25 @@ Ask the board. Do not trust a list written here — it goes stale the moment a c
 
 ```bash
 S=.claude/skills/kanban-ai/scripts
-bash $S/show_blocked.sh kanban/          # what is waiting on what
-bash $S/view_board.sh kanban/            # everything by status
-bash $S/list_all_cards.sh kanban/        # id | status | blocked_by | title
+bash $S/show_blocked.sh kanban-hardening/     # what is waiting on what
+bash $S/view_board.sh kanban-hardening/       # everything by status
+bash $S/list_all_cards.sh kanban-hardening/   # id | status | blocked_by | title
 ```
 
-The opening move, the two hard gates that block everything behind them, and the critical path are
-in [kanban/README.md](kanban/README.md) § Start here.
+`kanban-hardening/` is the active board. `kanban/` is frozen and every card in it must stay
+`backlog` — `scripts/check_board.py` fails the build otherwise. The stage order is in
+[docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) §2; the opening move and the two hard gates are in
+[kanban-hardening/README.md](kanban-hardening/README.md) § Start here.
 
 ---
 
 ## Session anti-patterns
 
-- Quoting REPORT.md's scores as current performance. Three leaks; the numbers are expected to move
-  down and that is a reported result, not a failure (risk R4).
+- Quoting REPORT.md's scores as current performance. Thirteen leaks, and CSVs committed in this
+  repository already contradict the headline numbers; they are expected to move down and that is a
+  reported result, not a failure (risk R4). The evidence table is `docs/REPORT-RECONCILIATION.md`.
+- Working a card on the frozen board, or editing the PRD, `research/`, `REPORT.md` or
+  `Machine_Model/` while the freeze holds. CI rejects it; [docs/FREEZE.md](docs/FREEZE.md) says why.
 - Writing a plan into this file. Write a card.
 - Reading twenty files to answer a question the graph would have routed in one query.
 - Moving a card to `doing` while an id in `blocked_by` is unfinished.

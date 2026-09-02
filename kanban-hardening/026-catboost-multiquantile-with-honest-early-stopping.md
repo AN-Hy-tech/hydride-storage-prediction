@@ -2,7 +2,7 @@
 id: 26
 status: backlog
 priority: High
-blocked_by: [23, 25]
+blocked_by: [23, 25, 88]
 assignee: "@amirhossein"
 tags: [p1, l3, S2, R4]
 ---
@@ -27,9 +27,16 @@ interval, not a point. This is what makes LCB ranking possible.
 ## Done when
 
 - [ ] `loss_function='MultiQuantile:alpha=0.1,0.5,0.9'`
+- [ ] **`use_best_model=True`** — CatBoost validates at fit time that `eval_set` is non-empty, which
+      makes the guard mechanical rather than a convention
 - [ ] Early stopping on the validation split; the test split is not passed to `fit`
 - [ ] A test asserting the test split is never referenced during training
+- [ ] The quantile **column order** is asserted in a test — position is the only thing identifying
+      P10 / P50 / P90
+- [ ] Folds come from ticket 88's protocol; no fold is both tuned on and scored on
 - [ ] Optuna search space ported from the archived script, selection on validation score only
+- [ ] Training is CPU-only (`MultiQuantile` has no GPU support) and the runtime is recorded for the
+      slow lane's budget
 
 ## Runnable check
 
@@ -53,3 +60,8 @@ python -m hydms.surrogate.train --target capacity && python -m pytest tests/surr
   honest `eval_set` is the validation split. Note `MultiQuantile` is one of the few regression
   losses with **no GPU support**, so this trains CPU-only — relevant to the slow lane's runtime
   budget. Details in `docs/LIBRARY-APIS.md`. (by @assistant)
+
+- 2026-09-02: Amended for Phase H. Blocked on 88 as well: fixing the early-stopping-on-test leak (L1) without
+  fixing fold reuse (L4) and row-level folds (L7) would still report a tuning optimum as a held-out
+  score. The `use_best_model=True` requirement is what turns the guard from a convention into a
+  fit-time error (by @assistant)
