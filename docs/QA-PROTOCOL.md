@@ -108,13 +108,19 @@ python scripts/check_freeze.py --base origin/main
 # Tests run inside the pinned environment; the suite imports the scientific stack
 conda run -n Project python -m pytest -q
 conda run -n Project python -m pytest -m leak -q         # HG-1 sentinels only
-conda run -n Project python -m pytest --cov              # enforces the coverage floor
+conda run -n Project python -m pytest --cov              # NOT YET: see the note below
 
 # Lint and types run OUTSIDE it, deliberately: they need no project environment, and the CI
 # fast lane stays free of conda (card #68).
 ruff check hydms/ tests/ scripts/
 mypy
 ```
+
+> **The coverage line does not run yet.** Neither `pytest-cov` nor `coverage` is installed in
+> `Project`, so `--cov` exits with `unrecognized arguments: --cov` and the floor in `pyproject.toml`
+> is unenforceable *anywhere* today. Both are declared in the `dev` extra and nothing installed them.
+> Where they get installed is card **#86**'s decision, not a `pip install`: adding a package to
+> `Project` invalidates `environment.lock.yml`, which exists to reproduce the published numbers.
 
 Two environment facts that will otherwise cost you an afternoon, both from
 [ENVIRONMENT.md](ENVIRONMENT.md): the interpreter is **3.10.13**, so `tomllib` is unavailable and

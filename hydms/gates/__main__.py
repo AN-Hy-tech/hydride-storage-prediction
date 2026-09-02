@@ -48,8 +48,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    listing = sub.add_parser("list", help="show every registered gate and the card that owes it")
-    listing.add_argument("--config", type=Path, default=None, help=argparse.SUPPRESS)
+    # `list` reads the registry, not the config: what is promised is a fact about the package,
+    # and answering it must keep working when the configuration does not load.
+    sub.add_parser("list", help="show every registered gate and the card that owes it")
 
     runner = sub.add_parser("run", help="run gates and report pass/fail")
     runner.add_argument(
