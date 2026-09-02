@@ -40,6 +40,19 @@ AC-6 — and five compositions carry conflicting class labels, so the join needs
 - [ ] The reconciliation is reproducible: the same input gives the same labels
 - [ ] A test asserts that the 16 known cross-split collisions now share one key
 - [ ] Canonicalisation never silently merges two genuinely different materials — asserted on the full dataset
+- [ ] **Account for the collapse in three steps, not one.** Measured by #9: whitespace alone takes
+      1149 formula strings to **1142** — 34 strings carry a trailing space, 9 an internal one, and 7
+      of the padded forms already have an unpadded twin in the file. Element order and scaling take
+      it the rest of the way to 1115. A canonical key that reports only the endpoint hides which
+      normalisation did what, and the whitespace step is the one a downstream `str.strip()` could
+      silently reproduce elsewhere
+- [ ] **Reuse `hydms.data.load.parse_formula` rather than writing a second parser.** It is already
+      the validated grammar — periodic-table membership, positive amounts, non-empty result — and is
+      asserted at parity with CBFV over all 1279 + 772 formulae. Two parsers is two grammars
+- [ ] **The two class vocabularies are not nested.** `hydride_data.csv` has 10 classes including
+      HEA/LEA/MEA; ML-HydPARK's `Material_Class` has 9 and splits AB2 into `AB2(C14)` and
+      `AB2(C15)`. Neither is a subset of the other, so the re-join needs a stated mapping, not a
+      merge. Both closed sets are declared in `hydms/data/load.py`
 - [ ] **L13 has no sentinel and this card owes one.** `extract_features_cbfv.py:19-21` drops every
       object column but `Composition`, destroying `Alloy_class` and with it every hope of
       leave-one-alloy-class-out validation (AC-6). Once the class is re-joined on the canonical key,

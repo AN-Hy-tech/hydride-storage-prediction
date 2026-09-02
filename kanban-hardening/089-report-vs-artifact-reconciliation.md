@@ -36,6 +36,12 @@ app does not inherit the old figures unexamined.
 - [ ] It records that the published pipeline is not the committed pipeline, with the evidence
 - [ ] It notes `REPORT.md` is preserved unedited, and why
 - [ ] The new honest numbers from #29 and #30 are shown beside the published ones
+- [ ] **A ninth disagreement, found by #9: the file contains 55 elements, not 54.** `REPORT.md` §2.3
+      ("Fifty-four elements were identified across all formulae") and the PRD's dataset table both say
+      54. Counted from the parsed compositions of all 1279 rows of `hydride_data.csv` the answer is
+      **55**, seven of which appear exactly once (N, Eu, Lu, Pb, Au, Os, Re). Asserted in
+      `tests/data/test_load.py`. Check whether it is inherited rather than introduced: the HyStor paper
+      reports 54 for its own 1,282-row release, which is a different file
 - [ ] Linked from the model card (#83) and from `kanban-hardening/README.md`
 
 ## Runnable check

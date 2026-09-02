@@ -37,6 +37,13 @@ takes minutes and around eight gigabytes to construct.
 - [ ] It stays comfortably under the existing timeout
 - [ ] The conda rebuild remains in the slow lane
 - [ ] A failure names which gate failed, not merely that something did
+- [ ] **Decide whether `openpyxl` is added, or the HyStor spreadsheet stays unread.** Card #9 left
+      `Machine_Model/data/raw/HyStor_27_7_24 (1).xlsx` without a loader because reading it needs
+      `openpyxl`, which is in neither `environment.lock.yml` nor the machine interpreter, and adding
+      a package invalidates the lock. The cost of saying no is low — the file is one sheet of 1283
+      rows over the same six columns as `hydride_data.csv`, which is its downstream, and nothing in
+      the repository has ever read it. This is the same decision as `pytest-cov` above, so make both
+      once rather than twice
 - [ ] Registered in the gate harness as HG-4
 
 ## Runnable check

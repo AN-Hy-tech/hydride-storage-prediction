@@ -185,8 +185,13 @@ the same module as L3 (card #71).
 ```
 
 - [x] **#3** Config loader — relative paths, seeds, thresholds. No absolute path literal anywhere.
-- [ ] **#9** Raw loaders with schema validation. Assert `len(skipped) == 0` where the legacy code
-      silently discarded CBFV failures.
+- [x] **#9** Raw loaders with schema validation. **The `len(skipped) == 0` assertion this line
+      originally asked for is vacuous** — measured against the installed CBFV, `skipped` is empty on
+      all 1279 rows. The defect is upstream of it: `CBFV.composition.parse_formula` validates
+      nothing, returning `{'Xx': 2.0}` for a non-element, `{}` for `Mg0` and `{'Mg': -1.0}` for
+      `Mg-1`. An unknown element is then dropped into the unread `skipped` list; an empty
+      composition kills `generate_features` with `zero-size array to reduction operation maximum`.
+      So the loader parses and rejects at the door, at parity with CBFV on all 1279 + 772 formulae.
 - [ ] **#10** Replace the positional `concat` with a keyed merge; assert the join covers every row.
 - [ ] **#87** `hydms/data/canonical.py` — normalise element fractions to a stable key; use it as the
       split key **and** the CV group key; re-join `Alloy_class` on it; reconcile the **5 compositions

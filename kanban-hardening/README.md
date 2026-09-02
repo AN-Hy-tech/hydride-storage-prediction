@@ -127,30 +127,31 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-03 · S1 closed, S2 is next
+### Handoff — 2026-09-03 · S2 open, #9 landed
 
-**Where the phase is.** S0 and S1 are done. Ten cards: #1, #2, #3, #5, #8, #68, #69, #70, #71, #72.
-The tree is green on everything the project has — `pytest -q`, `ruff check hydms/ tests/ scripts/`,
-`mypy`, `check_board.py`, `check_freeze.py`. Nothing is in `doing`; nothing is half-finished.
+**Where the phase is.** S0 and S1 are closed. S2 (data layer) is open and its first card, **#9**, is
+`done`. Eleven cards: #1, #2, #3, #5, #8, #9, #68, #69, #70, #71, #72. The tree is green on
+everything the project has — `pytest -q` (212 passing), `ruff check hydms/ tests/ scripts/`, `mypy`,
+`check_board.py`, `check_freeze.py`. Nothing is in `doing`.
 
-**S2 (data layer) and S3 (descriptor layer) are both unblocked and are the only pair worth running in
-parallel** ([../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §2). This note is written for
-whoever takes **S2**.
+**S3 (descriptor layer) is still unblocked and still the only thing worth running in parallel**
+([../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §2). This note is written for whoever takes
+the rest of **S2**.
 
 ---
 
 #### The opening move
 
-**#9, raw loaders with schema validation.** It is the only S2 card whose blockers are clear — every
-other card in the stage is behind it, directly or transitively:
+**#10, the keyed merge.** #9 is done, so #10 and #11 are both clear; everything after them is a
+chain:
 
 ```
-#9 loaders → #10 keyed merge (L9) → #11 target transform → #87 canonical key (L8, L13)
+#9 loaders ✔ → #10 keyed merge (L9) → #11 target transform → #87 canonical key (L8, L13)
 → #12 alloy class → #13 splits (L8) → #14 CleanLab, train-only (L3, L10) → #15 golden tests
 ```
 
-(#11 is blocked on #9 rather than on #10, so it can run alongside the merge. Everything after #87
-is a chain.)
+(#11 is blocked on #9 rather than on #10, so it can run alongside the merge — and #9 has already
+measured its answer for it: the transform is `log1p`, exactly, on all 1279 rows. The box is on #11.)
 
 Ask the board rather than trusting that diagram — it is the runbook's plan, not the current state:
 
@@ -160,7 +161,27 @@ bash $S/show_blocked.sh .
 bash $S/list_all_cards.sh .
 ```
 
-#### What S1 built that S2 is expected to use
+#### What #9 built that the rest of S2 is expected to use
+
+`hydms/data/load.py` owns **what a valid row is**, so no later stage re-litigates it:
+
+| You need | Call | Rather than |
+|---|---|---|
+| A raw frame you can trust | `load_hydride_data()`, `load_prefeaturized()`, `load_ml_hydpark()` | `pd.read_csv` and hoping |
+| A composition as `{element: amount}` | `parse_formula(...)` | a second regex, or CBFV's |
+| To declare a new file's shape | `SourceSchema` / `ColumnSpec`, then `validate()` | an `assert df.shape ==` |
+
+**Do not write a second formula parser.** `parse_formula` is asserted at parity with CBFV over all
+1279 + 772 formulae *and* rejects the four things CBFV waves through — a non-existent element, a zero
+amount, a negative amount, and a parenthesised annotation read as an element. #87 needs a parser; it
+needs this one.
+
+**The loader normalises nothing, deliberately.** 34 formula strings carry a trailing space and 9 an
+internal one; all 43 are returned exactly as stored. Stripping them would move the unique-formula
+count from 1149 to 1142 silently — which is #87's collapse to make and to account for, in three steps
+rather than one. The measured breakdown is boxed on #87.
+
+#### What S1 built that S2 is still expected to use
 
 `hydms/qa/` is not a test-support package. It holds the guards the data layer is meant to carry, and
 three S2 cards are expected to call them **in the pipeline**, not merely beside it:
@@ -178,6 +199,9 @@ to do it. The fix is never to delete the sentinel — it is to add the `live` ca
 `hydms/qa/sentinels.py`. If your card names its module differently from the `subject` string, update
 that string in the same commit.
 
+`hydms/data/load.py` is **not** a sentinel subject, which is why landing #9 left the audit unchanged
+at ten `pending` and three `deferred`.
+
 ```bash
 conda run -n Project python -m hydms.gates run HG-1     # exits 1 until every leak is guarded
 conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} {r.status:9} #{r.owed_by}  {r.title}') for r in audit()]"
@@ -193,7 +217,9 @@ conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} 
 - **#87 owes a sentinel, not just a key.** L13 (`Alloy_class` destroyed at
   `extract_features_cbfv.py:19-21`) is a recorded deferral against #87, and HG-1 cannot go green
   until it exists. Five compositions carry conflicting class labels and need a stated rule, recorded
-  in the narrative — a merge will not decide it for you.
+  in the narrative — a merge will not decide it for you. #9 added a second reconciliation #87 owes:
+  the curated file's ten `Alloy_class` values and ML-HydPARK's nine `Material_Class` values are
+  neither a subset nor a superset of one another.
 - **#14 owes two wirings and inherits a leak no stage closes.** L10 — the recovered
   `Outliers_Management.py:60-72` clipped held-out *feature* values using their own residuals — is
   absent only because that script is not being ported. That is an accident, not a fix, and it returns
@@ -201,9 +227,11 @@ conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} 
 - **`numpy` cannot be imported anywhere under `hydms/`** while the lint lane stays conda-free. mypy
   resolves it from the machine's 3.13 site-packages, whose `__init__.pyi` uses PEP 695 `type`
   statements that `python_version = "3.10"` rejects as a **syntax** error, aborting the whole run;
-  `ignore_missing_imports` does not suppress it. #71 sidestepped it with stdlib `random`. **The data
-  layer probably can too; the descriptor layer (#16–#20) cannot**, so whoever reaches S3 owns the
-  real fix. The constraint is commented in `pyproject.toml` beside the mypy override list.
+  `ignore_missing_imports` does not suppress it. #71 sidestepped it with stdlib `random` and #9 with
+  `math` plus pandas — **pandas is fine, it is only `numpy` that is poisoned**, and note that
+  `pandas.api.types` must be reached as `pd.api.types.…` because the mypy override lists `pandas`
+  and not `pandas.*`. **The descriptor layer (#16–#20) cannot dodge numpy**, so whoever reaches S3
+  owns the real fix. The constraint is commented in `pyproject.toml` beside the mypy override list.
 
 #### S2 is done when
 
@@ -216,23 +244,21 @@ the per-leak table.
 
 #### Findings from this session, and what was done with each
 
-Four, all fixed rather than carried:
+One correction made here, four findings sent to the cards that own them.
 
-- **`docs/PHASE-H-RUNBOOK.md` §5 told you to run a config file that does not exist** —
-  `--config hydms/config/default.yaml`, where card #3 shipped `pipeline.yaml`. The command would have
-  exited 2 with `configuration file not found`. Corrected.
-- **The S2 checklist still had #3 unticked** although the card is `done`. Ticked.
-- **S2's exit check named the wrong sentinels.** It listed L3/L8/L9/L13 and omitted **L10**, whose
-  subject is #14's module and which therefore also goes live in this stage. Corrected, and the
-  per-leak diagnostic added beside it.
-- **This README claimed #71 did not exist yet** — "without it, nothing stops the next session
-  reintroducing a leak". It does exist, and the paragraph now says what it will actually do to you.
+**Corrected in place** — [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §S2 told #9 to
+"assert `len(skipped) == 0` where the legacy code silently discarded CBFV failures". Measured against
+the installed CBFV, `skipped` is **empty** on all 1279 rows: the assertion would have passed while
+proving nothing. The defect is upstream of `skipped` — CBFV's parser accepts a non-existent element,
+a zero amount and a negative amount, and reads `(M)` in `Hf2Cu (M)` as an element. An unknown element
+then lands in the unread `skipped` list and an empty composition kills `generate_features` with
+`zero-size array to reduction operation maximum`. The runbook line now says what to guard instead.
 
-Findings from landing #71 itself went to the cards that own them rather than being fixed in passing:
-L10 closed by no stage (**#14**), L11/L12/L13 not yet sentinellable (**#29**, **#26**, **#87**), and
-the L9 wording that was wrong in three documents — "a shuffled input makes the merge fail" is false
-of a *correct* keyed merge, since joining by key is what makes row order irrelevant. The two real
-properties are order-invariance and coverage; **#10**'s box says so.
+**Sent to the owning card** — #86 (decide `openpyxl`, or the HyStor spreadsheet stays unread — the
+same decision as `pytest-cov`), #89 (the file has **55** elements; REPORT §2.3 and the PRD say 54),
+#11 (the transform is `log1p`, measured elementwise, not `log(10y)`), #87 (whitespace alone accounts
+for 1149 → 1142 of the collapse to 1115; reuse `parse_formula`; the two class vocabularies are not
+nested).
 
 **Carried forward, still true.** `ruff` and `mypy` run **outside** the `Project` environment on
 purpose — neither imports the project's dependencies, and #68 established that the fast lane installs
