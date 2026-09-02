@@ -112,13 +112,25 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-S0 and most of S1 have landed: **#72** (freeze), **#69** (test infrastructure) and **#70** (QA
-protocol) are done, alongside the four cards that were already done before the phase opened — #1, #2,
-#8, #68.
+### Handoff — 2026-09-02
 
-The next unblocked cards are **#3** (config loader), **#16** (element property tables) and **#19**
-(the 22-feature contract). #3 is the one on the critical path: it gates #9, and through #5 it gates
-every gate card including **#71**, the leak sentinels that S1 cannot close without it.
+S0 is closed and S1 is two thirds done: the freeze (**#72**) is live and CI-enforced in two
+independent halves, both demonstrated red before being trusted; test tooling (**#69**), the QA
+protocol (**#70**) and the config loader (**#3**) have landed, joining the four cards that were
+already done before the phase opened — #1, #2, #8, #68 — for eight done in total, with 34 tests
+green and ruff and mypy clean. **Take #5 (the gate harness) next**: it is the only thing standing
+between here and **#71**, the leak sentinels that close S1 and make every leak this phase removes
+stay removed, and it also unblocks #21, #31, #32, #33 and #41 behind it. #4, #9, #16, #19 and #44 are
+unblocked too and can run alongside; #9 → #10 → #87 is the S2 chain that leads to the canonical
+composition key, and #16 opens the S3 descriptor work that runs parallel to it. **One correction is
+owed before anything else is called done:** card #6 (CI fast lane) still assumes lint and type checks
+run inside the `Project` conda environment, but ruff and mypy were deliberately left outside it —
+they need no project environment and card #68 established that the fast lane stays conda-free — so
+#6's text and its runnable check need amending to match, and #86 inherits that assumption if it is
+not fixed first. Read [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §1 before touching the
+pipeline: the thirteen leaks with their exact line numbers are the definition of done for S2 to S4,
+and the two that are not in the PRD — `CleanLab.py:90` rewriting held-out labels, and the positional
+concat in `merge_datasets.py:46` — are the severe ones.
 
 ---
 
