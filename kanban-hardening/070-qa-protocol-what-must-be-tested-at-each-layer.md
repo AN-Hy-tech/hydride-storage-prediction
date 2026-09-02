@@ -1,6 +1,6 @@
 ---
 id: 70
-status: backlog
+status: done
 priority: Normal
 blocked_by: [69]
 assignee: "@amirhossein"
@@ -24,12 +24,12 @@ property or metamorphic tests, which need a gate, and what a reviewer looks for 
 
 ## Done when
 
-- [ ] `docs/QA-PROTOCOL.md` exists and states, per layer L0-L7, what a card must prove
-- [ ] It names the four test kinds in use — golden, metamorphic, contract, sentinel — and when each applies
-- [ ] It gives the reviewer checklist and the definition of done
-- [ ] It states the rule that a gate card's check must be able to **fail** — a gate that cannot go red
+- [x] `docs/QA-PROTOCOL.md` exists and states, per layer L0-L7, what a card must prove
+- [x] It names the four test kinds in use — golden, metamorphic, contract, sentinel — and when each applies
+- [x] It gives the reviewer checklist and the definition of done
+- [x] It states the rule that a gate card's check must be able to **fail** — a gate that cannot go red
       is not a gate
-- [ ] It is linked from `kanban-hardening/README.md`
+- [x] It is linked from `kanban-hardening/README.md`
 
 ## Runnable check
 
@@ -44,3 +44,8 @@ python scripts/check_board.py --root .
 ## Narrative
 
 - 2026-09-02: Created for Phase H (by @assistant)
+
+- 2026-09-02: Done. The layer table is derived from the leak inventory rather than from general
+  testing advice: every row exists because something in `docs/PHASE-H-RUNBOOK.md` section 1 went wrong
+  at that layer. The rule that a gate must be demonstrated red before it is trusted came out of S0,
+  where both halves of the freeze were shown to fail before being relied on. (by @assistant)

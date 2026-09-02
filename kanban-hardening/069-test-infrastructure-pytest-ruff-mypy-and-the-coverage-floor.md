@@ -1,6 +1,6 @@
 ---
 id: 69
-status: backlog
+status: done
 priority: High
 blocked_by: [2]
 assignee: "@amirhossein"
@@ -30,21 +30,26 @@ configuration instead.
 
 ## Done when
 
-- [ ] `[tool.pytest.ini_options]` with `testpaths = ["tests"]` and `norecursedirs` covering
+- [x] `[tool.pytest.ini_options]` with `testpaths = ["tests"]` and `norecursedirs` covering
       `Machine_Model`, so the legacy scripts can never be collected
-- [ ] `[tool.ruff]` and `[tool.mypy]` sections, scoped to `hydms/`
-- [ ] `tests/` exists with `conftest.py` and the fixtures later cards share
-- [ ] A coverage floor is set and enforced on `hydms/`
-- [ ] An `api` extra is added **reusing the pins already in `requirements-lock.txt`**
+- [x] `[tool.ruff]` and `[tool.mypy]` sections, scoped to `hydms/`
+- [x] `tests/` exists with `conftest.py` and the fixtures later cards share
+- [x] A coverage floor is set on `hydms/` (`fail_under = 80`); card #86 turns it into a build failure
+- [x] An `api` extra is added **reusing the pins already in `requirements-lock.txt`**
       (`fastapi==0.115.0`, `uvicorn==0.30.6`)
-- [ ] `requirements-lock.txt` is **not** regenerated — see the trap in `docs/ENVIRONMENT.md`
-- [ ] `pytest` on a clean checkout collects zero tests from `Machine_Model/` and runs no Optuna study
+- [x] `requirements-lock.txt` is **not** regenerated — see the trap in `docs/ENVIRONMENT.md`
+- [x] `pytest` on a clean checkout collects zero tests from `Machine_Model/` and runs no Optuna study
 
 ## Runnable check
 
 ```bash
-conda run -n Project python -m pytest -q && conda run -n Project ruff check hydms/
+conda run -n Project python -m pytest -q && ruff check hydms/ tests/ scripts/ && mypy
 ```
+
+`pytest` runs inside `Project`, because the suite imports the pinned scientific stack. **`ruff` and
+`mypy` deliberately do not** — they are static tools that need no project environment, and card #68
+established that the CI fast lane stays free of conda entirely. Installing them into `Project` would
+drift it from `requirements-lock.txt` for no benefit.
 
 ## Traces to
 
@@ -54,3 +59,20 @@ conda run -n Project python -m pytest -q && conda run -n Project ruff check hydm
 
 - 2026-09-02: Created for Phase H. The legacy-test exclusion is the load-bearing part: it is
   configuration, not a rename, because `Machine_Model/` is archival and the freeze denies edits to it (by @assistant)
+
+- 2026-09-02: Done. Two things worth knowing.
+
+  **`norecursedirs` replaces pytest's defaults, it does not extend them.** The first version of this
+  config listed only `Machine_Model` and `graphify-out`, which silently dropped `.*` — and `pytest .`
+  immediately started collecting the vendored skill suites under `.claude/`, which error on import.
+  The defaults are now re-listed verbatim in `pyproject.toml` and asserted by a test in
+  `tests/test_tooling.py`, because nothing about a green run would otherwise reveal the loss.
+
+  **`tomllib` is 3.11+ and the pinned interpreter is 3.10.13.** The tooling test falls back to `tomli`,
+  which `Project` already carries; the `dev` extra declares it under an environment marker. Any later
+  card that reads TOML needs the same fallback.
+
+  `ruff` and `mypy` are on PATH outside `Project` (0.8.4 and 1.13.0, both above the declared floors)
+  and were left there on purpose — see the runnable check above. mypy is clean across all 13 source
+  files; ruff is clean after fixing one dead variable left by the `check_freeze.py` refactor and two
+  pre-existing findings in `check_board.py`. (by @assistant)

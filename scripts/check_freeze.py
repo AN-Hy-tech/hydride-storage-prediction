@@ -95,8 +95,6 @@ def changed_paths(root: Path, base: str) -> tuple[list[tuple[str, str, str]], st
 
 def exempt(status: str, path: str, dest: str) -> str | None:
     """Return the reason this changed path is allowed, or None if it must be judged."""
-    name = path.rsplit("/", 1)[-1]
-
     if path == "kanban/README.md":
         return "board metadata, not a card"
 

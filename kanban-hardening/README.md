@@ -11,6 +11,7 @@ id space, and where to start. It does not restate what lives elsewhere:
 | What is frozen, why, and the unfreeze condition | [../docs/FREEZE.md](../docs/FREEZE.md) |
 | The frozen inverse-design programme | [../docs/PRD-inverse-design.md](../docs/PRD-inverse-design.md), [../kanban/README.md](../kanban/README.md) |
 | What a card *is now* | the card itself — it outranks every document above on its own status |
+| What a card must prove before it is done | [../docs/QA-PROTOCOL.md](../docs/QA-PROTOCOL.md) |
 
 ---
 
@@ -111,8 +112,13 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-At the time of writing, **#72** (freeze) has no blockers, and **#3** (config), **#16** and **#19**
-(descriptor tables and contract) are unblocked by the four already-done cards #1, #2, #8, #68.
+S0 and most of S1 have landed: **#72** (freeze), **#69** (test infrastructure) and **#70** (QA
+protocol) are done, alongside the four cards that were already done before the phase opened — #1, #2,
+#8, #68.
+
+The next unblocked cards are **#3** (config loader), **#16** (element property tables) and **#19**
+(the 22-feature contract). #3 is the one on the critical path: it gates #9, and through #5 it gates
+every gate card including **#71**, the leak sentinels that S1 cannot close without it.
 
 ---
 

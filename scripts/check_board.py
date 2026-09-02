@@ -28,6 +28,7 @@ Exits non-zero and lists every violation found. Finding none prints a one-line s
 from __future__ import annotations
 
 import argparse
+import contextlib
 import re
 import sys
 from pathlib import Path
@@ -79,10 +80,8 @@ def _split_list(raw: str) -> list[str]:
 def _int_list(raw: str) -> list[int]:
     out = []
     for item in _split_list(raw):
-        try:
+        with contextlib.suppress(ValueError):
             out.append(int(item))
-        except ValueError:
-            pass
     return out
 
 
@@ -213,7 +212,7 @@ def check_cycles(cards: list[Card]) -> list[str]:
                 loop = trail[trail.index(nxt):] + [nxt]
                 problems.append("dependency cycle: " + " -> ".join(str(n) for n in loop))
             elif colour[nxt] == WHITE:
-                walk(nxt, trail + [nxt])
+                walk(nxt, [*trail, nxt])
         colour[node] = BLACK
 
     for node in sorted(graph):
