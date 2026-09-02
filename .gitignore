@@ -42,6 +42,14 @@ conda-meta/
 catboost_info/
 temp/
 
+# Everything the new pipeline writes. hydms/config/pipeline.yaml already claimed these were
+# gitignored; four of the five were not, and the first `python -m hydms.gates run` would have
+# dropped artifacts/gate-results.json into the working tree as an untracked file. Card #5.
+/artifacts/
+/data/interim/
+/data/processed/
+/data/splits/
+
 # ── Test cache ────────────────────────────────────────────────────────────────
 .pytest_cache/
 

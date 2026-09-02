@@ -26,6 +26,13 @@ takes minutes and around eight gigabytes to construct.
 
 - [ ] The fast lane runs `check_board.py`, `check_freeze.py`, the test suite, ruff, mypy and the
       coverage floor
+- [ ] ruff and mypy run in #6's **conda-free** `hygiene` job, not inside the `Project`
+      environment — they need no project dependencies and #68 established that the fast lane
+      builds none
+- [ ] `pytest-cov` is available wherever the floor is enforced. It is declared in the `dev`
+      extra and installed nowhere: neither it nor `coverage` is in `Project` today, so
+      `pytest --cov` fails outright and the floor in `pyproject.toml` is currently
+      unenforceable. Decide where it gets installed rather than inheriting the gap
 - [ ] It runs the gates that do not require a retrain, against the published artifact
 - [ ] It stays comfortably under the existing timeout
 - [ ] The conda rebuild remains in the slow lane
@@ -45,3 +52,9 @@ python scripts/check_board.py --root . && python scripts/check_freeze.py --base 
 ## Narrative
 
 - 2026-09-02: Created for Phase H (by @assistant)
+- 2026-09-02: Two prerequisites recorded while landing #5. The lint/type lane is conda-free
+  (see #6's amendment the same day), and the coverage floor cannot be measured anywhere right
+  now — `pytest-cov` and `coverage` are both absent from `Project`, so `pytest --cov` exits
+  with `unrecognized arguments: --cov`. Installing into `Project` invalidates
+  `environment.lock.yml`, so where the floor is measured is a decision this card owns.
+  (by @assistant)

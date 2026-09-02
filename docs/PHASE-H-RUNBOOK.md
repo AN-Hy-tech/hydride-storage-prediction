@@ -109,7 +109,7 @@ python scripts/check_freeze.py --base origin/main
 
 ---
 
-### S1 — QA foundation · #69, #70, #71 · 2 d
+### S1 — QA foundation · #69, #70, #5, #71 · 2 d
 
 **Goal:** somewhere to put every later test, and the sentinels that make the leaks un-reintroducible.
 
@@ -117,20 +117,24 @@ python scripts/check_freeze.py --base origin/main
 them** — no `[tool.ruff]`, no `[tool.pytest.ini_options]`, no `[tool.mypy]`, no `conftest.py`, no
 `tests/`.
 
-- [ ] **#69** Add the three tool config sections. Create `tests/` with `conftest.py` and shared
+- [x] **#69** Add the three tool config sections. Create `tests/` with `conftest.py` and shared
       fixtures. Set a coverage floor on `hydms/`.
-- [ ] **#69** Exclude the legacy tests with `testpaths = ["tests"]` + `norecursedirs` — **not** by
+- [x] **#69** Exclude the legacy tests with `testpaths = ["tests"]` + `norecursedirs` — **not** by
       touching `Machine_Model/`, which is deny-listed and archival. This is load-bearing:
       `Machine_Model/tests/test_catboost_smogn.py` is a 250-line training script that calls
       `optuna.create_study(...).optimize(n_trials=50)` at import time, so pytest would **run an Optuna
       study during collection**; and `test_check_database.py` asserts against a gitignored `hydride.db`
       that is absent from a clean clone.
-- [ ] **#69** Add an `api` extra. **Reuse the pins already in `requirements-lock.txt`** —
+- [x] **#69** Add an `api` extra. **Reuse the pins already in `requirements-lock.txt`** —
       `fastapi==0.115.0` and `uvicorn==0.30.6` are present as pollution from a removed service.
       **Do not regenerate the lock file:** [ENVIRONMENT.md](ENVIRONMENT.md) records a hand-applied
       `python-graphviz` → `graphviz` fix that regeneration silently undoes, killing the install at the
       end of the pip stage.
-- [ ] **#70** Write `docs/QA-PROTOCOL.md`.
+- [x] **#70** Write `docs/QA-PROTOCOL.md`.
+- [x] **#5** The gate harness. Twelve criteria registered — the PRD's eight plus the four below —
+      one module each under `hydms/gates/`, all reporting `SKIPPED` until the card that owns each
+      one lands. It slots in here rather than in a stage of its own because #71 and every AC gate
+      is blocked behind it.
 - [ ] **#71 (HG-1)** Write `tests/leaks/` — one sentinel per leak, each passing **only because the leak
       is absent**:
 
@@ -325,6 +329,31 @@ single prediction path and HG-3 covers the UI too.
 Inherits **AC-1 … AC-4** and **AC-6**. AC-5 is thermodynamic and AC-7/AC-8 are inverse-design; all
 three stay frozen.
 
+**The harness exists** (card #5). All twelve criteria are registered — the frozen three included, so
+the registry is the complete list of what this project has promised to check rather than the list it
+is currently able to check:
+
+```bash
+conda run -n Project python -m hydms.gates list          # every gate, its lane, its owning card
+conda run -n Project python -m hydms.gates run --all     # the whole registry
+conda run -n Project python -m hydms.gates run --fast    # the per-push lane (card #6)
+conda run -n Project python -m hydms.gates run AC-2      # one gate; a skip here exits non-zero
+```
+
+Three properties are worth knowing before you write a gate:
+
+- **A skip is never a pass.** An unimplemented criterion reports `SKIPPED`, the table prints a
+  `NOT CHECKED` banner naming every one of them, and `--strict` turns any skip into a failure.
+- **Naming a gate makes the run strict.** `run AC-2` exits non-zero while AC-2 is unimplemented —
+  which is why the `## Runnable check` on #21, #31, #32, #33, #71, #77 and #79 is honest from the day
+  it is written. `run --all` tolerates skips, because CI that is red for the length of the phase is
+  CI nobody reads.
+- **Each gate declares its own lane.** `Speed.FAST` means answerable against the published artifact;
+  `Speed.SLOW` means it needs a retrain. Cards #6 and #7 select on that rather than deciding it.
+
+A run writes its results as JSON under the configured artifacts directory, behind a versioned
+`schema` key. Card #4's manifest embeds that object under `gates` when it lands.
+
 | Gate | Card | Fails when |
 |---|---|---|
 | **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red |
@@ -350,7 +379,9 @@ python scripts/verify_environment.py
 # Suite
 conda run -n Project python -m pytest -q
 conda run -n Project python -m pytest tests/leaks -q          # HG-1
-conda run -n Project ruff check hydms/ && conda run -n Project mypy hydms/
+# Lint and types run OUTSIDE the environment, deliberately: neither imports the project's
+# dependencies, and card #68 fixed that the fast lane installs nothing (docs/QA-PROTOCOL.md §6).
+ruff check hydms/ tests/ scripts/ && mypy
 conda run -n Project python -m hydms.gates run --fast
 
 # Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical metrics
@@ -368,6 +399,12 @@ curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
 
 conda run -n Project streamlit run app/main.py
 ```
+
+> **`pytest --cov` does not run here yet.** Neither `pytest-cov` nor `coverage` is installed in
+> `Project`, so the coverage floor in `pyproject.toml` is unenforceable anywhere today — the command
+> exits with `unrecognized arguments: --cov`. Both are declared in the `dev` extra and nothing
+> installed them. Where they get installed is card **#86**'s decision, because adding a package to
+> `Project` invalidates `environment.lock.yml`.
 
 **Manual acceptance for the interface**
 

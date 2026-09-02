@@ -63,7 +63,7 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | Stage | Cards | Days |
 |---|---|---:|
 | **S0** Freeze & tooling | 72 | 1 |
-| **S1** QA foundation | 69, 70, 71 | 2 |
+| **S1** QA foundation | 69, 70, 5, 71 | 2 |
 | **S2** Data layer | 3, 9, 10, 11, 87, 12, 13, 14, 15 | 7 |
 | **S3** Descriptor layer | 16, 17, 18, 19, 20, 21, 22 | 6 |
 | **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34 | 13 |
@@ -72,17 +72,20 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | **S7** Delivery: interface | 81, 82, 83, 84 | 3.5 |
 | **S8** Evidence & close | 89, 85, 86, 35, 36, 37 | 5 |
 
-Cards **4, 5, 6, 7, 73, 74** are foundation and CI work that slots in where its blockers allow rather
-than sitting in one stage: #5 (the gate harness) in particular blocks every gate card and should land
-early in S1.
+Cards **4, 6, 7, 73, 74** are foundation and CI work that slots in where its blockers allow rather
+than sitting in one stage. **#5** (the gate harness) was the same kind of card and has landed inside
+S1, where it belonged: every gate card on the board was blocked behind it.
 
 ---
 
 ## Gates
 
-Eight, registered in the gate harness (#5) and enforced by CI. Four are new to this phase; five are
-inherited from the PRD's acceptance criteria. The full table with failure conditions is in
-[../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §4.
+Nine are live in this phase — four new, five inherited from the PRD's acceptance criteria. The full
+table with failure conditions is in [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §4.
+
+All of them are registered in the gate harness (#5), together with the three frozen criteria, so the
+registry is the complete list of what the project has promised to check rather than the subset it can
+currently check. Ask it rather than this table: `python -m hydms.gates list`.
 
 | Gate | Card | | Gate | Card |
 |---|---|---|---|---|
@@ -112,25 +115,46 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-02
+### Handoff — 2026-09-02 (evening)
 
-S0 is closed and S1 is two thirds done: the freeze (**#72**) is live and CI-enforced in two
-independent halves, both demonstrated red before being trusted; test tooling (**#69**), the QA
-protocol (**#70**) and the config loader (**#3**) have landed, joining the four cards that were
-already done before the phase opened — #1, #2, #8, #68 — for eight done in total, with 34 tests
-green and ruff and mypy clean. **Take #5 (the gate harness) next**: it is the only thing standing
-between here and **#71**, the leak sentinels that close S1 and make every leak this phase removes
-stay removed, and it also unblocks #21, #31, #32, #33 and #41 behind it. #4, #9, #16, #19 and #44 are
-unblocked too and can run alongside; #9 → #10 → #87 is the S2 chain that leads to the canonical
-composition key, and #16 opens the S3 descriptor work that runs parallel to it. **One correction is
-owed before anything else is called done:** card #6 (CI fast lane) still assumes lint and type checks
-run inside the `Project` conda environment, but ruff and mypy were deliberately left outside it —
-they need no project environment and card #68 established that the fast lane stays conda-free — so
-#6's text and its runnable check need amending to match, and #86 inherits that assumption if it is
-not fixed first. Read [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §1 before touching the
-pipeline: the thirteen leaks with their exact line numbers are the definition of done for S2 to S4,
-and the two that are not in the PRD — `CleanLab.py:90` rewriting held-out labels, and the positional
-concat in `merge_datasets.py:46` — are the severe ones.
+**S1 is one card from closed.** The gate harness (**#5**) has landed, which was the only thing
+standing between the board and **#71**, the leak sentinels. Nine cards are done — #1, #2, #8, #68,
+#72, #69, #70, #3 and now #5 — with **69 tests green**, ruff and mypy clean, and both halves of the
+freeze still enforced.
+
+**Take #71 next.** It closes S1 and it is what makes the phase durable: it is the difference between
+removing thirteen leaks and *keeping* them removed. The harness registers it as `HG-1` already, so
+the work is writing `tests/leaks/` and replacing one `Pending` with a real check. Read
+[../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §1 first — the thirteen leaks with their
+exact line numbers are the definition of done for S2 to S4, and the two that are not in the PRD,
+`CleanLab.py:90` rewriting held-out labels and the positional concat in `merge_datasets.py:46`, are
+the severe ones. Each sentinel must be **seen red** with its leak deliberately put back, and that
+demonstration recorded in the card's `## Narrative`; a sentinel nobody has watched fail is an
+assumption with a test's name on it.
+
+**Running alongside:** #4, #9, #16, #19 and #44 are unblocked. #9 → #10 → #87 is the S2 chain leading
+to the canonical composition key; #16 opens the S3 descriptor work in parallel. #6 is unblocked too
+now that #5 has landed.
+
+**What #5 changed for everyone else.** `python -m hydms.gates list` is now the authoritative list of
+what this project has promised to check — twelve criteria, all `SKIPPED`, each naming the card that
+owes it. Two behaviours are worth knowing before you write a gate: naming one (`run AC-2`) exits
+non-zero while it is unimplemented, so a gate card's runnable check is honest from the day it is
+written, while `run --all` tolerates skips and prints a `NOT CHECKED` banner instead. And every gate
+declares its own CI lane, so cards #6 and #7 read the split rather than deciding it.
+
+**Two corrections were owed and are now made.** Card **#6** assumed lint and type checks run inside
+the `Project` conda environment; they were deliberately left outside it, so #6 is now two
+independently-reporting jobs — a conda-free `hygiene` job and a `suite` job that pays for the
+environment — and its runnable check is the lane's own commands rather than `gh run watch`, which
+could not fail before the workflow existed. **#86** carries the same note so it cannot inherit the
+assumption. The runbook's §5 verification block had the same mistake and is fixed there too.
+
+**One new gap, for #86.** Neither `pytest-cov` nor `coverage` is installed in `Project`, so
+`pytest --cov` fails outright and the coverage floor in `pyproject.toml` is unenforceable
+*anywhere* today. Both are declared in the `dev` extra and nothing installed them. Adding a package
+to `Project` invalidates `environment.lock.yml`, so where they get installed is a decision, not a
+`pip install`.
 
 ---
 
