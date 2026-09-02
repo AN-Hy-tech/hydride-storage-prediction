@@ -39,6 +39,12 @@ scores through it rather than re-deriving folds.
 - [ ] Seeds come from config; the same seed reproduces identical folds
 - [ ] The leave-one-alloy-class-out protocol (#30) is expressed through the same interface
 - [ ] The protocol records, with every score, which folds produced it — so a later reader can check
+- [ ] That record is a `hydms.qa.SelectionRecord` per model compared, carrying `tuned_on`,
+      `scored_on` and metrics keyed by split. A protocol that cannot emit one cannot be checked
+- [ ] The **L2 sentinel**, the **L4 sentinel** and the **L7 sentinel** (ticket 71) are wired to this
+      module — `live` checks in `hydms/qa/sentinels.py` calling `hydms.qa.assert_selection_is_nested`
+      on the real records and `hydms.qa.assert_disjoint_groups` on the real folds. Gate HG-1 goes red
+      once `hydms/surrogate/validation.py` exists without them
 
 ## Runnable check
 

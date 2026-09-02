@@ -115,73 +115,66 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-02 (evening)
+### Handoff — 2026-09-02 (night)
 
-**S1 is one card from closed.** The gate harness (**#5**) has landed — the last thing standing
-between the board and **#71**. Nine cards are done: #1, #2, #8, #68, #72, #69, #70, #3, #5. The
-tree is green on every check the project currently has: **69 tests**, `ruff check hydms/ tests/
-scripts/`, `mypy`, `check_board.py`, `check_freeze.py`.
+**S1 is closed.** **#71** landed and with it the last card of the QA foundation. Ten cards are done:
+#1, #2, #8, #68, #72, #69, #70, #3, #5, #71. The tree is green on every check the project has:
+`conda run -n Project python -m pytest -q`, `ruff check hydms/ tests/ scripts/`, `mypy`,
+`check_board.py`, `check_freeze.py`. **S2 (data layer) and S3 (descriptor layer) are now unblocked
+and are the only pair that may run in parallel** — see [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §2.
 
-**What #5 gives you.** `python -m hydms.gates list` is now the authoritative answer to "what has
-this project promised to check" — twelve criteria, the PRD's eight plus this phase's four, one
-module each under [../hydms/gates/](../hydms/gates/), every one `SKIPPED` and naming the card that
-owes it. Three behaviours to know before writing a gate. **Naming a gate makes the run strict:**
-`run AC-2` exits non-zero while AC-2 is unimplemented, which is what makes the `## Runnable check`
-on #21, #31, #32, #33, #71, #77 and #79 honest from the day it is written; `run --all` tolerates
-skips and prints a `NOT CHECKED` banner instead, because CI that is red for the length of the phase
-is CI nobody reads. **A gate that raises is red, not absent** — so is a module that will not import.
-**A gate may only report on itself**, or one could report a pass on another's behalf and the table
-would look complete. Each gate also declares its own CI lane (`FAST` = answerable against the
-published artifact, `SLOW` = needs a retrain), so cards #6 and #7 read the split rather than
-deciding it.
+**What #71 gives you, and what it will do to you.** `hydms/qa/` holds the leak inventory as data,
+six detectors, and one sentinel per leak. Ten of the thirteen leaks have a sentinel; L11, L12 and
+L13 are recorded deferrals owed by #29, #26 and #87, each with a box on that card. Two things you
+need to know before you touch S2 or S4:
 
-**Corrections made, so you do not inherit them.** Card **#6** had `ruff` and `mypy` running inside
-the `Project` conda environment. They were deliberately left outside it — neither imports the
-project's dependencies, and #68 established that the fast lane installs nothing so it still reports
-when the environment is broken. #6 is now two independently-reporting jobs, a conda-free `hygiene`
-job and a `suite` job that pays for the environment, and its runnable check is the lane's own
-commands rather than `gh run watch`, which could not fail before the workflow existed. The same
-mistake was in [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §5 and is fixed there;
-**#86** carries a matching box so it cannot re-acquire the assumption.
+- **The detectors are production code and your card is expected to call them.** `assert_merge_is_keyed`,
+  `assert_disjoint_groups`, `assert_holdout_unchanged`, `assert_early_stopping_is_honest`,
+  `assert_selection_is_nested`, `assert_selection_ignores_holdout`. Cards #10, #13, #14, #24, #26 and
+  #88 each carry a box naming the one they owe. Every detector takes row labels, a record of what a
+  fit saw, or a callable — never a fitted model — which is how all ten could be written and proved
+  before any of the code they guard exists.
+- **HG-1 will go red on you, on purpose, the first time you create a module a sentinel names.** Each
+  sentinel declares the module its leak would reappear in (`hydms.data.merge`, `hydms.data.splits`,
+  `hydms.data.screening`, `hydms.surrogate.model`, `hydms.surrogate.selection`,
+  `hydms.surrogate.validation`). The moment one of those exists without a `live` hook in
+  `hydms/qa/sentinels.py`, the gate fails with `L9 [unwired] #10 -- ... guarded in name only`. That is
+  the mechanism, not a bug: a sentinel written six weeks early against a miniature becomes a real
+  guard only when somebody points it at the real thing, and nobody was going to remember. If your
+  card names its module differently, update the `subject` string in the same commit.
 
-**Findings, and what was done with each.** Three came out of #5, and none was left in a commit
-message where nothing checks it. (1) `pytest --cov` **does not run anywhere** — neither `pytest-cov`
-nor `coverage` is installed in `Project`, so the coverage floor in `pyproject.toml` is currently
-unenforceable. It is declared in the `dev` extra and nothing installed it. Two boxes on **#86**,
-which owns the floor, plus notes in the runbook §5 and
-[../docs/QA-PROTOCOL.md](../docs/QA-PROTOCOL.md) §6 where the command was printed as though it
-worked — adding a package to `Project` invalidates `environment.lock.yml`, so this is a decision,
-not a `pip install`. (2) Card **#4**'s artifact manifest does not exist yet, so a gate run writes its
-results to `artifacts/gate-results.json` behind a versioned `schema` key; #4 embeds that object under
-`gates` rather than inventing a second format. (3) `hydms/config/pipeline.yaml` claimed its output
-directories were gitignored and **four of the five were not** — the first default gate run would have
-dropped an untracked file into the tree. Fixed in `.gitignore` in the same commit, because that one
-was a defect this card's own output would have created.
+**HG-1 is SKIPPED today and that is the right answer.** `0/13 leaks guarded in the pipeline`.
+`python -m hydms.gates run HG-1` exits 1. The reproductions going red proves the *detectors* work;
+it says nothing about a pipeline that does not exist. The gate reports green only when all thirteen
+are checked against real code, which is what makes [../docs/FREEZE.md](../docs/FREEZE.md)'s unfreeze
+condition mean something.
 
-**Also unblocked:** #6 (now that #5 has landed), and #4, #9, #16, #19, #44 as before. #9 → #10 → #87
-is the S2 chain leading to the canonical composition key; #16 opens the S3 descriptor work in
-parallel with it.
+**Findings, each now a box on the card that owns it.**
 
-#### Starting #71 — the leak sentinels
+- **L10 is closed by no stage.** The runbook's S2 and S4 headers between them list every leak except
+  L10, which is absent only because `Ashghal/Outliers_Management.py` is not being ported — an
+  accident, not a fix. It returns the day #14 grows outlier handling. Boxed on **#14**, and the
+  runbook now says so.
+- **L11, L12 and L13 cannot be sentinelled yet.** Each needs a decision its owning card has not made:
+  what the explainability record is (**#29**), what the weighting scheme is (**#26**), what the class
+  join produces (**#87**). Each carries a box with the assertion it will have to make.
+- **#71's own L9 wording was wrong**, and the runbook's and QA-PROTOCOL's with it. "A shuffled input
+  frame makes the merge fail" is false of a *correct* keyed merge — joining by key is what makes row
+  order irrelevant. The two real properties are order-invariance (reordering must not change the
+  answer silently) and coverage (a row the merge cannot key must raise). All three documents now say
+  that; #10's box does too.
+- **`numpy` cannot be imported under `hydms/` while the lint lane stays conda-free.** mypy resolves
+  it from the machine's 3.13 site-packages, whose `__init__.pyi` uses PEP 695 `type` statements that
+  `python_version = "3.10"` rejects as a *syntax* error — which aborts the whole run, not just that
+  file, and `ignore_missing_imports` does not suppress it. #71 sidestepped it with stdlib `random`
+  for its one seeded shuffle. **The descriptor layer (#16–#20) cannot sidestep it**, so whoever gets
+  there first owns the fix; the constraint is commented in `pyproject.toml` beside the override list.
+  `pandas` needed adding to that list and has been.
 
-Take **#71** next: it closes S1, and it is the difference between removing thirteen leaks and
-*keeping* them removed. Read [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §1 first — the
-thirteen leaks with their exact line numbers in `Machine_Model/src/` are the definition of done for
-S2 through S4, and the two absent from the PRD are the severe ones: `CleanLab.py:90` rewriting
-held-out labels, and the positional `concat` at `merge_datasets.py:46`. The shape of the work is
-`tests/leaks/`, one file per leak, each marked `leak` so `pytest -m leak` selects the gate, plus
-swapping the `Pending` in [../hydms/gates/hg1_leak_sentinels.py](../hydms/gates/hg1_leak_sentinels.py)
-for a real check once the suite exists. Two constraints make this harder than it looks and are worth
-accepting up front. First, **most of the code these sentinels guard has not been written yet** — the
-keyed merge is #10, the canonical key is #87, the honest early stopping is #26 — so a sentinel
-written today must assert against the *contract* the later card will meet, and several will start as
-`xfail` or as tests over a fixture rather than over `hydms`; say which is which in the card, because
-an `xfail` nobody revisits is a leak with a test's name on it. Second, and non-negotiable: **each
-sentinel must be seen red with its leak deliberately reintroduced**, and that demonstration recorded
-in the card's `## Narrative` ([../docs/QA-PROTOCOL.md](../docs/QA-PROTOCOL.md) §1 and §5). A sentinel
-nobody has watched fail is an assumption, not a check — which is exactly the failure mode #5 was
-built to make impossible, and it would be a poor joke to reintroduce it in the card that inherits
-the harness.
+**Corrections carried forward from #5's handoff.** `ruff` and `mypy` run **outside** the `Project`
+environment, deliberately: neither imports the project's dependencies, and #68 established that the
+fast lane installs nothing so it still reports when the environment is broken. #6 is two
+independently-reporting jobs; **#86** carries a matching box.
 
 ---
 

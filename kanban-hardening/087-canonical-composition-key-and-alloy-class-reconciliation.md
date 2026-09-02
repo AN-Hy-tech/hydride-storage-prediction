@@ -40,6 +40,11 @@ AC-6 — and five compositions carry conflicting class labels, so the join needs
 - [ ] The reconciliation is reproducible: the same input gives the same labels
 - [ ] A test asserts that the 16 known cross-split collisions now share one key
 - [ ] Canonicalisation never silently merges two genuinely different materials — asserted on the full dataset
+- [ ] **L13 has no sentinel and this card owes one.** `extract_features_cbfv.py:19-21` drops every
+      object column but `Composition`, destroying `Alloy_class` and with it every hope of
+      leave-one-alloy-class-out validation (AC-6). Once the class is re-joined on the canonical key,
+      add the **L13 sentinel** to `hydms/qa/sentinels.py`: `Alloy_class` survives featurisation for
+      every row. Until it exists, HG-1 cannot report green
 
 ## Runnable check
 

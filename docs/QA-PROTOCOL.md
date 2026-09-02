@@ -25,6 +25,20 @@ A sentinel is the one kind that is written *against* a specific past failure. It
 to go **red** when its defect is reintroduced, and the demonstration recorded in the card's
 `## Narrative`. A sentinel nobody has seen fail is an assumption with a test's name on it.
 
+Since card #71 that demonstration is also **executable**, and the narrative note is no longer the
+only record of it. Every sentinel in `hydms/qa/sentinels.py` carries `Reproduction` pairs — the leak
+in miniature, which must raise, beside the corrected version of the same thing, which must not — and
+gate HG-1 runs all of them. A one-time demonstration decays silently the moment somebody loosens an
+assertion to make a build pass; this one goes red instead, naming the leak. **A new sentinel adds a
+reproduction pair, not just a test**, and the corrected twin must differ from the leaky case only in
+the defect. A clean twin that also changes the shape of the data proves nothing: it passes for the
+wrong reason, and the sentinel is then measuring its fixture rather than its subject.
+
+The second half of a sentinel's life is being pointed at the real thing. Sentinels are written in
+stage S1, against miniatures, because the modules they guard do not exist yet; each names the module
+it expects, and HG-1 turns **red** the moment that module appears with nothing wired to it. That is
+deliberate — it is the only reliable way a guard written six weeks early becomes a guard at all.
+
 ---
 
 ## 2. What each layer must prove
@@ -32,7 +46,7 @@ to go **red** when its defect is reintroduced, and the demonstration recorded in
 | Layer | A card here is not done until it has shown |
 |---|---|
 | **L0 Foundation** | Config resolves with no absolute path. Seeds reproduce. The artifact manifest round-trips. Every gate registered here can **fail**, demonstrated. |
-| **L1 Data** | Row counts at every stage, asserted not assumed. The merge is keyed and a shuffled input makes it fail. No canonical composition spans two splits. Held-out targets are byte-identical before and after any screening stage. |
+| **L1 Data** | Row counts at every stage, asserted not assumed. The merge is keyed: reordering an input never changes the answer *silently*, and a row it cannot key makes it fail. No canonical composition spans two splits. Held-out targets **and feature values** are byte-identical before and after any screening stage. |
 | **L2 Descriptors** | Parity with CBFV to 1e-9 across all 1,279 formulae (AC-2). Permutation and scale invariance. Both element tables are exercised — a single-table result cannot pass. |
 | **L3 Surrogate** | The scaler is fitted exactly once and never refitted downstream. No fold is both tuned on and scored on. The test split is never passed to `fit`. Quantile column order asserted by position. Conformal coverage within a few points of nominal (AC-3). |
 | **L4 Screens** | Every screen returns a verdict **with a reason**; no silent drop. Boundary cases on each window are covered, both sides. |

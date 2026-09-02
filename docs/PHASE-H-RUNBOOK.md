@@ -135,26 +135,48 @@ them** — no `[tool.ruff]`, no `[tool.pytest.ini_options]`, no `[tool.mypy]`, n
       one module each under `hydms/gates/`, all reporting `SKIPPED` until the card that owns each
       one lands. It slots in here rather than in a stage of its own because #71 and every AC gate
       is blocked behind it.
-- [ ] **#71 (HG-1)** Write `tests/leaks/` — one sentinel per leak, each passing **only because the leak
-      is absent**:
+- [x] **#71 (HG-1)** `hydms/qa/` and `tests/leaks/` — one sentinel per leak, each passing **only
+      because the leak is absent**. Ten of the thirteen are written; three are recorded deferrals.
 
-| Leak | Sentinel |
-|---|---|
-| L1, L5 | The CatBoost `eval_set` identity is asserted to be the **validation** split; `use_best_model=True` with an empty or test eval set must raise |
-| L2, L4 | The model-selection record contains no test-split metric; the reported score comes from folds disjoint from the tuning folds |
-| L3 | `y` for val and test is **byte-identical** before and after the CleanLab stage |
-| L6 | Re-running selection with test rows perturbed produces an identical feature set |
-| L7, L8 | No **canonical** composition appears in two splits, and none in two CV folds |
-| L9 | The merge is keyed — a deliberately shuffled input frame must fail the join, not pass silently |
+| Leak | Sentinel | Detector |
+|---|---|---|
+| L1, L5 | The `eval_set` identity is the **validation** split; `use_best_model=True` with an empty or test eval set raises | `assert_early_stopping_is_honest` |
+| L2, L4 | The model-selection record contains no held-out metric; the reported score comes from folds disjoint from the tuning folds | `assert_selection_is_nested` |
+| L3, L10 | `y` **and** `X` for val and test are byte-identical before and after any screening stage | `assert_holdout_unchanged` |
+| L6 | Re-running selection with held-out rows perturbed produces an identical feature set, order included | `assert_selection_ignores_holdout` |
+| L7, L8 | No **canonical** composition appears in two splits, and none in two CV folds | `assert_disjoint_groups` |
+| L9 | Reordering an input never changes the merged result silently, and a row the merge cannot key raises | `assert_merge_is_keyed` |
+| L11, L12, L13 | **Deferred** — each needs a decision its owning card has not made. Boxed on #29, #26, #87 | — |
 
-**Exit check:** `conda run -n Project python -m pytest tests/leaks -q` · `ruff check hydms/` · `mypy hydms/`
+Three things about the design are load-bearing; the reasoning is in #71's `## Narrative`:
+
+- **The detectors live in `hydms/qa/`, not in `tests/`.** They are the guard the pipeline itself is
+  meant to carry, so #10, #13, #14, #24, #26 and #88 each call the same function and the sentinel
+  then tests the real guard rather than a parallel copy of it. Every detector takes row labels, a
+  record of what a fit saw, or a callable — never a fitted model — which is what let all ten be
+  written and proved before any of the code they guard exists.
+- **The red demonstration is executable, not a ritual.** Each sentinel carries `Reproduction` pairs,
+  a leaky case that must raise and a corrected twin that must not, and HG-1 runs every one of them.
+  Weaken a detector and the gate names the leak.
+- **A sentinel whose subject module appears without a `live` hook makes HG-1 red.** That is how a
+  sentinel written against a miniature in S1 becomes a guard in S2–S4 without anyone remembering to
+  wire it. Each owning card carries the box.
+
+**Exit check:** `conda run -n Project python -m pytest tests/leaks -q` · `ruff check hydms/ tests/
+scripts/` · `mypy` · `conda run -n Project python -m hydms.gates run HG-1` — the last **exits 1
+until stage S4 closes**, reporting `0/13 leaks guarded in the pipeline`. Ten reproductions going red
+proves the detectors work; it says nothing about a pipeline that does not exist yet, and the gate
+refuses to let those two claims be confused.
 
 ---
 
 ### S2 — Data layer · #3, #9, #10, #11, #87, #12, #13, #14, #15 · 7 d
 
 **Goal:** the merge is keyed, the split key is chemical, and CleanLab cannot touch held-out labels.
-**Closes:** L3, L8, L9, L13.
+**Closes:** L3, L8, L9, L13 — and **L10 by watchfulness only.** No stage closes L10: it is absent
+because `Ashghal/Outliers_Management.py` is not being ported, which is an accident rather than a
+fix. The day #14 grows outlier handling is the day it can come back, so the L10 sentinel guards
+the same module as L3 (card #71).
 
 ```
 #3 config → #9 loaders → #10 keyed merge (L9) → #11 target transform
@@ -356,7 +378,7 @@ A run writes its results as JSON under the configured artifacts directory, behin
 
 | Gate | Card | Fails when |
 |---|---|---|
-| **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red |
+| **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red: a detector stopped firing, a sentinel's subject module exists with nothing wired to it, or a leak has neither a sentinel nor a recorded deferral. Green only when all thirteen are checked against the real pipeline |
 | **HG-2** No bare numbers | #77 | Any prediction path returns a point estimate without an interval **and** a domain verdict |
 | **HG-3** Transport parity | #79 | The API's answer differs from `predict_capacity()`'s for the same input |
 | **HG-4** Hygiene | #86 | ruff, mypy, or the coverage floor fail on `hydms/` |

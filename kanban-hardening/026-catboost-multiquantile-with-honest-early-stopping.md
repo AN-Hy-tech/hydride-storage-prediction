@@ -37,6 +37,15 @@ interval, not a point. This is what makes LCB ranking possible.
 - [ ] Optuna search space ported from the archived script, selection on validation score only
 - [ ] Training is CPU-only (`MultiQuantile` has no GPU support) and the runtime is recorded for the
       slow lane's budget
+- [ ] The **L1 sentinel** and the **L5 sentinel** (ticket 71) are wired to this module — `live`
+      checks in `hydms/qa/sentinels.py` calling `hydms.qa.assert_early_stopping_is_honest` with the
+      real `eval_set` and scored-row identities, once for the final fit and once per fold. Gate HG-1
+      goes red once `hydms/surrogate/model.py` exists without them
+- [ ] **L12 has no sentinel and this card owes one.** `Catboostmodel.py:516-518` set
+      `weights = np.where(np.expm1(y) > 3, 2.0, 1.0)` — sample weights conditioned on the target,
+      with a hand-tuned threshold. Whatever weighting scheme this card chooses, add the
+      **L12 sentinel** to `hydms/qa/sentinels.py`: weights must be a function of the training rows'
+      own features and of nothing else. Until it exists, HG-1 cannot report green
 
 ## Runnable check
 

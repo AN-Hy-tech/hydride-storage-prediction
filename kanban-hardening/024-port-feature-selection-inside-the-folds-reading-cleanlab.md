@@ -47,6 +47,9 @@ difference.
 - [ ] **Selection runs inside the training folds** of ticket 88 — never once over the whole training set
 - [ ] Val and test are untouched at every stage
 - [ ] Perturbing test rows leaves the selected feature set identical — the L6 sentinel in ticket 71
+- [ ] That **L6 sentinel** is wired to this module — a `live` check in `hydms/qa/sentinels.py`
+      calling `hydms.qa.assert_selection_ignores_holdout` on the real selector. Gate HG-1 goes red
+      once `hydms/surrogate/selection.py` exists without one
 - [ ] Stage-by-stage feature counts logged for the Chapter 1 revision
 - [ ] The card's own description matches the code that exists, not `REPORT.md` 3.3
 

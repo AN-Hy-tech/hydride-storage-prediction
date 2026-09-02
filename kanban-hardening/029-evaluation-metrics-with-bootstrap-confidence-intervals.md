@@ -27,6 +27,12 @@ intervals alongside point estimates by default — not as an option.
 - [ ] Bootstrap confidence intervals (2000 resamples) accompany every point metric
 - [ ] Metrics computed per split and per temperature subgroup
 - [ ] Output is a structured table written to `reports/`, ready for the thesis
+- [ ] SHAP and PDP are computed on train or a dedicated split, **never on test**. Leak L11:
+      `benchmark_model_selection.py:1375,1383,1394` computed both on `X_test`, which makes REPORT §6.1
+      a test-set artefact
+- [ ] **L11 has no sentinel and this card owes one.** Once this card decides what the explainability
+      record looks like, add the **L11 sentinel** to `hydms/qa/sentinels.py`: the record names no
+      held-out split. Until it exists, HG-1 cannot report green
 
 ## Runnable check
 

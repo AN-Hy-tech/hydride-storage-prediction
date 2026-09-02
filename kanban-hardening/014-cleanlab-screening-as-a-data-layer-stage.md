@@ -46,6 +46,13 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
 - [ ] **The stage drops or reweights training rows only** — no label is ever rewritten, on any split
 - [ ] **Validation and test targets are byte-identical before and after this stage** — asserted, and
       covered by the L3 sentinel in ticket 71
+- [ ] Held-out **feature** values are byte-identical too. The recovered `Outliers_Management.py:60-72`
+      clipped val/test features using their own residuals — leak L10, the same defect on the other
+      side of the table. If this stage grows any outlier handling, that is where it comes back
+- [ ] The **L3 sentinel** and the **L10 sentinel** (ticket 71) are wired to this module — `live`
+      checks in `hydms/qa/sentinels.py` calling `hydms.qa.assert_holdout_unchanged` on the real
+      stage, once for `y` and once for `X`. Gate HG-1 goes red once `hydms/data/screening.py` exists
+      without them
 - [ ] Removed rows written to a report with their residuals, not silently dropped
 - [ ] Counts recorded per split for the Chapter 1 revision (37)
 - [ ] Module docstring records the counter-caution: removing real measurements in underrepresented regimes flatters metrics

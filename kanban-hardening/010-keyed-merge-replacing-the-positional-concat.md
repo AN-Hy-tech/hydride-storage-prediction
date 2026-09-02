@@ -28,6 +28,9 @@ This is the highest-severity correctness defect in the audit.
 - [ ] Row count and key-set asserted equal before and after the join
 - [ ] Any unmatched key on either side raises with the keys listed
 - [ ] Regression test feeds a deliberately reordered input and asserts alignment still holds
+- [ ] The **L9 sentinel** (ticket 71) is wired to this module — give it a `live` check in
+      `hydms/qa/sentinels.py` calling `hydms.qa.assert_merge_is_keyed` on the real merge. Gate HG-1
+      goes red the moment `hydms/data/merge.py` exists without one, so this is not optional cleanup
 
 ## Runnable check
 

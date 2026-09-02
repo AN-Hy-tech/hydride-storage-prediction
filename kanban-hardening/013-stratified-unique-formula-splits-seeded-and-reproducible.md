@@ -38,6 +38,9 @@ Documented target: 1279 rows, 1149 raw formulae, 896 / 136 / 247.
 - [ ] Split is stratified on binned target and grouped by **canonical composition**, not raw formula
 - [ ] **No canonical composition appears in more than one split** — asserted, not assumed
 - [ ] The 16 known cross-split collisions are covered by a regression test
+- [ ] The **L8 sentinel** (ticket 71) is wired to this module — a `live` check in
+      `hydms/qa/sentinels.py` calling `hydms.qa.assert_disjoint_groups` on the real splits, keyed on
+      the canonical composition. Gate HG-1 goes red once `hydms/data/splits.py` exists without one
 - [ ] Seed comes from config; same seed reproduces identical splits
 - [ ] Split sizes are close to the documented 896 / 136 / 247 and any difference is explained by the
       35 rows the raw-string key formerly allowed to leak — an exact match is **not** expected, and

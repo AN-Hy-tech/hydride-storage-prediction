@@ -166,10 +166,21 @@ disallow_incomplete_defs = true
 
 # The scientific stack ships incomplete or absent stubs. Silencing the import errors keeps
 # mypy useful on our own code rather than drowning it in third-party noise.
+#
+# NumPy is deliberately NOT in this list, and adding it will not help: it ships real stubs,
+# and they are the problem. mypy runs outside the `Project` environment (docs/QA-PROTOCOL.md
+# §6), so it resolves numpy from the machine's 3.13 site-packages, whose `__init__.pyi` uses
+# PEP 695 `type` statements that `python_version = "3.10"` rejects as a syntax error — which
+# aborts the whole run, not just that file. `ignore_missing_imports` does not suppress a
+# syntax error. The first card that needs numpy inside `hydms/` has to solve that; card #71
+# sidestepped it by using stdlib `random` for its one seeded shuffle.
 [[tool.mypy.overrides]]
 module = [
   "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*",
   "sklearn.*", "scipy.*", "streamlit.*", "shap.*", "boruta.*",
+  # pandas ships no inline types either; pandas-stubs is a separate distribution and the
+  # conda-free lint lane installs nothing (card #68).
+  "pandas",
   # PyYAML ships no inline types. types-PyYAML is in the dev extra and takes precedence
   # when installed; this keeps mypy runnable on a bare CI interpreter when it is not.
   "yaml",
