@@ -130,6 +130,52 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
+### Handoff — 2026-09-03 (later) · #6 and #16 landed · written for #17
+
+**Where the phase is.** Seventeen cards done. Two landed since the handoff below, and both were
+worth more than their card text promised.
+
+**#6, the CI fast lane.** `.github/workflows/ci.yml`, two independently-reporting jobs, green in
+32 s + 56 s. `integrity.yml` is absorbed into it and deleted. Three things to know:
+
+- **CI now runs on every push to every branch.** The old workflow filtered `push: branches: [main]`,
+  so the freeze check and the board check had not run once across the eight Phase H commits on this
+  branch. If you push, you will get a result.
+- **The `suite` job is not the `Project` environment and cannot be.** `environment.lock.yml` is
+  win-64 by construction, so a Linux runner cannot restore it; the job runs
+  `pip install -e ".[dev]"` instead. The consequence is #7's: nothing in CI proves the lockfile
+  still recreates, and only `windows-latest` ever could.
+- **`ruff` and `mypy` are pinned exactly** (`0.8.4`, `1.13.0`) to the machine lane's versions. Not
+  caution — a floor resolved newer on the first run and raised RUF100 on a `# noqa` the older ruff
+  requires, which makes the two versions mutually unsatisfiable. Bumping them is a deliberate commit.
+
+**#16, the element property tables.** `hydms/descriptors/element_data.py` over two committed CSVs
+built from their publishers by `scripts/build_element_tables.py`; `data/SOURCES.md` is the record.
+**The numpy wall is down** — the mypy override is applied with its cost stated in `pyproject.toml`,
+and numpy may now be imported under `hydms/`. Read `SOURCES.md` before #17; four findings change
+what the rest of S3 is:
+
+| Finding | Who inherits it |
+|---|---|
+| CBFV's `jarvis.csv` **is** NIST's `Elements.json` (7.3e-12), and the five composites are per-element **columns** — so **R3 is settled**, statistic-of-composite by construction | **#18** inherits the answer, not the question; its budgeted slack is free |
+| The Oliynyk table was **revised for 2024** — 8 of 13 needed properties disagree with CBFV, up to 10.0 | **#21**: AC-2 means "reproduces CBFV *given the same table*", supplied from `tests/descriptors/data/` |
+| `gordy_en` is blank for **21 of the 55** elements (nearly the rare earths); europium's JARVIS properties are `-9999` | **#19** must record computability per *composition*; #24/#25 may have to re-run selection |
+| CBFV answers for `Eu1Ni5` anyway, substituting an all-zero property vector — row 516 of the published matrix is that row | **#89**, as a data-integrity disagreement |
+
+**The tree is green:** 411 tests, ruff and mypy clean, both CI jobs green, `audit()` still reports
+4 of 13 leaks guarded (no sentinel changed hands — `element_data.py` is not a subject any sentinel
+names; L13 still waits on `hydms.descriptors.featurize`, which is #20).
+
+#### The opening move
+
+**#17, weighted composition statistics.** It is the only S3 card whose blockers are all done. It
+takes property vectors from `element_data.PropertyTable.vector()` and must reproduce CBFV's `avg`,
+`dev` and `range` — and note that `dev` is CBFV's own definition, not a standard deviation, so
+measure it against CBFV rather than assuming. #19 (the feature contract) is also unblocked and can
+run beside it.
+
+---
+
 ### Handoff — 2026-09-03 · S2 closed as far as it can close · written for S3
 
 **Where the phase is.** S0, S1 and **S2** are done with S2 as far as the data layer can go alone.
