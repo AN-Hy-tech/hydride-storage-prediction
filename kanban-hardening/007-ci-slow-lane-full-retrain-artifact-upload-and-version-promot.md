@@ -30,6 +30,20 @@ one-line change, not a retrain.
 - [ ] `hydms.gates run --all` decides promotion to `current`
 - [ ] A failed gate leaves the previous version as `current` and marks the run failed
 
+- [ ] **This lane must run on `windows-latest`, and it is now the only lane that rebuilds the
+      pinned environment.** #6 measured that `environment.lock.yml` cannot be restored on Linux:
+      it pins conda build strings and is win-64 by construction — `vc`, `vs2015_runtime`, four
+      `m2w64-*`, `ucrt`, `win_inet_pton`, 85 Windows build strings across 253 lines — and
+      `requirements-lock.txt` carries `pywin32==308`. `docs/ENVIRONMENT.md` already said the
+      solve fails on a different OS; the fast lane therefore installs from `pyproject.toml`
+      instead and never touches the lockfile. The consequence lands here: **nothing in CI
+      currently proves `Project` still recreates.** A lockfile that has quietly stopped working
+      would not be discovered until someone needed it, which is precisely when it is most
+      expensive. Budget for it — `windows-latest` bills at 2× minutes on a private repository,
+      the environment is 8.2 GB against a 10 GB per-repository cache budget, and
+      `docs/ENVIRONMENT.md` puts a cold rebuild appreciably over its warm 7 minutes. A weekly
+      schedule is the right cadence for that cost; a per-push one is not
+
 ## Runnable check
 
 ```bash

@@ -1,0 +1,111 @@
+# The fast lane — what runs on every push.
+#
+# Two jobs, and the split is the point (card #6). Lint and type checks need none of the
+# project's dependencies — mypy reads `pyproject.toml` and the scientific stack is stubbed out
+# by its `ignore_missing_imports` overrides — so `hygiene` builds no environment and reports in
+# under a minute even when the environment is broken, unpinned or absent. Card #68 established
+# that principle and `docs/QA-PROTOCOL.md` §6 states it. Only `suite` pays for an environment,
+# and only because the test suite imports the scientific stack. The two report independently:
+# a failed install in one must not be able to hide a failure in the other.
+#
+# This workflow absorbs the former `integrity.yml`. Its two stdlib-only checks are now the
+# first two steps of `hygiene` — a separate workflow meant a second checkout and a second queue
+# wait for a fifteen-second answer, and card #6's job table names them here.
+#
+# `suite` does NOT rebuild the pinned `Project` environment, and on this runner it cannot.
+# `environment.lock.yml` pins conda build strings and is win-64 by construction (`vc`,
+# `vs2015_runtime`, `m2w64`, `ucrt`, and 85 Windows build strings), and `requirements-lock.txt`
+# carries `pywin32`; `docs/ENVIRONMENT.md` says so outright — "on a different OS the solve will
+# fail". Rebuilding it needs a `windows-latest` runner, which bills at 2× on a private
+# repository, for an 8.2 GB environment against a 10 GB per-repository cache budget. The pinned
+# environment exists to reproduce the *published numbers*, and reproducing those is the slow
+# lane's job (card #7), which retrains. This lane runs unit tests and the gates answerable
+# without a retrain, so it installs what `pyproject.toml` declares. Card #6's narrative records
+# the measurement and what it costs.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# A superseded push has nothing useful left to say; cancel it and keep the queue short.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hygiene:
+    name: Hygiene — board, freeze, ruff, mypy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # A branch in this repository is already covered by its own push event, so the
+    # pull_request event would only duplicate it. Forks are the case that needs it: their
+    # pushes never reach this repository.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # check_freeze.py diffs against the base ref; a shallow clone cannot resolve it.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Both checks are stdlib-only by design and run before any install, so a broken pip
+      # cannot hide a freeze violation.
+      - name: Check board and prose integrity
+        run: python scripts/check_board.py --root .
+
+      - name: Check the Phase H implementation freeze
+        run: python scripts/check_freeze.py --base "origin/${{ github.base_ref || github.event.repository.default_branch }}"
+
+      # Floors taken from pyproject.toml's `dev` extra. types-PyYAML is deliberately not
+      # installed: the `yaml` entry in [tool.mypy]'s overrides exists precisely to keep mypy
+      # runnable on a bare interpreter, and installing the stubs here would mean CI and the
+      # local lane were checking different things.
+      - name: Install the lint tools
+        run: python -m pip install --disable-pip-version-check "ruff>=0.6" "mypy>=1.10"
+
+      - name: ruff
+        run: ruff check hydms/ tests/ scripts/
+
+      - name: mypy
+        run: mypy
+
+  suite:
+    name: Suite — pytest and the fast gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # 3.10 is the pinned interpreter (docs/ENVIRONMENT.md); pyproject requires <3.13
+          # because 3.13 forces NumPy 2.x.
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # The `parity` extra is deliberately absent: CBFV carries no licence and must never be
+      # installed as a dependency of a GPL-3.0 deliverable. The tests that diff against it use
+      # importorskip and therefore skip here; card #21 owns proving parity, in an environment
+      # that has it.
+      - name: Install hydms and its test dependencies
+        run: python -m pip install --disable-pip-version-check -e ".[dev]"
+
+      - name: pytest
+        run: python -m pytest
+
+      # Exits 1 on FAILED or ERRORED. A *lane* run does not fail on SKIPPED — an unimplemented
+      # gate would otherwise hold CI red for the length of the phase and be ignored. The
+      # asymmetry between a lane and a named gate is documented on `GateReport.ok` (card #5).
+      - name: Gates — fast lane
+        run: python -m hydms.gates run --fast

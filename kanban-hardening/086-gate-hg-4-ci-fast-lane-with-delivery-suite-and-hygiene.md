@@ -32,11 +32,25 @@ takes minutes and around eight gigabytes to construct.
 - [ ] `pytest-cov` is available wherever the floor is enforced. It is declared in the `dev`
       extra and installed nowhere: neither it nor `coverage` is in `Project` today, so
       `pytest --cov` fails outright and the floor in `pyproject.toml` is currently
-      unenforceable. Decide where it gets installed rather than inheriting the gap
+      unenforceable. Decide where it gets installed rather than inheriting the gap.
+      **#6 changed the shape of this decision.** The `suite` job is not the `Project`
+      environment — the lockfile is win-64 only and cannot be restored on a Linux runner — so it
+      runs `pip install -e ".[dev]"`, and the `dev` extra already carries `pytest-cov>=5.0`.
+      Coverage is therefore installable in CI *without touching either lockfile*, which was the
+      whole reason the decision was deferred. What is left to decide is only whether the floor
+      is enforced in CI alone or locally too, and locally still means adding a package to
+      `Project`. The `openpyxl` question below is no longer the same decision and should be
+      made on its own merits
 - [ ] It runs the gates that do not require a retrain, against the published artifact
 - [ ] It stays comfortably under the existing timeout
 - [ ] The conda rebuild remains in the slow lane
-- [ ] A failure names which gate failed, not merely that something did
+- [ ] A failure names which gate failed, not merely that something did. **`hydms.gates.__main__`
+      already has `summarise(report)`, written for exactly this** — its docstring says "one line
+      for a CI step summary or a commit comment" — and nothing calls it. #6 left it uncalled
+      because writing it into `$GITHUB_STEP_SUMMARY` needs a `GateReport` object, and the CLI
+      hands CI only an exit code and `artifacts/gate-results.json`. Either give the CLI a flag
+      that writes the summary itself, or this line stays a test-only function pretending to
+      serve CI
 - [ ] **Decide whether `openpyxl` is added, or the HyStor spreadsheet stays unread.** Card #9 left
       `Machine_Model/data/raw/HyStor_27_7_24 (1).xlsx` without a loader because reading it needs
       `openpyxl`, which is in neither `environment.lock.yml` nor the machine interpreter, and adding

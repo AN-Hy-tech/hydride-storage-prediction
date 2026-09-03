@@ -90,7 +90,8 @@ S2 and S3 are the only parallelism worth taking. Everything else is a chain.
 - [x] Write [../scripts/check_freeze.py](../scripts/check_freeze.py) — the diff half of the freeze.
 - [x] Write [../kanban-hardening/README.md](../kanban-hardening/README.md) — the board charter.
 - [x] Create cards #69–#89; amend #12, #13, #14, #24, #26.
-- [x] Wire the freeze check into [../.github/workflows/integrity.yml](../.github/workflows/integrity.yml).
+- [x] Wire the freeze check into `integrity.yml` — since absorbed, with `check_board.py`, into
+      the `hygiene` job of [../.github/workflows/ci.yml](../.github/workflows/ci.yml) by card #6.
 - [x] Repoint [../CLAUDE.md](../CLAUDE.md) and mark [../kanban/README.md](../kanban/README.md) frozen.
 
 **Exit check**
