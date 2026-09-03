@@ -56,6 +56,15 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
 - [ ] Removed rows written to a report with their residuals, not silently dropped
 - [ ] Counts recorded per split for the Chapter 1 revision (37)
 - [ ] Module docstring records the counter-caution: removing real measurements in underrepresented regimes flatters metrics
+- [ ] **Decide what happens to the one byte-identical duplicate row.** `hydride_data.csv` rows 687
+      and 694 are identical across all six columns — `La0.9Ce0.1Ni5`, AB5, Extracted, 1.40 wt%,
+      373 K, same citation URL. One measurement recorded twice. This stage is the only one entitled
+      to drop a row, so the decision is yours: drop it, or keep it and say why. It is *not* one of
+      the six genuine replicates — those are seven `(Composition, temperature(K))` pairs in total,
+      six of which carry different targets from different citations and belong in the data (measured
+      by #10, which refuses to key on that pair for exactly this reason). Left in, it is one
+      material contributing twice to whichever split it lands in; under #87's canonical key both
+      copies land in the same split, so this is a weighting question, not a leak
 
 ## Runnable check
 
@@ -75,3 +84,9 @@ python -m pytest tests/data/test_clean.py -q
   labels with the model's own predictions (leak L3) — worse than any leak the PRD names, and inert only
   because its output is an orphan. This ticket was the one that would have connected it. Scope is now
   explicitly drop-or-reweight, training rows only (by @assistant)
+
+- 2026-09-03: Box added by #10. Rows 687 and 694 of `hydride_data.csv` are byte-identical across
+  all six columns — one `La0.9Ce0.1Ni5` measurement at 373 K recorded twice, same citation. Found
+  while measuring whether `(Composition, temperature(K))` could serve as the merge key; it cannot,
+  and six of the seven repeats on that key are genuine replicates. This one is not, and this stage
+  is the only one entitled to drop a row. (by @assistant)

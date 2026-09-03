@@ -172,3 +172,46 @@ def test_a_merge_that_cannot_run_at_all_is_a_caller_error(
 
     with pytest.raises(ValueError, match="raised on its own unmodified inputs"):
         assert_merge_is_keyed(broken, frames)
+
+
+# --------------------------------------------------------------------------------------
+# The live wiring -- card #10
+# --------------------------------------------------------------------------------------
+
+
+def test_l9_is_green_against_the_real_merge() -> None:
+    """`hydms/data/merge.py` exists, and the sentinel is pointed at it rather than at the
+    miniature above. Until card #10 wired it, this leak sat in the `unwired` state and HG-1
+    was red -- which is the mechanism, not a bug (card #71)."""
+    from hydms.qa import audit
+
+    row = next(entry for entry in audit() if entry.leak == "L9")
+    assert row.status == "green", row.detail
+    assert "hydms.data.merge" in row.detail
+
+
+def test_l9_goes_red_when_the_real_merge_stops_keying(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Seen red, and against the real subject rather than a copy of it.
+
+    The live hook imports `merge_features` at call time, so replacing it here is enough to
+    prove the sentinel is watching the actual function the pipeline calls. Put the archival
+    positional concat back and the audit must report L9 broken.
+    """
+    from hydms.qa import audit
+    from hydms.qa.sentinels import for_leak
+
+    def archival(spine: Any, blocks: Any) -> Any:
+        frames = [spine.reset_index(drop=True)]
+        frames += [block.frame.reset_index(drop=True) for block in blocks]
+        return pd.concat(frames, axis=1)
+
+    monkeypatch.setattr("hydms.data.merge.merge_features", archival)
+
+    live = for_leak("L9").live
+    assert live is not None
+    with pytest.raises(LeakDetected):
+        live()
+
+    row = next(entry for entry in audit() if entry.leak == "L9")
+    assert row.status == "broken"
+    assert "hydms.data.merge has leak L9" in row.detail

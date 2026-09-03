@@ -29,6 +29,14 @@ aliases. Pin it before anyone writes code against the wrong interpreter.
 - [x] **`requirements-lock.txt` holds the 208 pip packages** — added to this card, see Narrative
 - [x] `docs/ENVIRONMENT.md` states which interpreter to use and why 3.13 is excluded
 - [x] A fresh rebuild from the lock files imports CBFV, catboost and sklearn without error
+- [ ] **The rebuild no longer reaches stage 1 on this machine.** Run 2026-09-03 while working #10:
+      `python scripts/verify_environment.py` fails after 26 s with
+      `UnavailableInvalidChannel: HTTP 403 FORBIDDEN for channel pkgs/main`. That is Anaconda's
+      `defaults` channel refusing the request, not a defect in the solve — but the lock lists
+      `defaults` alongside `conda-forge`, so the rebuild claim above depends on a channel this
+      machine cannot currently reach. Either re-verify from a host that can, or re-solve the lock
+      against `conda-forge` with `nodefaults` so the guarantee is one the project can actually
+      re-run. Until then the box above is history, not a check anybody can repeat (found by #10)
 
 ## Runnable check
 
@@ -80,3 +88,9 @@ file — deliberately not in CI, where it belongs to the slow lane at best.
   to be tidy. The narrow runtime dependency set belongs in card #2's `pyproject.toml`, and once
   the pipeline runs from that and reproduces the metrics, this becomes the historical record
   rather than the working environment. (by @assistant)
+
+- 2026-09-03: Reopened box, not reopened card. `scripts/verify_environment.py` was run as part of
+  #10's document pass — the runbook's section 5 lists it — and it now fails at stage 1 with an
+  HTTP 403 from `repo.anaconda.com/pkgs/main`. Nothing in the repository changed; the channel did.
+  Recorded here rather than fixed in passing because re-solving a lock file is this card's work and
+  invalidates `environment.lock.yml`, which several other cards depend on. (by @assistant)

@@ -58,6 +58,16 @@ AC-6 — and five compositions carry conflicting class labels, so the join needs
       leave-one-alloy-class-out validation (AC-6). Once the class is re-joined on the canonical key,
       add the **L13 sentinel** to `hydms/qa/sentinels.py`: `Alloy_class` survives featurisation for
       every row. Until it exists, HG-1 cannot report green
+- [ ] **Recount the `(key, temperature)` collisions after canonicalisation, and confirm the class
+      conflicts are the same five.** Two numbers measured by #10 on the **raw string** move when the
+      key changes, and both matter downstream. First: 1279 rows carry 1272 distinct
+      `(Composition, temperature(K))` pairs — seven repeats, six of them genuine replicates from
+      different citations. Canonicalisation merges strings, so that count can only fall, and the new
+      repeats are what #13's splits and #88's folds see as one material measured twice. Second: five
+      *raw formula strings* already carry more than one `Alloy_class`, which is the same count this
+      card states for canonical compositions. Either canonicalisation adds no new conflict — worth
+      asserting rather than assuming — or the two fives are different sets and the reconciliation
+      rule has more work to do than the box above implies
 
 ## Runnable check
 
@@ -74,3 +84,10 @@ conda run -n Project python -m pytest tests/data/test_canonical.py -q
 - 2026-09-02: Created for Phase H after the audit quantified the collision: 1,149 raw strings
   collapse to 1,115 normalised compositions, and 16 of them (35 rows) span two splits. Also blocks
   AC-6, because `Alloy_class` has to exist before it can be held out (by @assistant)
+
+- 2026-09-03: Box added by #10. Two counts measured on the raw formula string that move, or need
+  confirming, once the canonical key exists: 1272 distinct `(Composition, temperature(K))` pairs
+  over 1279 rows, and **five** raw strings already carrying more than one `Alloy_class` — the same
+  number this card states for canonical compositions. Canonicalisation can only merge, so the
+  class-conflict count can only rise; that the two numbers match is either a fact worth asserting
+  or a coincidence hiding a larger reconciliation. (by @assistant)

@@ -164,9 +164,10 @@ Three things about the design are load-bearing; the reasoning is in #71's `## Na
 
 **Exit check:** `conda run -n Project python -m pytest tests/leaks -q` · `ruff check hydms/ tests/
 scripts/` · `mypy` · `conda run -n Project python -m hydms.gates run HG-1` — the last **exits 1
-until stage S4 closes**, reporting `0/13 leaks guarded in the pipeline`. Ten reproductions going red
-proves the detectors work; it says nothing about a pipeline that does not exist yet, and the gate
-refuses to let those two claims be confused.
+until stage S4 closes**, reporting `N/13 leaks guarded in the pipeline` where N is however many
+subjects have been built and wired so far (#10 made it 1; ask the gate rather than this line). Ten
+reproductions going red proves the detectors work; it says nothing about a pipeline that does not
+exist yet, and the gate refuses to let those two claims be confused.
 
 ---
 
@@ -192,7 +193,15 @@ the same module as L3 (card #71).
       `Mg-1`. An unknown element is then dropped into the unread `skipped` list; an empty
       composition kills `generate_features` with `zero-size array to reduction operation maximum`.
       So the loader parses and rejects at the door, at parity with CBFV on all 1279 + 772 formulae.
-- [ ] **#10** Replace the positional `concat` with a keyed merge; assert the join covers every row.
+- [x] **#10** Replace the positional `concat` with a keyed merge; assert the join covers every row.
+      **The key this line implies is not a row identity.** The card said "formula, and temperature
+      where the row is a measurement"; measured, 1279 rows carry only **1272** distinct
+      `(Composition, temperature(K))` pairs, six of the seven repeats being independent replicates
+      from different citations. So the spine's *index label* is the row identity, feature blocks are
+      per-composition (1149 rows) and looked up from it, and a repeated block key is refused — that
+      key, used row-wise, would have inflated the table to **1293** rows in silence. `merge_features`
+      also refuses a column name arriving twice, which is `merge_datasets.py:49`, one line below the
+      leak and the same defect in a different disguise.
 - [ ] **#87** `hydms/data/canonical.py` — normalise element fractions to a stable key; use it as the
       split key **and** the CV group key; re-join `Alloy_class` on it; reconcile the **5 compositions
       carrying conflicting class labels**.
@@ -407,6 +416,11 @@ A run writes its results as JSON under the configured artifacts directory, behin
 # Board and freeze integrity (stdlib only, no environment needed)
 python scripts/check_board.py --root .
 python scripts/check_freeze.py --base origin/main
+
+# NOT one of the cheap checks: this rebuilds a throwaway conda env from both lock files,
+# roughly 8 GB and 15-20 minutes. Run it by hand after touching an environment file, never
+# in a routine pass. As of 2026-09-03 it fails at stage 1 on this machine with an HTTP 403
+# from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
 # Suite

@@ -30,6 +30,7 @@ from __future__ import annotations
 import importlib.util
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 from .detectors import (
@@ -463,6 +464,54 @@ def _l9_keyed_merge() -> None:
     assert_merge_is_keyed(_keyed_join, _merge_inputs())
 
 
+@lru_cache(maxsize=1)
+def _l9_real_frames() -> tuple[Any, ...]:
+    """The real spine and two real per-composition blocks, read once.
+
+    The spine is ``hydride_data.csv`` through card #9's loader -- 1279 measurement rows over
+    1149 distinct formula strings -- and the blocks are one row per distinct formula, which
+    is the shape every descriptor block has (PRD section 2.3: every selected feature is a
+    composition statistic or the temperature). So the live check exercises the one-to-many
+    join the pipeline actually performs, on the data it actually performs it on, rather than
+    a four-row miniature.
+
+    The two columns are derived from :func:`~hydms.data.load.parse_formula` because they must
+    come from somewhere real and the descriptor layer (cards #16-#20) does not exist yet.
+    They are stand-ins for its output, not a claim about which descriptors it will produce.
+    """
+    pd = _pandas()
+    from hydms.data.load import load_hydride_data, parse_formula
+
+    spine = load_hydride_data()
+    formulae = list(dict.fromkeys(spine["Composition"]))
+    parsed = [parse_formula(formula) for formula in formulae]
+    index = pd.Index(formulae, name="Composition")
+    return (
+        spine,
+        pd.DataFrame({"n_elements": [float(len(c)) for c in parsed]}, index=index),
+        pd.DataFrame({"total_amount": [sum(c.values()) for c in parsed]}, index=index),
+    )
+
+
+def _l9_real_merge(frames: Sequence[Any]) -> Any:
+    """Call the real :func:`hydms.data.merge.merge_features` the way the pipeline will."""
+    from hydms.data.merge import FeatureBlock, merge_features
+
+    spine, *blocks = frames
+    return merge_features(
+        spine,
+        [
+            FeatureBlock(name=f"descriptor block {position}", frame=frame, key=("Composition",))
+            for position, frame in enumerate(blocks)
+        ],
+    )
+
+
+def _l9_live() -> None:
+    """Card #10's merge, against the real dataset. The wiring the `unwired` state demands."""
+    assert_merge_is_keyed(_l9_real_merge, _l9_real_frames())
+
+
 # --------------------------------------------------------------------------------------
 # The registry
 # --------------------------------------------------------------------------------------
@@ -590,6 +639,7 @@ SENTINELS: tuple[Sentinel, ...] = (
         reproductions=(
             Reproduction("positional concat", _l9_positional_merge, _l9_keyed_merge),
         ),
+        live=_l9_live,
     ),
     Sentinel(
         leak="L10",
