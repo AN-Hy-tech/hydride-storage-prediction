@@ -49,6 +49,16 @@ Formula parsing via `pymatgen.core.Composition` (MIT, already a dependency).
       moment the module exists the audit reports `L13 [unwired] #12`. That is the mechanism working;
       coordinate with #12 rather than deleting the sentinel
 
+- [ ] **Two obligations the contract hands this card (from #19).** First, `temperature(K)`
+      is `int64` in the raw file and `float64` in the contract, so this function owes the cast —
+      `assert_contract` refuses the integer column by name, and a candidate at 313.5 K would
+      otherwise truncate to 313 in silence. Second, call
+      `hydms.descriptors.contract.CONTRACT.computability(composition)` *before* building a row:
+      seven of the 22 are not computable for every composition, and a featuriser that emits NaN
+      instead of refusing is one median-fill away from a number that looks like a measurement.
+      The verdict names the blocking element and distinguishes a missing element from an empty
+      published cell, which is what the index-reporting box above needs
+
 ## Runnable check
 
 ```bash

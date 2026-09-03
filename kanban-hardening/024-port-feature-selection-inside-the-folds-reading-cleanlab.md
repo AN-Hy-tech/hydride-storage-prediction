@@ -53,6 +53,18 @@ difference.
 - [ ] Stage-by-stage feature counts logged for the Chapter 1 revision
 - [ ] The card's own description matches the code that exists, not `REPORT.md` 3.3
 
+- [ ] **Selection now has a cost to weigh that the old run never faced (from #19).**
+      `dev_Gordy_electonegativity` is not computable from the citable Oliynyk table for
+      **266 of 1,279 rows / 236 of 1,115 compositions** (21 elements have no `gordy_en`), and
+      the six JARVIS features are not computable for the single europium row `Eu1Ni5`. CBFV's
+      own table has neither hole, so the published run selected `dev_Gordy_electonegativity`
+      without ever meeting this. Two options, and this card measures rather than guesses:
+      carry the feature and drop 266 rows from any fold that needs it, or drop the feature and
+      keep every row. The loss is concentrated — AB5 91/196 (46.4%) and MIC 54/127 (42.5%),
+      against AB2 34/371 (9.2%) and LEA 0/26 — so dropping the rows is not neutral with respect
+      to AC-6's leave-one-class-out folds. `hydms.descriptors.contract.CONTRACT.computability()`
+      answers per composition; call it rather than re-deriving the element lists
+
 ## Runnable check
 
 ```bash

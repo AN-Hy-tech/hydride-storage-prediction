@@ -28,6 +28,14 @@ finding, and the comparison table is the evidence either way.
 - [ ] The feature contract (19) regenerated from the result
 - [ ] No re-running until a better set appears — the first result stands
 
+- [ ] **Regenerate the contract, never hand-edit it (from #19).**
+      `FeatureContract.from_names(selected)` rebuilds names, order, table attribution and
+      dtypes from the selected names alone — verified injective over both tables (5 statistics
+      × 537 properties = 2,685 names, all distinct; no property name is shared between the
+      tables). The old-22-vs-new-N comparison must also report **computability**, not only
+      importance: the old 22 contain one feature that costs 266 of 1,279 rows and six that cost
+      one row, and a new set that avoids them is better on an axis SHAP does not measure
+
 ## Runnable check
 
 ```bash

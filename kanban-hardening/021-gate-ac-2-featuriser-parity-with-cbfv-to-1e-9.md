@@ -65,6 +65,18 @@ would be trained on subtly different features than `REPORT.md` describes.
       raises. A refusal and a number are not comparable, so `Eu1Ni5` must be excluded from the
       parity set **explicitly and with the reason recorded**, not filtered out quietly
 
+- [ ] **This gate also cannot see the seven features that are not computable everywhere
+      (from #19).** CBFV's copy of the Oliynyk table supplies `gordy_en` for **all twenty-one**
+      elements the citable 2024 revision leaves blank — Ce 4.5734, Hf 6.3704, Pr 4.6395, and the
+      rest — so the reference table this gate is required to use has no hole in it at all. The
+      shipped featuriser, reading the citable table, cannot produce `dev_Gordy_electonegativity`
+      for **266 of 1,279 rows**, and cannot produce any of the six JARVIS features for `Eu1Ni5`.
+      This gate will be green throughout. It is the second defect AC-2 structurally cannot
+      detect, after the wrong-axis reduction above, and for the same reason both times: the gate
+      measures agreement with CBFV on the rows and columns CBFV can answer. Say so in the gate's
+      own output — a line naming how many rows the shipped tables could *not* have featurised —
+      so a green AC-2 is never read as "the featuriser can produce all 22 for every row"
+
 ## Runnable check
 
 ```bash

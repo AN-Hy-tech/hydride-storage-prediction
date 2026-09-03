@@ -130,7 +130,75 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-03 (latest) · #17 landed · written for #19, then #18
+### Handoff — 2026-09-04 (latest) · #19 landed · written for #18, then #20
+
+**Where the phase is.** Nineteen cards done. The tree is green: **481 tests**, ruff 0.8.4 and
+mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, `gates run --fast` exit 0,
+`audit()` unchanged at **4 of 13** — `hydms/descriptors/contract.py` is no sentinel's subject
+either, and L13 still waits on `hydms.descriptors.featurize`, which is #20.
+
+**#19, the 22-feature contract.** `hydms/descriptors/contract.py`: `CONTRACT` over 22
+`FeatureSpec`s carrying `(name, statistic, table, property)`, `assert_contract(df)`,
+`FeatureContract.from_names()` for #25's regeneration, `as_manifest()`/`from_manifest()` for
+#4, and `computability(composition)` — the verdict the card existed to deliver. 42 tests.
+The card told you to record computability per composition; measuring it first corrected
+**three** of its own claims:
+
+- **"Two of the 22" is seven.** The card folded the six JARVIS features into one because
+  they all fail on the same element. As columns they are six, and a caller asking "can I
+  build this matrix?" needs six answers. `dev_Gordy_electonegativity` is uncomputable on
+  **266 of 1,279 rows / 236 of 1,115 compositions**; each JARVIS feature on `Eu1Ni5` alone.
+- **The Gordy hole belongs to the citable edition, not to CBFV — so AC-2 cannot see it.**
+  CBFV's copy of the Oliynyk table supplies `gordy_en` for **all twenty-one** elements the
+  2024 revision leaves blank (Ce 4.5734, Hf 6.3704, Pr 4.6395, …). #16 made CBFV's table
+  AC-2's reference input by necessity, so the gate will be green throughout while the
+  shipped featuriser cannot build that column for 266 rows. That is the **second** defect
+  AC-2 structurally cannot detect, after #17's wrong-axis reduction, and for the same
+  reason both times. Boxed on **#21**; the trade — carry the feature and lose 266 rows, or
+  drop the feature and keep them — boxed on **#24** and **#25** with the numbers.
+- **The loss falls on AB5 and MIC, not on "AB5 and AB2".** Rows losing at least one feature:
+  AB5 91/196 (46.4%), MIC 54/127 (42.5%), HEA 26.0%, AB 24.4%, SS 18.4%, MEA 11.0%,
+  A2B 9.4%, **AB2 34/371 (9.2%)**, Mg 7.4%, LEA 0/26. The card's sentence was a physical
+  intuition about where rare earths live; the Laves phases are barely touched.
+
+**Two things the card did not ask about and the next cards need.**
+
+- **The training column order was never persisted.** I went looking for `selected_train.csv`
+  to pin it and found `Machine_Model/data/processed_data/` is not in the repository at all,
+  and that all three committed listings of the 22 are sorted by three different keys —
+  `feature_selection_report.csv` by SHAP, `feature_importance.csv` alphabetically,
+  `feature_target_pearson_corr.csv` by correlation. There is no history to be faithful to,
+  so the contract *declares* REPORT.md §3.2's SHAP order and the test asserts it against
+  that CSV. AC-4 is protected by there being one declaration, not by matching the past.
+- **`temperature(K)` is `int64` in the raw file and `float64` in the contract.** Every column
+  is `float64`; the cast is #20's, and `assert_contract` refuses the integer column by name.
+  Not tidiness: a candidate at 313.5 K truncates to 313 in an integer column, silently.
+
+**One thing that was confirmed rather than corrected.** The naming rule — a feature is
+`f"{statistic}_{property}"`, with a 13-entry alias map for CBFV's Oliynyk spellings, the
+JARVIS half needing none because CBFV's `jarvis.csv` *is* NIST's file — is provably
+regenerable: **2,685 names over 5 statistics × 537 properties, all distinct**, and the two
+tables share **no** property name. `from_names(CONTRACT.names) == CONTRACT` is a test, and
+it is the path #25 takes.
+
+#### The opening move
+
+**#18, the composites.** Now the only unblocked S3 card, and still smaller than it looks:
+#16 settled R3 (the composites are per-element **columns** of the JARVIS table, so the form
+is statistic-of-composite by construction) and #19 has already resolved and tested every one
+of the five against `hydms.descriptors.element_data` — `polzbl_divi_atom_mass`,
+`atom_mass_mult_therm_cond`, `bp_divi_atom_mass`, `first_ion_en_mult_X`,
+`voro_coord_divi_mol_vol`. What is left is reproducing the statistic over the column and
+pinning each against a hand-computed value. It chooses nothing.
+
+**Then #20**, which unblocks the rest of the layer and carries two obligations from this
+card (the `int64` → `float64` cast, and calling `computability()` before building a row) plus
+the L13 sentinel going red the moment `featurize.py` exists. That is planned; #12 owes the
+hook.
+
+---
+
+### Handoff — 2026-09-03 (earlier still) · #17 landed · written for #19, then #18
 
 **Where the phase is.** Eighteen cards done. The tree is green: **439 tests**, ruff 0.8.4 and
 mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, `gates run --fast` exit 0,

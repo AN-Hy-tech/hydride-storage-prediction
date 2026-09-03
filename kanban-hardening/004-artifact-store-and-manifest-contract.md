@@ -29,6 +29,14 @@ promoted to by passing gates, and later phases pin the version they consume.
 - [ ] `hydms.artifacts.save(...)` / `.load(version)` are the only ways in and out
 - [ ] Loading a version whose gate results are incomplete raises rather than returning a model
 
+- [ ] **The feature contract's manifest payload already exists; embedding it is this card's
+      (from #19).** `hydms.descriptors.contract.FeatureContract.as_manifest()` returns JSON-safe
+      data — one entry per feature with its statistic, table, property and dtype, plus a
+      SHA-256 digest over the names, their order and their dtype — and `from_manifest()` refuses
+      a payload whose digest no longer matches. Store it under the model's manifest so a stored
+      model records what it expects; a model fed a matrix built to a different contract returns
+      plausible, wrong numbers, which is what AC-4 exists to catch
+
 ## Runnable check
 
 ```bash

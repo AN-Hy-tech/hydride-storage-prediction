@@ -327,9 +327,24 @@ could mean anything. See below.
       no table header" was wrong — each equal to the arithmetic of its parts to 1e-9. A composite is a
       property of an element, so the form is **statistic-of-composite** by construction. #18
       reproduces the statistic and no longer chooses the form; the slack budgeted here is free.
-- [ ] **#19** The 22-feature contract. Must now record computability *per composition*, not only per
-      feature: `dev_Gordy_electonegativity` is unavailable for 21 of 55 elements and all six JARVIS
-      features are unavailable for europium.
+- [x] **#19** The 22-feature contract — `hydms/descriptors/contract.py`.
+      **Landed 2026-09-04, and it corrected three of its own instructions.**
+      **(a)** "Two of the 22 are not computable everywhere" is **seven**: the card folded the six
+      JARVIS features into one because they all fail on the same element. `dev_Gordy_electonegativity`
+      is uncomputable on **266 of 1,279 rows / 236 of 1,115 compositions**; each JARVIS feature on the
+      single europium row `Eu1Ni5`. `CONTRACT.computability()` answers per composition, naming the
+      blocking element and distinguishing an absent element from an empty published cell.
+      **(b)** **The Gordy hole is the citable edition's, not CBFV's** — CBFV's copy supplies
+      `gordy_en` for all 21 elements Lee et al. 2024 leave blank. AC-2 runs against that table, so it
+      will be green while the shipped featuriser cannot build the column for 266 rows. Second defect
+      AC-2 structurally cannot see; boxed on #21, with the trade boxed on #24/#25.
+      **(c)** The card guessed the loss falls on "AB5 and AB2". Measured, AB2 is the second *least*
+      affected class (34/371, 9.2%); the pair is **AB5 (91/196) and MIC (54/127)**.
+      **(d)** The training column order was never persisted — `Machine_Model/data/processed_data/`
+      is not in the repository and all three committed listings of the 22 are sorted by three
+      different keys — so the contract *declares* REPORT.md §3.2's SHAP order rather than recovering
+      one, and `from_names()` regenerates the whole contract for #25. Every column is `float64`;
+      `temperature(K)` is `int64` in the raw file and #20 owes the cast.
 - [ ] **#20** `featurize()` — the layer's public interface.
 - [ ] **#21 GATE AC-2** — parity with CBFV to 1e-9 on all 1,279 formulae. **Hard gate.** If it fails,
       the reimplementation is wrong, not CBFV. **Two amendments from #16:** parity is measured against
