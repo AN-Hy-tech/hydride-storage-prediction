@@ -130,7 +130,83 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #18 landed · written for #20
+### Handoff — 2026-09-04 (latest) · #20 landed · written for #12, then #21
+
+**Where the phase is.** Twenty-one cards done, and **the tree is red on purpose.** 554 tests,
+**546 pass and 8 fail**; every one of the eight is the same fact — `hydms/descriptors/featurize.py`
+now exists, so the L13 sentinel reads `unwired` and HG-1 fails at **4 of 13**. ruff 0.8.4 and mypy
+1.13.0 clean, `check_board.py` and `check_freeze.py` OK. This was written down in advance on three
+cards and it happened exactly as written. **Do not re-aim the sentinel's subject and do not delete
+it.** #12 is `doing`, was blocked only on this module, and closes it.
+
+**#20, the featuriser.** `featurize(formulas, temperatures, *, contract=None, tables=None)` →
+`(n, 22)` of float64, in contract order, on the caller's index. 52 tests. No CSV in, no CSV out;
+one parse pass, then 19 fancy-indexes and 19 batched reductions — 10,000 formulae in **0.31 s**.
+Four things it taught, one of which changed a module that was already `done`.
+
+- **A batch of one was not the same arithmetic as a batch of many, and only from eight elements
+  up.** #17 established that the reduction must run down the *leading* axis because numpy sums the
+  fast axis pairwise. But a batch of **one**, transposed, leaves the leading axis contiguous too —
+  and numpy's contiguous sum switches from a plain loop to an eight-accumulator unrolled one at
+  exactly eight elements. Measured over 200 random compositions per arity: identical to the bit up
+  to arity 7, and from **arity 8** a lone composition disagrees with itself inside a batch by up to
+  **5.5e-12** on `avg` and `dev`. That is three orders inside AC-2's 1e-9, so **no gate would ever
+  have caught it**; what it would have done is make a single-formula prediction (#82) and AC-4's
+  round-trip (#33) disagree with the training matrix, for the eleven curated rows of eight elements
+  or more, silently. Fixed in `stats.statistics` — a lone composition is duplicated, the pair is
+  reduced, the copy discarded — rather than worked around in the featuriser, because that is where
+  the axis decision lives. #17's own test passed throughout because its arity was 5; it is now 10,
+  and deleting the fix turns it red. No committed number moves: every existing pin is a batch.
+- **The refusal is much bigger than "seven features are not always computable" sounds.** Counted as
+  rows a caller loses, the published 22 cannot featurise **266 of the 1,279** curated rows — 265
+  for `dev_Gordy_electonegativity` alone, and `Eu1Ni5` for seven features at once. So the full
+  contract **cannot build the training matrix at all**. Drop Gordy and the remaining 21 cover
+  **1,278 of 1,279**. One feature is the difference between 1,278 rows and 1,013, which is the
+  decision #24/#25 are actually making; boxed there.
+- **#21's requirement turned out to be a requirement on this module's interface.** "The featuriser
+  reproduces CBFV *given the same table*" cannot be arranged from outside a function that resolves
+  its own tables. So `tables=` is a parameter — and that forced the honest version of the verdict:
+  `FeatureContract.computability(..., tables=)`, because asking the *shipped* table whether a row
+  is featurisable while reading CBFV's numbers would refuse the 266 rows the gate exists to
+  compare. `PropertyTable.of()` was added so a caller builds a table without reaching through a
+  frozen dataclass's underscored field. This is the layer's existing convention, not a new one —
+  `disagreements`, `require_coverage` and `require_self_consistent` all take their table.
+- **The value pin found nothing wrong, which is worth saying out loud.** All 22 columns against
+  CBFV's own output over the sixteen fixture formulae, with CBFV's own table supplied: worst
+  **4.547e-13** absolute and **6.828e-15** relative. The assembly — right statistic, right
+  property, right table, right column — was correct first time, and the residue is the element
+  order #17 already measured.
+
+**Two interface decisions that are not in the card and will look arbitrary later.** The frame comes
+back on the **caller's index** (a `Series` keeps its labels, a list gets a `RangeIndex`), a repeated
+label is refused, and a `temperature` Series whose index disagrees with the formulae's is refused
+rather than zipped by position — all three because the metadata AC-6 needs is re-attached to this
+matrix afterwards, and the way that goes wrong is leak L9. And **nothing is ever dropped**: an
+unparseable formula, a hole, a non-finite temperature each raise, listing every offender with its
+label, because a featuriser that quietly returns fewer rows than it was given is how a feature
+matrix comes to be joined to the wrong compositions.
+
+#### The opening move
+
+**#12, and it is the only one.** It is `doing`, it is unblocked, and it is what turns the tree
+green. Three boxes are owed and all three name the module that now exists: the class surviving
+featurisation, its absence from `X`, and the **L13 `live` hook**. The shape is on the card. Two
+practical notes: the join is `pd.concat([metadata, features], axis=1)` and is label-aligned by
+construction, never positional; and a `live` hook that featurises real rows must either pick
+well-covered formulae or pass a contract without `dev_Gordy_electonegativity`, because the full 22
+refuse 266 of the 1,279.
+
+**Then #21, the hard gate of S3.** It inherits three boxes from this card — the `tables=` seam and
+how to build the reference table, "compare in one batch and here is why", and the news that a
+16-formula version of the gate already passes at 4.547e-13. Its remaining work is the other 1,263
+formulae, a failure output that names the column and the row, and the line stating how many rows
+the *shipped* tables could not have featurised at all — because AC-2 runs against CBFV's table,
+where neither the Gordy hole nor the wrong-axis reduction is visible. Then #22, the benchmark,
+which starts from 0.31 s / 10k.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #18 landed · written for #20
 
 **Where the phase is.** Twenty cards done. The tree is green: **502 tests**, ruff 0.8.4 and
 mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, `gates run --fast` exit 0,

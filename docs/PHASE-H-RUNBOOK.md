@@ -232,7 +232,8 @@ the same module as L3 (card #71).
       class being `A2B` at 24 compositions of 1115. `UNKNOWN` is settled as a **refusal** — the
       class is complete on all 1279 rows and an eleventh label changes AC-6's fold count. What is
       owed: the class surviving featurisation, its absence from `X`, and the L13 `live` hook, all
-      three naming `hydms.descriptors.featurize`, which **#20 creates in S3**.
+      three naming `hydms.descriptors.featurize` — which **#20 created on 2026-09-04**, so all
+      three are now unblocked and HG-1 is red until they land.
 - [x] **#13** The assertion becomes "no **canonical composition** spans two splits" — the current
       raw-string assertion passes while 35 rows leak. Landed: `hydms/data/splits.py` ports the
       protocol unchanged and changes only the unit. **893 / 131 / 255 rows over 780 / 111 / 224
@@ -273,7 +274,10 @@ version of this line was wrong about it.** Its site is `extract_features_cbfv.py
 guards the *featuriser*; #87 wrote the sentinel and #12 wires it, but the module it names does not
 exist until S3. Pointing it at the data layer instead would have made it green today while guarding
 a different property — that the class exists — and left the drop itself unguarded. L13 therefore
-reads `pending` through S2 and turns green when #12 carries the class through featurisation. Read
+read `pending` through S2 — **and since #20 landed on 2026-09-04 it reads `unwired`, which is
+red**: the module it names now exists and the sentinel is still pointed at a miniature of it. That
+is the design working, not a regression. It turns green when #12 carries the class through
+featurisation and gives the sentinel a `live` hook. Read
 the per-leak table with:
 
 ```bash
@@ -365,7 +369,35 @@ could mean anything. See below.
       different keys — so the contract *declares* REPORT.md §3.2's SHAP order rather than recovering
       one, and `from_names()` regenerates the whole contract for #25. Every column is `float64`;
       `temperature(K)` is `int64` in the raw file and #20 owes the cast.
-- [ ] **#20** `featurize()` — the layer's public interface.
+- [x] **#20** `featurize()` — the layer's public interface. `hydms/descriptors/featurize.py`.
+      **Landed 2026-09-04, and it moved a module that was already done.**
+      **(a)** **A batch of one was not the same arithmetic as a batch of many, from arity 8 up.**
+      #17 established that the reduction must run down the leading axis because numpy sums the
+      *fast* axis pairwise — but a batch of one, transposed, leaves the leading axis contiguous
+      too, and numpy's contiguous sum switches to an eight-accumulator unrolled loop at exactly
+      eight elements. Measured over 200 random compositions per arity: bit-identical to arity 7,
+      and from **arity 8** a lone composition disagrees with itself inside a batch by up to
+      **5.5e-12** on `avg` and `dev`. Three orders inside AC-2's tolerance, so no gate would ever
+      have failed — it would have made a single-formula prediction (#82) and AC-4's round-trip
+      (#33) disagree with the training matrix for the **eleven** curated rows of eight elements or
+      more. Fixed in `stats.statistics` (a lone composition is duplicated, reduced as a pair and
+      the copy discarded); #17's own test used arity 5 and is widened to 10.
+      **(b)** **The refusal, counted in rows, is the number #24/#25 need.** The published 22
+      cannot featurise **266 of the 1,279** curated rows — 265 for Gordy alone, `Eu1Ni5` for seven
+      features at once — so the full contract cannot build the training matrix at all. Without
+      `dev_Gordy_electonegativity` the remaining 21 cover **1,278 of 1,279**. One feature is the
+      difference between 1,278 rows and 1,013.
+      **(c)** **#21's requirement turned out to be a requirement on this interface.** "Parity given
+      the same table" cannot be arranged from outside a function that resolves its own tables, so
+      `featurize(..., tables=)` is a parameter — which forced `FeatureContract.computability(...,
+      tables=)` too, because asking the *shipped* table whether a row is featurisable while reading
+      CBFV's would refuse the 266 rows the gate exists to compare. `PropertyTable.of()` builds one.
+      **(d)** **The value pin found nothing wrong.** All 22 columns against CBFV's own output over
+      the sixteen fixture formulae, with CBFV's table supplied: worst **4.547e-13** absolute,
+      **6.828e-15** relative. Assembly correct first time; the residue is #17's element order.
+      **(e)** **HG-1 is red on purpose.** `L13 [unwired] #12`. Eight tests fail with it, including
+      one whose docstring predicted its own death. The sentinel was not re-aimed. #12 is `doing`,
+      is now unblocked, and takes HG-1 to 5/13.
 - [ ] **#21 GATE AC-2** — parity with CBFV to 1e-9 on all 1,279 formulae. **Hard gate.** If it fails,
       the reimplementation is wrong, not CBFV. **Two amendments from #16:** parity is measured against
       the reference table, not the shipped one; and no Eu-containing formula can be compared at all,
@@ -558,7 +590,9 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite
+# Suite. Expect 8 red as of 2026-09-04, all of them HG-1 and all of them one fact: #20 created
+# `hydms.descriptors.featurize`, so the L13 sentinel reads `unwired` until #12 gives it a `live`
+# hook. See S2's #12 and S3's #20. Anything else red is a real failure.
 conda run -n Project python -m pytest -q
 conda run -n Project python -m pytest tests/leaks -q          # HG-1
 # Lint and types run OUTSIDE the environment, deliberately: neither imports the project's

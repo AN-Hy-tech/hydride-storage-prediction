@@ -20,6 +20,8 @@ GATE: Gate = Pending(
     title="Featuriser parity with CBFV to 1e-9",
     card=21,
     speed=Speed.FAST,
-    blocked_by=(20,),
-    reason="hydms.descriptors.featurize() is card #20 and does not exist yet",
+    reason=(
+        "hydms.descriptors.featurize() landed with card #20 and takes the reference table as "
+        "an argument; the comparison over all 1,279 formulae is #21's own work"
+    ),
 )

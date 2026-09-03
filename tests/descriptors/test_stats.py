@@ -258,11 +258,22 @@ def test_padding_changes_nothing_at_all() -> None:
 
 
 def test_a_composition_does_not_depend_on_its_batch() -> None:
-    """Row i of a batched call equals the same row computed alone. Exactly."""
+    """Row i of a batched call equals the same row computed alone. Exactly.
+
+    **The arity here is ten, and that is the whole test.** At five, which is what this test
+    used until card #20, it passes whether or not the module handles a batch of one --
+    because a lone composition transposes to a *contiguous* reduction axis, numpy sums it
+    pairwise, and its contiguous sum only starts regrouping the additions at eight elements.
+    From arity 8 a batch of one disagreed with the same composition inside a batch by up to
+    5.5e-12 on ``avg`` and ``dev``; eleven of the 1,279 curated rows are that wide, and
+    featurising one formula alone is what the app does. `statistics` now reduces a duplicated
+    pair and discards the copy. Drop that and this goes red at arity 8, not at arity 5.
+    """
     rng = np.random.default_rng(1717)
-    weights = rng.uniform(0.05, 5.0, size=(32, 5))
-    weights[::3, 3:] = 0.0  # a mix of arities, as any real batch has
-    values = rng.uniform(-2.0e4, 2.0e4, size=(32, 5))
+    weights = rng.uniform(0.05, 5.0, size=(32, 10))
+    weights[::3, 8:] = 0.0  # a mix of arities, as any real batch has
+    weights[::7, 3:] = 0.0
+    values = rng.uniform(-2.0e4, 2.0e4, size=(32, 10))
     batched = statistics(weights, values)
 
     for row in range(weights.shape[0]):

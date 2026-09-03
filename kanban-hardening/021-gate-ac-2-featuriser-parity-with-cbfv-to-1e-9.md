@@ -77,6 +77,30 @@ would be trained on subtly different features than `REPORT.md` describes.
       own output — a line naming how many rows the shipped tables could *not* have featurised —
       so a green AC-2 is never read as "the featuriser can produce all 22 for every row"
 
+- [ ] **The seam this gate needs exists, and it is a parameter (from #20).**
+      `featurize(formulas, temperatures, *, contract=None, tables=None)`. Pass
+      `tables={"oliynyk": <CBFV's copy>}` and both the numbers **and the computability verdict**
+      come from that table — which is what makes the 266 Gordy rows comparable here even though
+      the shipped featuriser refuses them. Build the table with
+      `PropertyTable.of(name, citation, values)` and **spell its properties the way the contract
+      does** (`gordy_en`, not `Gordy_electonegativity`): `PUBLISHED_SPELLING` inverted is the map,
+      and `tests/descriptors/test_featurize.py`'s `cbfv_oliynyk` fixture is the eleven lines that
+      do it. The jarvis half needs no override — CBFV's `jarvis.csv` *is* NIST's file
+
+- [ ] **Compare in one batch, not row by row (from #20).** A lone composition and a batched one
+      agreed only up to arity 7 before this card fixed `statistics()`; they now agree at every
+      arity, and the fix is one `np.repeat` that a later "simplification" could remove without
+      any gate noticing. Featurising all 1,279 formulae in a single call is both the faster route
+      and the one that cannot be affected by it. Excluding `Eu1Ni5` stays a deliberate,
+      recorded exclusion (box above), not a filter
+
+- [ ] **A 16-formula version of this gate already passes (from #20).** All 22 columns against
+      `cbfv_statistics_reference.csv`, with CBFV's table supplied: worst **4.547e-13** absolute
+      and **6.828e-15** relative — three orders inside the 1e-9 this gate asserts. So the
+      expected outcome here is green, and what this card adds is the other 1,263 formulae, the
+      failure output that names the column and the row, and the line stating how many rows the
+      *shipped* tables could not have featurised at all
+
 ## Runnable check
 
 ```bash

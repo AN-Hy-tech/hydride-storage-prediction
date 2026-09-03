@@ -28,6 +28,15 @@ Not a nice-to-have measurement — an input to the design of tickets 53 and 59.
 - [ ] A candidate-budget estimate for Architecture A written from it
 - [ ] If throughput is under ~1k/s at batch 10k, a note is filed against ticket 59 on feasibility
 
+- [ ] **The starting numbers, measured on the development machine while landing #20.** 10,000
+      formulae in one call: **0.31 s**. The 1,278 featurisable curated rows: **0.21 s**. The
+      shape of the cost is one Python pass to parse and intern the symbols, then 19 fancy-indexes
+      and 19 batched reductions — so per-row cost is dominated by `parse_formula`, and a
+      benchmark that does not separate parsing from arithmetic will report the parser.
+      One caveat for the singleton case: a batch of **one** is deliberately computed as a
+      duplicated pair (see #20's finding about arity 8), so it does twice the arithmetic of the
+      smallest possible call. That is bounded and intentional; it is not a regression to optimise
+
 ## Runnable check
 
 ```bash

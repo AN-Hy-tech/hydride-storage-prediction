@@ -47,6 +47,14 @@ finding, and the comparison table is the evidence either way.
       rows. Nothing forces a decision — CBFV reads the same column, so parity is unaffected — but
       it belongs in the old-vs-new write-up beside computability
 
+- [ ] **The Gordy trade, as rows rather than as a feature (from #20).** With the published 22,
+      `featurize` refuses **266 of the 1,279** curated rows and the training matrix cannot be
+      built at all. Drop `dev_Gordy_electonegativity` and the remaining 21 cover **1,278 of
+      1,279** — everything but the single europium row. So the decision this card makes is not
+      "is Gordy predictive?" but "is Gordy worth 265 rows?", and selection must be run on the
+      set it can actually featurise. Both numbers are pinned in
+      `tests/descriptors/test_featurize.py`
+
 ## Runnable check
 
 ```bash

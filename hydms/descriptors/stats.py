@@ -54,6 +54,19 @@ selection onto a property that had never been checked. The correct axis costs no
 there is no trade to make: :func:`statistics` transposes to element-leading and reduces
 there, whatever shape the caller hands it.
 
+**4. A batch of one defeats 3, and only from eight elements up.** Transposed, a single
+composition leaves the reduction axis *contiguous* after all, so numpy sums it pairwise --
+and its contiguous sum switches from a plain loop to an eight-accumulator unrolled one at
+exactly eight elements. Measured over 200 random compositions per arity: a lone composition
+agrees with itself inside a batch **bit for bit up to arity 7**, and from **arity 8**
+disagrees by up to **5.5e-12** on ``avg`` and ``dev``. Eleven of the 1,279 curated rows have
+eight elements or more, and featurising one formula alone is exactly what the app (#82) and
+AC-4's round-trip (#33) do. So :func:`statistics` duplicates a lone composition, reduces the
+pair and discards the copy: the promise "a composition does not depend on what it was batched
+with" then holds at every arity, which is the form the rest of the project relies on. Found by
+card #20 through :func:`hydms.descriptors.featurize.featurize`; card #17's own test used arity
+5 and could not have seen it.
+
 **What is *not* exactly invariant.** ``docs/QA-PROTOCOL.md`` §L2 asks for permutation and
 scale invariance, and neither holds to the bit -- in this module or in CBFV, for the same
 reason. A sequential accumulation in a different element order rounds differently, and
@@ -219,6 +232,18 @@ def statistics(weights: np.ndarray, values: np.ndarray) -> Statistics:
             f"measurement."
         )
 
+    # A batch of one is the one shape the paragraph below does not survive: transposed, a
+    # lone composition leaves the reduction axis contiguous, and numpy's contiguous sum
+    # regroups the additions from eight elements up. Reducing a duplicated pair restores the
+    # stride, and the copy is dropped at the end. See the module docstring's point 4; it is
+    # worth 5.5e-12 on the eleven curated rows with eight elements or more, and it is what
+    # makes a single-formula prediction agree with the training matrix.
+    alone = weights.shape[0] == 1
+    if alone:
+        weights = np.repeat(weights, 2, axis=0)
+        values = np.repeat(values, 2, axis=0)
+        present = np.repeat(present, 2, axis=0)
+
     # Element-leading, contiguous. Everything below reduces over axis 0, which numpy
     # performs as a sequential accumulation rather than a pairwise one -- that is what
     # makes a padded exact zero cost nothing and the result bit-identical to CBFV's
@@ -238,6 +263,10 @@ def statistics(weights: np.ndarray, values: np.ndarray) -> Statistics:
     # reductions, so padding cannot become the largest or the smallest value.
     largest = np.where(here, value, -np.inf).max(axis=0)
     smallest = np.where(here, value, np.inf).min(axis=0)
+
+    if alone:
+        avg, dev = avg[:1], dev[:1]
+        largest, smallest = largest[:1], smallest[:1]
 
     return Statistics(
         avg=avg, dev=dev, range=largest - smallest, max=largest, min=smallest

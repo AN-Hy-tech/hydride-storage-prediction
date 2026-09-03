@@ -130,7 +130,7 @@ def test_pending_gates_report_their_owning_card_and_blockers(cfg: Config) -> Non
     result = gate.check(cfg)
     assert result.status is Status.SKIPPED
     assert "#21" in result.message      # who owes it
-    assert "#20" in result.message      # what it is waiting for
+    assert "#20" in result.message      # what it waited for, and now calls
 
 
 def test_the_frozen_criteria_say_so(cfg: Config) -> None:

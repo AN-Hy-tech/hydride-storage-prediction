@@ -88,6 +88,19 @@ result rather than deciding again.
       `hydms.qa.assert_metadata_survives(before, after, columns=hydms.data.metadata.metadata_columns())`
       on the real featurisation path, plus `refuse_non_features` called on what #20 returns
 
+- [ ] **#20 landed, so the three boxes above are now unblocked — here is the shape (from #20).**
+      `hydms.descriptors.featurize.featurize(frame["Composition"], frame["temperature(K)"])`
+      returns the 22 columns **on the caller's index**, and refuses a repeated label precisely so
+      the re-attachment cannot be ambiguous. The label-aligned join is therefore
+      `pd.concat([metadata, features], axis=1)` — never a positional one — and
+      `refuse_non_features(features)` passes by construction, since the frame is exactly the
+      contract. Two practical notes for the `live` hook: the full 22-feature contract **refuses
+      266 of the 1,279 curated rows** (the Gordy hole), so a hook that featurises real rows must
+      either use a handful of well-covered formulae or pass a contract without
+      `dev_Gordy_electonegativity`; and `featurize` raises rather than dropping, so
+      `assert_metadata_survives` will be testing a stage that cannot lose a row silently — the
+      thing it must still prove is that the class **arrives** on the other side
+
 ## Runnable check
 
 ```bash

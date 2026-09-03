@@ -129,7 +129,7 @@ from typing import Any, Final
 
 import pandas as pd
 
-from hydms.descriptors.element_data import TABLES, load_table
+from hydms.descriptors.element_data import TABLES, PropertyTable, load_table
 from hydms.descriptors.stats import STATISTICS
 
 __all__ = [
@@ -206,18 +206,27 @@ def _named(items: Iterable[object]) -> str:
     return f"{shown}, ... ({len(listed) - _MAX_NAMED} more)"
 
 
-@cache
-def _servable(table: str, prop: str) -> frozenset[str]:
+def _servable_in(table: PropertyTable, prop: str) -> frozenset[str]:
     """Every element ``table`` can supply ``prop`` for.
 
-    Cached per (table, property) because :meth:`FeatureContract.computability` is called once
-    per candidate composition and the underlying tables never change at runtime. Membership
-    answers both failure modes at once -- an element the table has never heard of and an
-    element whose cell is empty are both simply absent from the set -- so the caller needs
-    one lookup rather than a try/except.
+    Membership answers both failure modes at once -- an element the table has never heard of
+    and an element whose cell is empty are both simply absent from the set -- so the caller
+    needs one lookup rather than a try/except.
     """
-    loaded = load_table(table)
-    return frozenset(e for e in loaded.elements if loaded.has(e, prop))
+    return frozenset(e for e in table.elements if table.has(e, prop))
+
+
+@cache
+def _servable(table: str, prop: str) -> frozenset[str]:
+    """:func:`_servable_in` for a shipped table, cached.
+
+    Cached per (table, property) because :meth:`FeatureContract.computability` is called once
+    per candidate composition and the shipped tables never change at runtime. A table passed
+    in by a caller cannot be cached -- :class:`~hydms.descriptors.element_data.PropertyTable`
+    holds a dict and is unhashable -- so that path recomputes, which is affordable because
+    the only caller is a gate that runs once.
+    """
+    return _servable_in(load_table(table), prop)
 
 
 @dataclass(frozen=True)
@@ -423,7 +432,11 @@ class FeatureContract:
         payload = "\n".join(f"{spec.name}\t{DTYPE}" for spec in self.features)
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-    def computability(self, composition: Iterable[str]) -> Computability:
+    def computability(
+        self,
+        composition: Iterable[str],
+        tables: Mapping[str, PropertyTable] | None = None,
+    ) -> Computability:
         """Which features this composition can produce, and why the rest cannot.
 
         Called *before* featurisation, per candidate. The amounts are irrelevant -- a hole is
@@ -432,6 +445,14 @@ class FeatureContract:
 
         Args:
             composition: The element symbols, or any mapping keyed by them.
+            tables: The tables to answer *against*, by name. Defaults to the shipped, cited
+                ones, which is what a caller featurising for real wants. The exception is
+                gate AC-2 (card #21), which is required to run against CBFV's copy of the
+                Oliynyk table: that copy supplies ``gordy_en`` for all 21 elements the
+                citable 2024 edition leaves blank, so a verdict computed against the shipped
+                table would refuse 266 of the 1,279 rows the gate exists to compare.
+                :func:`hydms.descriptors.featurize.featurize` forwards whatever it was given,
+                so the verdict is always about the numbers actually used.
 
         Returns:
             Computability: the verdict, with a blocking element and a reason per failure.
@@ -449,18 +470,24 @@ class FeatureContract:
                 "door and hydms.descriptors.stats.statistics raises on them too."
             )
 
+        supplied = dict(tables) if tables else {}
         available: list[str] = []
         holes: list[Hole] = []
         for spec in self.features:
             if spec.table is None or spec.prop is None:
                 available.append(spec.name)
                 continue
-            servable = _servable(spec.table, spec.prop)
+            source = supplied.get(spec.table)
+            servable = (
+                _servable(spec.table, spec.prop)
+                if source is None
+                else _servable_in(source, spec.prop)
+            )
             blocking = [element for element in elements if element not in servable]
             if not blocking:
                 available.append(spec.name)
                 continue
-            known = load_table(spec.table).elements
+            known = (load_table(spec.table) if source is None else source).elements
             holes.extend(
                 Hole(
                     feature=spec.name,

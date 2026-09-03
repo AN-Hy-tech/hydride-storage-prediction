@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import csv
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -114,6 +115,34 @@ class PropertyTable:
     #: element -> property -> value. A property absent from the inner mapping is a hole:
     #: the table has a column for it and the publication left the cell empty.
     _values: dict[str, dict[str, float]]
+
+    @classmethod
+    def of(
+        cls, name: str, citation: str, values: Mapping[str, Mapping[str, float]]
+    ) -> PropertyTable:
+        """A table from an in-memory ``{element: {property: value}}`` mapping.
+
+        The committed tables come from :func:`load_table` and nothing else should. This exists
+        for the one caller that must featurise against a table it has *not* shipped: gate
+        AC-2 (card #21) is required to compare against CBFV's copy of the Oliynyk table, which
+        is test input and must never become package data, and
+        :func:`hydms.descriptors.featurize.featurize` takes tables as an argument for that
+        reason. Without this the caller would be constructing a frozen dataclass through its
+        underscored field.
+
+        A property is a column of the table if *any* element carries it, which is how a hole
+        stays distinguishable from a typo: an element missing the property is a hole, and a
+        property no element carries is not a column at all.
+        """
+        properties: dict[str, None] = {}
+        for row in values.values():
+            properties.update(dict.fromkeys(row))
+        return cls(
+            name=name,
+            citation=citation,
+            properties=tuple(properties),
+            _values={element: dict(row) for element, row in values.items()},
+        )
 
     @property
     def elements(self) -> frozenset[str]:
