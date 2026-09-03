@@ -54,6 +54,7 @@ import pandas as pd
 
 from hydms.config import Columns
 from hydms.config import load as load_config
+from hydms.data.target import model_space_name
 
 __all__ = [
     "ELEMENT_SYMBOLS",
@@ -338,8 +339,10 @@ def prefeaturized_schema(columns: Columns | None = None) -> SourceSchema:
     """The schema of ``hydride_prefeaturizing.csv``.
 
     The same rows as ``hydride_data.csv`` with ``H2_W% (max)`` replaced by its ``log1p``.
-    The transform is card #11's to own and to invert; this schema only records that the
-    column is a non-negative number, which ``log1p`` of a non-negative target must be.
+    The transform is :mod:`hydms.data.target`'s to own and to invert; this schema only
+    records that the column is a non-negative number, which ``log1p`` of a non-negative
+    target must be, and takes its heading from
+    :func:`~hydms.data.target.model_space_name` so the ``log_`` contract is spelled once.
     """
     names = columns if columns is not None else load_config().columns
     return SourceSchema(
@@ -352,7 +355,7 @@ def prefeaturized_schema(columns: Columns | None = None) -> SourceSchema:
             ColumnSpec(names.dataset, "string", allowed=HYDRIDE_DATASETS),
             ColumnSpec(names.temperature, "integer", minimum=0.0, maximum=_MAX_TEMPERATURE_K),
             ColumnSpec(names.citation, "string"),
-            ColumnSpec(f"log_{names.target}", "number", minimum=0.0),
+            ColumnSpec(model_space_name(names.target), "number", minimum=0.0),
         ),
     )
 

@@ -203,6 +203,15 @@ the same module as L3 (card #71).
       key, used row-wise, would have inflated the table to **1293** rows in silence. `merge_features`
       also refuses a column name arriving twice, which is `merge_datasets.py:49`, one line below the
       leak and the same defect in a different disguise.
+- [x] **#11** Target transform. `to_model_space` / `to_wt_pct`, and the docstring that says which
+      published metric is in which space. **The transform is `log1p` — measured, and the three
+      candidates that were ruled out are wrong by more than 2.0 — but "equals `numpy.log1p`
+      elementwise" holds only to one ulp.** `hydride_prefeaturizing.csv`'s column agrees to
+      4.44e-16 and is bit-identical on 1005 of 1279 rows, because `log_transform_target.py:59`
+      wrote it with `to_csv` and it came back through decimal text. Two more one-ulp effects
+      compound (`math.log1p` vs `numpy.log1p`; the round trip itself), so the tolerance is 1e-12
+      and **nothing in this project compares two target vectors with `==`**. That is also a third
+      independent reason the column is a fixture rather than a source.
 - [x] **#87** `hydms/data/canonical.py` — normalise element fractions to a stable key; use it as the
       split key **and** the CV group key; re-join `Alloy_class` on it; reconcile the compositions
       carrying conflicting class labels. **There are ten of those, not five.** Five is the count on
