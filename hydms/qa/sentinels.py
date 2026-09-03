@@ -40,6 +40,7 @@ from .detectors import (
     assert_early_stopping_is_honest,
     assert_holdout_unchanged,
     assert_merge_is_keyed,
+    assert_metadata_survives,
     assert_selection_ignores_holdout,
     assert_selection_is_nested,
 )
@@ -513,6 +514,77 @@ def _l9_live() -> None:
 
 
 # --------------------------------------------------------------------------------------
+# L13 -- Alloy_class through featurisation
+# --------------------------------------------------------------------------------------
+
+_CLASS_ROWS = ("row-0", "row-1", "row-2", "row-3")
+
+
+def _class_frame() -> Any:
+    """Four rows as the raw file has them: a formula, its class, and the target.
+
+    Two of them are the same material under two spellings, because that is the case the
+    re-join has to survive: `Ce1Mg12` and `Mg12Ce1` are one composition carrying two class
+    labels in the file, and a featuriser that keeps the class per *string* keeps two answers.
+    """
+    pd = _pandas()
+    return pd.DataFrame(
+        {
+            "Composition": ["Ce1Mg12", "Mg12Ce1", "LaNi5", "TiFe"],
+            "Alloy_class": ["MIC", "Mg", "AB5", "AB"],
+            "H2_W% (max)": [6.0, 6.0, 1.4, 1.9],
+        },
+        index=list(_CLASS_ROWS),
+    )
+
+
+def _drop_object_columns(frame: Any) -> Any:
+    """`extract_features_cbfv.py:19-21`, transcribed.
+
+    The features it then computes are irrelevant to the defect, so this stops at the drop.
+    """
+    object_columns = frame.select_dtypes(include="object").columns
+    return frame.drop(columns=[name for name in object_columns if name != "Composition"])
+
+
+def _featurise_carrying_metadata(frame: Any) -> Any:
+    """The same stage, keeping the columns it was handed and adding one of its own."""
+    featurised = frame.copy(deep=True)
+    featurised["n_elements"] = [2.0, 2.0, 2.0, 2.0]
+    return featurised
+
+
+def _l13_alloy_class_dropped() -> None:
+    before = _class_frame()
+    assert_metadata_survives(
+        before,
+        _drop_object_columns(before),
+        columns=("Alloy_class",),
+        what="row metadata",
+    )
+
+
+def _l13_alloy_class_carried_through() -> None:
+    before = _class_frame()
+    assert_metadata_survives(
+        before,
+        _featurise_carrying_metadata(before),
+        columns=("Alloy_class",),
+        what="row metadata",
+    )
+
+
+def _l13_a_row_loses_its_class() -> None:
+    """The quieter half: the column survives and one row's label does not."""
+    before = _class_frame()
+    after = _featurise_carrying_metadata(before)
+    after.loc["row-1", "Alloy_class"] = None
+    assert_metadata_survives(
+        before, after, columns=("Alloy_class",), what="row metadata"
+    )
+
+
+# --------------------------------------------------------------------------------------
 # The registry
 # --------------------------------------------------------------------------------------
 
@@ -654,6 +726,24 @@ SENTINELS: tuple[Sentinel, ...] = (
             ),
         ),
     ),
+    Sentinel(
+        leak="L13",
+        title="Alloy_class survives featurisation for every row",
+        detector="hydms.qa.detectors.assert_metadata_survives",
+        subject="hydms.descriptors.featurize",
+        reproductions=(
+            Reproduction(
+                "every object column but the formula dropped",
+                _l13_alloy_class_dropped,
+                _l13_alloy_class_carried_through,
+            ),
+            Reproduction(
+                "one row's class lost while the column survives",
+                _l13_a_row_loses_its_class,
+                _l13_alloy_class_carried_through,
+            ),
+        ),
+    ),
 )
 
 
@@ -669,12 +759,6 @@ DEFERRED: tuple[Deferral, ...] = (
         owed_by=26,
         reason="the sentinel asserts that sample weights are a function of nothing but the "
         "training rows' own features; the weighting scheme is #26's decision to make",
-    ),
-    Deferral(
-        leak="L13",
-        owed_by=87,
-        reason="the sentinel asserts that Alloy_class survives featurisation for every row, "
-        "which needs the canonical key #87 re-joins it on",
     ),
 )
 

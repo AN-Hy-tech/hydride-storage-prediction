@@ -66,6 +66,16 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       material contributing twice to whichever split it lands in; under #87's canonical key both
       copies land in the same split, so this is a weighting question, not a leak
 
+- [ ] **One row's formula is missing a decimal point, and nothing has ever noticed.**
+      `Mg0853Ni0.125La0.022` (one row of `hydride_data.csv`) parses as magnesium with an amount of
+      **853**, so its atomic fractions are Mg 0.9998, Ni 1.5e-04, La 2.6e-05 — essentially pure Mg.
+      The intended composition is plainly `Mg0.853Ni0.125La0.022`, since 0.853 + 0.125 + 0.022 = 1.000
+      exactly. It passes #9's schema (a positive amount on a real element), it passes CBFV, and its
+      feature vector is that of pure magnesium rather than of a Mg-Ni-La alloy. Found by #87, whose
+      key surfaced it as the only fraction in either raw file below 1e-4. Decide what screening does
+      with it — flag, drop, or correct in a documented correction layer, since `Machine_Model/` is
+      read-only under the freeze — and say so out loud; do **not** repair it silently in a loader
+
 ## Runnable check
 
 ```bash
@@ -77,6 +87,11 @@ python -m pytest tests/data/test_clean.py -q
 `docs/PRD-inverse-design.md` — S1
 
 ## Narrative
+
+- 2026-09-03: Box added by #87. The canonical key made one bad row visible: `Mg0853Ni0.125La0.022` is
+  a missing decimal point that parses as Mg-853, and it is the only atomic fraction below 1e-4 in
+  either raw file. It is a features defect rather than a label defect, so it is not what CleanLab
+  detects — but this is the stage that decides what happens to a row nobody can trust (by @assistant)
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
 

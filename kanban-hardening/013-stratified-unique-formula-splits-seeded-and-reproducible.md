@@ -37,6 +37,12 @@ Documented target: 1279 rows, 1149 raw formulae, 896 / 136 / 247.
 
 - [ ] Split is stratified on binned target and grouped by **canonical composition**, not raw formula
 - [ ] **No canonical composition appears in more than one split** — asserted, not assumed
+- [ ] **Group on `hydms.data.canonical.group_keys(frame)`, called, not re-derived.** #87 landed it:
+      one key per row, aligned to the frame's index, the same function #88's folds group on. The
+      published protocol is reproduced end to end in `tests/data/test_canonical.py::published_split`
+      — stratification, rare-stratum merging, both `StratifiedShuffleSplit` calls, seed 42 — and
+      returns 896/136/247 exactly, so this card can port from a reproduction that is known faithful
+      rather than from the archival file
 - [ ] The 16 known cross-split collisions are covered by a regression test
 - [ ] The **L8 sentinel** (ticket 71) is wired to this module — a `live` check in
       `hydms/qa/sentinels.py` calling `hydms.qa.assert_disjoint_groups` on the real splits, keyed on
@@ -45,6 +51,13 @@ Documented target: 1279 rows, 1149 raw formulae, 896 / 136 / 247.
 - [ ] Split sizes are close to the documented 896 / 136 / 247 and any difference is explained by the
       35 rows the raw-string key formerly allowed to leak — an exact match is **not** expected, and
       matching exactly would mean the grouping key did not change
+
+- [ ] **Grouping on the key moves four `(key, temperature)` pairs, not only the split boundaries.**
+      Canonicalisation takes 1272 distinct `(Composition, temperature(K))` pairs to 1268, and four of
+      the eleven repeats exist only because two spellings became one material. Those four are two
+      measurements of one material at one temperature; the split must place both on the same side,
+      which grouping on the key does for free, but any per-row deduplication added later must not
+      silently drop one of them
 
 ## Runnable check
 
@@ -57,6 +70,12 @@ python -m pytest tests/data/test_splits.py -q
 `docs/PRD-inverse-design.md` — S1, AC-1
 
 ## Narrative
+
+- 2026-09-03: #87 landed the key and reproduced the published split to demonstrate it. Measured
+  through that reproduction: the archival assertion (no *formula string* spans two splits) is green
+  while 16 canonical compositions — 35 rows — sit on both sides of a line, and grouping the same
+  protocol on the canonical key leaves none. Both halves are asserted in
+  `tests/data/test_canonical.py`; this card's job is to make the split module do it (by @assistant)
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
 

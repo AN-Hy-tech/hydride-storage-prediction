@@ -144,8 +144,10 @@ Things that are true across every session, and expensive to rediscover.
   means "re-run the pipeline first".
 - **Two rows describe the same material more often than the formula string admits.** 1,149 distinct
   formula strings collapse to 1,115 canonical compositions. Grouping — for splits, for folds, for
-  anything — uses the canonical key, never the raw string. Reasoning and the measured collision count:
-  [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) §1, leak L8.
+  anything — uses the canonical key, never the raw string, and the key is
+  `hydms.data.canonical.group_keys`, called rather than re-derived. Reasoning and the measured
+  collision count: [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) §1, leak L8; the resolution the
+  key rounds to, and why, is that module's docstring.
 - **A prediction without an interval and a domain verdict is not a deliverable.** Gate HG-2 makes that
   structural: the result type cannot be constructed without them.
 - **The evaluator is the deep module; search is a seam.** Architectures A and B differ only in how

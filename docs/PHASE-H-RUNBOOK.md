@@ -46,7 +46,7 @@ This table is the definition of done for stages S2–S4. Line numbers refer to t
 | **L10** | recovered `Ashghal/Outliers_Management.py:60-72` | Clips val/test **feature values** using their own residuals |
 | **L11** | `benchmark_model_selection.py:1375,1383,1394` | PDP and SHAP computed on `X_test` — REPORT §6.1 is a test-set artefact |
 | **L12** | `Catboostmodel.py:516-518` — `weights = np.where(np.expm1(y) > 3, 2.0, 1.0)` | Target-conditioned weights with a hand-tuned threshold |
-| **L13** | `extract_features_cbfv.py:19-21` drops every object column but `Composition` | Destroys `Alloy_class`. **Blocks leave-one-alloy-class-out CV (#30)** — the PRD's most important validation number |
+| **L13** | `extract_features_cbfv.py:19-21` drops every object column but `Composition` | Destroys `Alloy_class`. **Blocks leave-one-alloy-class-out CV (#30)** — the PRD's most important validation number. #87 gives the class a composition to be re-joined on and writes its sentinel; **#12 closes it** by carrying the class through featurisation |
 
 Two blockers that are not leaks:
 
@@ -146,7 +146,8 @@ them** — no `[tool.ruff]`, no `[tool.pytest.ini_options]`, no `[tool.mypy]`, n
 | L6 | Re-running selection with held-out rows perturbed produces an identical feature set, order included | `assert_selection_ignores_holdout` |
 | L7, L8 | No **canonical** composition appears in two splits, and none in two CV folds | `assert_disjoint_groups` |
 | L9 | Reordering an input never changes the merged result silently, and a row the merge cannot key raises | `assert_merge_is_keyed` |
-| L11, L12, L13 | **Deferred** — each needs a decision its owning card has not made. Boxed on #29, #26, #87 | — |
+| L13 | `Alloy_class` survives featurisation: the column, every row, every label unchanged | `assert_metadata_survives` |
+| L11, L12 | **Deferred** — each needs a decision its owning card has not made. Boxed on #29, #26 | — |
 
 Three things about the design are load-bearing; the reasoning is in #71's `## Narrative`:
 
@@ -202,18 +203,30 @@ the same module as L3 (card #71).
       key, used row-wise, would have inflated the table to **1293** rows in silence. `merge_features`
       also refuses a column name arriving twice, which is `merge_datasets.py:49`, one line below the
       leak and the same defect in a different disguise.
-- [ ] **#87** `hydms/data/canonical.py` — normalise element fractions to a stable key; use it as the
-      split key **and** the CV group key; re-join `Alloy_class` on it; reconcile the **5 compositions
-      carrying conflicting class labels**.
+- [x] **#87** `hydms/data/canonical.py` — normalise element fractions to a stable key; use it as the
+      split key **and** the CV group key; re-join `Alloy_class` on it; reconcile the compositions
+      carrying conflicting class labels. **There are ten of those, not five.** Five is the count on
+      the raw formula *string*; canonicalisation adds five more by merging spellings the file
+      labelled independently (`Ce1Mg12` is `MIC`, `Mg12Ce1` is `Mg`). The rule is
+      `ALLOY_CLASS_PRECEDENCE` — most specific structural claim first, not a majority vote, which
+      counts citations rather than chemistry. The key rounds atomic fractions to **four significant
+      digits**, which is the only resolution that both reproduces 1115 compositions and keeps the
+      widest gap it merges (3.46e-05) narrower than the closest it does not (1.01e-04); `separation()`
+      asserts that over both raw files and is demonstrated red at three digits.
 - [ ] **#12** Re-join `Alloy_class` on the canonical key, not the raw string.
 - [ ] **#13** The assertion becomes "no **canonical composition** spans two splits" — the current
       raw-string assertion passes while 35 rows leak.
 - [ ] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are immutable.
 - [ ] **#15** Data-layer golden tests.
 
-**Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9, L10** and
-L13 sentinels go green — L10 because its subject is #14's module, and L13 because #87 owes the
-sentinel itself. Read the per-leak table with:
+**Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9** and L10
+sentinels go green — L10 because its subject is #14's module. **L13 does not, and the original
+version of this line was wrong about it.** Its site is `extract_features_cbfv.py`, so its sentinel
+guards the *featuriser*; #87 wrote the sentinel and #12 wires it, but the module it names does not
+exist until S3. Pointing it at the data layer instead would have made it green today while guarding
+a different property — that the class exists — and left the drop itself unguarded. L13 therefore
+reads `pending` through S2 and turns green when #12 carries the class through featurisation. Read
+the per-leak table with:
 
 ```bash
 conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} {r.status:9} #{r.owed_by}  {r.title}') for r in audit()]"
@@ -456,7 +469,9 @@ conda run -n Project streamlit run app/main.py
 **Manual acceptance for the interface**
 
 - A known training alloy returns the model's prediction for that row (AC-4 at the UI boundary).
-- `Mg12Ce1` and `Ce1Mg12` return the **same** answer — L8 fixed, visibly.
+- `Mg12Ce1` and `Ce1Mg12` return the **same** answer — L8 fixed, visibly. They already share one
+  canonical key (`Ce0.07692Mg0.9231`, #87); what is left to check here is that the *prediction path*
+  keys them rather than featurising the strings.
 - A plausible-but-far composition visibly widens the interval and flags the domain.
 - Nonsense is refused with a reason, not answered.
 

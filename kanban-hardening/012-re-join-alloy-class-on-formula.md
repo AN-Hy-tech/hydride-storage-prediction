@@ -35,6 +35,23 @@ result rather than deciding again.
 - [ ] It is never present in the feature matrix passed to the model
 - [ ] Class distribution matches the raw 10 classes with no rows lost
 - [ ] Rows with a missing class are labelled `UNKNOWN` rather than dropped
+- [ ] **Consume #87's reconciliation; do not decide again.** `hydms.data.canonical.alloy_classes`
+      already returns one label per row, reconciled on the canonical key by
+      `ALLOY_CLASS_PRECEDENCE`, and `alloy_class_table` returns the same thing per composition with
+      the evidence beside it. Ten canonical compositions carried more than one label and all ten are
+      resolved there; 13 of 1279 rows are relabelled. A second reconciliation here is a second answer
+- [ ] **Wire the L13 sentinel's `live` hook.** #87 wrote the sentinel — `assert_metadata_survives`,
+      subject `hydms.descriptors.featurize` — and it is `pending` only because the featuriser does
+      not exist. The moment #20 creates that module, HG-1 goes **red** (`unwired`) and stays red
+      until this card gives the **L13 sentinel** a `live` check calling
+      `hydms.qa.assert_metadata_survives` on the real featurisation path: `Alloy_class` present, one
+      row per input row, every label unchanged. If #20 names the module differently, update the
+      sentinel's `subject` string in the same commit
+- [ ] **`UNKNOWN` is this card's word, and it is not in the vocabulary.** `reconcile_class` refuses
+      a label outside the ten `hydride_data.csv` declares, because an eleventh class changes the fold
+      structure of AC-6. Nothing in the curated file needs it — the class is complete on all 1279
+      rows — so the `UNKNOWN` box above is about a *future* source. Whichever way it is settled, the
+      closed set in `hydms/data/load.py` and `ALLOY_CLASS_PRECEDENCE` both have to learn the word
 
 ## Runnable check
 
@@ -53,3 +70,12 @@ python -m pytest tests/data/test_alloy_class.py -q
 - 2026-09-02: Amended for Phase H: the join key is the canonical composition key (ticket 87), not the raw
   formula string. Blocked on 87 for that reason, and because the five conflicting-label compositions
   have to be reconciled before any class-based grouping is meaningful (by @assistant)
+
+- 2026-09-03: #87 landed and this card's input changed shape. The conflicting-label compositions are
+  **ten**, not five — five raw formula strings already disagreed with themselves, and canonicalisation
+  adds five more by merging spellings that were labelled independently (`Ce1Mg12` is MIC, `Mg12Ce1` is
+  Mg). All ten are reconciled in `hydms/data/canonical.py` by a stated precedence, so this card
+  consumes `alloy_classes()` rather than reconciling again. It also inherits the **L13 sentinel**:
+  #87 wrote it, and it turns from `pending` to a guard only when this card carries the class through
+  featurisation and gives it a `live` hook. `hydms/qa/leaks.py` now records L13 as closed by #12 for
+  that reason (by @assistant)

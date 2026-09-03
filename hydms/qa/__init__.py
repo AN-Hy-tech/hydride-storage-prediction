@@ -12,10 +12,10 @@ Three files, three kinds of knowledge:
     the authority on what a leak *is*; this is the copy a gate can count.
 
 ``detectors.py``
-    Six assertions about held-out data, raising :class:`~hydms.qa.detectors.LeakDetected` with
-    the offenders named. These are not test helpers: card #10's merge, card #13's split and
-    card #26's fit are each meant to call the relevant one directly, so the sentinel then
-    tests the real guard rather than a copy of it.
+    Seven assertions about what a stage did to its data, raising
+    :class:`~hydms.qa.detectors.LeakDetected` with the offenders named. These are not test
+    helpers: card #10's merge, card #13's split and card #26's fit are each meant to call the
+    relevant one directly, so the sentinel then tests the real guard rather than a copy of it.
 
 ``sentinels.py``
     One sentinel per leak, each carrying the counterexample that gives it meaning -- a leaky
@@ -43,6 +43,7 @@ from .detectors import (
     assert_early_stopping_is_honest,
     assert_holdout_unchanged,
     assert_merge_is_keyed,
+    assert_metadata_survives,
     assert_selection_ignores_holdout,
     assert_selection_is_nested,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "assert_early_stopping_is_honest",
     "assert_holdout_unchanged",
     "assert_merge_is_keyed",
+    "assert_metadata_survives",
     "assert_selection_ignores_holdout",
     "assert_selection_is_nested",
     "audit",

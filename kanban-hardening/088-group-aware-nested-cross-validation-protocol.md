@@ -34,6 +34,11 @@ scores through it rather than re-deriving folds.
 - [ ] `hydms/surrogate/validation.py` provides the project's only fold generator
 - [ ] Folds are grouped on the canonical composition key from #87 — `StratifiedGroupKFold`, stratified
       on the binned target
+- [ ] **The group vector is `hydms.data.canonical.group_keys(frame)`, called, not re-derived.** It
+      returns one key per row aligned to the frame's index and is the same function #13 splits on;
+      two ways of computing "the same material" is two answers. Do not group on the raw formula
+      string, on `str.strip()` of it, or on a `groupby` of `Composition` — the first leaks 35 rows,
+      and the second reproduces only the whitespace third of the normalisation
 - [ ] A test asserts **no canonical composition appears in two folds**
 - [ ] Tuning runs on inner folds; the reported score comes from an outer fold the tuner never saw
 - [ ] Seeds come from config; the same seed reproduces identical folds
@@ -57,6 +62,13 @@ conda run -n Project python -m pytest tests/surrogate/test_validation.py -q
 `docs/PHASE-H-RUNBOOK.md` — S4; `docs/PRD-inverse-design.md` — AC-6, R4
 
 ## Narrative
+
+- 2026-09-03: #87 landed the group key. `hydms.data.canonical.group_keys` is the single seam — 1279
+  rows to 1115 canonical compositions — and the L7 sentinel's live hook should call
+  `assert_disjoint_groups` on folds keyed by it. Note that the 141-of-896 figure above was measured
+  on the **raw formula string**, so it is a floor: the canonical key merges spellings the string kept
+  apart, and the true row-level collision count inside the published training split can only be
+  higher (by @assistant)
 
 - 2026-09-02: Created for Phase H. Expect the reported score to fall when this lands — that is
   the point, and per PRD R4 it is a reported result, not a failure. Note the installed

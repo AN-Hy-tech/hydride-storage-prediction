@@ -44,8 +44,11 @@ class Leak:
 
 
 # Ordered as the runbook orders them. `closed_by` is the card that removes the leak, which is
-# not always the card that will own its sentinel -- L10 is the case where they differ, and the
-# reason is recorded on the sentinel rather than here.
+# not always the card that owns its sentinel -- L10 and L13 are the two where they differ. L13
+# is the sharper case: card #87 gives `Alloy_class` a composition to be re-joined on and writes
+# the sentinel, but the leak is the *drop* at `extract_features_cbfv.py:19-21`, and it is gone
+# only once #12 carries the class through featurisation. So #12 is what `audit()` names when
+# the sentinel's subject appears unwired.
 INVENTORY: tuple[Leak, ...] = (
     Leak(
         id="L1",
@@ -138,7 +141,7 @@ INVENTORY: tuple[Leak, ...] = (
         site="extract_features_cbfv.py:19-21",
         effect="every object column but Composition is dropped, destroying Alloy_class",
         stage="S2",
-        closed_by=87,
+        closed_by=12,
     ),
 )
 

@@ -1,9 +1,14 @@
 """The mechanical guards behind the leak sentinels.
 
-Six functions, each answering one question about held-out data, and each raising
-:class:`LeakDetected` with the offending items named. Between them they cover ten of the
-thirteen leaks in ``docs/PHASE-H-RUNBOOK.md`` section 1; ``hydms/qa/sentinels.py`` records
-which, and which three are still owed.
+Seven functions, each answering one question about what a stage did to its data, and each
+raising :class:`LeakDetected` with the offending items named. Between them they cover eleven
+of the thirteen leaks in ``docs/PHASE-H-RUNBOOK.md`` section 1; ``hydms/qa/sentinels.py``
+records which, and which two are still owed.
+
+Six of the seven ask about *held-out* data. The seventh, :func:`assert_metadata_survives`,
+asks the opposite question -- whether a stage carried through something the next stage needs
+-- because L13 is a leak of a different shape: nothing is contaminated, a column simply
+stops existing and takes a validation criterion with it.
 
 **Why these live in the package and not in ``tests/``.** They are not test helpers. Several
 of them are the guard the runbook asks the *pipeline itself* to carry -- card #10's merge
@@ -43,6 +48,7 @@ __all__ = [
     "assert_early_stopping_is_honest",
     "assert_holdout_unchanged",
     "assert_merge_is_keyed",
+    "assert_metadata_survives",
     "assert_selection_ignores_holdout",
     "assert_selection_is_nested",
 ]
@@ -534,3 +540,102 @@ def _shuffle(frame: Any, seed: int) -> Any:
         f"could not produce a reordering of a {len(original)}-row frame in 16 attempts; give "
         f"assert_merge_is_keyed frames with at least two distinct rows"
     )
+
+
+# --------------------------------------------------------------------------------------
+# L13 -- the metadata a later stage needs
+# --------------------------------------------------------------------------------------
+
+
+def assert_metadata_survives(
+    before: Any,
+    after: Any,
+    *,
+    columns: Iterable[str],
+    what: str = "metadata",
+) -> None:
+    """A stage may add columns and compute features; it may not lose the ones it was given.
+
+    Guards **L13** (``extract_features_cbfv.py:19-21``::
+
+        object_cols = df_raw.select_dtypes(include='object').columns
+        cols_to_drop = [col for col in object_cols if col != 'Composition']
+        df_raw = df_raw.drop(columns=cols_to_drop)
+
+    which deletes ``Alloy_class``, ``Dataset`` and ``Citation`` in one line because they are
+    not numbers. The class is the one that matters: leave-one-alloy-class-out validation
+    (AC-6) is the PRD's most important validation number and there is no trace of it anywhere
+    in the repository, because after this line there is nothing to fold on).
+
+    The defect is *shape*, not value -- a featuriser drops a column that is not a feature,
+    which is locally reasonable and globally fatal. So all three ways of losing it are one
+    finding here: the column gone, a row gone, or a label quietly changed.
+
+    Distinct from :func:`assert_holdout_unchanged`, which asks whether a stage rewrote data it
+    was not entitled to touch. This asks whether a stage carried through data the next stage
+    needs, over **every** row rather than a holdout.
+
+    Args:
+        before: The frame entering the stage, label-indexed.
+        after: The frame leaving it. Extra columns are expected -- that is what the stage is
+            for. Rows are compared by label, and a row of ``before`` that ``after`` has lost
+            is a finding; rows ``after`` has *gained* are the merge's business
+            (:func:`assert_merge_is_keyed`, leak L9), not this one's.
+        columns: The column names that must survive.
+        what: What they are, for the message.
+
+    Raises:
+        LeakDetected: A named column is missing, a row is missing, or a value changed.
+        ValueError: ``columns`` is empty, or ``before`` does not have one of them -- a check
+            for a column that was never there passes vacuously, which is the shape of the
+            leak it exists to catch.
+    """
+    wanted = list(columns)
+    if not wanted:
+        raise ValueError(
+            "assert_metadata_survives was given no columns to check. A vacuous pass here is "
+            "exactly the shape of the leak it exists to catch."
+        )
+
+    absent = [name for name in wanted if name not in before.columns]
+    if absent:
+        raise ValueError(
+            f"{_named(absent)} is not in the frame entering the stage, so its survival "
+            f"cannot be checked. Pass the frame as it was *before* featurisation."
+        )
+
+    dropped = [name for name in wanted if name not in after.columns]
+    if dropped:
+        raise LeakDetected(
+            f"the stage dropped {len(dropped)} of {len(wanted)} {what} column(s): "
+            f"{_named(dropped)}. `extract_features_cbfv.py:19-21` drops every object column "
+            f"but the formula, which is how Alloy_class stopped existing and AC-6 stopped "
+            f"being answerable (leak L13)."
+        )
+
+    index_after = set(after.index)
+    missing = [label for label in before.index if label not in index_after]
+    if missing:
+        raise LeakDetected(
+            f"{len(missing)} of {len(before)} row(s) did not survive the stage: "
+            f"{_named(missing)}. A row whose {what} is gone cannot be held out by class "
+            f"(leak L13)."
+        )
+
+    labels = list(before.index)
+    for name in wanted:
+        if _fingerprint(_rows(before[[name]], labels, "before")) == _fingerprint(
+            _rows(after[[name]], labels, "after")
+        ):
+            continue
+        changed = [
+            label
+            for label in labels
+            if _fingerprint(_rows(before[[name]], [label], "before"))
+            != _fingerprint(_rows(after[[name]], [label], "after"))
+        ]
+        raise LeakDetected(
+            f"the stage rewrote {name!r} for {len(changed)} of {len(labels)} row(s): "
+            f"{_named(changed)}. Carrying {what} through means carrying it unchanged; a "
+            f"relabelled row folds into the wrong class (leak L13)."
+        )

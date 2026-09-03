@@ -128,17 +128,17 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-03 · S2 open, #10 landed
+### Handoff — 2026-09-03 · S2 half done, #87 landed
 
-**Where the phase is.** S0 and S1 are closed. S2 (data layer) is open and two of its nine cards are
-`done`: **#9** (loaders) and **#10** (the keyed merge). Twelve cards on the board: #1, #2, #3, #5,
-#8, #9, #10, #68, #69, #70, #71, #72. The tree is green on everything the project has — `pytest -q`
-(**241 passing**), `ruff check hydms/ tests/ scripts/`, `mypy`, `check_board.py`, `check_freeze.py`.
-Nothing is in `doing`.
+**Where the phase is.** S0 and S1 are closed. S2 (data layer) is open and three of its nine cards are
+`done`: **#9** (loaders), **#10** (the keyed merge) and **#87** (the canonical composition key and the
+`Alloy_class` reconciliation). Thirteen cards on the board are done. The tree is green on everything
+the project has — `pytest -q` (**304 passing**, up from 241), `ruff check hydms/ tests/ scripts/`,
+`mypy`, `check_board.py`, `check_freeze.py`. Nothing is in `doing`.
 
-**L9 is the first leak in the phase to reach `green`.** HG-1 now reports `1/13 leaks guarded in the
-pipeline` — up from `0/13`, where it had sat since #71 landed. That number is the honest measure of
-how far the phase has actually got, and it is the one to quote.
+**HG-1 still reports `1/13 leaks guarded in the pipeline`.** L9 is the only `green` row and #87 did
+not move that number, on purpose — see *the L13 decision* below. That number is the honest measure of
+how far the phase has got, and it is the one to quote.
 
 **S3 (descriptor layer) is still unblocked and still the only thing worth running in parallel**
 ([../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §2). This note is written for whoever takes
@@ -148,20 +148,27 @@ the rest of **S2**.
 
 #### The opening move
 
-**#87, the canonical composition key.** #10 is done, so #87 is clear, and it is the card the rest of
-the stage is queued behind — #12 and #13 both name it in `blocked_by`, and #14 and #15 sit behind
-#13:
+**#12 and #13 are both clear now, and #13 is the one to take.** #87 was the card the stage was queued
+behind; with it done, `blocked_by` empties for both, and #13 (splits) unblocks four more cards while
+#12 (alloy class) unblocks only #30:
 
 ```
-#9 loaders ✔ → #10 keyed merge (L9) ✔ → #87 canonical key (L8, L13) → #12 alloy class
+#9 loaders ✔ → #10 keyed merge (L9) ✔ → #87 canonical key ✔ → #12 alloy class
 → #13 splits (L8) → #14 CleanLab, train-only (L3, L10) → #15 golden tests
 ```
 
-**#11 is the cheap one to run alongside it.** It is blocked on #9, not on #87, it is estimated at
-half a day, and both of its answers are already measured and boxed on the card: the transform is
-`log1p` exactly, on all 1279 rows, and it must be **recomputed rather than joined** from
-`hydride_prefeaturizing.csv` — that file aligns with `hydride_data.csv` only positionally, which is
-the very thing #10 exists to stop.
+**#13 also has the least left to invent.** The published split protocol — stratification on binned
+target and temperature, rare-stratum merging by Euclidean distance, both `StratifiedShuffleSplit`
+calls, seed 42 — is already reproduced end to end in
+`tests/data/test_canonical.py::published_split`, and it returns **896 / 136 / 247 exactly**. Port from
+that reproduction, which is known faithful, rather than from `split_data.py`, and swap the grouping
+key. The before-and-after is already asserted there: 16 canonical compositions straddle under the raw
+string, none under the key.
+
+**#11 is still the cheap one to run alongside.** Blocked on #9 only, half a day, and both of its
+answers are measured and boxed on the card: the transform is `log1p` exactly on all 1279 rows, and it
+must be **recomputed rather than joined** from `hydride_prefeaturizing.csv`, which aligns with
+`hydride_data.csv` only positionally — the very thing #10 exists to stop.
 
 Ask the board rather than trusting that diagram — it is the runbook's plan, not the current state:
 
@@ -171,10 +178,9 @@ bash $S/show_blocked.sh .
 bash $S/list_all_cards.sh .
 ```
 
-#### What #9 and #10 built that the rest of S2 is expected to use
+#### What #9, #10 and #87 built that the rest of S2 is expected to use
 
-`hydms/data/load.py` owns **what a valid row is** and `hydms/data/merge.py` owns **how blocks are
-joined to it**, so no later stage re-litigates either:
+Three modules own three questions, so no later stage re-litigates any of them:
 
 | You need | Call | Rather than |
 |---|---|---|
@@ -182,21 +188,35 @@ joined to it**, so no later stage re-litigates either:
 | A composition as `{element: amount}` | `parse_formula(...)` | a second regex, or CBFV's |
 | To declare a new file's shape | `SourceSchema` / `ColumnSpec`, then `validate()` | an `assert df.shape ==` |
 | To attach features to the measurement table | `merge_features(spine, [FeatureBlock(...)])` | `pd.concat(axis=1)`, ever |
+| **The identity of one material** | **`canonical_key(formula)`** | `str.strip()`, `sorted()`, or a `groupby` on `Composition` |
+| **A group vector for a split or a fold** | **`group_keys(frame)`** | any of the above, per module |
+| **The alloy class of every row** | **`alloy_classes(frame)`** | joining `Alloy_class` on the formula string |
+| **The class of every composition, with evidence** | **`alloy_class_table(frame)`** | reconciling the conflicts again |
 
-**Do not write a second formula parser.** `parse_formula` is asserted at parity with CBFV over all
-1279 + 772 formulae *and* rejects the four things CBFV waves through — a non-existent element, a zero
-amount, a negative amount, and a parenthesised annotation read as an element. #87 needs a parser; it
-needs this one.
+**Do not write a second formula parser, and do not write a second key.** `parse_formula` is asserted
+at parity with CBFV over all 1279 + 772 formulae *and* rejects the four things CBFV waves through;
+`canonical_key` is built on it, so both grammars stay one grammar. #20 still says
+"formula parsing via `pymatgen.core.Composition`" — that line predates #9 and now carries a box
+saying not to.
 
-**The loader normalises nothing, deliberately.** 34 formula strings carry a trailing space and 9 an
-internal one; all 43 are returned exactly as stored. Stripping them would move the unique-formula
-count from 1149 to 1142 silently — which is #87's collapse to make and to account for, in three steps
-rather than one. The measured breakdown is boxed on #87.
+**The key rounds atomic fractions to four significant digits, and that number was measured, not
+chosen.** It is the only resolution that both reproduces the **1115** compositions every document in
+this repository states *and* keeps the widest gap it merges (3.46e-05) narrower than the closest gap
+it does not (1.01e-04). `separation()` asserts exactly that over all 8920 comparable pairs in both raw
+files, and the test suite demonstrates it going red at three digits. If you add a data source, run
+`separation()` over the union before trusting the key on it.
 
-**The merge takes its key as a parameter, so #87 does not have to change it.** `merge_features` joins
-a `FeatureBlock` to the spine on whatever column the caller names. When the canonical key exists, hand
-it that column; nothing in `hydms/data/merge.py` moves. What the module *fixes* is the direction of
-the join: the spine keeps its rows, its order and its index, and a block is looked up from it.
+**A key is a label, not an input.** Re-keying a key moves a final digit for 185 of 1784 formulae,
+because rounded fractions no longer sum to one. It never lands on another material's key — that is
+asserted — but nothing should be grouping on a key it computed twice.
+
+**The class conflicts were five and are ten.** Five raw formula strings disagree with themselves;
+canonicalisation adds five more by merging spellings the file labelled independently (`Ce1Mg12` is
+`MIC`, `Mg12Ce1` is `Mg`, one material, 6.0 wt% at 598 K). All ten are resolved by
+`ALLOY_CLASS_PRECEDENCE` — `AB5 ≻ AB2 ≻ AB ≻ A2B ≻ Mg ≻ HEA ≻ MEA ≻ LEA ≻ SS ≻ MIC`, the most
+specific structural claim first — and **not** by a majority vote, which would count citations rather
+than chemistry and get `Mg2Ni` wrong three rows to one. 13 of 1279 rows change label. #12 consumes
+that; it does not decide it again.
 
 #### What S1 built that S2 is still expected to use
 
@@ -206,8 +226,9 @@ the remaining S2 cards are expected to call them **in the pipeline**, not merely
 | Card | Creates | Calls | Closes | State |
 |---|---|---|---|---|
 | #10 | `hydms/data/merge.py` | `assert_merge_is_keyed` | L9 | ✔ wired, `green` |
-| #13 | `hydms/data/splits.py` | `assert_disjoint_groups` | L8 | owed |
+| #13 | `hydms/data/splits.py` | `assert_disjoint_groups` on `group_keys(frame)` | L8 | owed |
 | #14 | `hydms/data/screening.py` | `assert_holdout_unchanged` (twice: `y` and `X`) | L3, L10 | owed |
+| #12 | — (carries the class through #20's featuriser) | `assert_metadata_survives` | L13 | owed |
 
 **The build will go red the first time you create one of those files, before you have written
 anything wrong.** That is card #71's `unwired` state and it is deliberate. It fired exactly as
@@ -216,14 +237,13 @@ name only`, and stayed red until the `live` hook was added to `hydms/qa/sentinel
 never to delete the sentinel. If your card names its module differently from the `subject` string,
 update that string in the same commit.
 
-**What a good `live` hook looks like, now that there is one to copy.** `_l9_live` in
-`hydms/qa/sentinels.py` runs the detector against the **real** data — the 1279-row spine through
-#9's loader and two real per-composition blocks — not against the miniature the reproductions use.
-It costs 0.07 s and `audit()` stays under 0.05 s. It is also tested for the failure that would
-otherwise be invisible: `test_l9_goes_red_when_the_real_merge_stops_keying` monkeypatches
-`hydms.data.merge.merge_features` with the archival positional concat and asserts the audit reports
-`broken`, which is what proves the sentinel watches the real function rather than a copy of it. Do
-the same for L8, L3 and L10.
+**What a good `live` hook looks like.** `_l9_live` in `hydms/qa/sentinels.py` runs the detector
+against the **real** data — the 1279-row spine through #9's loader and two real per-composition
+blocks — not against the miniature the reproductions use. It costs 0.07 s and `audit()` stays under
+0.05 s. It is also tested for the failure that would otherwise be invisible:
+`test_l9_goes_red_when_the_real_merge_stops_keying` monkeypatches `hydms.data.merge.merge_features`
+with the archival positional concat and asserts the audit reports `broken`, which is what proves the
+sentinel watches the real function rather than a copy of it. Do the same for L8, L3, L10 and L13.
 
 ```bash
 conda run -n Project python -m hydms.gates run HG-1     # exits 1 until every leak is guarded
@@ -232,78 +252,86 @@ conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} 
 
 #### Five things that will otherwise cost S2 an afternoon each
 
-- **Measure the key before you assert on it. Twice now the prescribed key was wrong.** #9's runbook
-  line asked for a vacuous assertion; #10's card named `(formula, temperature)` as if it identified a
-  row, and it does not — 1279 rows carry 1272 distinct pairs, and keying on it would have inflated
-  the table to 1293 in silence. #87 is *about* a key, so this applies to it more than to any other
-  card on the board. Run the measurement in a scratchpad probe first.
+- **Measure the key before you assert on it. Three times now the prescribed thing was wrong.** #9's
+  runbook line asked for a vacuous assertion; #10's card named `(formula, temperature)` as if it
+  identified a row, and it does not; #87's card said five compositions carry conflicting class labels,
+  and ten do. In all three cases the card was corrected in the same commit as the code. Run the
+  measurement in a scratchpad probe *first* — the planning documents were written from the archival
+  code's intent, and the intent is not always what the code or the data does.
 - **#13's split sizes will not match REPORT.md, and that is the fix working.** `split_data.py` used
   0.20 / 0.10, not the 70/15/15 that REPORT §2.6 and the README both claim; the config already
   carries the real fractions. Grouping on the canonical key instead of the raw string moves the
-  896/136/247 split, because 35 rows were previously allowed to straddle. An exact match would mean
-  the grouping key did not change.
-- **#87 owes a sentinel, not just a key.** L13 (`Alloy_class` destroyed at
-  `extract_features_cbfv.py:19-21`) is a recorded deferral against #87, and HG-1 cannot go green
-  until it exists. Five compositions carry conflicting class labels and need a stated rule, recorded
-  in the narrative — a merge will not decide it for you. Two further reconciliations are boxed there:
-  the curated file's ten `Alloy_class` values and ML-HydPARK's nine `Material_Class` values are
-  neither subset nor superset of one another (#9), and the raw-string class-conflict count is *also*
-  five, which either confirms the canonical number or hides a larger set (#10).
-- **#14 owes two wirings and inherits a leak no stage closes.** L10 — the recovered
-  `Outliers_Management.py:60-72` clipped held-out *feature* values using their own residuals — is
-  absent only because that script is not being ported. That is an accident, not a fix, and it returns
-  the day #14 grows outlier handling. It also now owns one concrete decision: `hydride_data.csv` rows
-  687 and 694 are byte-identical across all six columns, and #14 is the only stage entitled to drop a
-  row. All boxes are on the card.
+  896/136/247 split, because **35 rows across 16 compositions** were previously allowed to straddle.
+  An exact match would mean the grouping key did not change. Note also that four `(key, temperature)`
+  pairs are new repeats after canonicalisation — two spellings of one material at one temperature —
+  so a per-row deduplication added later must not silently drop one of them.
+- **The L13 decision, because it is the one that looks like a mistake.** L13's sentinel exists now
+  (`assert_metadata_survives`, the seventh detector) and reports **`pending`**, not `green`. Its
+  subject is `hydms.descriptors.featurize`, which does not exist until S3. Pointing it at the data
+  layer instead would have made it green today while guarding a different property — that the class
+  *exists* — and left the archival drop itself unguarded. So `closed_by` moved from #87 to **#12**,
+  which is the card that carries the class through featurisation and owes the `live` hook, and the
+  runbook's S2 exit line (which said L13 goes green at S2) was corrected. **S2 now exits with L3, L8,
+  L9 and L10 green and L13 pending.**
+- **#14 owes two wirings, inherits a leak no stage closes, and now owns a bad row.** L10 — the
+  recovered `Outliers_Management.py:60-72` clipped held-out *feature* values using their own residuals
+  — is absent only because that script is not being ported. That is an accident, not a fix, and it
+  returns the day #14 grows outlier handling. Its two concrete decisions: rows 687 and 694 are
+  byte-identical across all six columns, and `Mg0853Ni0.125La0.022` is a **missing decimal point**
+  (0.853 + 0.125 + 0.022 = 1.000) that parses as Mg-853 and featurises as essentially pure magnesium.
+  It passes #9's schema and it passes CBFV; #87's key found it as the only atomic fraction below 1e-4
+  in either raw file. `Machine_Model/` is read-only under the freeze, so correcting it means a
+  documented correction layer, not an edit — and not a silent repair inside a loader.
 - **`numpy` cannot be imported anywhere under `hydms/`** while the lint lane stays conda-free. mypy
   resolves it from the machine's 3.13 site-packages, whose `__init__.pyi` uses PEP 695 `type`
   statements that `python_version = "3.10"` rejects as a **syntax** error, aborting the whole run;
   `ignore_missing_imports` does not suppress it. #71 sidestepped it with stdlib `random`, #9 with
-  `math` plus pandas, #10 with pandas alone — **pandas is fine, it is only `numpy` that is poisoned**,
-  and note that `pandas.api.types` must be reached as `pd.api.types.…` because the mypy override
-  lists `pandas` and not `pandas.*`. **The descriptor layer (#16–#20) cannot dodge numpy**, so
-  whoever reaches S3 owns the real fix. The constraint is commented in `pyproject.toml`.
+  `math` plus pandas, #10 and #87 with pandas alone — **pandas is fine, it is only `numpy` that is
+  poisoned**, and note that `pandas.api.types` must be reached as `pd.api.types.…` because the mypy
+  override lists `pandas` and not `pandas.*`. A *test* may import numpy freely; only `hydms/` is
+  constrained. **The descriptor layer (#16–#20) cannot dodge it**, so whoever reaches S3 owns the real
+  fix. The constraint is commented in `pyproject.toml`.
 
 #### S2 is done when
 
-`conda run -n Project python -m pytest tests/data -q` passes and the **L3, L8, L9, L10 and L13**
-rows of the audit read `green`. L9 is there already; four to go. HG-1 as a whole stays SKIPPED until
-S4 — L1, L2, L4, L5, L6, L7, L11 and L12 belong to the surrogate layer — so do not read a skipped
-HG-1 as failure to finish S2. Read the per-leak table.
+`conda run -n Project python -m pytest tests/data -q` passes and the **L3, L8, L9 and L10** rows of
+the audit read `green`, with **L13 `pending`** until the descriptor layer exists. L9 is there already;
+three to go. HG-1 as a whole stays SKIPPED until S4 — L1, L2, L4, L5, L6, L7, L11 and L12 belong to
+the surrogate layer — so do not read a skipped HG-1 as failure to finish S2. Read the per-leak table.
 
 ---
 
 #### Findings from this session, and what was done with each
 
-Two corrections made here, four findings sent to the cards that own them.
+Three corrections made here, four findings sent to the cards that own them.
 
-**Corrected in place** — [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §S2's #10 line and
-the card's own first `## Done when` box both named a merge key the data does not support. Measured:
-1279 rows, **1272** distinct `(Composition, temperature(K))` pairs; seven repeats, six of them
-independent replicates with different targets and different citations. Both now say what the module
-actually does — the spine's index label is the row identity, blocks are per-composition and looked up
-from it, and a repeated block key is refused. The runbook's `0/13 leaks guarded` line was also stale
-the moment L9 went green and now tells you to ask the gate instead of reading a number out of prose.
+**Corrected in place, all three because the data disagreed with the plan** —
+(1) #87's card and [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §S2 both said **five**
+compositions carry conflicting class labels. Five is the count on the raw formula *string*; on the
+canonical key it is **ten**, and the five raw ones are a strict subset. The card's own last box had
+asked for exactly this confirmation, and the answer is the one it feared.
+(2) The runbook's S2 exit check said the L13 sentinel goes green at S2 exit because #87 owes it. The
+sentinel guards the featuriser, which is S3, so it reads `pending`; `closed_by` moved to #12.
+(3) The runbook's leak-sentinel table listed L13 as deferred alongside L11 and L12. It now has a row.
 
-**Fixed in passing, because #10's own output would otherwise reproduce it** — `merge_datasets.py:49`,
-one line below the leak: `df_merged.loc[:, ~df_merged.columns.duplicated()]` silently keeps the first
-of two identically-named columns from different featurisers. `merge_features` refuses and names them.
+**Decided rather than deferred** — the key's resolution and the reconciliation rule are both
+judgement calls that would have been easy to leave implicit. Four significant digits, and precedence
+over majority: both are argued from measurements in #87's `## Narrative`, which is where #36's ADRs
+should read them from.
 
-**Sent to the owning card** — **#1** (`scripts/verify_environment.py` now fails at stage 1 with
-`HTTP 403 FORBIDDEN for channel pkgs/main`; the lock lists `defaults`, and the rebuild claim on that
-card is currently unrepeatable from this machine), **#11** (compute the log target, never join it —
-`hydride_prefeaturizing.csv` has no key to join on), **#14** (rows 687 and 694 are byte-identical;
-that is a decision, and this is the stage entitled to make it), **#87** (recount the `(key,
-temperature)` collisions after canonicalisation, and confirm the five class conflicts are the same
-five under both keys).
+**Sent to the owning card** — **#12** (consume `alloy_classes()`, do not reconcile again; wire the
+L13 `live` hook; `UNKNOWN` is not in the closed vocabulary and adding it is a decision), **#13** and
+**#88** (group on `group_keys(frame)`, called, not re-derived — two ways of computing "the same
+material" is two answers), **#14** (`Mg0853Ni0.125La0.022`), **#20** (use `parse_formula`, not
+pymatgen; and creating `hydms/descriptors/featurize.py` turns HG-1 red until #12 wires L13).
 
 **Carried forward, still true.** `ruff` and `mypy` run **outside** the `Project` environment on
 purpose — neither imports the project's dependencies, and #68 established that the fast lane installs
 nothing so it still reports when the environment is broken. `pytest --cov` does not run anywhere yet:
 neither `pytest-cov` nor `coverage` is in `Project`, so the coverage floor is unenforceable and
 installing them is **#86**'s decision, because adding a package invalidates `environment.lock.yml`.
-`hydms/data/load.py` is still **not** a sentinel subject, which is why #9 left the audit unchanged
-while #10 moved it.
+`scripts/verify_environment.py` still fails at stage 1 with `HTTP 403 FORBIDDEN for channel
+pkgs/main` (boxed on #1), and it is not a cheap check — it rebuilds a throwaway conda environment.
 
 ---
 
