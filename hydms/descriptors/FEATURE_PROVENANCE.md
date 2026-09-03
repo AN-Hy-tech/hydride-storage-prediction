@@ -58,9 +58,17 @@ Statistic prefixes are CBFV's composition statistics over the element property n
 
 ### From `jarvis` (6)
 
-Five of these are **composite** descriptors CBFV synthesises rather than reads: `a_divi_b` is a
-ratio, `a_mult_b` a product. They appear in no table header, which is why this spike had to run
-the featuriser instead of diffing CSV columns.
+Five of these are **composite** descriptors: `a_divi_b` is a ratio, `a_mult_b` a product.
+
+> **Correction, 2026-09-03 (card #16).** This section said the composites are descriptors CBFV
+> *synthesises* and that they "appear in no table header". That is wrong. All five are
+> per-element **columns** of NIST's `Elements.json` and of CBFV's copy of it, and each equals
+> the arithmetic of its parts to 1e-9 (`tests/descriptors/test_element_data.py`). The spike's
+> *method* was still the right one — running the featuriser rather than diffing headers is what
+> resolved the mapping, and the 15/6/1 split it produced is unaffected. But the inference drawn
+> from a header sighting was not, and it mattered: it settles PRD risk **R3** and card #18's
+> open question in the opposite direction from "to be determined numerically". A composite is a
+> property *of an element*, so the form is **statistic-of-composite** by construction.
 
 | Feature | Statistic | Base property | Form |
 |---|---|---|---|
@@ -93,10 +101,13 @@ No descriptor name is emitted by more than one table, so a name identifies its s
 
 ## Method
 
-Rather than reading each table's CSV header — which would report every composite as unaccounted
-and fail the gate for the wrong reason — the spike runs the real featuriser once per table with
-**the exact arguments the original script used** (`drop_duplicates=False`, `extend_features=True`)
-and diffs the emitted column names against the selected set.
+The spike runs the real featuriser once per table with **the exact arguments the original
+script used** (`drop_duplicates=False`, `extend_features=True`) and diffs the emitted column
+names against the selected set. That was the right method — a header diff resolves the plain
+descriptors but says nothing about the arguments CBFV was actually called with, which is the
+question the spike existed to answer. The reason originally given for it, that header-matching
+would report every composite as unaccounted, was mistaken: the composites *are* in the headers
+(see the correction above).
 
 Column counts emitted per table, 20 formulae: magpie 133, oliynyk 265, jarvis 2,629,
 mat2vec 1,201, onehot 715. `random_200` is excluded — 200 randomly generated vectors can only
@@ -111,5 +122,7 @@ produce accidental matches.
 - Card #19's 22-feature contract should record the table alongside each name, so this finding
   cannot be lost again.
 - The composite forms (`divi`, `mult`) must be reproduced **statistic-of-composite**, not
-  composite-of-statistic. Risk R3 in the PRD names this ambiguity; the spike does not resolve
-  it, and card #18 must settle it against CBFV numerically.
+  composite-of-statistic. Risk R3 in the PRD names this ambiguity. **Card #16 settled it from
+  the source data rather than numerically:** the composites are per-element columns of the
+  JARVIS table, so a composite is a property of an element and the statistic is taken over it,
+  by construction. Card #18 reproduces the statistic; it no longer has to choose the form.

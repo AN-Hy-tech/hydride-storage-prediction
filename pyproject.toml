@@ -167,13 +167,8 @@ disallow_incomplete_defs = true
 # The scientific stack ships incomplete or absent stubs. Silencing the import errors keeps
 # mypy useful on our own code rather than drowning it in third-party noise.
 #
-# NumPy is deliberately NOT in this list, and adding it will not help: it ships real stubs,
-# and they are the problem. mypy runs outside the `Project` environment (docs/QA-PROTOCOL.md
-# §6), so it resolves numpy from the machine's 3.13 site-packages, whose `__init__.pyi` uses
-# PEP 695 `type` statements that `python_version = "3.10"` rejects as a syntax error — which
-# aborts the whole run, not just that file. `ignore_missing_imports` does not suppress a
-# syntax error. The first card that needs numpy inside `hydms/` has to solve that; card #71
-# sidestepped it by using stdlib `random` for its one seeded shuffle.
+# NumPy is handled separately, below, because it is a different problem: it ships *real*
+# stubs and they are what breaks.
 [[tool.mypy.overrides]]
 module = [
   "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*",
@@ -185,6 +180,35 @@ module = [
   # when installed; this keeps mypy runnable on a bare CI interpreter when it is not.
   "yaml",
 ]
+ignore_missing_imports = true
+
+# NumPy. This block is a deliberate trade made on card #16 and it costs something real, so
+# the cost is written here rather than left to be rediscovered.
+#
+# The problem: mypy runs OUTSIDE the `Project` environment by design — the conda-free lint
+# lane, card #68, docs/QA-PROTOCOL.md §6 — so it resolves numpy from the machine's Python
+# 3.13 site-packages, whose `__init__.pyi` uses PEP 695 `type` statements. Under
+# `python_version = "3.10"` those are a *syntax* error, which aborts the entire run rather
+# than one file: `Found 1 error in 1 file (errors prevented further checking)`.
+# `ignore_missing_imports` does not suppress a syntax error, because the import resolves.
+# Cards #71 and #11 both sidestepped it — stdlib `random`, `math.log1p` — and the descriptor
+# layer cannot: composition statistics over 55 elements are array code.
+#
+# `follow_imports = "skip"` makes mypy accept the import without parsing the stub at all.
+#
+# THE COST: numpy becomes `Any`. mypy no longer checks dtype or shape mistakes in the layer
+# that has the most array code in the project — exactly where it would be most useful. That
+# is the same trade already made above for pandas, scipy and scikit-learn, but it is a worse
+# one, because those ship no usable types while numpy's are good. Two better answers exist
+# and were both rejected as bigger than this card: vendoring numpy stubs pinned to the 1.26
+# line (a new committed dependency, and it drifts), and a second mypy target run inside
+# `Project` (which breaks the conda-free lane's promise to report when the environment is
+# broken). If the lint lane ever moves onto a 3.10 interpreter with numpy 1.26 installed,
+# this block should be deleted and the real stubs used.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 ignore_missing_imports = true
 
 # The delivery layer is the boundary users meet, so it is held to a stricter standard than

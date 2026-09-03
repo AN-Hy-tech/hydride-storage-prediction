@@ -28,6 +28,22 @@ would be trained on subtly different features than `REPORT.md` describes.
 - [ ] Failure output names the column and the worst-offending formula, not just a boolean
 - [ ] Registered in the gate harness as `AC-2` and run by CI
 
+- [ ] **Parity cannot be a claim about the numbers, only about this code (from #16).** The
+      published Oliynyk table is a *revised* edition of the one CBFV ships: of the thirteen
+      properties the selected features need, five agree exactly and eight do not -- up to 10 in
+      `valence_d` (Ga, Ge), 2.0 in `gilman_no_of_valence_electrons` (Lu), 0.54 in
+      `covalent_radius` (Th, U). Comparing our featuriser's output against CBFV's while the
+      tables differ measures the tables, not the code. This gate must read: **the featuriser
+      reproduces CBFV to 1e-9 given the same table**, with
+      `tests/descriptors/data/cbfv_oliynyk_reference.csv` supplied as that table. It is test
+      input for this gate and must never become package data -- CBFV carries no licence, which
+      is the whole reason the descriptor layer exists
+
+- [ ] **No europium-containing formula may be compared at all.** CBFV drops Eu from its JARVIS
+      index and answers anyway, substituting an all-zero property vector; `element_data.py`
+      raises. A refusal and a number are not comparable, so `Eu1Ni5` must be excluded from the
+      parity set **explicitly and with the reason recorded**, not filtered out quietly
+
 ## Runnable check
 
 ```bash

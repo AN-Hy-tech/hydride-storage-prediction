@@ -31,6 +31,16 @@ the parity gate (21) proves it.
 - [ ] Composite names parse from a declarative spec, not hard-coded branches
 - [ ] Unit test pins each of the six composites against a hand-computed value
 
+- [ ] **Answered by #16 before this card started: the composites are table columns.** Card #8
+      recorded them as descriptors CBFV *synthesises*, appearing in no table header. They are
+      per-element columns of NIST's `Elements.json` and of CBFV's copy alike --
+      `polzbl_divi_atom_mass`, `atom_mass_mult_therm_cond`, `bp_divi_atom_mass`,
+      `first_ion_en_mult_X`, `voro_coord_divi_mol_vol` -- and each equals the arithmetic of its
+      parts to 1e-9, asserted in `tests/descriptors/test_element_data.py`. So the form is
+      **statistic-of-composite**, by construction rather than by experiment: a composite is a
+      property *of an element*, and the statistic is taken over it. PRD risk **R3** is settled.
+      What is left for this card is reproducing the statistic, not choosing the form
+
 ## Runnable check
 
 ```bash

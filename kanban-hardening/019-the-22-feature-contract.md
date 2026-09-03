@@ -28,6 +28,18 @@ the scaler and the predictor alike.
 - [ ] The contract is written into the artifact manifest so a model records what it expects
 - [ ] After feature selection re-runs (25), the contract is regenerated rather than hand-edited
 
+- [ ] **Two of the 22 cannot be computed from the citable sources, and the contract has to
+      say so per composition rather than per feature (from #16).**
+      `dev_Gordy_electonegativity` needs `gordy_en`, which the published Oliynyk table supplies
+      for 34 of the 55 dataset elements and leaves blank for 21: Ce, Dy, Er, Eu, Gd, Hf, Ho,
+      Ir, Lu, Nd, Os, Pr, Pt, Re, Sm, Ta, Tb, Th, Tm, U, W -- nearly the rare-earth set, and so
+      most of the AB5 and AB2 chemistry in this dataset. And all six JARVIS features are
+      unavailable for europium, whose properties NIST marks -9999. A feature that exists for
+      some compositions and not others is not a column, and pretending otherwise is how a NaN
+      reaches the surrogate. Either the contract records computability per composition, or
+      #24/#25 re-run selection without those features. The lists are pinned in
+      `tests/descriptors/test_element_data.py`
+
 ## Runnable check
 
 ```bash

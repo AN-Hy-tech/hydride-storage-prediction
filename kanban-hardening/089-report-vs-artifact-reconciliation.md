@@ -55,6 +55,16 @@ app does not inherit the old figures unexamined.
       `hydms/data/target.py`'s docstring holds the space-by-space table this came from
 - [ ] Linked from the model card (#83) and from `kanban-hardening/README.md`
 
+- [ ] **A corrupted row in the published feature matrix (from #16).** `Eu1Ni5` -- row 516,
+      `H2_W% (max)` 1.2, AB5, the dataset's only europium composition. Europium is absent from
+      CBFV's `jarvis.csv`, so its six JARVIS features were computed with europium contributing
+      an all-zero property vector: zero mass, zero polarizability, zero boiling point. Verified
+      by arithmetic rather than inferred -- CBFV emits `avg_polzbl_divi_atom_mass = 0.096547`
+      for it, and (5/6) x (polzbl_Ni / atom_mass_Ni) = 0.096546914. CBFV reported the formula in
+      a `skipped` list; `extract_features_cbfv.py` never read it. The affected feature is the
+      highest-SHAP feature in the whole model. This is a data-integrity disagreement between
+      REPORT.md and what the pipeline actually computed, and belongs in the evidence table
+
 ## Runnable check
 
 ```bash

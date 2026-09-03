@@ -284,18 +284,39 @@ conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} 
 
 ### S3 — Descriptor layer · #16–#22 · 6 d *(parallel with S2)*
 
-**Goal:** a two-table featuriser that matches CBFV exactly.
+**Goal:** ~~a two-table featuriser that matches CBFV exactly~~ → **a two-table featuriser that
+matches CBFV exactly given CBFV's table.** #16 measured that the citable Oliynyk source and
+CBFV's copy of it are not the same numbers, so "matches CBFV" had to be restated before AC-2
+could mean anything. See below.
 
-- [ ] **#16** Element property tables with cited provenance — **two tables**: 15 `oliynyk` + 6 `jarvis`.
+- [x] **#16** Element property tables with cited provenance — **two tables**: 15 `oliynyk` + 6 `jarvis`.
       A single-table reimplementation cannot pass AC-2 regardless of correctness.
+      **Landed 2026-09-03, and it moved three things downstream:**
+      **(a)** The JARVIS half is NIST's `Elements.json` itself — CBFV's `jarvis.csv` *is* that file,
+      agreeing to 7.3e-12 — so it is public-domain and needs no reimplementation of the numbers.
+      **(b)** The Oliynyk half was **revised** for its 2024 publication: 5 of the 13 needed
+      properties agree with CBFV exactly, 8 do not, by up to 10 (`valence_d`, Ga/Ge). AC-2 is
+      therefore a claim about the *code*, with CBFV's table supplied as test input from
+      `tests/descriptors/data/cbfv_oliynyk_reference.csv`. #21 carries it.
+      **(c)** Neither source covers all 55 elements: `gordy_en` is blank for 21 (the rare earths),
+      and europium's JARVIS properties are `-9999` sentinels. Two of the 22 features are therefore
+      not computable everywhere — #19 and #24/#25 carry it.
 - [ ] **#17** Weighted composition statistics.
-- [ ] **#18** Composite descriptors (`_divi_`, `_mult_`). **The live technical risk (R3):** whether the
+- [ ] **#18** Composite descriptors (`_divi_`, `_mult_`). ~~**The live technical risk (R3):** whether the
       JARVIS composites are statistic-of-composite or composite-of-statistic is unresolved and must be
-      settled numerically. Budget slack here.
-- [ ] **#19** The 22-feature contract.
+      settled numerically. Budget slack here.~~ **R3 is settled, and not numerically.** The five
+      composites are per-element **columns** of the JARVIS table — card #8's note that they "appear in
+      no table header" was wrong — each equal to the arithmetic of its parts to 1e-9. A composite is a
+      property of an element, so the form is **statistic-of-composite** by construction. #18
+      reproduces the statistic and no longer chooses the form; the slack budgeted here is free.
+- [ ] **#19** The 22-feature contract. Must now record computability *per composition*, not only per
+      feature: `dev_Gordy_electonegativity` is unavailable for 21 of 55 elements and all six JARVIS
+      features are unavailable for europium.
 - [ ] **#20** `featurize()` — the layer's public interface.
 - [ ] **#21 GATE AC-2** — parity with CBFV to 1e-9 on all 1,279 formulae. **Hard gate.** If it fails,
-      the reimplementation is wrong, not CBFV.
+      the reimplementation is wrong, not CBFV. **Two amendments from #16:** parity is measured against
+      the reference table, not the shipped one; and no Eu-containing formula can be compared at all,
+      because this layer refuses where CBFV returns a silently-zeroed number.
 - [ ] **#22** Featurisation throughput benchmark.
 
 **Exit check:** `conda run -n Project python -m hydms.gates run AC-2`
