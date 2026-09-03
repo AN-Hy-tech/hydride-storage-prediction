@@ -130,6 +130,16 @@ ruff check hydms/ tests/ scripts/
 mypy
 ```
 
+> **The lint versions are pinned exactly in CI, and must match this machine.**
+> `.github/workflows/ci.yml` installs `ruff==0.8.4` and `mypy==1.13.0`, not the `dev` extra's
+> floors. On a floor, the fast lane's first run installed a newer ruff, which raised SIM905,
+> RUF005 and RUF100 on code the local ruff passes, and warned that `PD901` — sitting in
+> `[tool.ruff.lint]`'s ignore list — had been removed. RUF100 makes the two versions mutually
+> unsatisfiable rather than merely stricter: it calls a `# noqa: E402` unused where the older
+> ruff requires it. So "the local command fails on exactly what CI fails on" holds only while
+> the versions match. Upgrading is a deliberate commit that bumps the pin and fixes what the
+> new version finds — never a floor left to drift. Card #6.
+
 > **The coverage line does not run yet.** Neither `pytest-cov` nor `coverage` is installed in
 > `Project`, so `--cov` exits with `unrecognized arguments: --cov` and the floor in `pyproject.toml`
 > is unenforceable *anywhere* today. Both are declared in the `dev` extra and nothing installed them.

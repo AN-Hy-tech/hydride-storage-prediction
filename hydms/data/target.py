@@ -118,6 +118,15 @@ ROUND_TRIP_TOLERANCE = 1e-12
 #: ``0.09531017980432493``, one ulp above -- the same one-ulp gap this module's docstring
 #: measures over the whole column, showing up in a constant. Written out here because a
 #: literal is where it is checkable.
+#:
+#: **Both numbers were measured under MSVC, and the upper one is not portable.**
+#: ``math.log1p`` delegates to the platform's libm: glibc returns ``2.102913897864978`` for
+#: ``log1p(7.19)``, one ulp below the literal here. The CI fast lane found it (card #6) by
+#: being the first thing to run this suite on Linux. Nothing downstream is affected -- the
+#: gap is ~4.4e-16 against a ``ROUND_TRIP_TOLERANCE`` of 1e-12, and the target column is
+#: reported to two decimals -- but the literal is a record of one C library's answer rather
+#: than a mathematical constant, and only ``ROUND_TRIP_TOLERANCE`` may be asserted against
+#: it. The lower bound happens to agree on both platforms; that is luck, not a guarantee.
 WT_PCT_RANGE = (0.1, 7.19)
 MODEL_SPACE_RANGE = (0.09531017980432487, 2.1029138978649784)
 

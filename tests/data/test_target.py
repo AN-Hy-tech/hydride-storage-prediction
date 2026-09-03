@@ -173,9 +173,20 @@ def test_the_prefeaturized_schema_declares_the_same_name() -> None:
 
 
 def test_scalars_go_through_the_same_two_functions() -> None:
+    """The two ends of the published range, and back.
+
+    These read ``abs=ROUND_TRIP_TOLERANCE`` and not ``abs=0.0``, which is what they said
+    until the CI fast lane first ran on Linux (card #6). ``math.log1p`` delegates to the
+    platform's libm, and the two disagree in the last bit: ``math.log1p(7.19)`` is
+    ``2.1029138978649784`` under MSVC, which is where the literal in
+    :data:`~hydms.data.target.MODEL_SPACE_RANGE` was measured, and ``2.102913897864978``
+    under glibc -- one ulp, about 4.4e-16, four orders inside the tolerance. Asserting
+    bit-equality against a hardcoded libm result is a claim about the C library, not about
+    this module, and it is the only assertion in the suite that made one.
+    """
     low, high = WT_PCT_RANGE
-    assert to_model_space(low) == pytest.approx(MODEL_SPACE_RANGE[0], abs=0.0)
-    assert to_model_space(high) == pytest.approx(MODEL_SPACE_RANGE[1], abs=0.0)
+    assert to_model_space(low) == pytest.approx(MODEL_SPACE_RANGE[0], abs=ROUND_TRIP_TOLERANCE)
+    assert to_model_space(high) == pytest.approx(MODEL_SPACE_RANGE[1], abs=ROUND_TRIP_TOLERANCE)
     assert to_wt_pct(to_model_space(high)) == pytest.approx(high, abs=ROUND_TRIP_TOLERANCE)
 
 
