@@ -35,6 +35,18 @@ Validation belongs here so no later layer has to defend against a malformed row.
       which is that file's upstream. Nothing in the repository or its history reads it. Reopen
       this box only if #86 adds the dependency **and** a card needs the four extra rows.
 
+- [ ] **Decide whether a correction layer sits above this module, and if so, where.** #14 needs
+      one and cannot host it. `Mg0853Ni0.125La0.022` is a missing decimal point — 0.853 + 0.125 +
+      0.022 = 1.000 exactly, so the intended formula is unambiguous — and this loader's stated
+      contract is that it **normalises nothing**, which is why the row arrives untouched. But the
+      canonical key, the split and the class join all run *before* screening, so by the time #14
+      sees the row it has already been keyed and split as essentially pure magnesium; a correction
+      applied there arrives too late to matter. #14 therefore drops the row from training and names
+      it in `MALFORMED_FORMULAE`. The open question is this card's: a declared, cited correction
+      table read between `load_*` and `canonical_key` would fix the row properly, and it would also
+      be the first place in the pipeline entitled to change a value it was given. That is a
+      deliberate widening of this module's contract, not a repair made in passing
+
 ## Runnable check
 
 ```bash
@@ -101,3 +113,9 @@ python -m pytest tests/data/test_load.py -q
   test rejects was then accepted. `hydms.data.load` is not a sentinel subject, so HG-1 did not
   move: it still reports `0/13 leaks guarded in the pipeline`, which is correct until #10.
   (by @assistant)
+
+- 2026-09-03: Box added by #14. That card had to decide what happens to the one row whose formula
+  is missing a decimal point, and found the right fix is in the wrong place: correcting it must
+  happen upstream of the canonical key, which means widening this loader's "normalises nothing"
+  contract. #14 drops the row from training and names it; the correction-layer decision is
+  recorded here rather than half-made there. (by @assistant)

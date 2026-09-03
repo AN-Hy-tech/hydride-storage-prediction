@@ -336,6 +336,53 @@ def _l10_only_training_features_clipped() -> None:
     assert_holdout_unchanged(before, after, holdout=_HELD_OUT, what="held-out feature rows")
 
 
+@lru_cache(maxsize=1)
+def _screening_run() -> tuple[Any, Any, Any]:
+    """Card #14's screening of the real 1279 rows: before, after, and the held-out labels.
+
+    The label-quality input is `True` for **every** row -- a method that condemns the whole
+    dataset. That is not a plausible screening; it is the strongest available pressure on the
+    contract, and it needs no invented heuristic to stand in for a feature matrix that does
+    not exist until S3. Under it a correct stage drops every training row and leaves every
+    held-out row exactly where it was, byte for byte. A stage that touched the holdout could
+    not hide.
+
+    Cached: the split it depends on costs ~0.7 s and `audit()` runs on every gate invocation.
+    """
+    pd = _pandas()
+    from hydms.data.load import load_hydride_data
+    from hydms.data.screening import screen
+    from hydms.data.splits import assign_splits
+
+    frame = load_hydride_data()
+    split = assign_splits(frame)
+    condemn_everything = pd.Series(True, index=frame.index)
+    result = screen(frame, split, label_issues=condemn_everything)
+    return frame, result.frame, list(split[split != "train"].index)
+
+
+def _l3_live() -> None:
+    """Card #14's screening, against the real dataset: held-out **targets** are immutable."""
+    before, after, held_out = _screening_run()
+    assert_holdout_unchanged(
+        before["H2_W% (max)"], after["H2_W% (max)"], holdout=held_out
+    )
+
+
+def _l10_live() -> None:
+    """The same run, on the other side of the table: held-out **features** are immutable.
+
+    L10 has no closing card -- `Ashghal/Outliers_Management.py` is not being ported, which is
+    an accident rather than a fix -- so this hook is watchfulness, not a fix. It guards the
+    module where the clipping would come back if screening ever grew outlier handling.
+    """
+    before, after, held_out = _screening_run()
+    columns = [name for name in before.columns if name != "H2_W% (max)"]
+    assert_holdout_unchanged(
+        before[columns], after[columns], holdout=held_out, what="held-out feature rows"
+    )
+
+
 # --------------------------------------------------------------------------------------
 # L6 -- feature selection
 # --------------------------------------------------------------------------------------
@@ -666,6 +713,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l3_only_training_rows_dropped,
             ),
         ),
+        live=_l3_live,
     ),
     Sentinel(
         leak="L4",
@@ -755,6 +803,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l10_only_training_features_clipped,
             ),
         ),
+        live=_l10_live,
     ),
     Sentinel(
         leak="L13",

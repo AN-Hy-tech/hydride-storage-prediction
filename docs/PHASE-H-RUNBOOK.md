@@ -242,7 +242,18 @@ the same module as L3 (card #71).
       **model space**, because a mean does not commute with `log1p` and the archival code
       averaged the log column; and the rare-stratum merge measures its distances against the
       counts as they were *before* any merging, so two rare strata never absorb each other.
-- [ ] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are immutable.
+- [~] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are
+      immutable. **Contract and structural screening landed; the card is `doing`, not `done`.**
+      `hydms/data/screening.py` drops training rows and refuses everything else: no label rewritten
+      on *any* split (`CleanLab.py` rewrites training labels too, at `:64,80`), no held-out row
+      touched, and `assert_holdout_unchanged` called three times from inside `screen` before it
+      returns. **Reweighting is declined** — the only weighting the archival pipeline had is
+      target-conditioned (L12) and choosing a policy is #26's. Two rows are dropped from training,
+      both decided here: the byte-identical duplicate (found with `duplicated`, not by row number)
+      and `Mg0853Ni0.125La0.022`, whose correction is unambiguous but must be applied upstream of
+      the canonical key — boxed on #9. **L3 and L10 are wired and green.** What is owed to S4: #24
+      consuming this stage's output, which is what closes the `Boruta_FeatEng.py:23-25` bypass and
+      also supplies the feature matrix CleanLab needs to produce `label_issues` at all.
 - [ ] **#15** Data-layer golden tests.
 
 **Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9** and L10

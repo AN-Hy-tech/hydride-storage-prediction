@@ -1,6 +1,6 @@
 ---
 id: 14
-status: backlog
+status: doing
 priority: High
 blocked_by: [13]
 assignee: "@amirhossein"
@@ -9,7 +9,7 @@ tags: [p1, l1, S1]
 
 # CleanLab screening as a data-layer stage
 
-**Phase 1 — Hardening Chapter 1** · **L1 Data** · Estimate: 1 d
+**Stage S2 — Data layer** · **L1 Data** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Which **training** rows are label-suspect, and the record of
 > what was removed. Held-out labels are not this module's to touch.
@@ -43,20 +43,25 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
 ## Done when
 
 - [ ] Feature selection (24) consumes CleanLab's output, closing the bypass
-- [ ] **The stage drops or reweights training rows only** — no label is ever rewritten, on any split
-- [ ] **Validation and test targets are byte-identical before and after this stage** — asserted, and
+- [x] **The stage drops or reweights training rows only** — no label is ever rewritten, on any split
+- [x] **Validation and test targets are byte-identical before and after this stage** — asserted, and
       covered by the L3 sentinel in ticket 71
-- [ ] Held-out **feature** values are byte-identical too. The recovered `Outliers_Management.py:60-72`
+- [x] Held-out **feature** values are byte-identical too. The recovered `Outliers_Management.py:60-72`
       clipped val/test features using their own residuals — leak L10, the same defect on the other
       side of the table. If this stage grows any outlier handling, that is where it comes back
-- [ ] The **L3 sentinel** and the **L10 sentinel** (ticket 71) are wired to this module — `live`
+- [x] The **L3 sentinel** and the **L10 sentinel** (ticket 71) are wired to this module — `live`
       checks in `hydms/qa/sentinels.py` calling `hydms.qa.assert_holdout_unchanged` on the real
       stage, once for `y` and once for `X`. Gate HG-1 goes red once `hydms/data/screening.py` exists
       without them
-- [ ] Removed rows written to a report with their residuals, not silently dropped
-- [ ] Counts recorded per split for the Chapter 1 revision (37)
-- [ ] Module docstring records the counter-caution: removing real measurements in underrepresented regimes flatters metrics
-- [ ] **Decide what happens to the one byte-identical duplicate row.** `hydride_data.csv` rows 687
+- [x] Removed rows written to a report, not silently dropped — **with their reason and their
+      label-quality score, not their residuals.** A residual needs a fitted model and a feature
+      matrix; the stage has neither, and inventing one here is how `CleanLab.py` ended up fitting
+      a `HistGradientBoostingRegressor` inside a data-cleaning script. `Screening.report()` carries
+      label, kind, split, removed, quality, reason; `Screening.counts()` carries the per-split
+      totals
+- [x] Counts recorded per split for the Chapter 1 revision (37)
+- [x] Module docstring records the counter-caution: removing real measurements in underrepresented regimes flatters metrics
+- [x] **Decide what happens to the one byte-identical duplicate row.** `hydride_data.csv` rows 687
       and 694 are identical across all six columns — `La0.9Ce0.1Ni5`, AB5, Extracted, 1.40 wt%,
       373 K, same citation URL. One measurement recorded twice. This stage is the only one entitled
       to drop a row, so the decision is yours: drop it, or keep it and say why. It is *not* one of
@@ -66,7 +71,7 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       material contributing twice to whichever split it lands in; under #87's canonical key both
       copies land in the same split, so this is a weighting question, not a leak
 
-- [ ] **One row's formula is missing a decimal point, and nothing has ever noticed.**
+- [x] **One row's formula is missing a decimal point, and nothing has ever noticed.**
       `Mg0853Ni0.125La0.022` (one row of `hydride_data.csv`) parses as magnesium with an amount of
       **853**, so its atomic fractions are Mg 0.9998, Ni 1.5e-04, La 2.6e-05 — essentially pure Mg.
       The intended composition is plainly `Mg0.853Ni0.125La0.022`, since 0.853 + 0.125 + 0.022 = 1.000
@@ -76,10 +81,44 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       with it — flag, drop, or correct in a documented correction layer, since `Machine_Model/` is
       read-only under the freeze — and say so out loud; do **not** repair it silently in a loader
 
+- [x] **Both decided rows land in `train` under #13's split, so the stage is entitled to act.**
+      Measured, not assumed — and the general case is a real code path with a test: a finding on a
+      held-out row is recorded with `removed=False` and the row stays exactly where it is.
+      Removing it would be the mirror image of L3, improving a held-out set by touching it
+- [x] **The duplicate: dropped, and found structurally.** `DataFrame.duplicated(keep="first")`
+      rather than a hard-coded row number, so a new duplicate is found rather than missed and the
+      decision survives a re-export. There is no information in the second copy and keeping it
+      weights that one measurement double in its split and in every fold
+- [x] **`Mg0853Ni0.125La0.022`: dropped from training and named, not corrected.** The correction
+      is unambiguous (0.853 + 0.125 + 0.022 = 1.000 exactly) and would be the better fix — but it
+      cannot happen *here*. The canonical key, the split and the class join are all computed
+      upstream, so by the time screening sees the row it has already been keyed and split as
+      essentially pure magnesium. A correction layer must sit above `hydms/data/load.py`, whose
+      stated contract is that it normalises nothing, and moving that line is a decision rather
+      than a repair made in passing. **Boxed on #9.** `MALFORMED_FORMULAE` declares the string and
+      the reason; a test asserts the string is still in the file, because a declaration about a
+      row that no longer exists is a decision nothing enforces
+- [x] **Reweighting is declined, with a reason.** The card allows "drop or reweight". The only
+      weighting the archival pipeline had is `Catboostmodel.py:516-518` —
+      `np.where(np.expm1(y) > 3, 2.0, 1.0)`, target-conditioned with a hand-tuned threshold, which
+      is leak **L12**. Choosing a weighting policy is #26's decision, made with the surrogate in
+      view; a weight vector invented here would be a second answer. The stage drops
+- [x] **No label is rewritten on *any* split, which is stronger than L3.** `CleanLab.py` rewrites
+      training labels too, at `:64` and `:80` — `cleaned_y_train` is `predicted_label` wherever
+      CleanLab flagged an issue. That is not L3, since a training label is not a measurement
+      anyone scores against, but it is the same reflex. `screen` only ever *selects* rows, and
+      asserts it: `assert_holdout_unchanged` is called a third time over every surviving row
+- [ ] **Owed to S4 — this card is not done.** The first box stays open: feature selection (#24)
+      consuming this stage's output is what closes the `Boruta_FeatEng.py:23-25` bypass, and #24
+      also supplies the feature matrix CleanLab needs to produce `label_issues` in the first place.
+      The seam is in place — `screen(frame, split, label_issues=..., label_quality=...)` takes
+      exactly what `CleanLearning(...).find_label_issues(X, y)` returns
+
 ## Runnable check
 
 ```bash
-python -m pytest tests/data/test_clean.py -q
+conda run --no-capture-output -n Project python -m pytest tests/data/test_clean.py -q
+conda run --no-capture-output -n Project python -m pytest tests/leaks/test_l3_l10_holdout_immutability.py -q
 ```
 
 ## Traces to
@@ -105,3 +144,25 @@ python -m pytest tests/data/test_clean.py -q
   while measuring whether `(Composition, temperature(K))` could serve as the merge key; it cannot,
   and six of the seven repeats on that key are genuine replicates. This one is not, and this stage
   is the only one entitled to drop a row. (by @assistant)
+
+- 2026-09-03: Contract and structural screening landed; **status `doing`, not `done`** — the
+  CleanLab call itself needs #24's feature matrix. `hydms/data/screening.py` — `screen`,
+  `Screening`, `Finding`, `MALFORMED_FORMULAE`; 18 tests in `tests/data/test_clean.py`. The
+  **L3 and L10 sentinels are wired**, so `audit()` now reports L3, L8, L9 and L10 green — the
+  four the runbook's S2 exit check names. Three things this card taught:
+
+  **The live hook needed no invented heuristic, only the strongest possible input.** CleanLab
+  cannot run without features, so the obvious move was to stand in a plausible scorer. Instead the
+  hook passes `label_issues = True` for **every** row — a method that condemns the whole dataset.
+  Under it a correct stage drops every training row and leaves every held-out row byte-identical,
+  which is maximal pressure on the contract and zero invention. Cached, like `_l9_real_frames`.
+
+  **Both decided rows landing in `train` is luck, so the held-out path is a real code path.** If
+  the duplicate had landed in test, the contract would have forbidden removing it. That case is
+  implemented and tested rather than left to be discovered by a future re-split.
+
+  **The correction that is right is in the wrong place.** `Mg0.853Ni0.125La0.022` is plainly what
+  was meant, and screening is downstream of keying and splitting, so a correction applied here
+  would arrive after the row had already been keyed and split as pure magnesium. Dropped and
+  named instead, with the correction-layer decision boxed on #9 rather than half-made here.
+  (by @assistant)
