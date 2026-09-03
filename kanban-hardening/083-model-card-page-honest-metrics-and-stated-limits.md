@@ -37,6 +37,14 @@ DOE system target, and the published figures inherited as though nothing had cha
       capacity distinction
 - [ ] The artifact version and training date
 
+- [ ] **State the two descriptor-level filler values (from #18 and #19).** `dev_Gordy_electonegativity`
+      cannot be computed for 266 of 1,279 rows from the citable Oliynyk edition, and
+      `dev_voro_coord_divi_mol_vol` rests on `voro_coord = 1.0` for gadolinium — a placeholder, not
+      a measurement: every other element in the JARVIS table sits between 3 and 12, and Gd is hcp
+      with twelve nearest neighbours. Gd appears in **18 of the 1,279** rows. Neither is a bug and
+      neither moves parity; both are limits a reader forming a belief about the model should be
+      told, in the same paragraph as the no-pressure-data limit
+
 ## Runnable check
 
 ```bash
@@ -48,5 +56,8 @@ conda run -n Project python -m pytest tests/delivery/test_model_card.py -q
 `docs/PHASE-H-RUNBOOK.md` — S7; `docs/PRD-inverse-design.md` — S6, R4
 
 ## Narrative
+
+- 2026-09-04: One box added by #18 — two descriptor-level filler values a reader must be told
+  about, both measured during S3 (by @assistant)
 
 - 2026-09-02: Created for Phase H (by @assistant)

@@ -320,13 +320,33 @@ could mean anything. See below.
       5.3e-15. **(d)** `parse_formula` sorts elements by symbol and CBFV does not, which alone
       moves a cell by up to 3.638e-12 — three orders inside 1e-9, but it is why #21 can never
       be an equality. #21 carries (b) and (d).
-- [ ] **#18** Composite descriptors (`_divi_`, `_mult_`). ~~**The live technical risk (R3):** whether the
-      JARVIS composites are statistic-of-composite or composite-of-statistic is unresolved and must be
-      settled numerically. Budget slack here.~~ **R3 is settled, and not numerically.** The five
-      composites are per-element **columns** of the JARVIS table — card #8's note that they "appear in
-      no table header" was wrong — each equal to the arithmetic of its parts to 1e-9. A composite is a
-      property of an element, so the form is **statistic-of-composite** by construction. #18
-      reproduces the statistic and no longer chooses the form; the slack budgeted here is free.
+- [x] **#18** Composite descriptors (`_divi_`, `_mult_`) — `hydms/descriptors/composites.py`.
+      ~~**The live technical risk (R3):** whether the JARVIS composites are statistic-of-composite or
+      composite-of-statistic is unresolved and must be settled numerically. Budget slack here.~~
+      **R3 was already settled by #16, and not numerically** — the five composites are per-element
+      **columns** of the JARVIS table, so a composite is a property of an element and the statistic
+      is taken over it. **Landed 2026-09-04. The card's own work was a parse, a pin and an audit,
+      and the audit found something.**
+      **(a)** **Eleven of JARVIS's 156 composite columns are not the arithmetic their names claim.**
+      All eleven are the `*_mult_voro_coord` family and all fail on exactly **Cs and Gd**, where
+      each is `0.0` — formed as though `voro_coord` were 0 — while the `voro_coord` column stores
+      `1.0` and `voro_coord_divi_mol_vol` uses that 1.0. The published file contradicts itself
+      about two elements. The other 145 equal their parts **bit-exactly**, and so do all five of
+      the selected composites on all 82 elements carrying them. Hence the rule the featuriser
+      inherits: **read the published column, never a derived value** — it is what CBFV reads, so
+      it is what parity means. `require_self_consistent()` is the guard; boxed on #20 and #25.
+      **(b)** **`voro_coord = 1.0` for Cs and Gd is a placeholder and it reaches a selected
+      feature.** Every other element sits between 3 and 12, gadolinium is hcp with twelve nearest
+      neighbours, and Gd is in **18 of the 1,279** rows through `dev_voro_coord_divi_mol_vol`. Not
+      a bug and not a parity problem — a limit the model card must state. Boxed on #83 and #25.
+      **(c)** The rejected order is kept as a **negative test** rather than deleted: over the
+      sixteen fixture formulae, composite-of-statistic misses CBFV by between **1.8%** and a factor
+      of **65**, while statistic-of-composite agrees to **9.1e-13**. No flag was ever written; two
+      code paths would have left less behind than one measurement and one failing assertion.
+      **(d)** The naming grammar is a **parse, not a guess**, and that is measured: 156 of 438
+      JARVIS columns carry an infix, `oliynyk` carries none, none carries two, every one splits
+      into two real columns, and none splits two ways. A feature name arriving with its statistic
+      still attached is refused rather than split into `avg_polzbl` and `atom_mass`.
 - [x] **#19** The 22-feature contract — `hydms/descriptors/contract.py`.
       **Landed 2026-09-04, and it corrected three of its own instructions.**
       **(a)** "Two of the 22 are not computable everywhere" is **seven**: the card folded the six
@@ -586,7 +606,11 @@ conda run -n Project streamlit run app/main.py
   `check_board.py` enforces exactly that integrity. The two directories are a **freeze boundary, not
   an id-space boundary**; blockers reach across them and are checked as one graph.
 - **#44, #48, #49 were pulled out of the frozen PA phase.** Without them the interface has no refusal path.
-- **#18 is the live technical risk (R3).** It gates #21, which gates everything downstream of selection.
+- ~~**#18 is the live technical risk (R3).**~~ **Closed 2026-09-04, and it never was one.** #16
+  settled R3 from the source data before #18 started — a composite is a table column, so the form
+  is statistic-of-composite by construction — and #18's measurement of the rejected order (1.8% to
+  65x off CBFV) only confirms it. What #18 found instead is that eleven of the table's 156
+  composite columns are not their own arithmetic. #21 is still gated by #20, not by this.
 - **Expect the headline numbers to fall, substantially.** Risk R4 anticipates it; given L2 and the
   contradicting CSVs, the fall will be large. Per the PRD that is *a reported result, not a failure*.
 - **Scope:** ~31 board-days of existing cards + 4 migrated + ~15 new ≈ **50 developer-days** for one

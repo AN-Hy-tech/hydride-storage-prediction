@@ -59,6 +59,15 @@ Formula parsing via `pymatgen.core.Composition` (MIT, already a dependency).
       The verdict names the blocking element and distinguishes a missing element from an empty
       published cell, which is what the index-reporting box above needs
 
+- [ ] **Read the published composite column; never derive it from its parts (from #18).** The five
+      composite properties in the 22 are per-element columns of the JARVIS table, and CBFV reads
+      those columns — so the column is what parity means (#21). On those five the two routes are
+      the same double for all 82 elements that carry them, but eleven of the table's 156 composite
+      columns are *not* the arithmetic their names claim, so this is a rule rather than a
+      preference. Call `hydms.descriptors.composites.require_self_consistent("jarvis", props)` on
+      the composite properties this function is about to featurise: it raises naming the column and
+      the element, and it is cheap enough to run once per property set
+
 ## Runnable check
 
 ```bash
@@ -70,6 +79,9 @@ python -m pytest tests/descriptors/test_featurize.py -q
 `docs/PRD-inverse-design.md` — S3, S12
 
 ## Narrative
+
+- 2026-09-04: One box added by #18: composite columns are read, not derived, and eleven of the
+  table's 156 are not their own arithmetic — the guard to call is named in the box (by @assistant)
 
 - 2026-09-03: Two boxes added by #87. The card's "formula parsing via `pymatgen.core.Composition`"
   line is now the odd one out — #9 owns the grammar and #87's key is built on it — and creating this

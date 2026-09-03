@@ -36,6 +36,17 @@ finding, and the comparison table is the evidence either way.
       importance: the old 22 contain one feature that costs 266 of 1,279 rows and six that cost
       one row, and a new set that avoids them is better on an axis SHAP does not measure
 
+- [ ] **If the candidate pool widens beyond the old 22, exclude the eleven JARVIS columns that are
+      not their own arithmetic (from #18).** Every `*_mult_voro_coord` column is `0.0` for Cs and
+      Gd — formed as though `voro_coord` were 0, while the base column stores 1.0 — so a feature
+      selected from that family is correct for 101 elements and zero for two.
+      `hydms.descriptors.composites.disagreements("jarvis")` lists them.
+      **And whether `dev_voro_coord_divi_mol_vol` should survive at all is this card's call:**
+      `voro_coord = 1.0` is a placeholder (every other element is 3 to 12; Gd is hcp with twelve
+      neighbours) and Gd is in 18 of the 1,279 rows, so that feature is built on filler for those
+      rows. Nothing forces a decision — CBFV reads the same column, so parity is unaffected — but
+      it belongs in the old-vs-new write-up beside computability
+
 ## Runnable check
 
 ```bash
@@ -47,5 +58,8 @@ python -m hydms.surrogate.select --emit-comparison
 `docs/PRD-inverse-design.md` — S7, R4
 
 ## Narrative
+
+- 2026-09-04: One box added by #18 — eleven JARVIS composite columns disagree with their own
+  parts, and one selected feature rests on a placeholder `voro_coord` (by @assistant)
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)

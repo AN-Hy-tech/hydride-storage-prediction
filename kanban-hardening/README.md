@@ -130,7 +130,87 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #19 landed · written for #18, then #20
+### Handoff — 2026-09-04 (latest) · #18 landed · written for #20
+
+**Where the phase is.** Twenty cards done. The tree is green: **502 tests**, ruff 0.8.4 and
+mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, `gates run --fast` exit 0,
+`audit()` unchanged at **4 of 13** — `hydms/descriptors/composites.py` is no sentinel's
+subject either, and L13 still waits on `hydms.descriptors.featurize`, which is #20.
+
+**#18, the composites.** `hydms/descriptors/composites.py`: `INFIXES` (two entries — the whole
+spec), `decompose()`, `composite_properties()`, `disagreements()` and
+`require_self_consistent()`. 21 tests. The card asked for the construction order, both orders
+behind a flag, a declarative spec and six hand pins. The order was already settled by #16 and
+the statistic already built by #17, so the real work was the thing the by-construction argument
+*assumes* — that a column named `a_divi_b` is `a` divided by `b`. Checked across all 156
+composite columns instead of the five in play:
+
+- **Eleven of the 156 are not the arithmetic their names claim.** One family,
+  `*_mult_voro_coord`, and two elements, **Cs and Gd**, where every one of them is `0.0` —
+  formed as though `voro_coord` were 0, while the `voro_coord` column stores `1.0` and
+  `voro_coord_divi_mol_vol` uses that 1.0 (Gd: `1/19.9 = 0.05025125628140704`, the stored
+  value). NIST's file contradicts itself about two elements. No tolerance would have shown
+  this: the disagreement is a relative **1.0**.
+- **The other 145 — and all five selected composites — equal their parts bit-exactly.** Not to
+  a tolerance; the same double, on every one of the 82 elements carrying them. Which is what
+  makes the rule cheap and easy to lose: **read the published column, never a derived value.**
+  It is what CBFV reads, so it is what parity means (#21). Today the two routes are identical
+  for the five in the 22; the eleven are why it is a rule.
+- **`voro_coord = 1.0` for Cs and Gd is a placeholder, and it reaches a selected feature.**
+  Every other element in the table sits between 3 and 12, and gadolinium is hcp with twelve
+  nearest neighbours. Gd is in **18 of the 1,279** rows, through
+  `dev_voro_coord_divi_mol_vol`. Not a bug, not a parity problem — a limit to state. Boxed on
+  **#83**; whether the feature survives re-selection is **#25**'s, boxed there with the eleven.
+
+**Two smaller things worth having.**
+
+- **The naming grammar is a parse, not a guess, and that is measured**: 156 of JARVIS's 438
+  columns carry an infix, `oliynyk` carries **none**, no name carries two, every one splits
+  into two names that are themselves columns, and none splits two ways. So `INFIXES` can be a
+  spec rather than a branch table. The trap it guards: a *feature* name is not a *property*
+  name — `avg_polzbl_divi_atom_mass` splits into `avg_polzbl` and `atom_mass`, and `decompose()`
+  refuses it rather than featurising from the wrong pair.
+- **The rejected order is kept as a failing assertion rather than deleted.** No flag was ever
+  written: the card's "both orders behind a flag, loser deleted before merge" would have left
+  nothing behind, and the measurement leaves a test. Over the sixteen fixture formulae
+  composite-of-statistic misses CBFV by between **1.8%** (`avg_first_ion_en_mult_X`) and a
+  factor of **65** (`dev_bp_divi_atom_mass`), while statistic-of-composite agrees to
+  **9.1e-13**. Some of the gap is structural rather than large — `range(a)/range(b)` is not a
+  range of anything, and `dev_voro_coord_divi_mol_vol` computed the wrong way on a two-element
+  composition is exactly zero.
+
+**The hand pins.** Six features × five statistics on `Mg2Ni1`, where the fractions are 2/3 and
+1/3 and the closed forms fit on one line: `avg = (2a+b)/3`, `dev = (4/9)|a−b|`, `range = |a−b|`.
+Every expected value is exact decimal arithmetic from the two element values — not numpy, not
+the code under test — and the element values are asserted against the table first, so a table
+revision breaks the test at the value it changed rather than at a statistic three lines later.
+Agreement: **1.9e-16** relative at worst. If you need a second worked example, `Ti1Fe1` gives
+`avg = (a+b)/2`, `dev = |a−b|/2`.
+
+#### The opening move
+
+**#20, `featurize()`.** The last card of the layer before the gates, and it now carries four
+obligations rather than two:
+
+1. **The `int64` → `float64` cast for `temperature(K)`** (#19). `assert_contract` refuses the
+   integer column by name; a candidate at 313.5 K truncates to 313 in silence otherwise.
+2. **Call `CONTRACT.computability(composition)` before building a row** (#19). Seven of the 22
+   are not computable everywhere. The contract answers per composition and names the blocking
+   element — **ask before you build, do not fill after.** A NaN here is one median-fill away
+   from a number that looks like a measurement.
+3. **Read the published composite column; call `require_self_consistent()` on the composite
+   properties you featurise** (#18). Cheap, once per property set.
+4. **The parser is `hydms.data.load.parse_formula`, not `pymatgen.core.Composition`** (#87).
+
+And **creating `hydms/descriptors/featurize.py` turns HG-1 red before you write a wrong line** —
+the L13 sentinel names that module as its subject and has no `live` hook yet, so `audit()` will
+report `L13 [unwired] #12`. That is the mechanism working. **Do not re-aim the sentinel's
+subject.** #12 owes the hook and is `doing` precisely because it waits on #20; the two halves
+are boxed on the two cards. HG-1 goes green again at 5/13.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #19 landed · written for #18, then #20
 
 **Where the phase is.** Nineteen cards done. The tree is green: **481 tests**, ruff 0.8.4 and
 mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, `gates run --fast` exit 0,

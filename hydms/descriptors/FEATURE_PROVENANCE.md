@@ -70,6 +70,16 @@ Five of these are **composite** descriptors: `a_divi_b` is a ratio, `a_mult_b` a
 > open question in the opposite direction from "to be determined numerically". A composite is a
 > property *of an element*, so the form is **statistic-of-composite** by construction.
 
+> **Refinement, 2026-09-04 (card #18).** "Equals the arithmetic of its parts to 1e-9" is looser
+> than the measurement. For these five, on every one of the 82 elements that carry them, the
+> published column and the quotient or product of its parts are the **same double**. But that is
+> not true of the table at large: of its 156 composite columns, **eleven are not their own
+> arithmetic** — the whole `*_mult_voro_coord` family, `0.0` for Cs and Gd, formed as though
+> `voro_coord` were 0 while the base column stores `1.0`. So the featuriser reads the published
+> column and never a derived value, and `hydms.descriptors.composites.require_self_consistent()`
+> is the guard for a column nobody has audited. Relevant to #25: a wider candidate pool can
+> select one of the eleven.
+
 | Feature | Statistic | Base property | Form |
 |---|---|---|---|
 | `avg_polzbl_divi_atom_mass` | avg | polzbl / atom_mass | composite (ratio) |
