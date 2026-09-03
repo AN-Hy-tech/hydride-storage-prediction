@@ -222,7 +222,16 @@ the same module as L3 (card #71).
       digits**, which is the only resolution that both reproduces 1115 compositions and keeps the
       widest gap it merges (3.46e-05) narrower than the closest it does not (1.01e-04); `separation()`
       asserts that over both raw files and is demonstrated red at three digits.
-- [ ] **#12** Re-join `Alloy_class` on the canonical key, not the raw string.
+- [~] **#12** Re-join `Alloy_class` on the canonical key, not the raw string. **Data-layer half
+      landed; the card is `doing`, not `done`.** `hydms/data/metadata.py` declares the boundary in
+      two lists — `metadata_columns()` (what a featuriser must carry: formula, class, dataset,
+      citation, canonical key) and `non_feature_columns()` (that, **plus the target in both
+      spaces**), with `refuse_non_features(X)` checking the matrix rather than the featuriser. All
+      ten classes survive, 1279 rows in and out, 13 relabelled; AC-6 is feasible, the smallest
+      class being `A2B` at 24 compositions of 1115. `UNKNOWN` is settled as a **refusal** — the
+      class is complete on all 1279 rows and an eleventh label changes AC-6's fold count. What is
+      owed: the class surviving featurisation, its absence from `X`, and the L13 `live` hook, all
+      three naming `hydms.descriptors.featurize`, which **#20 creates in S3**.
 - [ ] **#13** The assertion becomes "no **canonical composition** spans two splits" — the current
       raw-string assertion passes while 35 rows leak.
 - [ ] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are immutable.

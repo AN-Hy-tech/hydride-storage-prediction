@@ -588,8 +588,9 @@ def alloy_class_table(
     if bool(missing.any()):
         raise CanonicalisationError(
             f"{int(missing.sum())} row(s) have no {label_column!r}: "
-            f"{_named(frame.index[missing])}. A missing class is card #12's to label "
-            f"UNKNOWN; reconciliation refuses to guess one."
+            f"{_named(frame.index[missing])}. A row with no class refuses "
+            f"here rather than becoming an eleventh class -- #12 settled that, and "
+            f"hydms.data.metadata says why."
         )
 
     translate = dict(aliases) if aliases is not None else {}
@@ -601,11 +602,17 @@ def alloy_class_table(
     records = []
     for key in sorted(grouped):
         labels = grouped[key]
+        # `reconcile_class` first, because it is the one that validates the vocabulary.
+        # Ordering `distinct` by `ALLOY_CLASS_PRECEDENCE.index` would otherwise raise a bare
+        # `tuple.index(x): x not in tuple` on an unrecognised label -- a crash naming neither
+        # the label nor the row, shadowing the refusal that exists two lines below. Found by
+        # #12, whose settled answer for an unlabelled row is that it refuses at the door.
+        resolved = reconcile_class(labels)
         distinct = sorted(set(labels), key=ALLOY_CLASS_PRECEDENCE.index)
         records.append(
             {
                 "canonical_key": key,
-                names.alloy_class: reconcile_class(labels),
+                names.alloy_class: resolved,
                 "labels": ", ".join(distinct),
                 "rows": len(labels),
                 "conflicted": len(distinct) > 1,

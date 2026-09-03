@@ -195,3 +195,12 @@ conda run -n Project python -m pytest tests/data/test_canonical.py -q
   exit line, which said L13 goes green at S2 because #87 owes the sentinel, has been corrected.
   `assert_metadata_survives` is the seventh detector and the first that asks whether a stage
   *carried something through* rather than whether it touched held-out data. (by @assistant)
+
+- 2026-09-03: Corrected by #12. `alloy_class_table` ordered a composition's labels with
+  `ALLOY_CLASS_PRECEDENCE.index` *before* calling `reconcile_class`, so an out-of-vocabulary label
+  raised a bare `ValueError: tuple.index(x): x not in tuple` — naming neither the label nor the
+  row, with `reconcile_class`'s careful refusal sitting two lines below, unreachable from the
+  conflicted path. The guard was written and tested directly; nothing had ever driven a bad label
+  through the table. Fixed by reconciling first. The missing-class message, which said "a missing
+  class is card #12's to label UNKNOWN", was corrected in the same commit: #12 settled it as a
+  refusal. (by @assistant)
