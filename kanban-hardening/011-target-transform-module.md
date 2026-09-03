@@ -104,3 +104,16 @@ conda run --no-capture-output -n Project python -m pytest tests/data/test_target
   weight percent (`:1194-1196`), §6.1's SHAP is log space. §4.2's footnote therefore defines
   its Overfitting column across two spaces — that is a ninth disagreement and went to #89.
   (by @assistant)
+
+- 2026-09-03: A fourth one-ulp effect, found by card #6's CI lane rather than by this card, and
+  it is a different kind from the three above. Those were stdlib-versus-NumPy on the same
+  machine. This one is the **same** `math.log1p` on two platforms: `log1p(7.19)` is
+  `2.1029138978649784` under MSVC and `2.102913897864978` under glibc, because `math.log1p`
+  delegates to the C library. `MODEL_SPACE_RANGE`'s upper literal was measured here, on Windows,
+  so `test_scalars_go_through_the_same_two_functions` -- the one assertion in the suite that used
+  `abs=0.0` -- was asserting MSVC's answer and went red the first time the suite ran on Linux. It
+  now uses `ROUND_TRIP_TOLERANCE` like every other float comparison in this project, and the
+  constant's comment records that a libm result is a measurement, not a mathematical fact. The
+  keep-it-as-a-literal decision above still stands; what changed is what may be asserted against
+  it. Nothing downstream moves: ~4.4e-16 against a 1e-12 tolerance, in a column reported to two
+  decimals. (by @assistant)
