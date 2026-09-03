@@ -254,10 +254,20 @@ the same module as L3 (card #71).
       the canonical key — boxed on #9. **L3 and L10 are wired and green.** What is owed to S4: #24
       consuming this stage's output, which is what closes the `Boruta_FeatEng.py:23-25` bypass and
       also supplies the feature matrix CleanLab needs to produce `label_issues` at all.
-- [ ] **#15** Data-layer golden tests.
+- [~] **#15** Data-layer golden tests. **Written and green; the card stays `backlog`, and
+      `check_board.py` is what insisted.** `tests/data/test_golden.py` pins 34 facts as one record
+      and reports a deviation as a table of fact/expected/actual rather than as a bare assertion.
+      It separates *facts that must not move* (1279 rows, 1149 strings, 1115 compositions, the ten
+      classes) from *facts that moved on purpose* — the split is pinned at 893/131/255 **with** the
+      published 896/136/247 beside it under `split_rows.published_*`, so restoring the old number
+      is a visible failure rather than a silent return to the leaky split. The card cannot leave
+      backlog while #14 is unfinished, and that is right on the substance: when #24 lands,
+      CleanLab starts flagging rows and `screened.rows_out` / `screened.removed` move. Re-measure
+      those two then; nothing else should move, and if it does, that is the finding.
 
 **Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9** and L10
-sentinels go green — L10 because its subject is #14's module. **L13 does not, and the original
+sentinels go green — L10 because its subject is #14's module. **As of 2026-09-03 all four are
+green** (`4/13 leaks guarded`), and `tests/data` is 215 tests over eight files. **L13 does not, and the original
 version of this line was wrong about it.** Its site is `extract_features_cbfv.py`, so its sentinel
 guards the *featuriser*; #87 wrote the sentinel and #12 wires it, but the module it names does not
 exist until S3. Pointing it at the data layer instead would have made it green today while guarding
