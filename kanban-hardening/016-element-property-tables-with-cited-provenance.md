@@ -175,3 +175,11 @@ python -m pytest tests/descriptors/test_element_data.py -q && ! grep -rn 'import
   feature computable for some compositions and not others is worse than one that is simply
   unavailable: it becomes a column of NaNs downstream unless something refuses early. #19 now
   carries a list rather than an impression. (by @assistant)
+
+- 2026-09-03 (later, from #17): `scripts/build_element_tables.py` grew a second fixture mode
+  (`--cbfv-statistics`, card #17's parity golden) and lost the requirement that `--oliynyk` and
+  `--jarvis` be passed to run at all. That requirement was a defect this card shipped: both
+  sources are one-off downloads the repository does not keep, so the AC-2 reference fixture
+  committed here was already unregenerable on a clean clone. The two source arguments are now
+  optional, must be given together, and a run that would build nothing is refused. Nothing
+  about the tables themselves changed. (by @assistant)

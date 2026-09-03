@@ -132,10 +132,21 @@ data rather than an impression.
 python scripts/build_element_tables.py --oliynyk oliynyk-elemental-property-list.xlsx \
                                        --jarvis Elements.json
 
-# The AC-2 reference fixture as well; needs the `parity` extra, and is not run by CI.
-conda run -n Project python scripts/build_element_tables.py --oliynyk ... --jarvis ... \
-       --cbfv-reference tests/descriptors/data
+# The two CBFV fixtures. Both need the `parity` extra, neither is run by CI, and neither
+# needs the downloads above -- they are built from CBFV's own installed copy, so a fixture
+# stays regenerable on a clean clone.
+conda run -n Project python scripts/build_element_tables.py \
+       --cbfv-reference tests/descriptors/data \
+       --cbfv-statistics tests/descriptors/data
 ```
+
+`--oliynyk` and `--jarvis` go together and may be omitted entirely; a run that would build
+nothing is refused. The two fixtures are:
+
+| Fixture | Card | Holds |
+|---|---|---|
+| `cbfv_oliynyk_reference.csv` | #16 | CBFV's own values for the 13 Oliynyk properties, so AC-2 can compare code rather than tables |
+| `cbfv_statistics_reference.csv` | #17 | CBFV's `avg`/`dev`/`range`/`max`/`min` over 16 formulae spanning arity 2–10 × the 19 needed properties of **both** tables — 1,520 statistics. It is what keeps "`dev` is CBFV's fraction-weighted mean absolute deviation, not a standard deviation" a check rather than a claim |
 
 The build script is stdlib-only: `openpyxl` is not in the pinned environment and adding it is
 card #86's decision, not one to make in passing.

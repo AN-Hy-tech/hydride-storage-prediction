@@ -39,6 +39,27 @@ would be trained on subtly different features than `REPORT.md` describes.
       input for this gate and must never become package data -- CBFV carries no licence, which
       is the whole reason the descriptor layer exists
 
+- [ ] **Parity through this project's parser cannot be bit-exact, and the reason is the element
+      order (from #17).** `hydms.data.load.parse_formula` returns elements sorted by symbol;
+      CBFV keeps its parse order. The statistics accumulate sequentially, so a different order
+      rounds differently — measured over all 1,279 formulae and the nineteen properties the 22
+      features need, that alone moves a cell by up to **2.274e-13** (oliynyk) and **3.638e-12**
+      (jarvis, `atom_mass_mult_therm_cond`, `Pr0.8Ce0.3Cu5`). Both are ~3 orders inside the 1e-9
+      this gate asserts, so the tolerance holds comfortably — but it must be *stated* as the
+      reason the gate is a tolerance rather than an equality, because `hydms.descriptors.stats`
+      **is** bit-identical to CBFV when handed CBFV's own element order (measured: 0.0 over both
+      tables, all five statistics, every cell). If this gate ever fails by ~1e-12, suspect the
+      order before suspecting the arithmetic
+
+- [ ] **This gate cannot detect a wrong-axis reduction, and #17 found one that would matter.**
+      AC-2 compares 22 columns. Reducing the composition batch over its fast axis instead of its
+      leading one costs up to 2.274e-12 on those 22 — which passes — while costing **2.794e-09
+      on `bp_mult_mp`**, over tolerance, on a property no selected feature uses. So a featuriser
+      with a real numerical defect passes this gate today and fails it the moment #25 re-runs
+      selection onto a different property. `tests/descriptors/test_stats.py` guards the axis
+      directly (padding a batch must change nothing *exactly*); this box exists so that guard is
+      not deleted as redundant when this gate goes green
+
 - [ ] **No europium-containing formula may be compared at all.** CBFV drops Eu from its JARVIS
       index and answers anyway, substituting an all-zero property vector; `element_data.py`
       raises. A refusal and a number are not comparable, so `Eu1Ni5` must be excluded from the

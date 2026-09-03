@@ -228,10 +228,116 @@ def build_cbfv_reference(dest: Path) -> None:
     write_table(dest / "cbfv_oliynyk_reference.csv", list(CBFV_OLIYNYK_PROPERTIES), rows)
 
 
+#: The formulae the statistics fixture pins, chosen from ``hydride_data.csv`` to span every
+#: arity the dataset contains -- 2 through 10 distinct elements -- because the arity is what
+#: decides how many terms the reduction accumulates, and the reduction order is the whole
+#: question (card #17). No formula here contains europium: every jarvis property of europium
+#: is a ``-9999`` sentinel, so the committed table refuses it where CBFV silently zeroes it.
+CBFV_STATISTICS_FORMULAE = (
+    # arity 2..10, every one of them present in the dataset
+    "Mg1.5Ni1",
+    "Ti1Fe1",
+    "La1Ni5",
+    "Mg2Ni1",
+    "Ti1V1Mn",  # an implicit amount of 1, which both parsers must read the same way
+    "Mg0.874La0.021Ni0.105",
+    "Mg0.7Li0.1Ni0.1Cu0.1",
+    "Ti0.8Zr0.2Mn1.4V0.2Cr0.4",
+    "La1Ni5.5Mn0.1Al0.05",
+    "Ti0.9Zr0.15Mn1.6Cr0.2V0.2",
+    "Ti0.85Zr0.15Mn1.65Cr0.2Nb0.15",
+    "Co1Fe1Mn1Ti1V1Zr3",
+    "Ti0.8Zr0.2V0.6Mn0.2Pd0.1Ni0.8Fe0.2",
+    "Ti0.52Zr0.48Ni1.01V0.39Cr0.22Mn0.21Fe0.19Al0.19",
+    "La0.5Ce0.4Ti0.1Ni3.77Cu0.6Fe0.6Cr0.6Mn0.36Al0.27",
+    "Ti0.12Zr0.215V0.10Cr0.075Mn0.081Fe0.01Co0.07Ni0.322Sn0.003Al0.004",
+)
+
+#: The six jarvis properties behind 6 of the 22 selected features. Five are composites and
+#: are per-element *columns* of NIST's ``Elements.json``, not something CBFV synthesises --
+#: card #16 measured that and it settled PRD risk R3. ``atom_mass_mult_therm_cond`` is here
+#: for its magnitude as much as its selection: at ~2e4 it is where an absolute 1e-9
+#: tolerance has least room, and where a reduction down the wrong axis first shows.
+CBFV_JARVIS_PROPERTIES = (
+    "polzbl_divi_atom_mass",
+    "atom_mass_mult_therm_cond",
+    "bp_divi_atom_mass",
+    "first_ion_en_mult_X",
+    "voro_coord_divi_mol_vol",
+    "is_alkaline",
+)
+
+
+def build_cbfv_statistics(dest: Path) -> None:
+    """Emit CBFV's ``avg``/``dev``/``range``/``max``/``min`` as a **test** fixture.
+
+    Card #17's third box asks that ``dev`` match CBFV's definition exactly. It does -- it is
+    the fraction-weighted mean absolute deviation about the fraction-weighted mean, and
+    transcribing that reproduces CBFV to 0.0 over all 1,279 formulae -- but a measurement
+    made once in a session is a claim, not a check. This fixture is what turns it into one:
+    ``tests/descriptors/test_stats.py`` reads it and reproduces every cell without importing
+    CBFV, which CI cannot do because ``parity`` is an optional extra and the package is
+    unlicensed.
+
+    It pins both tables, as ``docs/QA-PROTOCOL.md`` §L2 requires: the oliynyk half is
+    checked against ``cbfv_oliynyk_reference.csv`` so the numbers are CBFV's own, and the
+    jarvis half against the committed ``jarvis.csv``, which *is* CBFV's source -- NIST's
+    ``Elements.json``, agreeing to 7.3e-12 (card #16).
+
+    Requires the `parity` extra. Deliberately not run by default and not by CI.
+    """
+    import numpy as np
+    import pandas as pd
+    from CBFV.composition import generate_features
+
+    frame = pd.DataFrame({"formula": list(CBFV_STATISTICS_FORMULAE), "target": 0.0})
+    wanted = {
+        "oliynyk": CBFV_OLIYNYK_PROPERTIES,
+        "jarvis": CBFV_JARVIS_PROPERTIES,
+    }
+
+    dest.mkdir(parents=True, exist_ok=True)
+    path = dest / "cbfv_statistics_reference.csv"
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(["formula", "table", "property", *STATISTIC_PREFIXES])
+        cells = 0
+        for table, properties in wanted.items():
+            emitted, _, formulae, _ = generate_features(
+                frame.copy(), elem_prop=table, drop_duplicates=False, extend_features=False
+            )
+            order = list(formulae)
+            for formula in CBFV_STATISTICS_FORMULAE:
+                row = emitted.iloc[order.index(formula)]
+                for prop in properties:
+                    values = [row[f"{stat}_{prop}"] for stat in STATISTIC_PREFIXES]
+                    if any(np.isnan(v) for v in values):
+                        raise SystemExit(
+                            f"CBFV emitted nan for {formula} / {table} / {prop}. It "
+                            f"median-fills those, so the fixture would pin a dataset "
+                            f"median rather than a statistic."
+                        )
+                    writer.writerow([formula, table, prop, *(_cell(v) for v in values)])
+                    cells += len(values)
+    print(f"  wrote {path}  ({cells} statistics over {len(CBFV_STATISTICS_FORMULAE)} formulae)")
+
+
+#: CBFV's own prefixes, in CBFV's own order. Duplicated from
+#: ``hydms.descriptors.stats.STATISTICS`` rather than imported: this script is stdlib-only
+#: by design (see the module docstring) and importing the package here would make building
+#: the tables depend on the layer the tables feed.
+STATISTIC_PREFIXES = ("avg", "dev", "range", "max", "min")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--oliynyk", type=Path, required=True, help="the Mendeley xlsx")
-    parser.add_argument("--jarvis", type=Path, required=True, help="NIST Elements.json")
+    # Optional, not because the tables are optional but because the *fixtures* are separable.
+    # Both sources are large one-off downloads that nothing in the repository keeps, and the
+    # two CBFV fixtures need neither of them -- they are built from CBFV's own installed
+    # copy. Requiring the downloads to regenerate a fixture made the fixtures effectively
+    # unregenerable, which is how a golden record quietly stops being checkable (card #15).
+    parser.add_argument("--oliynyk", type=Path, default=None, help="the Mendeley xlsx")
+    parser.add_argument("--jarvis", type=Path, default=None, help="NIST Elements.json")
     parser.add_argument("--dest", type=Path, default=DEST)
     parser.add_argument(
         "--cbfv-reference",
@@ -239,15 +345,34 @@ def main() -> int:
         default=None,
         help="also write the AC-2 reference fixture here (needs the `parity` extra)",
     )
+    parser.add_argument(
+        "--cbfv-statistics",
+        type=Path,
+        default=None,
+        help="also write card #17's statistics fixture here (needs the `parity` extra)",
+    )
     args = parser.parse_args()
 
-    print("Oliynyk -- Lee et al. 2024, Data in Brief 53, 110178 (CC BY 4.0)")
-    build_oliynyk(args.oliynyk, args.dest)
-    print("JARVIS -- Choudhary et al. 2020, npj Comput. Mater. 6, 173 (NIST, public domain)")
-    build_jarvis(args.jarvis, args.dest)
+    if (args.oliynyk is None) != (args.jarvis is None):
+        parser.error(
+            "--oliynyk and --jarvis go together: the descriptor layer sources from both "
+            "tables (card #8), and rebuilding one alone would leave the pair inconsistent."
+        )
+    if args.oliynyk is None and args.cbfv_reference is None and args.cbfv_statistics is None:
+        parser.error("nothing to build: pass --oliynyk/--jarvis, --cbfv-reference or "
+                     "--cbfv-statistics.")
+
+    if args.oliynyk is not None and args.jarvis is not None:
+        print("Oliynyk -- Lee et al. 2024, Data in Brief 53, 110178 (CC BY 4.0)")
+        build_oliynyk(args.oliynyk, args.dest)
+        print("JARVIS -- Choudhary et al. 2020, npj Comput. Mater. 6, 173 (NIST, public domain)")
+        build_jarvis(args.jarvis, args.dest)
     if args.cbfv_reference is not None:
         print("AC-2 reference fixture -- CBFV 1.1.0's own oliynyk.csv, for tests only")
         build_cbfv_reference(args.cbfv_reference)
+    if args.cbfv_statistics is not None:
+        print("Card #17 fixture -- CBFV 1.1.0's composition statistics, for tests only")
+        build_cbfv_statistics(args.cbfv_statistics)
     return 0
 
 

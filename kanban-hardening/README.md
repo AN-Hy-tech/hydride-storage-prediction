@@ -130,7 +130,55 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-03 (later) · #6 and #16 landed · written for #17
+### Handoff — 2026-09-03 (latest) · #17 landed · written for #19, then #18
+
+**Where the phase is.** Eighteen cards done. The tree is green: **439 tests**, ruff 0.8.4 and
+mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, `gates run --fast` exit 0,
+`audit()` unchanged at **4 of 13** — `hydms/descriptors/stats.py` is no sentinel's subject, and
+L13 still waits on `hydms.descriptors.featurize`, which is #20.
+
+**#17, the composition statistics.** `statistics(weights, values) -> Statistics` over `avg`,
+`dev`, `range`, `max`, `min`, plus 28 tests and a committed CBFV golden. The card told you to
+measure `dev` rather than assume it, and measuring it **confirmed the card** — it is the
+fraction-weighted mean absolute deviation, exact to 0.0 against CBFV. Three things it found
+instead, and each is now somebody's:
+
+- **The axis is the whole card.** Reducing the natural `(n_compositions, arity)` batch over its
+  fast axis makes numpy sum pairwise; over the leading axis it accumulates sequentially, and a
+  padded exact zero is then invisible. The wrong axis differs from CBFV by **2.794e-09 on
+  jarvis — over AC-2's 1e-9** — while the right one is **bit-identical**. `statistics()`
+  transposes internally so no caller can get it wrong, and the tests state it as arithmetic
+  rather than as a shape.
+- **AC-2 cannot see that defect.** On the 22 selected columns the wrong axis costs only
+  2.274e-12 and passes. A featuriser with a real numerical fault would go green today and red
+  the moment #25 re-runs selection. Boxed on **#21**, together with the reason parity can never
+  be an equality: `parse_formula` sorts elements by symbol, CBFV keeps parse order, and that
+  alone moves a cell by up to 3.638e-12.
+- **`docs/QA-PROTOCOL.md` §L2 asks for two invariances that do not exist exactly.** Permutation
+  and rescaling hold to `atol = rtol = 1e-12` (measured need: 4.3e-16 and 5.3e-15) and no
+  tighter — CBFV moves by 1.364e-12 when a formula string is merely *reversed*, on 293 of 400
+  real formulae. The protocol is right to ask; it just cannot have them to the bit.
+
+**One thing was fixed in passing, because it blocked the card.**
+`scripts/build_element_tables.py` demanded `--oliynyk` and `--jarvis` even to write a CBFV
+fixture needing neither — and those are one-off downloads the repository does not keep, so
+**#16's own AC-2 reference fixture was already unregenerable on a clean clone.** Both are now
+optional and must be given together; `--cbfv-statistics` is #17's golden. Recorded on #16.
+
+#### The opening move
+
+**#19, the 22-feature contract.** Its blockers are done and it is the card the last two have
+been piling findings onto: it must record computability **per composition**, because `gordy_en`
+is empty for 21 of the 55 elements and every jarvis property of europium is a sentinel. #17
+deliberately left the property axis outside `statistics()` so that decision lands here rather
+than being forced by an array shape.
+
+**#18, the composites, is also unblocked** and is smaller than it looks — #16 settled R3, so
+#18 reproduces a statistic over a per-element column and chooses nothing. Both feed #20.
+
+---
+
+### Handoff — 2026-09-03 (earlier) · #6 and #16 landed · written for #17
 
 **Where the phase is.** Seventeen cards done. Two landed since the handoff below, and both were
 worth more than their card text promised.

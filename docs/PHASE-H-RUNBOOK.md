@@ -301,7 +301,25 @@ could mean anything. See below.
       **(c)** Neither source covers all 55 elements: `gordy_en` is blank for 21 (the rare earths),
       and europium's JARVIS properties are `-9999` sentinels. Two of the 22 features are therefore
       not computable everywhere — #19 and #24/#25 carry it.
-- [ ] **#17** Weighted composition statistics.
+- [x] **#17** Weighted composition statistics — `hydms/descriptors/stats.py`.
+      **Landed 2026-09-03. `dev` was confirmed; the finding was somewhere else.**
+      **(a)** `dev` *is* the fraction-weighted mean absolute deviation about the
+      fraction-weighted mean, exact to **0.0** against CBFV over both tables and every cell.
+      The rival readings differ by 328.8 (fraction-weighted sd), 1172.2 (unweighted sd) and
+      1094.9 (unweighted MAD) — leading figures, not trailing ones. Committed as a fixture,
+      `tests/descriptors/data/cbfv_statistics_reference.csv`, so it stays checked without CBFV.
+      **(b)** **The reduction must run down the leading axis.** The caller-natural
+      `(n_compositions, arity)` batch reduced over its fast axis makes numpy sum *pairwise*,
+      which reorders the additions and differs from CBFV by up to **2.794e-09 on jarvis —
+      above AC-2's tolerance**. Transposed to `(arity, n_compositions)` and reduced over axis 0
+      it is bit-identical. `statistics()` transposes internally; two tests state the property as
+      arithmetic (padding a batch changes nothing *exactly*) so a rewrite cannot lose it.
+      **(c)** Permutation and scale invariance, which §L2 of the QA protocol asks for, are
+      **not exact** — here or in CBFV, which moves by 1.364e-12 when a formula string is merely
+      reversed. Both are tested as `atol=rtol=1e-12`; the measured requirement is 4.3e-16 and
+      5.3e-15. **(d)** `parse_formula` sorts elements by symbol and CBFV does not, which alone
+      moves a cell by up to 3.638e-12 — three orders inside 1e-9, but it is why #21 can never
+      be an equality. #21 carries (b) and (d).
 - [ ] **#18** Composite descriptors (`_divi_`, `_mult_`). ~~**The live technical risk (R3):** whether the
       JARVIS composites are statistic-of-composite or composite-of-statistic is unresolved and must be
       settled numerically. Budget slack here.~~ **R3 is settled, and not numerically.** The five
