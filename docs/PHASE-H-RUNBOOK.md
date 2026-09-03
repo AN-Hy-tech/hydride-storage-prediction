@@ -232,8 +232,16 @@ the same module as L3 (card #71).
       class is complete on all 1279 rows and an eleventh label changes AC-6's fold count. What is
       owed: the class surviving featurisation, its absence from `X`, and the L13 `live` hook, all
       three naming `hydms.descriptors.featurize`, which **#20 creates in S3**.
-- [ ] **#13** The assertion becomes "no **canonical composition** spans two splits" — the current
-      raw-string assertion passes while 35 rows leak.
+- [x] **#13** The assertion becomes "no **canonical composition** spans two splits" — the current
+      raw-string assertion passes while 35 rows leak. Landed: `hydms/data/splits.py` ports the
+      protocol unchanged and changes only the unit. **893 / 131 / 255 rows over 780 / 111 / 224
+      compositions**, against the published 896/136/247 — it cannot match, because the split now
+      has 1115 units instead of 1149, and matching would have meant the key changed nothing.
+      Fractions hold at 0.698 / 0.102 / 0.199. The **L8 sentinel is wired** and `audit()` reports
+      it green. Two things worth knowing before touching it: the per-group mean is taken in
+      **model space**, because a mean does not commute with `log1p` and the archival code
+      averaged the log column; and the rare-stratum merge measures its distances against the
+      counts as they were *before* any merging, so two rare strata never absorb each other.
 - [ ] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are immutable.
 - [ ] **#15** Data-layer golden tests.
 

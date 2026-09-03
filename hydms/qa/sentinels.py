@@ -419,6 +419,35 @@ def _l8_splits_grouped_by_composition() -> None:
     assert_disjoint_groups({"test": [*_COLLIDING, "lani5"], "val": ["tife", "zrv2"]})
 
 
+@lru_cache(maxsize=1)
+def _l8_real_splits() -> tuple[Any, Any]:
+    """Card #13's split of the real 1279 rows, and their canonical keys. Computed once.
+
+    Cached because the protocol costs about 0.7 s -- two `StratifiedShuffleSplit` cuts over
+    1115 compositions, on top of keying 1279 formulae -- and `audit()` runs on every gate
+    invocation and every test in `tests/leaks/`.
+    """
+    from hydms.data.canonical import group_keys
+    from hydms.data.load import load_hydride_data
+    from hydms.data.splits import assign_splits
+
+    frame = load_hydride_data()
+    return assign_splits(frame), group_keys(frame)
+
+
+def _l8_live() -> None:
+    """Card #13's splits, against the real dataset. The wiring the `unwired` state demands.
+
+    The keys handed to the detector come from `group_keys` here rather than from anything the
+    split module returned, so a split that had quietly grouped on something else would show
+    up as a straddle rather than as agreement with itself.
+    """
+    from hydms.data.splits import SPLIT_NAMES
+
+    split, keys = _l8_real_splits()
+    assert_disjoint_groups({name: keys[split == name] for name in SPLIT_NAMES})
+
+
 # --------------------------------------------------------------------------------------
 # L9 -- the merge
 # --------------------------------------------------------------------------------------
@@ -702,6 +731,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l8_splits_grouped_by_composition,
             ),
         ),
+        live=_l8_live,
     ),
     Sentinel(
         leak="L9",
