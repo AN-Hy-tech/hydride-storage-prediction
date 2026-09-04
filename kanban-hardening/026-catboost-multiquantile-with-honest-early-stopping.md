@@ -34,6 +34,10 @@ interval, not a point. This is what makes LCB ranking possible.
 - [ ] The quantile **column order** is asserted in a test — position is the only thing identifying
       P10 / P50 / P90
 - [ ] Folds come from ticket 88's protocol; no fold is both tuned on and scored on
+- [ ] **The budget is a product, and it is 4,500 fits.** #88's protocol is `model.cv_folds` (5)
+      outer x `model.inner_cv_folds` (3) inner x `model.optuna_trials` (300) per contender. Record
+      the measured wall time; if it is prohibitive, lower `inner_cv_folds` or `optuna_trials` in
+      `pipeline.yaml` -- never collapse the nesting, which is leak L4 returning
 - [ ] Optuna search space ported from the archived script, selection on validation score only
 - [ ] Training is CPU-only (`MultiQuantile` has no GPU support) and the runtime is recorded for the
       slow lane's budget
@@ -74,3 +78,5 @@ python -m hydms.surrogate.train --target capacity && python -m pytest tests/surr
   fixing fold reuse (L4) and row-level folds (L7) would still report a tuning optimum as a held-out
   score. The `use_best_model=True` requirement is what turns the guard from a convention into a
   fit-time error (by @assistant)
+
+- 2026-09-04: The budget box above was added by #88, whose protocol decides the multiplier. (by @assistant)

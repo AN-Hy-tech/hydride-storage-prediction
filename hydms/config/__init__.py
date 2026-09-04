@@ -171,6 +171,7 @@ class Model:
     early_stopping_rounds: int
     optuna_trials: int
     cv_folds: int
+    inner_cv_folds: int
 
 
 @dataclass(frozen=True)
@@ -289,6 +290,22 @@ def _validate(cfg: Config) -> None:
         problems.append(f"model.quantiles must be ascending, got {quantiles}")
     if len(set(quantiles)) != len(quantiles):
         problems.append(f"model.quantiles must not repeat, got {quantiles}")
+
+    for name in ("cv_folds", "inner_cv_folds"):
+        count = getattr(cfg.model, name)
+        if count < 2:
+            problems.append(
+                f"model.{name} must be at least 2; one fold is not a partition and nothing "
+                f"can be held out of it"
+            )
+    if cfg.model.cv_folds > cfg.split.min_stratum_size:
+        # StratifiedGroupKFold cannot place a stratum holding fewer compositions than there
+        # are folds, and split.min_stratum_size is exactly what bounds that from below.
+        problems.append(
+            f"model.cv_folds ({cfg.model.cv_folds}) exceeds split.min_stratum_size "
+            f"({cfg.split.min_stratum_size}), so a stratum can hold fewer compositions than "
+            f"there are folds to spread them over"
+        )
 
     if not 0.0 < cfg.conformal.confidence_level < 1.0:
         problems.append(

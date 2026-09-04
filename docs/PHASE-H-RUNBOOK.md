@@ -40,7 +40,7 @@ This table is the definition of done for stages S2–S4. Line numbers refer to t
 | **L4** | `benchmark_model_selection.py:1156` vs `:1168`; `Catboostmodel.py:588` vs `:642-660` | The same `splits` object tunes and then scores — no nested CV |
 | **L5** | `Catboostmodel.py:576-582`, `:654-658`; recovered `Opt_and_Stack.py:110-125,189,222-224` | Every CV fold early-stops on the fold it is scored on |
 | **L6** | `Boruta_FeatEng.py:57-113`; `Feature_selection.py:47-109` | Selection fit on all 896 training rows before CV. *PRD leak 2* |
-| **L7** | `benchmark_model_selection.py:895`, `Catboostmodel.py:522` | Row-level `StratifiedKFold`, no groups — **141 of 896 train rows (15.7 %)** share a formula across folds |
+| **L7** | `benchmark_model_selection.py:895`, `Catboostmodel.py:522` | Row-level `StratifiedKFold`, no groups — **141 of 896 train rows (15.7 %)** share a formula across folds. Re-measured by #88 on the reproduced 893-row split and under the **canonical** key: **181 rows (20.3 %)**, against 144 under the raw string |
 | **L8** | `split_data.py:48,55` — the split key is the **raw formula string** | 1149 raw strings collapse to **1115 normalised compositions**; **16 of them (35 rows) span two splits**. `Ce1Mg12`/`Mg12Ce1`, `Pr1Co5`/`Pr1Co5␠`, `Mg1Al1`/`Mg0.5Al0.5` |
 | **L9** | `merge_datasets.py:46` — positional `concat` after `reset_index(drop=True)` | Silent row misalignment. Highest-severity **correctness** defect |
 | **L10** | recovered `Ashghal/Outliers_Management.py:60-72` | Clips val/test **feature values** using their own residuals |
@@ -493,8 +493,19 @@ could mean anything. See below.
       matrix becomes plausible, wrong numbers. Read it back with `scaler_from(bundle)`.
 - [ ] **#24** Port selection reading **CleanLab output**, run **inside the training folds** (L6).
 - [ ] **#25** Run selection once; publish the old-22 vs new-N comparison.
-- [ ] **#88** `hydms/surrogate/validation.py` — `StratifiedGroupKFold` on the canonical key (L7),
+- [x] **#88** `hydms/surrogate/validation.py` — `StratifiedGroupKFold` on the canonical key (L7),
       **nested** so the reported score comes from an outer fold the tuner never saw (L4).
+      **Landed 2026-09-04**, out of the order the arrows above draw: its `blocked_by` is #13 and
+      #23 alone, and #24 waits on *it*. `nested_scores(features, split, contenders)` takes the
+      whole matrix with #13's assignment and selects the training rows itself, refusing a split
+      that holds nothing out — cross-validation never sees `val` or `test`, and a record carrying a
+      metric under either name is refused for it. `grouped_folds` is the **only** fold generator in
+      the project (a test asserts no other module imports a `KFold`), groups on
+      `hydms.data.canonical.group_keys` and stratifies with #13's `stratify`, recomputed per fold
+      set from the rows that set may see. **`leave_one_class_out` is #30's AC-6 protocol as an
+      `outer=` argument**, not a second scoring path. Fold ids are issued for *content* — the set
+      of compositions held out — so `tuned_on ∩ scored_on` is a real question rather than an empty
+      one, and `tuned_on` is the folds the search actually read. HG-1: **8/13**.
 - [ ] **#26** CatBoost MultiQuantile with `use_best_model=True` and the **validation** split as
       `eval_set` — CatBoost raises at fit time on an empty eval set, the mechanical guard against L1.
       `MultiQuantile` is CPU-only. Assert the quantile column order: position is the only thing

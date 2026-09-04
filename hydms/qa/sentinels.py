@@ -738,6 +738,135 @@ def _l13_live() -> None:
 
 
 # --------------------------------------------------------------------------------------
+# L2, L4, L7 -- the nested protocol, against the real training split
+# --------------------------------------------------------------------------------------
+
+
+def _baseline_prediction(frame: Any, statistic: str) -> float:
+    """A constant predictor: the median or the mean of the rows it was fitted on."""
+    from hydms.config import load as load_config
+
+    values = frame[load_config().columns.target]
+    return float(values.median() if statistic == "median" else values.mean())
+
+
+def _baseline_error(frame: Any, prediction: float) -> float:
+    """Mean absolute error of a constant prediction over ``frame``."""
+    from hydms.config import load as load_config
+
+    return float((frame[load_config().columns.target] - prediction).abs().mean())
+
+
+def _tune_baseline(task: Any) -> str:
+    """Choose between the two constants on the inner folds -- and on nothing else.
+
+    A search, in the only sense the protocol cares about: it reads the folds it is given,
+    fits on each fold's training rows and scores on each fold's held-out ones, and returns
+    the winner. Reading them is what ``tuned_on`` records.
+    """
+    scored: dict[str, float] = {}
+    for statistic in ("median", "mean"):
+        errors = [
+            _baseline_error(
+                task.frame.loc[list(fold.test)],
+                _baseline_prediction(task.frame.loc[list(fold.train)], statistic),
+            )
+            for fold in task.folds
+        ]
+        scored[statistic] = sum(errors) / len(errors)
+    return min(scored, key=lambda name: scored[name])
+
+
+def _score_baseline(configuration: str, task: Any) -> dict[str, float]:
+    """Refit the chosen constant on the outer fold's training rows; score its held-out ones."""
+    return {
+        "outer": _baseline_error(
+            task.test, _baseline_prediction(task.train, configuration)
+        )
+    }
+
+
+@lru_cache(maxsize=1)
+def _validation_run() -> tuple[Any, Any]:
+    """Card #88's nested protocol over the real training split. Computed once.
+
+    **The contender is a stand-in and is not a claim about the surrogate.** It chooses
+    between predicting the training median and the training mean, because what these three
+    sentinels check is the protocol's bookkeeping -- which folds the search was shown, which
+    fold produced the score, what the record says about both -- and that is answered by any
+    contender that actually reads its folds. The model is card #26's, and when it exists this
+    hook does not have to change: it is the protocol that is the subject, not the model run
+    through it.
+
+    Cached because it costs about a second -- keying 1,279 formulae, one split, and six
+    stratifications over the training rows -- and ``audit()`` runs on every gate invocation
+    and every test in ``tests/leaks/``.
+    """
+    from hydms.data.load import load_hydride_data
+    from hydms.data.splits import assign_splits
+    from hydms.surrogate.validation import Contender, nested_scores
+
+    frame = load_hydride_data()
+    contender = Contender(name="constant baseline", tune=_tune_baseline, score=_score_baseline)
+    return frame, nested_scores(frame, assign_splits(frame), [contender])
+
+
+def _l7_live() -> None:
+    """Card #88's outer folds, over the real training rows. The wiring `unwired` demands.
+
+    The keys handed to the detector come from `group_keys` here rather than from anything the
+    fold set carries, exactly as `_l8_live` re-derives them: folds that had quietly grouped on
+    something else would show up as a straddle rather than as agreement with themselves.
+    """
+    from hydms.data.canonical import group_keys
+
+    frame, evaluation = _validation_run()
+    keys = group_keys(frame)
+    assert_disjoint_groups(
+        {fold.name: keys.loc[list(fold.test)] for fold in evaluation.outer},
+        what="cross-validation folds",
+    )
+
+
+def _l4_live() -> None:
+    """The reported score came from outer folds the search never saw.
+
+    The premise is checked before the conclusion. `assert_selection_is_nested` finds L4 by
+    intersecting `tuned_on` with `scored_on`, which detects nothing at all if inner and outer
+    ids were issued by two independent counters. So this first asks the run's own
+    :class:`~hydms.surrogate.validation.FoldSpace` whether an outer fold's held-out
+    compositions still resolve to that outer fold's id -- if they do, an inner fold holding
+    the same materials would have collided with it, and the intersection below is a real
+    question.
+    """
+    _, evaluation = _validation_run()
+    for fold in evaluation.outer:
+        issued = evaluation.space.known(fold.held_out)
+        if issued != fold.id:
+            raise ValueError(
+                f"outer fold {fold.name!r} has id {fold.id} but its {len(fold.held_out)} "
+                f"held-out composition(s) resolve to {issued!r} in the run's own fold space. "
+                f"Ids are supposed to be issued for content; if they are not, tuned_on and "
+                f"scored_on cannot intersect and this sentinel checks nothing."
+            )
+    assert_selection_is_nested(evaluation.records)
+
+
+def _l2_live() -> None:
+    """The selection record carries no metric from a split the protocol never touched.
+
+    Stricter than the miniature above, deliberately. `assert_selection_is_nested` forbids a
+    `test` metric by default; cross-validation here runs inside the training split, so a
+    `val` metric could not have been computed either -- and a **validation** score published
+    beside the choice it made is precisely what L2 is.
+    """
+    from hydms.surrogate.validation import HELD_OUT_SPLITS
+
+    _, evaluation = _validation_run()
+    assert_selection_is_nested(evaluation.records, holdout_splits=HELD_OUT_SPLITS)
+
+
+# --------------------------------------------------------------------------------------
 # The registry
 # --------------------------------------------------------------------------------------
 
@@ -772,6 +901,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l2_record_without_a_test_metric,
             ),
         ),
+        live=_l2_live,
     ),
     Sentinel(
         leak="L3",
@@ -804,6 +934,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l4_nested_folds,
             ),
         ),
+        live=_l4_live,
     ),
     Sentinel(
         leak="L5",
@@ -843,6 +974,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l7_folds_grouped_by_composition,
             ),
         ),
+        live=_l7_live,
     ),
     Sentinel(
         leak="L8",

@@ -148,7 +148,101 @@ always to wire the sentinel, never to re-aim it. Nothing else is in flight.
 
 ---
 
-### Handoff — 2026-09-04 (latest) · #23 closed, **S4 open** · written for #88
+### Handoff — 2026-09-04 (latest) · #88 closed · written for #24
+
+**Where the phase is.** Twenty-eight cards done. Suite **807** green (770 + 37), ruff 0.8.4 and
+mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, AC-2 green at 2.7285e-12,
+`run --fast` exits 0, and **HG-1 is at 8/13** — L2, L4 and L7 went green the same hour the module
+they name appeared, which is what the `unwired` state exists to force. One card is still `doing`:
+**#14**, unchanged.
+
+**The front is #24, and it is blocked by a card that is waiting on it.** #24's `blocked_by` is
+[#14, #20, #88]; #20 and #88 are done, so the only thing in front of it is #14's `doing` status —
+and #14's one remaining box reads *"feature selection (#24) consumes CleanLab's output"*, which is
+#24's work. That is not a board error, it is one unit of work cut across two cards, and
+`check_board.py` will refuse `#24 → doing` until #14 is `done`. **Do them in one sitting**: build
+#24's selection against `hydms.data.screening.screen()`, tick #14's box and close #14 in that
+commit, then move #24. Do not close #14 first to unlock the board — the box is the record that the
+CleanLab call was never exercised end to end.
+
+Independent of all that, **#7 (CI slow lane) has been unblocked since #6 landed** and nothing in
+S4 waits on it.
+
+**What #88 leaves for #26 to trip over.** The tuning budget is now a product:
+`model.cv_folds` (5) x `model.inner_cv_folds` (3, new in `pipeline.yaml`) x
+`model.optuna_trials` (300) = **4,500 CatBoost fits per contender**. That is boxed on #26. If it is
+prohibitive, lower a number in config — collapsing the nesting is leak L4 walking back in.
+
+#### What #88 built, that the rest of S4 uses rather than re-invents
+
+`hydms/surrogate/validation.py` — the folds, and the guarantee that the data which produced a score
+never chose it.
+
+```python
+from hydms.surrogate import Contender, grouped_folds, leave_one_class_out, nested_scores
+
+folds = grouped_folds(training_rows, name="outer")   # the project's ONLY fold generator
+evaluation = nested_scores(features, split, [Contender("catboost", tune, score)])
+evaluation.records          # one SelectionRecord per model — tuned_on, scored_on, metrics
+evaluation.per_fold         # the spread behind the mean; chosen[model, fold] holds the winner
+nested_scores(features, split, contenders, outer=leave_one_class_out)   # #30's AC-6, same path
+```
+
+- **You cannot cross-validate without saying which rows are training rows.** `nested_scores` takes
+  the whole matrix *and* #13's split assignment and selects them itself, refusing a split that
+  holds nothing out — the same guard `fit_scaler` makes, for the same reason. It follows that no
+  metric in a record may be named `val` or `test`; both are refused, which is **stricter** than
+  `assert_selection_is_nested`'s default of `("test",)` and deliberately so — what L2 published was
+  a *validation* score.
+- **`grouped_folds` is the only fold generator, and a test asserts it** by refusing any other module
+  under `hydms/` that imports a `KFold`. `hydms/data/splits.py`'s `StratifiedShuffleSplit` cuts the
+  train/val/test split, not folds, and is deliberately not one.
+- **The outer partition is an argument.** `outer=leave_one_class_out` gives #30 the AC-6 protocol
+  with everything between proposal and score unchanged. A second scoring path in #30 is the
+  duplication the whole board is shaped to prevent.
+- **A fold id is issued for content**, not by counting: `FoldSpace` maps the set of canonical
+  compositions a fold holds out to an id, so an inner fold over an outer fold's materials collides
+  with it and `tuned_on ∩ scored_on` is a real question. Two independent counters would have made
+  the L4 detector decoration. `space.known(...)` is the read-only lookup the L4 live hook checks
+  that premise with before it checks the conclusion.
+- **`tuned_on` is measured.** The inner folds handed to a search record every fold it reads, and a
+  search that read none is refused. It cannot catch a tuner that rebuilds folds from the frame — but
+  the frame it is handed holds the outer fold's training rows and nothing else.
+- **Stratification is #13's `stratify`, not a second scheme**, recomputed for each fold set from the
+  rows that set may see. Quantile bins are a function of the targets they are computed over; taking
+  them once over the whole training matrix would let every fold's held-out rows shape the folds.
+
+#### Three numbers for the S4 chain
+
+- **181 of 893, not 141 of 896.** The archival row-level shape re-run over the reproduced training
+  split leaves **20.3 % of rows** in a fold their canonical composition also occupies, against 144
+  under the raw formula string. The runbook's L7 row now carries both.
+- **156 compositions in each of five outer folds** — 780 training compositions over 893 rows,
+  divided exactly. `grouped_folds` costs 0.23 s on that frame, `nested_scores` about 0.9 s with two
+  trivial contenders; the stratification is ~35 ms a call.
+- **The smallest alloy-class fold is 19 rows.** LEA 19 / 19 compositions, then A2B 29 / 21, HEA
+  51 / 47, AB 59 / 55, SS 73 / 69, MEA 76 / 69, MIC 87 / 81, Mg 96 / 89, AB5 143 / 123, AB2
+  260 / 207. Boxed on #30: an R² over 19 rows is not the claim an R² over 260 is, and it must be
+  reported beside its support.
+
+#### Findings of this session
+
+- **`min_stratum_size` and `cv_folds` are coupled, and nobody had written it down.** Rare strata are
+  merged up to `split.min_stratum_size` (5) compositions, and `StratifiedGroupKFold` cannot spread a
+  stratum over more folds than it has members. At 5 and 5 the real data sits exactly on that line;
+  the config loader now refuses `cv_folds > min_stratum_size` rather than leaving it to a warning
+  nobody reads.
+- **A metric that arrives as `"0.94"` is refused by type, not by `float()`.** `float("0.94")`
+  succeeds, so a coercion would have accepted a score something upstream had stringified.
+- **The card asked for stratification on the binned target; it got #13's merged
+  `(temperature, target)` key.** `splits.stratify` was exposed for exactly this and says so in its
+  own docstring. The box is ticked on the ground that two stratification schemes are two answers to
+  one question — if a later card wants the target alone, that is a change to #13's function, not a
+  second one here.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #23 closed, **S4 open** · written for #88
 
 **Where the phase is.** Twenty-seven cards done and S4 has started. Suite **770** green (724 + 46),
 ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, AC-2 green at

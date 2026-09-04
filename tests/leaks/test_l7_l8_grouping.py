@@ -24,7 +24,7 @@ Card #71.
 from __future__ import annotations
 
 import pytest
-from hydms.qa import LeakDetected, assert_disjoint_groups
+from hydms.qa import LeakDetected, assert_disjoint_groups, audit, for_leak
 
 # Two of the sixteen measured collisions, written both ways. The canonical column is what a
 # correct key produces; card #87 owns the function that produces it.
@@ -155,3 +155,46 @@ def test_a_single_partition_is_a_caller_error() -> None:
     """Nothing can straddle one split, so a green answer here would mean nothing."""
     with pytest.raises(ValueError, match="at least two"):
         assert_disjoint_groups({"train": ["lani5", "tife"]})
+
+
+# --------------------------------------------------------------------------------------
+# The registry
+# --------------------------------------------------------------------------------------
+
+
+def test_l7_is_wired_to_the_real_fold_generator() -> None:
+    """Card #88's folds are the subject now, not the five-key miniature above."""
+    sentinel = for_leak("L7")
+    assert sentinel is not None
+    assert sentinel.subject == "hydms.surrogate.validation"
+    assert sentinel.live is not None, "an unwired sentinel guards its subject in name only"
+
+    row = next(entry for entry in audit() if entry.leak == "L7")
+    assert row.status == "green", row.detail
+    assert row.owed_by == 88
+
+
+def test_l7_goes_red_when_the_real_folds_stop_grouping() -> None:
+    """Seen red against the real fold generator, not against a dictionary of strings.
+
+    `benchmark_model_selection.py:895` put back: the same rows, folded without `groups=`. The
+    detector is handed the canonical keys of the folds that protocol produces, and 1,279 rows
+    over 1,115 compositions cannot be cut five ways at row level without splitting one.
+    """
+    pytest.importorskip("pandas", reason="the real fold generator is pandas frames end to end")
+    from hydms.data.canonical import group_keys
+    from hydms.qa.sentinels import _validation_run
+    from sklearn.model_selection import StratifiedKFold
+
+    frame, _ = _validation_run()
+    keys = group_keys(frame)
+    labels = list(frame.index)
+    ungrouped = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    folds = {
+        f"fold-{position}": keys.loc[[labels[at] for at in held]]
+        for position, (_, held) in enumerate(
+            ungrouped.split(frame, group_keys(frame).str.len() % 3)
+        )
+    }
+    with pytest.raises(LeakDetected, match="cross-validation folds"):
+        assert_disjoint_groups(folds, what="cross-validation folds")

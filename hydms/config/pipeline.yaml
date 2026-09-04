@@ -85,8 +85,15 @@ model:
   optuna_trials: 300
 
   # Outer folds of the nested, group-aware protocol in card #88. The archival code used a
-  # row-level StratifiedKFold with no grouping, which is leak L7.
+  # row-level StratifiedKFold with no grouping, which is leak L7. Keep this at or below
+  # split.min_stratum_size: every stratum holds at least that many compositions, and
+  # StratifiedGroupKFold cannot divide a stratum that has fewer members than folds.
   cv_folds: 5
+
+  # Inner folds, cut inside each outer fold's training rows — where the hyperparameter
+  # search runs. It is a separate number from cv_folds because the cost is the product:
+  # 5 x 3 x optuna_trials fits. Three is the smallest that still averages.
+  inner_cv_folds: 3
 
 conformal:
   # MAPIE 1.x takes confidence_level, NOT alpha. 0.9 means a 90% interval; passing 0.1 here
