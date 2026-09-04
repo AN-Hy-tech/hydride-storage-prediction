@@ -35,6 +35,17 @@ class Screen(Protocol):
 - [ ] A composite runner applies all screens and produces one verdict table
 - [ ] Every rejection carries a human-readable reason string
 
+- [ ] **Screen a batch, never a candidate at a time — and the cost is measured (from #22).**
+      `featurize` has a **5 ms per-call floor** that does not depend on the batch size:
+      `require_self_consistent` re-audits both element tables' composite columns on every call
+      (#18's guard, and it is what stops a descriptor being silently zero for Cs and Gd). That
+      is 2% of a ten-thousand-candidate batch and **57% of a batch of one**, so a runner that
+      loops `for candidate in candidates: featurize([candidate], ...)` costs ~200× what the
+      same work costs batched — before anything is screened. `docs/BENCHMARKS.md` has the
+      table. If a genuinely per-candidate path is ever needed, the audit is a pure function of
+      (table, properties) and can be memoised the way #22 memoised
+      `PropertyTable.servable`; nobody should do that speculatively
+
 ## Runnable check
 
 ```bash

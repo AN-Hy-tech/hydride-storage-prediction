@@ -427,9 +427,28 @@ could mean anything. See below.
       HG-1's per-leak listing was hidden by the same bug. **(e)** Six harness tests used the string
       `AC-2` to mean "a criterion nobody has written yet" and now take an `unwritten` fixture that
       asks the registry.
-- [ ] **#22** Featurisation throughput benchmark.
+- [x] **#22** Featurisation throughput benchmark. **Landed 2026-09-04, and it found a 13x defect in
+      the layer it measures.** `hydms/descriptors/benchmark.py`, [BENCHMARKS.md](BENCHMARKS.md).
+      **(a)** The figure this project had quoted since #20 — *10,000 formulae in 0.31 s* — was
+      measured over **four distinct formulae repeated 2,500 times**. The computability memo is keyed
+      by element set, so that batch answered it four times instead of ten thousand. Ten thousand
+      *distinct* candidates took **3.34 s**: 2,996/s, three times the card's feasibility floor rather
+      than forty. **(b)** `cProfile` put **97%** of the wall clock in
+      `FeatureContract.computability` → `PropertyTable.has`, **13.8 million calls for nineteen
+      answers**: the servable-element set was cached only for the *shipped* tables, keyed by table
+      name, and `featurize` always hands `computability` a resolved `tables=` mapping, so the cached
+      branch was unreachable from the featuriser. Fixed by moving the memo onto the table
+      (`PropertyTable.servable`); 10k distinct now takes **0.245 s** (13.6x), 100k **2.23 s**, the
+      curated rows **0.022 s**, the whole suite 24.9 s → 17.9 s, AC-2 1.54 s → 1.28 s. No expected
+      value moved. **(c)** The parser is **22%** of the remainder, which is why the card asked for the
+      split — right about the principle, wrong about the culprit. **(d)** R6: a 1e6-point grid
+      featurises in ~24 s and NSGA-II's whole 100k budget in 2.2 s, so **featurisation does not decide
+      between Architectures A and B**; what does is the surrogate, and it is unmeasured. **(e)** The
+      "file a note against #59" condition became a **test** — #59 is frozen and `check_freeze.py`
+      denies edits under `kanban/` — failing the build below 1,000/s at batch 10,000.
 
 **Exit check:** `conda run -n Project python -m hydms.gates run AC-2` — **green**, and it needs the `parity` extra: without CBFV it skips rather than passing, which is what CI does.
+**S3 closed 2026-09-04**, seven cards: the layer's throughput is measured and its one hot spot is gone.
 
 ---
 

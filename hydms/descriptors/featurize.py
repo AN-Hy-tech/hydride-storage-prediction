@@ -15,8 +15,14 @@ per (table, property) rather than once per row, and the arithmetic runs over the
 in :mod:`hydms.descriptors.stats`. A composition's features do not depend on what it was
 batched with -- that is asserted as arithmetic, not as a shape, because the layer's tightest
 numerical property depends on it (#17: the reduction runs down the leading axis, and a batch
-of one and a batch of ten thousand must agree exactly). Measured: 10,000 formulae in one
-call take **0.31 s**, and 1,278 of them -- the curated set, less europium -- take 0.21 s.
+of one and a batch of ten thousand must agree exactly). Measured by card #22 over ten thousand
+**distinct** candidates: **0.245 s**, or 41,000 formulae per second, of which a quarter is
+:func:`~hydms.data.load.parse_formula` and the rest is numpy. The curated set less europium is
+1,278 rows in **0.026 s**. Those figures replace the ones this docstring carried until #22:
+they were measured over a batch of ten thousand *repeats of four formulae*, which answered the
+computability verdict from a memo nine thousand nine hundred and ninety-six times out of ten
+thousand and was thirteen times slower per distinct composition than the layer actually is.
+``docs/BENCHMARKS.md`` has the table, the machine and the batch-size curve.
 
 **No file is read and no file is written.** The old pipeline's descriptor stage was a script
 that read a CSV and wrote another one, which is how the training set acquired a feature matrix
@@ -53,9 +59,11 @@ composites, and they are *columns* of the JARVIS table rather than anything CBFV
 therefore what parity means (#21). It is a rule and not a preference because eleven of that
 table's 156 composite columns are **not** the arithmetic their names claim (#18), so
 :func:`~hydms.descriptors.composites.require_self_consistent` is run over the properties this
-call is about to featurise -- once per table per call, cheap, and it raises naming the column
-and the element rather than returning a descriptor that is zero for two elements and right for
-the other 101.
+call is about to featurise -- once per table per call, and it raises naming the column and the
+element rather than returning a descriptor that is zero for two elements and right for the
+other 101. It is not free: card #22 measured it at **5 ms**, which is 2% of a ten-thousand
+candidate batch and **57% of a batch of one**. That is the per-call floor, and it is another
+reason the batch is the unit here.
 
 Labels, not positions
 ---------------------

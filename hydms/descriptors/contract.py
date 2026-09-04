@@ -124,7 +124,6 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from functools import cache
 from typing import Any, Final
 
 import pandas as pd
@@ -206,27 +205,19 @@ def _named(items: Iterable[object]) -> str:
     return f"{shown}, ... ({len(listed) - _MAX_NAMED} more)"
 
 
-def _servable_in(table: PropertyTable, prop: str) -> frozenset[str]:
+def _servable(table: PropertyTable, prop: str) -> frozenset[str]:
     """Every element ``table`` can supply ``prop`` for.
 
-    Membership answers both failure modes at once -- an element the table has never heard of
-    and an element whose cell is empty are both simply absent from the set -- so the caller
-    needs one lookup rather than a try/except.
+    A one-line forward to :meth:`~hydms.descriptors.element_data.PropertyTable.servable`,
+    which owns the memo. It used to be two functions here -- one rebuilding the set from
+    :meth:`~hydms.descriptors.element_data.PropertyTable.has`, and a ``@cache``d twin keyed by
+    *table name* that only the shipped tables could use. :meth:`computability` is called once
+    per candidate composition and once per feature within it, so the uncached branch ran
+    thirteen million times over ten thousand distinct compositions and cost 97% of the wall
+    clock (card #22). The set belongs to the table, so the memo does too, and there is now one
+    path rather than a fast one and a slow one that nobody could tell apart from here.
     """
-    return frozenset(e for e in table.elements if table.has(e, prop))
-
-
-@cache
-def _servable(table: str, prop: str) -> frozenset[str]:
-    """:func:`_servable_in` for a shipped table, cached.
-
-    Cached per (table, property) because :meth:`FeatureContract.computability` is called once
-    per candidate composition and the shipped tables never change at runtime. A table passed
-    in by a caller cannot be cached -- :class:`~hydms.descriptors.element_data.PropertyTable`
-    holds a dict and is unhashable -- so that path recomputes, which is affordable because
-    the only caller is a gate that runs once.
-    """
-    return _servable_in(load_table(table), prop)
+    return table.servable(prop)
 
 
 @dataclass(frozen=True)
@@ -477,17 +468,13 @@ class FeatureContract:
             if spec.table is None or spec.prop is None:
                 available.append(spec.name)
                 continue
-            source = supplied.get(spec.table)
-            servable = (
-                _servable(spec.table, spec.prop)
-                if source is None
-                else _servable_in(source, spec.prop)
-            )
+            source = supplied.get(spec.table) or load_table(spec.table)
+            servable = _servable(source, spec.prop)
             blocking = [element for element in elements if element not in servable]
             if not blocking:
                 available.append(spec.name)
                 continue
-            known = (load_table(spec.table) if source is None else source).elements
+            known = source.elements
             holes.extend(
                 Hole(
                     feature=spec.name,

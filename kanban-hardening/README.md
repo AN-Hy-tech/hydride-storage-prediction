@@ -132,7 +132,81 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #21 closed, AC-2 green · written for #22, then S4
+### Handoff — 2026-09-04 (latest) · #22 closed, **S3 closed** · written for S4, opening at #23
+
+**Where the phase is.** Twenty-four cards done and **the descriptor layer is finished**. Suite
+**593** green, ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1
+`SKIPPED` at 5/13, AC-2 green at 2.7285e-12 in 1.28 s. S2 and S3 have both closed as far as they can;
+**everything left in this phase is a chain, and it starts at #23.**
+
+**#22 was budgeted as a printout and returned a 13× defect in the layer it measures.** This is the
+one thing to carry forward from it.
+
+- **The number this project has been quoting since #20 was measured on four formulae.** *10,000
+  formulae in 0.31 s* — in `featurize`'s docstring, in #20's narrative and in three handoffs below
+  this one — came from `["LaNi5", "TiFe", "Mg2Ni", "Ti0.8Zr0.2Mn1.4V0.2Cr0.4"] * 2500`. Ten thousand
+  rows, **four** distinct compositions. The computability verdict is memoised per element *set*, so
+  that batch answered it four times instead of ten thousand. Ten thousand genuinely distinct
+  candidates took **3.34 s** — 2,996/s, three times the card's feasibility floor rather than forty.
+  **Those earlier handoffs are history; the number is now 0.245 s.**
+- **97% of the wall clock was one cache that no caller could reach.** `cProfile`:
+  `FeatureContract.computability` → `PropertyTable.has`, **13.8 million calls to answer nineteen
+  questions**. The servable-element set was cached only for the *shipped* tables, keyed by table name
+  — and `featurize._sources` always hands `computability` a resolved `tables=` mapping, so the cached
+  branch was unreachable from the featuriser. Its comment said the uncached path was "affordable
+  because the only caller is a gate that runs once". Every caller was on it. The memo now lives on
+  the table (`PropertyTable.servable`, a `cached_property`) and `contract._servable` is a one-line
+  forward. **10k distinct 3.3375 → 0.2448 s, 100k 21.03 → 2.23 s, curated 0.1602 → 0.0221 s, the
+  suite 24.9 → 17.9 s, AC-2 1.54 → 1.28 s. No expected value in any test moved.**
+- **A benchmark is only evidence if the workload is the one the decision is about.** That is why the
+  candidates are asserted distinct *and* their element sets distinct — distinct strings alone would
+  let the workload silently become a cache again — and why the parse half is timed separately. The
+  parser turned out to be 22%, so the card's instruction was right about the principle and wrong
+  about the culprit.
+
+**What R6 now knows, and the sentence not to drop.** A 1e6-point grid featurises in ~24 s, 1e7 in
+~4 min, NSGA-II's whole 100,000-evaluation budget in 2.2 s. **Featurisation does not decide between
+Architecture A and Architecture B.** What decides it is unmeasured: one evaluation is featurisation
+*plus* the scaler, the surrogate, the conformal interval and two screens — #23, #26, #27, #44, #48,
+#49, none of which exists. [../docs/BENCHMARKS.md](../docs/BENCHMARKS.md) says so in bold, because
+the failure mode of that document is somebody quoting 44,000 candidates/s as an end-to-end rate.
+**Re-measure when #28's `predict()` lands and put the number there beside this one.**
+
+#### The opening move
+
+**#23, and S4 is thirteen cards of chain.** The fit-once scaler: fit on train, persist, never refit.
+Four things not worth re-deriving:
+
+- **`hydms.data.metadata.with_features` is the only place the record and the matrix become one
+  frame.** #23, #24 and #26 each need a training matrix and none of them should write a `concat`.
+  Boxed on #24, with the reason: `temperature(K)` is a column of the raw file **and** one of the 22
+  features, so a plain concat returns that name twice, `int64` beside `float64`.
+- **The full 22 cannot build a training matrix at all.** 266 of 1,279 rows are refused by the shipped
+  tables, 265 for `dev_Gordy_electonegativity` alone; without that one feature the remaining 21 cover
+  1,278. The trade is #24/#25's to make and AC-2 restates it in its own output every run.
+- **Featurise in batches, and now there is a number for why.** `featurize` has a **5 ms per-call
+  floor** — `require_self_consistent` re-auditing both tables' composite columns — which is 2% of a
+  ten-thousand batch and 57% of a batch of one. Boxed on #44, where a per-candidate loop would make
+  it a 200× cost. It was measured and deliberately *not* optimised: it moves no number #22 publishes.
+- **HG-1 goes from 5/13 to 11/13 across S4**, and the sentinels are already written. #24 owes L6, #88
+  owes L2/L4/L7, #26 owes L1/L5 — each is `pending` today only because its subject module does not
+  exist. Expect the same shape as L13 in S3: the day the module appears the sentinel reads `unwired`
+  and HG-1 goes **red on purpose** until the owning card gives it a `live` hook. Do not re-aim a
+  subject to make it green.
+
+**One card is still `doing`: #14**, and S4 is where it comes due — #24 consuming its output closes the
+`Boruta_FeatEng.py:23-25` bypass and supplies the feature matrix CleanLab needs to produce
+`label_issues` at all. **#15 is written, green, and stays `backlog` behind it**; when #24 lands,
+`screened.rows_out` and `screened.removed` move and those two facts are re-measured. Nothing else in
+`tests/data/test_golden.py` should move, and if it does, that is the finding.
+
+**And before you land a gate:** `tests/gates/` takes an `unwritten` fixture (`tests/gates/conftest.py`)
+wherever it needs "a criterion nobody has written yet". Use it for #26, #28, #30, #31, #32, #33, #77,
+#79 and #86 — naming a gate there is what card #21 had to undo.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #21 closed, AC-2 green · written for #22, then S4
 
 **Where the phase is.** Twenty-three cards done, and **S3 has one card left**. The suite is **577**
 green, ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1 still
