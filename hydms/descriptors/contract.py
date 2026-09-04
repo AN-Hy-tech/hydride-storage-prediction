@@ -20,7 +20,10 @@ to a table (:doc:`FEATURE_PROVENANCE`, card #8).
 That rule is what makes the contract *regenerable* rather than hand-maintained. When card
 #25 re-runs selection and the set becomes some other N, :meth:`FeatureContract.from_names`
 rebuilds the whole contract from the selected names, because the name carries its own
-provenance. Measured: the rule is injective over everything either table could ever offer --
+provenance. **That has now happened, and it left two contracts rather than one.**
+:data:`CONTRACT` is the published 22 -- the archival record, the pool selection ran over, and
+what gate AC-2 checks parity across -- and :data:`SELECTED` is what the corrected run chose.
+A model is fitted on the second; the first is history and a candidate list. Measured: the rule is injective over everything either table could ever offer --
 5 statistics x 537 properties gives 2,685 names and 2,685 distinct ones, no collision -- and
 the two tables share **no** property name, so a name identifies its table without ambiguity.
 Three JARVIS properties do begin with a statistic's spelling (``avg_ion_rad``,
@@ -135,6 +138,7 @@ __all__ = [
     "CONTRACT",
     "DTYPE",
     "PUBLISHED_SPELLING",
+    "SELECTED",
     "Computability",
     "ContractError",
     "FeatureContract",
@@ -643,6 +647,45 @@ CONTRACT: Final[FeatureContract] = FeatureContract(
         FeatureSpec.of("range", "oliynyk", "atomic_weight"),
         FeatureSpec.passthrough(),
         FeatureSpec.of("avg", "oliynyk", "unfilled_s"),
+    )
+)
+
+
+#: What re-running selection honestly chose -- card #25's decision, and what a model is
+#: fitted on from #26 onward. :data:`CONTRACT` stays the published 22: it is the archival
+#: record, the candidate pool selection ran over, and what gate AC-2 checks parity across.
+#: This is the answer, and the two are different objects rather than two versions of one.
+#:
+#: **The rule that produced it: every fold agreed.** Selection ran inside the five outer folds
+#: of card #88's group-aware protocol on CleanLab-screened rows. Every one of the 21 candidates
+#: was selected by *some* fold -- the union is the whole pool, so the permissive reading
+#: performs no selection at all -- and these 14 were selected by all five. The alternatives and
+#: why they were not taken, including the "refit on all the training rows" reading that would
+#: have published 18, are argued in ``reports/feature_selection/old_vs_new.md``.
+#:
+#: **Regenerated, not hand-edited** -- the box card #19 left for this one. The names alone
+#: rebuild the order, the table attribution and the dtypes, because a feature name carries its
+#: own provenance; and ``tests/surrogate/test_comparison.py`` asserts that these names *are*
+#: the consensus of the run table published beside that document, so the declaration cannot
+#: drift from the run that justified it. The order is the order the selector left them in --
+#: the candidate order with the ``must_keep`` restore appending ``temperature(K)`` last --
+#: which is why it is not exactly :data:`CONTRACT`'s order restricted to these names.
+SELECTED: Final[FeatureContract] = FeatureContract.from_names(
+    (
+        "dev_Zunger_radii_sum",
+        "dev_Pauling_Electronegativity",
+        "avg_valence_d",
+        "dev_atom_mass_mult_therm_cond",
+        "avg_is_alkaline",
+        "dev_bp_divi_atom_mass",
+        "dev_specific_heat_(J/g_K)_",
+        "dev_gilmor_number_of_valence_electron",
+        "range_specific_heat_(J/g_K)_",
+        "range_Mendeleev_Number",
+        "dev_voro_coord_divi_mol_vol",
+        "dev_heat_of_vaporization_(kJ/mol)_",
+        "avg_Number_of_unfilled_s_valence_electrons",
+        PASSTHROUGH,
     )
 )
 

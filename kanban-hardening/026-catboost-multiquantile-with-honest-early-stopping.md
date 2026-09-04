@@ -62,6 +62,18 @@ interval, not a point. This is what makes LCB ranking possible.
       target-conditioned one) now has a second candidate reason to exist: an unweighted fit
       treats a 571-row fold and a 704-row fold as equal evidence
 
+- [ ] **The feature set to fit on is `hydms.descriptors.contract.SELECTED`, and the cost of the
+      alternative is why (from #25).** #25 declared the consensus 14 — the features all five outer
+      folds chose — and `CONTRACT` stays the published 22, so a matrix built for this card is
+      `featurize(..., contract=SELECTED)` and the manifest records that contract, not the 22.
+      **What this card must not do is re-run selection inside its own folds:** Boruta at the
+      configured budget is 676 s a pass, and #88's protocol is 5 x 3 x 300 fits per contender, so
+      per-fold selection inside the tuning loop is not a slower option, it is an impossible one.
+      The consequence is a sentence this card owes rather than a defect: the folds that produced
+      #25's stability table each selected **16-20** features, so a score reported here belongs to a
+      *fixed* 14-feature pipeline and not to the procedure that chose them. Say which, in the
+      metrics record itself, and #29 carries the same box
+
 ## Runnable check
 
 ```bash

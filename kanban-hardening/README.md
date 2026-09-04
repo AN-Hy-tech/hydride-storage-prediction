@@ -133,20 +133,140 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty cards are done and nothing is `doing`. Suite
-**841** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
+**Next session, in one paragraph.** Thirty-one cards are done and nothing is `doing`. Suite
+**857** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
 `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
 **9 of 13** — L1, L5, L11 and L12 are all that remain, and every one is owed by #26 or #29. **The
-front is S4 and the card is #25**, which has a finished five-fold run waiting for it in the
-gitignored `reports/selection/`: read the handoff below before re-running anything, because a run at
-the configured Boruta budget costs about fifty minutes. **#15 and #49 also came unblocked**, and #15
-is owed a re-measure now that screening flags rows for real. Expect HG-1 to go **red on purpose**
-the day `hydms/surrogate/model.py` first appears: L1 and L5 name it and are `pending` only because
-it does not exist, so the fix is always to wire the sentinel, never to re-aim it.
+front is S4 and the card is #26**, whose three blockers all landed. Before writing a line of it,
+read the handoff below on the **two feature contracts**: `CONTRACT` is the published 22 and stays
+the candidate pool and AC-2's parity set, while `hydms.descriptors.contract.SELECTED` — the
+consensus 14 that #25 declared — is what a model is fitted on. Do **not** re-run selection inside
+#26's tuning loop: Boruta is 676 s a pass against a 4,500-fit budget. **#15 and #49 remain
+unblocked**, and #15 is still owed a re-measure now that screening flags rows for real. Expect HG-1
+to go **red on purpose** the day `hydms/surrogate/model.py` first appears: L1 and L5 name it and are
+`pending` only because it does not exist, so the fix is always to wire the sentinel, never to
+re-aim it.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #24 and #14 closed · written for #25
+### Handoff — 2026-09-05 (latest) · #25 closed · written for #26, and for the rest of S4
+
+**Where the phase is.** Thirty-one cards done. Suite **857** green (842 + 15 — note the previous
+handoff's 841 does not reproduce on this tree, and the one-test difference is not in #25's files).
+The 857 run predates two cosmetic edits made after it; the final tree was re-verified with
+`pytest -m "not slow"` and the whole of `tests/surrogate/test_comparison.py`, and nothing changed
+in between that a `slow` test reads. ruff and mypy clean, `check_board.py` and `check_freeze.py` OK, AC-2 green at 2.7285e-12, `run --fast` exits 0,
+**HG-1 still 9/13** — L1, L5, L11 and L12 are owed by #26 and #29, and nothing in #25 could move
+that number. **Nothing is `doing`.**
+
+**The front is #26** (CatBoost MultiQuantile with honest early stopping): its three blockers — #23,
+#25 and #88 — are all done. Two cards off the S4 chain are also unblocked and neither is a
+prerequisite for anything on it: **#15** (data-layer golden tests, and still *owed* a re-measure —
+see the previous handoff, which remains the live description of what that re-measure is) and **#49**
+(ElMD novelty, in S5).
+
+**S4 closes at #34**, artifacts v1, and the chain from here is
+`#26 → #27 → #28 → #29 → #30 → #31/#32/#33 → #34`.
+
+#### The one thing to know before writing a line of #26
+
+**There are now two feature contracts and they are not interchangeable.**
+
+```python
+from hydms.descriptors.contract import CONTRACT, SELECTED
+
+CONTRACT   # the published 22 — archival record, the candidate pool selection runs over,
+           # and the set gate AC-2 checks featuriser parity across. Not what a model sees.
+SELECTED   # the consensus 14 — what #25 declared and what a fitted model is built on.
+```
+
+`featurize(..., contract=SELECTED)` builds the training matrix for #26; the manifest records
+`SELECTED`, not the 22. Replacing `CONTRACT` was considered and rejected: it would have made the
+next selection run circular — the pool would be its own output — and would have quietly narrowed
+AC-2's parity check from 22 columns to 14.
+
+**Do not re-run selection inside #26's tuning loop.** Boruta at the configured budget is **676 s a
+pass**, and #88's protocol is 5 outer × 3 inner × 300 trials per contender. Per-fold selection
+inside that is not slower, it is impossible. The honest consequence is a *sentence*, not a defect,
+and #26 and #29 both carry it as a box: the folds that produced the stability table each selected
+**16–20** features, so any score from a fixed 14-column pipeline belongs to that pipeline and not
+to the procedure that chose the columns. Say which, in the metrics record itself.
+
+#### What #25 built
+
+```bash
+python -m hydms.surrogate.select --emit-comparison   # republish; fits nothing, takes a second
+```
+
+```python
+from hydms.surrogate.comparison import Comparison, row_cost
+
+c = Comparison.read(Path("reports/feature_selection"))
+c.consensus, c.union, c.verdict()   # what the folds agreed, and the old-22 row-by-row table
+row_cost()                          # per feature, the curated rows it alone makes unfeaturisable
+```
+
+- **`reports/feature_selection/` is versioned** — `/reports/*` plus a negation in `.gitignore`,
+  because git does not descend into an excluded directory and a plain negation under one does
+  nothing. The hour-long run's raw output stays local in `reports/selection/`; the tables the
+  write-up quotes travel with it.
+- **The document is generated and checked.** `old_vs_new.md` is a pure function of the CSVs beside
+  it, and `test_the_published_document_is_the_one_this_code_generates` fails if the two ever
+  disagree. Its run date comes from `provenance.csv`, not a file's mtime, so a fresh clone
+  reproduces the same bytes. This is the specific failure `REPORT.md` has, made impossible here.
+- **`SELECTED` is tied to the run that justified it.** It is a hand-typed name list — it must be,
+  since importing the contract module reads no files — and
+  `test_the_declared_set_is_the_consensus_of_the_published_run` asserts those names *are* the
+  consensus of the published stability table, order included.
+
+#### The result, in one paragraph, so it is not re-derived
+
+**The four readings nest: consensus 14 ⊂ 22-candidate 16 ⊂ whole-split 18 ⊂ pool 21.** The published
+set is the consensus. The union is the entire candidate pool, so the permissive reading performs no
+selection at all; a threshold would be a cut chosen after seeing where the features fell, which is
+the defect this phase exists to remove rather than relocate. The one serious alternative was the
+**refit** reading — in nested CV the folds estimate the *procedure* and the deployed model refits the
+procedure, selection included, on all the training rows, which would publish the whole-split 18. It
+was rejected because Chapter 3 reports the feature set **as a finding**, and a set from a single fit
+carries no evidence about its own stability. Since the consensus is a strict subset of that 18,
+choosing it contradicts nothing. All of it is argued in `reports/feature_selection/old_vs_new.md`;
+bring new evidence rather than a preference.
+
+#### Findings of this session
+
+- **#24's statistical-power reading was confounded, and the run #25 owed is what caught it.** The
+  previous handoff recorded the whole-split pass selecting **14** against the folds' 16–20 and read
+  it as fewer rows rejecting less. That 14 was the **unscreened** probe. Screened — 864 rows of 893
+  — the same pass selects **18**, inside the folds' own range. Row count and screening move together
+  across all three runs, so the direction can be stated and the size cannot; screening is not
+  neutral thinning, it removes the rows CleanLab finds least consistent. And *within* the folds the
+  row count does not order the answers at all: 571 rows → 16 features, 704 → 18, 635 → 20. That last
+  is the real argument for the consensus — what separates the folds is *which* compositions were
+  held out, not how many rows survived.
+- **The 22-candidate run does not select the feature that defines the 22.** Same 700-row pool, same
+  seed, same budget as #24's controlled comparison, which confirmed `dev_Gordy_electonegativity`;
+  the only difference is the **71 rows screening drops**, and they reverse the verdict. Two single
+  passes, opposite answers. #24 settled that trade on rows rather than on importance, and this is
+  the measurement showing it had to be settled that way.
+- **Computability is now a measured table, not an argument.** `row_cost()` charges each of the 22
+  the curated rows it alone makes unfeaturisable: **266 of 1,279** for Gordy, **one row each** for
+  six JARVIS features, and that one row is the same `Eu1Ni5` every time. So the consensus cut is
+  *free* on this axis — the new 14 cover exactly what the 21-candidate pool covered — and the whole
+  computability gain in the comparison is #24's Gordy trade.
+- **`dev_voro_coord_divi_mol_vol` stays, on a stated condition.** The JARVIS table's
+  `voro_coord = 1.0` for `Cs` and `Gd` is filler; of the two only gadolinium is in this dataset, in
+  **18 of 1,279 rows (1.4 %)**, so that feature is computed from a placeholder for those rows.
+  Against that, all five folds selected it, and hand-removing a unanimously-selected feature after
+  seeing the result is the decision this phase exists to remove. Kept — and **#83 owes the sentence**
+  in the model card, boxed there.
+- **A report directory can now say what varied.** `--all-features` and `--no-screening` suffix the
+  table names, so a cheap probe cannot silently overwrite an hour-long result. The five-fold
+  screened run over the 21 candidates is the unsuffixed one, because that is the run this project
+  means when it says "selection".
+
+---
+
+### Handoff — 2026-09-05 (earlier) · #24 and #14 closed · written for #25
 
 **Where the phase is.** Thirty cards done. Suite **841** green (807 + 34), ruff and mypy clean,
 `check_board.py` and `check_freeze.py` OK, AC-2 green at 2.7285e-12, `run --fast` exits 0, and

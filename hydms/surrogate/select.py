@@ -3,12 +3,19 @@
     python -m hydms.surrogate.select --config hydms/config/pipeline.yaml
     python -m hydms.surrogate.select --once            # the training split, not the folds
     python -m hydms.surrogate.select --report reports/selection
+    python -m hydms.surrogate.select --emit-comparison # publish, fitting nothing
 
 **This is the slow lane.** At ``pipeline.yaml``'s Boruta budget one pass over the real
 training matrix costs about eleven minutes, so the default five-fold run takes roughly an
 hour. ``--once`` is the single pass -- useful for a cost check or for reproducing what the
 archival selector did, and **not** a result: a selection fitted on the whole training split is
 leak L6, which is what this module exists to stop, so the run says so in its own output.
+
+``--emit-comparison`` is the cheap half and card #25's runnable check: it fits nothing, reads
+the tables the runs above left on disk, and publishes the old-22-versus-new-N write-up from
+them (:mod:`hydms.surrogate.comparison`). Regenerating the document therefore costs a second
+rather than an hour, which is the only reason it can be checked against the code that
+generates it.
 
 Exit codes:
 
@@ -34,6 +41,7 @@ from hydms.data.metadata import with_features, with_metadata
 from hydms.data.splits import assign_splits
 from hydms.descriptors.contract import CONTRACT, FeatureContract
 from hydms.descriptors.featurize import featurize
+from hydms.surrogate.comparison import DOCUMENT, Comparison, ComparisonError
 from hydms.surrogate.scaler import TRAIN
 from hydms.surrogate.selection import (
     SelectionSettings,
@@ -95,6 +103,18 @@ def _parser() -> argparse.ArgumentParser:
         help="skip the CleanLab stage — faster, and not what a real run does",
     )
     parser.add_argument(
+        "--emit-comparison",
+        action="store_true",
+        help="publish the old-22 vs new-N comparison from tables already on disk — fits "
+        "nothing, and is card #25's runnable check",
+    )
+    parser.add_argument(
+        "--publish",
+        type=Path,
+        default=None,
+        help="where --emit-comparison writes; defaults to the configured reports path",
+    )
+    parser.add_argument(
         "--report",
         type=Path,
         default=None,
@@ -146,6 +166,49 @@ def _write(tables: dict[str, pd.DataFrame], destination: Path, out: TextIO) -> N
         print(f"wrote {path}", file=out)
 
 
+def _emit(cfg: Config, args: argparse.Namespace, stream: TextIO) -> int:
+    """``--emit-comparison``: publish the write-up from the tables the runs left behind.
+
+    Nothing is fitted here. The expensive runs are the ones above; this reads what they
+    wrote, so the published document can be regenerated -- and therefore checked -- at any
+    time without an hour of Boruta.
+    """
+    source = args.report or (cfg.paths.reports / "selection")
+    destination = args.publish or (cfg.paths.reports / "feature_selection")
+    try:
+        comparison = Comparison.read(source, config=cfg)
+    except (ComparisonError, OSError, KeyError, ValueError) as error:
+        print(f"could not read the selection tables: {error}", file=sys.stderr)
+        return EXIT_BAD_INVOCATION
+
+    print(f"{comparison.folds} fold(s) from {source}, written {comparison.dated:%Y-%m-%d}", file=stream)
+    print(f"consensus ({len(comparison.consensus)}): {', '.join(comparison.consensus)}", file=stream)
+    print(f"union ({len(comparison.union)}): {', '.join(comparison.union)}", file=stream)
+    print(
+        f"declared ({len(comparison.selected)}): {', '.join(comparison.selected.names)}",
+        file=stream,
+    )
+    if tuple(comparison.selected.names) != comparison.consensus:
+        # Not an error: the declaration is a decision and a future card may take a different
+        # one. It is printed because a silent divergence between the contract and the run it
+        # cites is exactly the drift this document exists to prevent.
+        print(
+            "NOTE: the declared set is not this run's consensus. That is a decision, and "
+            "reports/feature_selection/old_vs_new.md must say which reading it published.",
+            file=stream,
+        )
+
+    try:
+        _write(comparison.tables(), destination, stream)
+        document = destination / DOCUMENT
+        document.write_text(comparison.to_markdown(), encoding="utf-8")
+    except OSError as error:
+        print(f"could not write the comparison: {error}", file=sys.stderr)
+        return EXIT_BAD_INVOCATION
+    print(f"wrote {document}", file=stream)
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     """Run the selector and report. Returns the process exit code."""
     stream = out if out is not None else sys.stdout
@@ -157,6 +220,9 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         print(f"could not read the configuration: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
 
+    if args.emit_comparison:
+        return _emit(cfg, args, stream)
+
     settings = SelectionSettings.from_config(cfg)
     if args.no_screening:
         settings = replace(settings, screen_labels=False)
@@ -166,6 +232,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         f"{len(frame)} row(s) x {len(frame.columns)} column(s); "
         f"{int((split == TRAIN).sum())} in {TRAIN!r}",
         file=stream,
+    )
+
+    # What varied is in the file name, so a probe cannot silently overwrite a result. The
+    # five-fold screened run over the 21 candidates -- the one card #25 publishes -- is the
+    # unsuffixed one, because it is the run this project means when it says "selection".
+    suffix = ("-all-features" if args.all_features else "") + (
+        "-unscreened" if args.no_screening else ""
     )
 
     tables: dict[str, pd.DataFrame] = {}
@@ -185,7 +258,10 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             f"{', '.join(selection.features)}",
             file=stream,
         )
-        tables["selection-once-trace"] = selection.trace()
+        tables[f"selection-once{suffix}"] = pd.DataFrame.from_records(
+            [{"run": "training-split", **selection.record()}]
+        ).set_index("run")
+        tables[f"selection-once{suffix}-trace"] = selection.trace()
     else:
         folds = select_across_folds(frame, split, settings=settings)
         print(f"\n{len(folds)} outer fold(s), grouped on the canonical composition:\n", file=stream)
@@ -198,10 +274,10 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             f"\nunion ({len(union)}): {', '.join(union)}",
             file=stream,
         )
-        tables["selection-per-fold"] = folds.per_fold()
-        tables["selection-stability"] = folds.stability()
+        tables[f"selection-per-fold{suffix}"] = folds.per_fold()
+        tables[f"selection-stability{suffix}"] = folds.stability()
         for fold, selection in zip(folds.folds, folds.selections, strict=True):
-            tables[f"selection-trace-{fold.name}"] = selection.trace()
+            tables[f"selection-trace-{fold.name}{suffix}"] = selection.trace()
 
     destination = args.report or (cfg.paths.reports / "selection")
     try:

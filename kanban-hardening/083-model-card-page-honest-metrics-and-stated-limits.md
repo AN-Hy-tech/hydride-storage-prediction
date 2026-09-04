@@ -45,6 +45,17 @@ DOE system target, and the published figures inherited as though nothing had cha
       neither moves parity; both are limits a reader forming a belief about the model should be
       told, in the same paragraph as the no-pressure-data limit
 
+- [ ] **Two limits this card owes, both measured and both already public (from #25).** First, one
+      of the 14 declared features rests on filler: the JARVIS table stores `voro_coord = 1.0` for
+      `Cs` and `Gd` where every other element is 3 to 12, and gadolinium is in **18 of the 1,279
+      curated rows (1.4 %)**, so `dev_voro_coord_divi_mol_vol` is computed from a placeholder for
+      those rows. #25 kept the feature — all five folds selected it, and hand-removing a
+      unanimously-selected feature after seeing the result is the decision this phase exists to
+      remove — on the condition that the model card states it. Second, **the feature set is not a
+      stable object**: every one of the 21 candidates was selected by some fold and only 14 by all
+      five, so "the model uses these 14 features" is a statement about a consensus, not a discovery
+      about hydrogen storage. `reports/feature_selection/old_vs_new.md` is the source for both
+
 ## Runnable check
 
 ```bash

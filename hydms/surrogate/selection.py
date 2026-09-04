@@ -260,6 +260,25 @@ class Selection:
     def __contains__(self, name: object) -> bool:
         return name in self.features
 
+    def record(self) -> dict[str, object]:
+        """The counts and the chosen names as one row of a table of selections.
+
+        Defined here, once, because two callers build such a table over the same columns:
+        :meth:`FoldSelection.per_fold` writes one row per outer fold, and
+        :mod:`hydms.surrogate.select` writes one for a single pass over the whole training
+        split. Card #25 compares those two tables against each other, and a comparison
+        between two differently-shaped rows is a comparison nobody can read.
+        """
+        return {
+            "rows_offered": self.rows_offered,
+            "rows_fitted": self.rows,
+            "removed": len(self.removed),
+            "flagged": self.flagged,
+            "held_out": self.held_out,
+            "selected": len(self.features),
+            "features": ", ".join(self.features),
+        }
+
     def trace(self) -> pd.DataFrame:
         """Stage by stage: in, out, dropped, restored -- the counts the card asks be logged.
 
@@ -685,16 +704,7 @@ class FoldSelection:
         """
         return pd.DataFrame.from_records(
             [
-                {
-                    "fold": fold.name,
-                    "rows_offered": entry.rows_offered,
-                    "rows_fitted": entry.rows,
-                    "removed": len(entry.removed),
-                    "flagged": entry.flagged,
-                    "held_out": entry.held_out,
-                    "selected": len(entry.features),
-                    "features": ", ".join(entry.features),
-                }
+                {"fold": fold.name, **entry.record()}
                 for fold, entry in zip(self.folds, self.selections, strict=True)
             ],
             columns=[

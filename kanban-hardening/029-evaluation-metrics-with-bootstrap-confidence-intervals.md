@@ -34,6 +34,14 @@ intervals alongside point estimates by default — not as an option.
       record looks like, add the **L11 sentinel** to `hydms/qa/sentinels.py`: the record names no
       held-out split. Until it exists, HG-1 cannot report green
 
+- [ ] **Every reported number must name the feature set it belongs to (from #25).** There are now
+      two, and they are not interchangeable: `SELECTED`, the consensus 14 a shipped model is fitted
+      on, and the per-fold sets of **16-20** features that #25's five-fold run actually produced.
+      A bootstrap interval over folds that each selected their own columns is an interval about a
+      *procedure*; one over a fixed 14-column pipeline is about a model. Both are legitimate and
+      they are different claims, so the record carries which — and the Chapter 1 revision (#37)
+      quotes it from there rather than from a paragraph
+
 ## Runnable check
 
 ```bash

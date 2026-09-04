@@ -16,6 +16,12 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     :mod:`hydms.data.screening` has already judged. :func:`~hydms.surrogate.selection.select_across_folds`
     is the protocol shape; ``python -m hydms.surrogate.select`` is the runnable entry point.
 
+``comparison.py``
+    What the corrected selection changed, against the published 22 -- card #25's write-up,
+    generated from the tables a slow-lane run left on disk rather than by fitting anything.
+    :meth:`~hydms.surrogate.comparison.Comparison.read` assembles it and
+    ``python -m hydms.surrogate.select --emit-comparison`` publishes it.
+
 ``validation.py``
     The project's only fold generator, and the nested protocol every score is produced
     through. Folds group on the canonical composition (leak L7) and the reported score comes
@@ -23,6 +29,13 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     :class:`~hydms.qa.detectors.SelectionRecord` per model compared.
 """
 
+from .comparison import (
+    Comparison,
+    ComparisonError,
+    Placeholder,
+    placeholder_exposure,
+    row_cost,
+)
 from .scaler import (
     QUANTILE_RANGE,
     SCALER_PAYLOAD,
@@ -67,6 +80,8 @@ __all__ = [
     "SCALER_PAYLOAD",
     "SENTINEL_BUDGET",
     "STAGE_NAMES",
+    "Comparison",
+    "ComparisonError",
     "Contender",
     "Evaluation",
     "FittedScaler",
@@ -74,6 +89,7 @@ __all__ = [
     "FoldSelection",
     "FoldSet",
     "FoldSpace",
+    "Placeholder",
     "ScalerError",
     "ScoringTask",
     "Selection",
@@ -86,6 +102,8 @@ __all__ = [
     "grouped_folds",
     "leave_one_class_out",
     "nested_scores",
+    "placeholder_exposure",
+    "row_cost",
     "scaler_from",
     "select_across_folds",
     "select_features",

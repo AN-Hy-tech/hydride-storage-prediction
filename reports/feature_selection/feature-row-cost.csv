@@ -1,0 +1,23 @@
+feature,rows_blocked,of,blocking_elements
+avg_polzbl_divi_atom_mass,1,1279,Eu
+dev_Zunger_radii_sum,0,1279,
+dev_Pauling_Electronegativity,0,1279,
+avg_valence_d,0,1279,
+dev_atom_mass_mult_therm_cond,1,1279,Eu
+avg_is_alkaline,1,1279,Eu
+dev_bp_divi_atom_mass,1,1279,Eu
+dev_specific_heat_(J/g_K)_,0,1279,
+dev_gilmor_number_of_valence_electron,0,1279,
+dev_Covalent_Radius,0,1279,
+range_Mulliken_EN,0,1279,
+range_specific_heat_(J/g_K)_,0,1279,
+range_heat_of_vaporization_(kJ/mol)_,0,1279,
+dev_Gordy_electonegativity,266,1279,"Ce, Dy, Er, Eu, Gd, Hf, Ho, Ir, Lu, Nd, Os, Pr, Pt, Re, Sm, Ta, Tb, Th, Tm, U, W"
+range_first_ion_en_mult_X,1,1279,Eu
+range_Mendeleev_Number,0,1279,
+range_Density_(g/mL),0,1279,
+dev_voro_coord_divi_mol_vol,1,1279,Eu
+dev_heat_of_vaporization_(kJ/mol)_,0,1279,
+range_Atomic_Weight,0,1279,
+temperature(K),0,1279,
+avg_Number_of_unfilled_s_valence_electrons,0,1279,

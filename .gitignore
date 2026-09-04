@@ -10,7 +10,13 @@ research/PHASE-H-PERSONAL-REPORT.md
 
 # ── Root-level duplicate output directories (kept locally, not in repo) ─────
 /models/
-/reports/
+# `/reports/*` rather than `/reports/`, because git does not descend into an excluded
+# directory and a negation under one has no effect. Card #25 publishes the old-22-vs-new-N
+# comparison and the tables it is generated from: an hour of Boruta is not a diff, so the run
+# output in reports/selection/ stays local, but the evidence behind the declared feature
+# contract is versioned with it — that is the whole of what went wrong with REPORT.md.
+/reports/*
+!/reports/feature_selection/
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
