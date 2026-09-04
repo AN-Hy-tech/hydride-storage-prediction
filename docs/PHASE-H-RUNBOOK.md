@@ -481,7 +481,16 @@ could mean anything. See below.
 → #31 AC-3 · #32 AC-1 · #33 AC-4 → #34 artifacts/v1
 ```
 
-- [ ] **#23** Scaler: fit once on train, persist, never refit.
+- [x] **#23** Scaler: fit once on train, persist, never refit. **Landed 2026-09-04.**
+      `hydms.surrogate.fit_scaler(features, split)` is handed the whole matrix with #13's split
+      assignment and selects the training rows itself; it refuses a split that holds nothing out.
+      What it returns and what the artifact stores is a `FittedScaler` — the names, the medians
+      and the IQRs, **not** the estimator — so there is no `fit` to reach and a scikit-learn
+      upgrade cannot change what a saved `v1` does. `(x - centre) / scale` is bit-identical to
+      `RobustScaler.transform` over all 1,278 x 21 values, measured. `transform` takes a
+      `DataFrame`, requires exactly the fitted column set and returns it **in fitting order**:
+      scikit-learn accepts a bare `ndarray` with only a `UserWarning`, which is where a permuted
+      matrix becomes plausible, wrong numbers. Read it back with `scaler_from(bundle)`.
 - [ ] **#24** Port selection reading **CleanLab output**, run **inside the training folds** (L6).
 - [ ] **#25** Run selection once; publish the old-22 vs new-N comparison.
 - [ ] **#88** `hydms/surrogate/validation.py` — `StratifiedGroupKFold` on the canonical key (L7),

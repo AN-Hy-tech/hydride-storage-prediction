@@ -148,7 +148,93 @@ always to wire the sentinel, never to re-aim it. Nothing else is in flight.
 
 ---
 
-### Handoff — 2026-09-04 (latest) · #44 closed · **the front is still S4 at #23 — read the next one down**
+### Handoff — 2026-09-04 (latest) · #23 closed, **S4 open** · written for #88
+
+**Where the phase is.** Twenty-seven cards done and S4 has started. Suite **770** green (724 + 46),
+ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, AC-2 green at
+2.7285e-12, HG-1 still `SKIPPED` at **5/13**, `run --fast` exits 0. **One card is still `doing`:
+#14**, unchanged.
+
+**The front is #88, not #24.** The runbook draws the S4 chain as `#23 → #24 → #25 → #88 → #26`,
+which is the order the *work* reads in; the `blocked_by` graph disagrees and it is the authority.
+#24 is blocked by #14 (`doing`) and by **#88**, and #88 is blocked by #13 and #23 — both now done.
+So #88 is the only S4 card with nothing in front of it, and #24 opens behind it.
+
+**#88 will turn the build red the day it creates its file, and that is correct.** Three sentinels —
+L2, L4 and L7 — name `hydms.surrogate.validation` as their subject, and all three read `pending`
+today for one reason only: the module does not exist. The moment `hydms/surrogate/validation.py`
+appears they go `unwired` and HG-1 goes **red on purpose** until #88 gives each a `live` hook
+against the real protocol. That is the L13 shape from S3, twice over. **Never re-aim a subject to
+make a sentinel green.** Landing all three takes HG-1 from 5/13 to 8/13.
+
+#### What #23 built, that the rest of S4 uses rather than re-invents
+
+`hydms/surrogate/scaler.py` — the scaling transform, and the fact that it belongs to the trained
+model rather than to the batch in front of it.
+
+```python
+from hydms.surrogate import fit_scaler, scaler_from
+
+scaler = fit_scaler(features, split)      # the WHOLE matrix + #13's assignment; it selects train
+scaler.transform(candidates)              # by name, in fitting order, returns a DataFrame
+artifacts.save({"scaler": scaler, ...}, contract=CONTRACT, gates=report)
+scaler_from(artifacts.load(...))          # the way back, checked against the manifest
+```
+
+- **You cannot fit it without saying which rows are training rows.** `fit_scaler` takes the whole
+  matrix *and* the split, selects the rows itself, and **refuses a split that holds nothing out**.
+  Do not pre-filter to a training subset and hand that in — it is the one call the guard is shaped
+  to refuse. The result records `fitted_rows` against `held_out_rows` (893 / 385 on the real
+  matrix), so the artifact states the ratio rather than implying it.
+- **What is stored is the fitted transform, not the estimator** — names, medians, IQRs. There is no
+  `fit` inside to reach; `fit`, `fit_transform` and `partial_fit` raise and say why. A scikit-learn
+  upgrade therefore cannot change what a saved `v1` does, which is the AC-1 failure mode. Nothing is
+  lost to it: `(x - centre) / scale` is **bit-identical** to `RobustScaler.transform` over all
+  1,278 × 21 values of the real matrix, and a test re-measures that rather than trusting it.
+- **`transform` takes a `DataFrame` and refuses an array.** Measured on scikit-learn 1.6.1: a
+  `RobustScaler` fitted on a frame raises on a reordered one, but accepts a bare `ndarray` with only
+  a `UserWarning` — and `fit_transform` returns an `ndarray`, so the names are gone one line after
+  the fit. That is where a permuted matrix becomes plausible, wrong numbers. The output is always in
+  **fitting** order, whatever order the caller had, which is what #26 and #28 need.
+- **`scaler_from` checks a subset, not an equality.** The stored scaler's columns must be *among*
+  the version's feature contract. #24 is expected to narrow them; equality would go red on correct
+  code the day selection lands.
+- **`require_gates=False` is still open and still closes at #34.** A version saved before
+  #31/#32/#33 records no passing gate run and will not load without it. `tests/surrogate/test_scaler.py`
+  passes it in one fixture, with the reason written beside the call.
+
+#### Two numbers for the S4 chain
+
+- **`transform` costs 0.29 ms for 1,278 × 21 and 0.19 ms for a single row** — a per-call floor, like
+  `featurize`'s 5 ms one, and the same instruction follows: **scale in batches**. scikit-learn's own
+  `transform` is 0.60 ms on the same matrix. These are the second and third numbers #22 asked for;
+  **[../docs/BENCHMARKS.md](../docs/BENCHMARKS.md) still has no end-to-end rate and must not be given
+  one until #28's `predict()` exists.**
+- **The real training matrix is 1,278 rows of 21 features.** Dropping `dev_Gordy_electonegativity`
+  (266 rows refused) leaves every row but `Eu1Ni5`, whose jarvis cells are empty for six features.
+  The trade stays #24 and #25'. If you need the refused rows in a fixture, ask
+  `CONTRACT.computability()` once per **element**, not once per row — a hole is a (feature, element)
+  pair, so fifty-odd verdicts answer for all 1,279.
+
+#### Findings of this session
+
+- **`avg_is_alkaline` is constant over the training split.** Zero inter-quartile span over the 893
+  training rows, so `RobustScaler` substitutes a scale of 1.0 and the scaled column is all zeros.
+  `VarianceThreshold(0.001)` should drop it and the archival counts do not say whether it did —
+  **boxed on #24**, to be recorded rather than assumed. `FittedScaler.degenerate` captures such
+  features at fit time, the only moment a scale of 1.0 is still distinguishable from an IQR that
+  genuinely equals 1.0.
+- **`hydms.config.load()` parses `pipeline.yaml` on every call and is not cached.** Harmless
+  everywhere it is used today; it is not harmless on a per-candidate path. `transform` reads no
+  configuration at all for that reason — it gets the check it needs from requiring the column set to
+  *equal* the fitted features, which is strictly stronger than `refuse_non_features` and free. Worth
+  knowing before #28 and #76 put anything else on that path.
+- **No sentinel names `hydms.surrogate.scaler`,** so unlike `merge.py`, `featurize.py` and the
+  modules #88 and #26 are about to create, this one was not expected to move HG-1 — and did not.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #44 closed · written when the front was still #23
 
 **Where the phase is.** Twenty-six cards done. #44 landed out of stage order for the same reason #4
 did: it is blocked only by #3, and S5's other two guard rails wait on #30. Suite **724** green, ruff

@@ -61,6 +61,15 @@ difference.
 - [ ] Stage-by-stage feature counts logged for the Chapter 1 revision
 - [ ] The card's own description matches the code that exists, not `REPORT.md` 3.3
 
+- [ ] **`avg_is_alkaline` is constant over the training split (from #23).** Measured while fitting
+      the scaler on the real 1,278 x 21 matrix: its inter-quartile span over the 893 training rows
+      is exactly zero, so `RobustScaler` substitutes a scale of 1.0 and the scaled column is all
+      zeros. `VarianceThreshold(0.001)` should drop it, and the point of the box is that the
+      archival run's own stage-by-stage counts do not say whether it did — so record the verdict
+      rather than assume it. `hydms.surrogate.FittedScaler.degenerate` names such features at fit
+      time, which is the only moment a scale of 1.0 is still distinguishable from an IQR that
+      genuinely equals 1.0
+
 - [ ] **Selection now has a cost to weigh that the old run never faced (from #19).**
       `dev_Gordy_electonegativity` is not computable from the citable Oliynyk table for
       **266 of 1,279 rows / 236 of 1,115 compositions** (21 elements have no `gordy_en`), and
