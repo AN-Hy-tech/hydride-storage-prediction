@@ -39,6 +39,11 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
 - [ ] Predictions are returned in wt%, back-transformed, with the interval transformed consistently
 - [ ] No absolute path, no network call, no global mutable state
 - [ ] Ten known training alloys reproduce the trained model's predictions on those rows (AC-4)
+- [ ] **The trained-temperature bound is `hydms.screens.temperature_window()` (#44) — used, not
+      re-written.** This layer owns no comparison against `domain.temperature_min_k/max_k`: it runs
+      the screens and reads the verdict, so the refusal path and the screening path cannot disagree
+      about what is in range. Read the domain verdict off `Verdicts`, and note that a screen may
+      answer `INDETERMINATE`, which is a refusal and not a pass.
 
 ## Runnable check
 
@@ -55,3 +60,7 @@ conda run -n Project python -m pytest tests/delivery/test_predict.py -q
 - 2026-09-02: Created for Phase H. Shaped with the `codebase-design` and
   `software-design-philosophy` vocabulary: this is the deep module, and the API and app above it are
   deliberately thin transports (by @assistant)
+
+- 2026-09-04: #44 landed the screen contract, so the domain verdict this card must carry has a
+  shape: `apply_screens(candidates, screens)` returns one row per candidate with a code and a
+  sentence per screen, and nothing is filtered until `Verdicts.select` is called. (by @assistant)

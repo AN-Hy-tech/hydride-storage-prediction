@@ -511,7 +511,18 @@ could mean anything. See below.
 **Goal:** the interface can refuse instead of guessing. These three migrated out of the frozen PA
 phase because a predictor with no domain check *is* the false-prediction machine this phase removes.
 
-- [ ] **#44** Screen interface — a verdict with a **reason**, never a silent drop.
+- [x] **#44** Screen interface — a verdict with a **reason**, never a silent drop. **Landed
+      2026-09-04, before S4 opened**: it is blocked only by #3, and it is #48 and #49 that wait on
+      the surrogate. `hydms.screens.apply_screens(candidates, screens)` runs every screen over the
+      whole batch — each called exactly once, whatever the size — and returns one verdict table:
+      `admitted`, then `<screen>.passed`, `<screen>.code`, `<screen>.reason` and any evidence
+      columns the screen returned. **Nothing is filtered until `Verdicts.select()` is called.** The
+      runner is the enforcement point: it refuses a screen that drops, adds or reorders a row, that
+      writes into the batch (caught by a position-weighted content fingerprint, not a structural
+      check), that returns a malformed verdict, or that emits a code it never declared. A screen
+      that cannot judge answers `INDETERMINATE`, which is a **rejection** — fail-closed.
+      `window.py` ships the worked screen; `temperature_window()` reads the 195–773 K bound from
+      config and is the **outer** bound, never an applicability domain (#48 is that).
 - [ ] **#48** Applicability-domain ceiling, derived from #30's LOACO result.
 - [ ] **#49** ElMD novelty screen. Needs the `novelty` extra; its API is unverified in
       [LIBRARY-APIS.md](LIBRARY-APIS.md) — settle it in this card.
@@ -657,7 +668,7 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. 567 green as of 2026-09-04. Anything red is a real failure: the eight that were red
+# Suite. 724 green as of 2026-09-04, after #4 and #44. Anything red is a real failure: the eight that were red
 # earlier that day were the L13 sentinel reading `unwired` between #20 creating its subject and
 # #12 wiring it, and both have landed.
 conda run -n Project python -m pytest -q

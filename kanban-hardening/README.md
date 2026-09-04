@@ -132,7 +132,81 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #4 closed · written for S4, opening at #23
+### Handoff — 2026-09-04 (latest) · #44 closed · **the front is still S4 at #23 — read the next one down**
+
+**Where the phase is.** Twenty-six cards done. #44 landed out of stage order for the same reason #4
+did: it is blocked only by #3, and S5's other two guard rails wait on #30. Suite **724** green, ruff
+0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1 `SKIPPED` at 5/13 —
+**no sentinel names `hydms/screens/`**, so unlike `merge.py` and `featurize.py` this package did not
+turn the build red on the day it appeared.
+
+**The opening move is unchanged and it is not this card's.** It is **#23**, then thirteen cards of
+S4 chain, and the handoff directly below this one is the live one for it — read it for what #4
+built, the `require_gates=False` window that closes at #34, and where the transform-only wrapper
+lives. The 63 tests it lists as uncommitted work on #44 are what landed here: **661 + 63 = 724**,
+which resolves its last finding.
+
+#### What #44 built, that S5 and S6 are expected to use rather than re-invent
+
+`hydms/screens/` — `protocol.py` is the contract, `window.py` is the worked screen.
+
+```python
+from hydms.screens import apply_screens, temperature_window
+
+verdicts = apply_screens(candidates, [temperature_window(), ceiling, novelty])
+verdicts.table            # admitted, then <screen>.passed / .code / .reason / evidence columns
+verdicts.rejections()     # long form: one row per rejection, with the sentence
+verdicts.summary()        # per candidate: which screens rejected it, and why — the CSV of S3
+shortlist = verdicts.select(candidates)   # the filtering: afterwards, explicit, by a caller
+```
+
+- **Nothing is filtered by a screen, ever.** A rejected candidate is a row with `passed=False`, not
+  an absent row, and `select()` is the only thing that removes anything. That is the whole card.
+- **The runner is the enforcement point; the protocol is only a promise.** `apply_screens` refuses a
+  screen that drops, adds or reorders a row, writes into the batch, returns a malformed verdict, or
+  emits a code it never declared — by name, every time. `verdict_table()` is a convenience and
+  validates nothing, deliberately: a screen that builds its frame by hand is checked identically.
+- **The vocabulary is declared, not discovered.** Each screen exposes `reasons`, and a code outside
+  it is refused. **#75 derives its refusal schema from that union rather than restating it** — boxed
+  there, and on #48, whose `OUT_OF_DOMAIN` / `HIGH_UNCERTAINTY` distinction is now something a test
+  can assert rather than a naming convention.
+- **Extra columns are evidence and are carried through prefixed.** #49's ElMD distance and nearest
+  formula ride on the verdict frame as `novelty.distance` / `novelty.nearest`; do not build a second
+  return channel that can disagree with the verdict. Boxed on #49.
+- **`INDETERMINATE` is a rejection.** A screen that cannot judge a candidate does not admit it —
+  fail-closed, because the alternative is a candidate reaching the shortlist *because* the rule
+  meant to stop it broke. It is a declared code, not an exception and not a `None`.
+- **One call per screen per batch, whatever the size**, asserted at 1, 10 and 1,000 rows by a screen
+  that counts its own calls. `Verdicts.durations` and `counts()['seconds']` are there because the
+  one thing the runner cannot see is a screen looping *internally* — the 200× shape #22 measured.
+- **`temperature_window()` is the outer bound and never an applicability domain.** It reads
+  195–773 K and the column name from config, and admits all 1,279 curated rows — which is the check
+  that the bounds really are the measured span. **#76 uses it rather than re-writing the
+  comparison**, boxed there; coverage inside is uneven (39 test rows above 500 K) and #48 is what
+  speaks to that.
+
+#### Findings of this session
+
+- **A window shipped with the protocol, and the blocker is why.** A bare `Protocol` needs no config
+  loader, yet #44 is blocked by #3 — and `docs/QA-PROTOCOL.md` asks this layer for *boundary cases
+  on each window, both sides* when no window existed. `Window` is that, `temperature_window()` is
+  the config-driven instance, and it demonstrates once the property #48's ceiling is required to
+  have. It is the only scope this card took beyond its four boxes.
+- **Catching a mutation needed a content fingerprint, not a structural check.** A screen that
+  overwrites one cell in place, or sorts the batch in place, passes every comparison of shape,
+  columns and dtypes — and an in-place sort is the worse of the two, because the *next* screen then
+  judges a differently ordered frame and the result silently depends on the order the screens ran
+  in. `hash_pandas_object` weighted by row position catches both; an unweighted sum would miss the
+  permutation. One O(rows) pass per screen, against the seconds that batch spends being featurised.
+- **Two sessions shared this working tree.** #4 and #44 were being written at the same time in the
+  same checkout, which is why the commit for this card stages named paths and not `-A`:
+  `.gitignore` (a local `research/` exclusion) and #23's move to `doing` are somebody else's
+  in-flight work and were left untouched. If you are about to run two cards at once, land them in
+  different worktrees or accept that every commit has to be path-scoped.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #4 closed · written for S4, opening at #23
 
 **Where the phase is.** Twenty-five cards done. #4 landed out of stage order because **#23 was
 blocked by it** and S4 is a thirteen-card chain that starts there; `#23` is now unblocked and

@@ -33,6 +33,12 @@ callers should include, but a type that cannot represent a bare number.
 - [ ] Units and the target space (wt%, back-transformed from log1p) are explicit in the type, not
       implied by a field name
 - [ ] Serialisable to JSON without loss, round-trip tested
+- [ ] **The refusal codes are enumerated from the screens, never hand-written here.** Every screen
+      declares `reasons` (#44) and `apply_screens` refuses a code outside that vocabulary, so the
+      schema's code set is `ADMITTED` plus the union of the configured screens' `reasons` plus the
+      shared `INDETERMINATE`. A literal list in this module is a second source of truth and will
+      drift from the screens that actually emit them — which is exactly what `docs/QA-PROTOCOL.md`
+      means by "every refusal reason code is reachable and asserted".
 
 ## Runnable check
 
@@ -47,3 +53,6 @@ conda run -n Project python -m pytest tests/delivery/test_contract.py -q
 ## Narrative
 
 - 2026-09-02: Created for Phase H (by @assistant)
+
+- 2026-09-04: #44 landed the screen contract. The reason vocabulary is declared per screen and
+  enforced by the runner, so this card can derive its code set instead of restating it. (by @assistant)

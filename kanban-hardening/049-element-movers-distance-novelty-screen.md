@@ -27,6 +27,11 @@ recorded here so the choice is not revisited by mistake.
 - [ ] Nearest neighbour's formula reported alongside the distance, so novelty is inspectable
 - [ ] Distances computed batched; a per-candidate loop over the training set would be too slow
 - [ ] GPL-3.0 dependency noted in `pyproject.toml` and in ADR 2
+- [ ] **The distance and the nearest formula ride on the verdict frame, not a second return
+      value.** `hydms.screens.apply_screens` (#44) carries any extra column a screen returns into
+      the verdict table as `<screen>.<column>`, so "reported alongside the distance" is satisfied by
+      returning them beside `passed`/`code`/`reason` — a parallel API would put the number and the
+      verdict on two paths that can disagree. Declare the rejection code in `reasons`.
 
 ## Runnable check
 
@@ -41,3 +46,8 @@ python -m pytest tests/screens/test_novelty.py -q
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- 2026-09-04: #44 landed the contract this card implements, including the evidence-column seam this
+  screen needs (a test pins that a screen returning `distance` and `nearest` gets them back as
+  `<screen>.distance` and `<screen>.nearest`). The batched requirement in the third box is now the
+  runner's own rule: `verdict()` takes a frame and is called once per run. (by @assistant)
