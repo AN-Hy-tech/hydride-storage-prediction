@@ -115,22 +115,25 @@ def test_every_gate_names_a_card_that_exists_on_one_of_the_two_boards() -> None:
         assert gate.card in ids, f"{gate.name} names card #{gate.card}, which is on no board"
 
 
-def test_no_unimplemented_gate_can_report_passed(cfg: Config) -> None:
+def test_no_unimplemented_gate_can_report_passed(cfg: Config, unwritten) -> None:
     """The rule the whole harness exists for: absence of evidence is never a pass."""
-    report = run(registry(), cfg, selection="--all")
+    report = run(unwritten, cfg, selection="--all")
     for result in report.results:
         assert result.status is not Status.PASSED, (
             f"{result.name} reported PASSED while its module still declares a Pending gate"
         )
 
 
-def test_pending_gates_report_their_owning_card_and_blockers(cfg: Config) -> None:
+def test_pending_gates_report_their_owning_card_and_blockers(cfg: Config, unwritten) -> None:
     """The skip line has to be actionable, or the table is a wall of 'not done'."""
-    gate = next(g for g in registry() if g.name == "AC-2")
-    result = gate.check(cfg)
-    assert result.status is Status.SKIPPED
-    assert "#21" in result.message      # who owes it
-    assert "#20" in result.message      # what it waited for, and now calls
+    for gate in unwritten:
+        result = gate.check(cfg)
+        assert result.status is Status.SKIPPED
+        assert f"#{gate.card}" in result.message, f"{gate.name} does not say who owes it"
+        for blocker in getattr(gate, "blocked_by", ()):
+            assert f"#{blocker}" in result.message, (
+                f"{gate.name} is blocked by #{blocker} and does not say so"
+            )
 
 
 def test_the_frozen_criteria_say_so(cfg: Config) -> None:
@@ -256,14 +259,15 @@ def test_pending_cannot_be_configured_into_passing(cfg: Config) -> None:
 # --------------------------------------------------------------------------------------
 
 
-def test_a_skip_is_tolerated_under_a_broad_selection(cfg: Config) -> None:
-    report = run(registry(), cfg, selection="--all", strict=False)
-    assert report.counts["skipped"] == len(registry())
+def test_a_skip_is_tolerated_under_a_broad_selection(cfg: Config, unwritten) -> None:
+    report = run([_passing(), *unwritten], cfg, selection="--all", strict=False)
+    assert report.counts["skipped"] == len(unwritten)
     assert report.ok, "a whole-registry run must not be red merely because work is unwritten"
 
 
-def test_a_skip_is_fatal_when_the_gate_was_named(cfg: Config) -> None:
-    report = run(select(["AC-2"]), cfg, selection="AC-2", strict=True)
+def test_a_skip_is_fatal_when_the_gate_was_named(cfg: Config, unwritten) -> None:
+    name = unwritten[0].name
+    report = run(select([name]), cfg, selection=name, strict=True)
     assert not report.ok, "you asked a specific question and did not get an answer"
 
 
@@ -272,10 +276,12 @@ def test_a_skip_is_fatal_when_the_gate_was_named(cfg: Config) -> None:
 # --------------------------------------------------------------------------------------
 
 
-def test_a_skip_does_not_read_like_a_pass(cfg: Config) -> None:
-    text = render_report(run(registry(), cfg, selection="--all"), registry())
+def test_a_skip_does_not_read_like_a_pass(cfg: Config, unwritten) -> None:
+    report = run(unwritten, cfg, selection="--all")
+    text = render_report(report, registry())
     assert "NOT CHECKED" in text
-    assert "12 skipped" in text
+    assert f"{report.counts['skipped']} skipped" in text
+    assert report.counts["skipped"] == len(unwritten)
 
 
 def test_the_table_names_the_measured_value_and_the_owning_card(cfg: Config) -> None:

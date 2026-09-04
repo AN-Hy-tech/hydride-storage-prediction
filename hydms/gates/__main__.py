@@ -12,7 +12,7 @@ Exit codes, which are the whole contract as far as CI is concerned:
     2   the invocation itself was wrong (unknown gate name, unreadable config)
 
 The asymmetry between a named gate and a lane is deliberate and is explained on
-``GateReport.ok``: asking for AC-2 and being told it is unimplemented is not a pass, while
+``GateReport.ok``: asking for HG-2 and being told it is unimplemented is not a pass, while
 failing a whole-registry run for the same reason would leave CI red for the length of the
 phase and therefore ignored.
 

@@ -340,7 +340,7 @@ class GateReport:
         """Whether this run may be called green.
 
         A skip is tolerated under a broad selection and fatal under an explicit one. Asking
-        for ``AC-2`` and being told the criterion is unimplemented is not a pass -- you asked
+        for ``HG-2`` and being told the criterion is unimplemented is not a pass -- you asked
         a question and did not get an answer. Asking for the whole registry while most of the
         phase is unwritten is a different situation, and failing there would leave CI
         permanently red and therefore permanently ignored.

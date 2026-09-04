@@ -89,10 +89,16 @@ def render_report(report: GateReport, gates: tuple[Gate, ...] = ()) -> str:
             f"{'them' if len(skipped) > 1 else 'it'}."
         )
 
-    # Multi-line detail -- tracebacks, per-column diffs -- goes below the table rather than
-    # into it, so a wide failure message cannot destroy the alignment of every other row.
+    # Multi-line detail -- tracebacks, per-column diffs, the caveats behind a green row --
+    # goes below the table rather than into it, so a wide message cannot destroy the
+    # alignment of every other row.
+    #
+    # Any status, not only the red ones. AC-2 is why (card #21): it passes, and the two
+    # things it is *required* to say are what the comparison excluded and what a green run
+    # does not establish. A pass with caveats that only reaches the JSON report is a pass
+    # whose caveats nobody reads.
     for result in report.results:
-        if result.status in (Status.FAILED, Status.ERRORED) and "\n" in result.message.strip():
+        if "\n" in result.message.strip():
             out.append("")
             out.append(f"--- {result.name} ---")
             out.append(result.message.rstrip())

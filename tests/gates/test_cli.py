@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from hydms.config import load
-from hydms.gates import run, select
+from hydms.gates import registry, run, select
 from hydms.gates.__main__ import EXIT_BAD_INVOCATION, EXIT_GATE_FAILED, EXIT_OK, main, summarise
 
 
@@ -39,10 +39,16 @@ def test_run_all_strict_is_red(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["run", "--all", "--strict", "--no-report"]) == EXIT_GATE_FAILED
 
 
-def test_naming_an_unimplemented_gate_is_red(capsys: pytest.CaptureFixture[str]) -> None:
-    """The runnable check on cards #21, #31, #32, #33, #71, #77 and #79 is exactly this
-    invocation. It must not report success before the card that owns it has landed."""
-    assert main(["run", "AC-2", "--no-report"]) == EXIT_GATE_FAILED
+def test_naming_an_unimplemented_gate_is_red(
+    capsys: pytest.CaptureFixture[str], unwritten
+) -> None:
+    """The runnable check on cards #31, #32, #33, #71, #77 and #79 is exactly this
+    invocation. It must not report success before the card that owns it has landed.
+
+    The gate is taken from the registry rather than named, so landing one does not quietly
+    turn this test into a test of that gate -- which is what card #21 did to it.
+    """
+    assert main(["run", unwritten[0].name, "--no-report"]) == EXIT_GATE_FAILED
 
 
 def test_an_unknown_gate_name_is_a_bad_invocation(
@@ -84,12 +90,14 @@ def test_a_report_is_written_where_it_is_asked_for(
 
     written = json.loads(destination.read_text(encoding="utf-8"))
     assert written["selection"] == "--all"
-    assert written["summary"]["skipped"] == 12
+    assert sum(written["summary"].values()) == len(registry())
+    assert written["summary"]["failed"] == 0 and written["summary"]["errored"] == 0
     assert str(destination) in capsys.readouterr().out
 
 
-def test_summarise_is_one_line_and_says_which_way_it_went() -> None:
-    report = run(select(["AC-2"]), load(), selection="AC-2", strict=True)
+def test_summarise_is_one_line_and_says_which_way_it_went(unwritten) -> None:
+    name = unwritten[0].name
+    report = run(select([name]), load(), selection=name, strict=True)
     line = summarise(report)
     assert "\n" not in line
-    assert "RED" in line and "AC-2" in line
+    assert "RED" in line and name in line

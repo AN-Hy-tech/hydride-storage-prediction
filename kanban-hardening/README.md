@@ -132,7 +132,83 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #12 closed · written for #21, then #22
+### Handoff — 2026-09-04 (latest) · #21 closed, AC-2 green · written for #22, then S4
+
+**Where the phase is.** Twenty-three cards done, and **S3 has one card left**. The suite is **577**
+green, ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1 still
+`SKIPPED` at 5/13, and the fast lane exits 0 with **AC-2 the first `PASSED` row the gate table has
+ever carried**. The hard gate of S3 is answered: `2.7285e-12` against a tolerance of `1e-9`, over
+1,278 of the 1,279 curated formulae, in 1.5 s.
+
+**#21, and why a gate expected to be green was still a day's work.** #20 had already measured the
+16-formula version at 4.547e-13, so the outcome was never in doubt. What the card actually bought is
+everything around the number.
+
+- **The exclusion is derived from both sides.** The card says no europium formula may be compared and
+  that the exclusion must be *recorded*, not filtered. Hard-coding `"Eu"` would have satisfied the
+  letter of that. A row is instead excluded when this layer refuses it — `computability` against the
+  tables the gate is actually using — **or** when CBFV lists it in the `skipped` array that
+  `extract_features_cbfv.py` never read, and the result prints the two counts separately, because
+  the case worth seeing is the two *disagreeing*. Today they are the same single row. Measured on the
+  way: **CBFV's `jarvis.csv` has no europium row at all** (82 elements, not 85), and CBFV emits a
+  full row for `Eu1Ni5` anyway — `avg_atom_mass` 48.911 is `(0×1 + 58.6934×5)/6`. The all-zero
+  property vector is now arithmetic rather than inference.
+- **The gate reads CBFV's installed table, not the committed fixture** — a correction to two boxes
+  and to the last handoff. The numbers are identical (zero differing cells, because the fixture was
+  written with `repr(float)`), but the gate imports CBFV anyway to produce the expected values, and a
+  second source of the *table* admits a skew between the two halves of one comparison that would
+  surface as a parity failure rather than as the stale fixture it is. It also keeps package code out
+  of `tests/`. The fixture gained a test that pins it against the installed table cell by cell.
+- **Supplying CBFV's JARVIS copy as well changes nothing — 2.7285e-12 either way, same cell.** #16
+  recorded the two copies of NIST's file agreeing to 7.3e-12 and the worst offender here is a JARVIS
+  composite of magnitude ~4e3, so table skew was the reasonable suspect. It is not. The whole residue
+  is #17's element order, and the card's "suspect the order before the arithmetic" is now measured.
+- **A green gate has to be able to say what it did not establish.** Two of the card's boxes are about
+  AC-2's blind spots and both are lines of the result — what was excluded, and that the *shipped*
+  tables could not have featurised **266 of 1,279** rows at all. Writing them found that
+  `_report.py` printed multi-line detail only for `FAILED` and `ERRORED`, so both lines lived only in
+  the JSON. Any status prints it now; HG-1's per-leak listing had been invisible for the same reason.
+
+**The thing to know before you touch `tests/gates/`.** Landing the first real gate broke six tests
+that were never about it: `test_harness.py` and `test_cli.py` used the literal `AC-2` wherever they
+meant "a criterion nobody has written yet", so a passing AC-2 turned four strictness tests and two
+CLI tests into tests of featuriser parity. They now take the **`unwritten` fixture** in
+`tests/gates/conftest.py`, which asks the registry which gates are still `Pending` and asserts the
+answer is non-empty. **Use it when you land #26, #28, #30, #31, #32, #33, #77, #79 or #86** — do not
+substitute another gate name, or the next card repeats this. Four doc comments that used AC-2 as the
+standing example of an unimplemented gate were repointed at HG-2.
+
+#### The opening move
+
+**#22, and it is the last card in S3.** The featurisation throughput benchmark. It starts from
+numbers already measured rather than from nothing: **10,000 formulae in one call take 0.31 s** and
+the curated 1,278 take **0.21 s** (`featurize`'s module docstring quotes both), and this card added a
+third — the whole AC-2 gate, which featurises 1,279 rows once and runs CBFV over them twice, takes
+**1.5 s** end to end. What #22 owes is a benchmark that is a *check* rather than a printout: a
+threshold that fails the build, a shape that says whether the cost is per-call or per-formula, and a
+statement of what it is defending — the memo's practical check 3 warns against a per-formula loop,
+and Architectures A and B both evaluate candidates in batches. `pyproject.toml` declares a `slow`
+marker for tests that take more than a few seconds; decide whether this one earns it.
+
+**Then S3 closes and S4 opens at #23**, the fit-once scaler. Two things there that are not worth
+re-deriving:
+
+- **`hydms.data.metadata.with_features` is the only place the record and the matrix become one
+  frame.** #23, #24 and #26 each need a training matrix and none of them should write a `concat`.
+  Boxed on #24. The reason is on that box too: `temperature(K)` is a column of the raw file *and* one
+  of the 22 features, so a plain concat returns the name twice, `int64` beside `float64`.
+- **The full 22 cannot build a training matrix at all** — 266 of 1,279 rows are refused by the
+  shipped tables, 265 for `dev_Gordy_electonegativity` alone. Without that one feature the remaining
+  21 cover 1,278. That trade is #24/#25's to make, and AC-2 says so in its own output every time it
+  runs, precisely so a green gate is never read as "the featuriser can produce all 22 for every row".
+
+**One card is still `doing`: #14.** It owes S4, not S3 — #24 consuming its output is what closes the
+`Boruta_FeatEng.py:23-25` bypass and supplies the feature matrix CleanLab needs to produce
+`label_issues` at all. #15 is written, green, and stays `backlog` behind it.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #12 closed · written for #21, then #22
 
 **Where the phase is.** Twenty-two cards done and **the tree is green again**: 567 tests pass, ruff
 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1 **skipped at 5/13**

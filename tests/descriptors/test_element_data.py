@@ -294,6 +294,34 @@ REVISED = {
 }
 
 
+def test_the_committed_reference_is_the_installed_cbfvs_own_table() -> None:
+    """The fixture is a transcription, and a transcription can go stale.
+
+    Everything downstream of card #16 leans on it: the delta table below, the contract's
+    spelling map, #20's value pin, and gate AC-2 -- which reads this file's *source* rather
+    than this file, precisely so that the reference table and the expected numbers come from
+    one CBFV and cannot drift apart. That choice is only safe while the two agree, so the
+    agreement is checked here rather than assumed.
+
+    Bit-exact, not approximate: `build_element_tables.py` writes each cell with `repr(float)`,
+    which round-trips exactly, so one differing digit means the installed CBFV is not the one
+    this fixture was cut from.
+    """
+    pd = pytest.importorskip("pandas", reason="the CBFV table is read with pandas")
+    cbfv = pytest.importorskip("CBFV", reason="CBFV is only installed in the `parity` extra")
+    published = pd.read_csv(
+        Path(cbfv.__file__).parent / "element_properties" / "oliynyk.csv", index_col=0
+    )
+    reference = _reference()
+
+    assert set(reference) == {str(element) for element in published.index}, (
+        "the fixture and the installed CBFV table cover different elements"
+    )
+    for element, row in reference.items():
+        for prop, value in row.items():
+            assert value == float(published.loc[element, prop]), f"{prop}[{element}]"
+
+
 def test_five_oliynyk_properties_match_cbfv_exactly(dataset_elements: frozenset[str]) -> None:
     table = load_table("oliynyk")
     reference = _reference()
@@ -385,12 +413,18 @@ def test_nothing_in_the_descriptor_layer_imports_cbfv() -> None:
     CBFV carries no licence, so it may not be a runtime dependency of a GPL-3.0 deliverable.
     It is allowed in exactly two places: `scripts/build_element_tables.py`, which writes the
     AC-2 reference fixture and is never run by CI, and the parity gate itself (card #21).
+
+    The sweep is over the whole package rather than this layer alone, because card #21 made
+    the second of those two places real. A boundary that is only checked where nothing has
+    ever wanted to cross it is not a boundary.
     """
     imports = re.compile(r"^\s*(?:import\s+CBFV|from\s+CBFV\b)", re.MULTILINE)
-    root = Path(__file__).resolve().parents[2] / "hydms" / "descriptors"
+    root = Path(__file__).resolve().parents[2] / "hydms"
     offenders = sorted(
-        str(path.relative_to(root))
+        path.relative_to(root).as_posix()
         for path in root.rglob("*.py")
         if imports.search(path.read_text(encoding="utf-8"))
     )
-    assert offenders == []
+    assert offenders == ["gates/ac2_featuriser_parity.py"], (
+        "CBFV may be imported by the parity gate (card #21) and by nothing else in hydms/"
+    )

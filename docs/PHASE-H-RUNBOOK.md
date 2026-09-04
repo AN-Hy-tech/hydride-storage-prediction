@@ -404,13 +404,32 @@ could mean anything. See below.
       with it, including one whose docstring predicted its own death. The sentinel was not
       re-aimed: #12 closed the same day with the `live` hook and the `with_features` join, and
       HG-1 reads **5/13**, skipped rather than red.
-- [ ] **#21 GATE AC-2** — parity with CBFV to 1e-9 on all 1,279 formulae. **Hard gate.** If it fails,
+- [x] **#21 GATE AC-2** — parity with CBFV to 1e-9 on all 1,279 formulae. **Hard gate.** If it fails,
       the reimplementation is wrong, not CBFV. **Two amendments from #16:** parity is measured against
       the reference table, not the shipped one; and no Eu-containing formula can be compared at all,
       because this layer refuses where CBFV returns a silently-zeroed number.
+      **Green 2026-09-04, at 2.7285e-12 against 1e-9** — `dev_atom_mass_mult_therm_cond` at
+      `Mg0.7Li0.2Cu0.1`, over **1,278 of the 1,279** rows, seven columns bit-identical, 1.5 s.
+      **(a)** The exclusion is **derived from both sides**, not hard-coded: a row is dropped when
+      this layer refuses it *or* when CBFV lists it in the `skipped` array `extract_features_cbfv.py`
+      never read, and the result reports the two counts separately so their disagreeing would be
+      visible. They coincide on one row. Measured here: **CBFV's `jarvis.csv` has no europium row at
+      all** (82 elements, not 85) and emits a full row for `Eu1Ni5` regardless — `avg_atom_mass`
+      48.911 is `(0×1 + 58.6934×5)/6`, so the all-zero vector is now arithmetic rather than
+      inference. **(b)** The gate reads CBFV's *installed* Oliynyk table rather than the committed
+      fixture. The two are bit-identical (measured, zero differing cells) but the gate imports CBFV
+      anyway for the expected numbers, and a second source admits a skew it would report as a parity
+      failure; a new test pins the fixture against the installed table so it cannot go stale.
+      **(c)** Supplying CBFV's JARVIS copy as well changes the worst gap by **nothing** — same
+      2.7285e-12, same cell — so the residue is #17's element order and not the 7.3e-12 between the
+      two copies of NIST's file. **(d)** `_report.py` printed multi-line detail only for red rows, so
+      the two lines this gate is *required* to print reached only the JSON. Any status now prints it;
+      HG-1's per-leak listing was hidden by the same bug. **(e)** Six harness tests used the string
+      `AC-2` to mean "a criterion nobody has written yet" and now take an `unwritten` fixture that
+      asks the registry.
 - [ ] **#22** Featurisation throughput benchmark.
 
-**Exit check:** `conda run -n Project python -m hydms.gates run AC-2`
+**Exit check:** `conda run -n Project python -m hydms.gates run AC-2` — **green**, and it needs the `parity` extra: without CBFV it skips rather than passing, which is what CI does.
 
 ---
 
@@ -559,10 +578,13 @@ Three properties are worth knowing before you write a gate:
 
 - **A skip is never a pass.** An unimplemented criterion reports `SKIPPED`, the table prints a
   `NOT CHECKED` banner naming every one of them, and `--strict` turns any skip into a failure.
-- **Naming a gate makes the run strict.** `run AC-2` exits non-zero while AC-2 is unimplemented —
-  which is why the `## Runnable check` on #21, #31, #32, #33, #71, #77 and #79 is honest from the day
-  it is written. `run --all` tolerates skips, because CI that is red for the length of the phase is
-  CI nobody reads.
+- **Naming a gate makes the run strict.** `run HG-2` exits non-zero while HG-2 is unimplemented —
+  which is why the `## Runnable check` on #31, #32, #33, #71, #77 and #79 is honest from the day it
+  is written. `run --all` tolerates skips, because CI that is red for the length of the phase is CI
+  nobody reads. **AC-2 is the first gate for which this is no longer true**: `run AC-2` exits 0, in
+  an environment that has CBFV. Without CBFV it reports `SKIPPED` and exits 1, which is the honest
+  answer — CI's `suite` job installs no `parity` extra on purpose, so the criterion is established
+  on the machine lane and CI records that it did not establish it.
 - **Each gate declares its own lane.** `Speed.FAST` means answerable against the published artifact;
   `Speed.SLOW` means it needs a retrain. Cards #6 and #7 select on that rather than deciding it.
 
