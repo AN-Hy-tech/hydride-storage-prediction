@@ -187,6 +187,42 @@ def test_l13_is_wired_to_the_real_featuriser() -> None:
     assert row.owed_by == 12
 
 
+def test_l13_goes_red_when_the_real_path_stops_carrying_the_class(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Seen red, and against the real subject rather than a copy of it.
+
+    `extract_features_cbfv.py:19-21` put back into the one function the hook actually calls. A
+    `live` hook that silently exercised a local reimplementation would look identical to one
+    that works, so this is the only thing that distinguishes them.
+
+    The run is cached -- `audit()` fires on every gate invocation -- so the cache is cleared on
+    both sides. A poisoned frame left behind would make every later audit in this process report
+    a leak that is not there.
+    """
+    from hydms.qa import audit
+    from hydms.qa.sentinels import _featurisation_run, for_leak
+
+    def archival(record: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+        object_columns = record.select_dtypes(include="object").columns
+        kept = record.drop(columns=[n for n in object_columns if n != "Composition"])
+        return pd.concat([kept, features], axis=1)
+
+    monkeypatch.setattr("hydms.data.metadata.with_features", archival)
+    _featurisation_run.cache_clear()
+    try:
+        sentinel = for_leak("L13")
+        assert sentinel is not None and sentinel.live is not None
+        with pytest.raises(LeakDetected):
+            sentinel.live()
+
+        row = next(entry for entry in audit() if entry.leak == "L13")
+        assert row.status == "broken"
+        assert "hydms.descriptors.featurize has leak L13" in row.detail
+    finally:
+        _featurisation_run.cache_clear()
+
+
 def test_the_class_arrives_for_every_row_the_real_featuriser_accepts() -> None:
     """The whole path, written the way a caller writes it, over the real file.
 

@@ -172,7 +172,7 @@ boundary exists for.
 
 - 2026-09-04: **Closed.** #20 created `hydms.descriptors.featurize` the same day, which flipped
   the L13 sentinel from `pending` to `unwired` and took eight tests red with it; this card wired
-  it. `audit()` reports **5/13** and the suite is 566 green. Three things this half taught:
+  it. `audit()` reports **5/13** and the suite is 567 green. Three things this half taught:
 
   **The join needed a function, not a line.** The card prescribed
   `pd.concat([metadata, features], axis=1)` and the hook could have written it inline — which

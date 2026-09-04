@@ -134,7 +134,7 @@ bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 
 ### Handoff — 2026-09-04 (latest) · #12 closed · written for #21, then #22
 
-**Where the phase is.** Twenty-two cards done and **the tree is green again**: 566 tests pass, ruff
+**Where the phase is.** Twenty-two cards done and **the tree is green again**: 567 tests pass, ruff
 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1 **skipped at 5/13**
 rather than failing. The eight red tests the last handoff described were one fact and it closed the
 way it was written down: #20 created the featuriser, the L13 sentinel went `unwired`, #12 pointed it
@@ -145,7 +145,10 @@ named `hydms.descriptors.featurize`, which did not exist. All three closed here.
 `hydms.data.metadata.with_features(record, features)` is the join — `refuse_non_features` on the
 way in, `assert_metadata_survives` on the way out, by label, refusing every way that join has
 silently gone wrong in this repository — and the L13 `live` hook runs it over the real featuriser
-across **1,278 of the 1,279** curated rows. 11 new tests on the join, 1 on the end-to-end path.
+across **1,278 of the 1,279** curated rows. 11 new tests on the join, one on the end-to-end path,
+and one that puts `extract_features_cbfv.py:19-21` back into the real seam and asserts the audit
+reports L13 `broken` — the only thing that distinguishes a hook watching the pipeline from a hook
+watching a copy of it.
 
 **Three things it taught.**
 

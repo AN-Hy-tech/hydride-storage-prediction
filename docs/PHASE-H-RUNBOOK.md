@@ -596,7 +596,7 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. 566 green as of 2026-09-04. Anything red is a real failure: the eight that were red
+# Suite. 567 green as of 2026-09-04. Anything red is a real failure: the eight that were red
 # earlier that day were the L13 sentinel reading `unwired` between #20 creating its subject and
 # #12 wiring it, and both have landed.
 conda run -n Project python -m pytest -q
