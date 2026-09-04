@@ -267,8 +267,8 @@ the same module as L3 (card #71).
       **model space**, because a mean does not commute with `log1p` and the archival code
       averaged the log column; and the rare-stratum merge measures its distances against the
       counts as they were *before* any merging, so two rare strata never absorb each other.
-- [~] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are
-      immutable. **Contract and structural screening landed; the card is `doing`, not `done`.**
+- [x] **#14** CleanLab may **drop or reweight training rows only**. Val and test targets are
+      immutable. **Closed 2026-09-05 by #24, which supplied the feature matrix.**
       `hydms/data/screening.py` drops training rows and refuses everything else: no label rewritten
       on *any* split (`CleanLab.py` rewrites training labels too, at `:64,80`), no held-out row
       touched, and `assert_holdout_unchanged` called three times from inside `screen` before it
@@ -276,9 +276,14 @@ the same module as L3 (card #71).
       target-conditioned (L12) and choosing a policy is #26's. Two rows are dropped from training,
       both decided here: the byte-identical duplicate (found with `duplicated`, not by row number)
       and `Mg0853Ni0.125La0.022`, whose correction is unambiguous but must be applied upstream of
-      the canonical key — boxed on #9. **L3 and L10 are wired and green.** What is owed to S4: #24
-      consuming this stage's output, which is what closes the `Boruta_FeatEng.py:23-25` bypass and
-      also supplies the feature matrix CleanLab needs to produce `label_issues` at all.
+      the canonical key — boxed on #9. **L3 and L10 are wired and green.** The CleanLab call itself
+      is `hydms.data.screening.label_issues` — added by #24, which supplies the matrix, but living
+      here because *which rows are label-suspect* is this card's to own. It returns two of
+      CleanLab's four columns: `predicted_label` is `CleanLab.py:90`'s leak in raw form and there is
+      now no object a caller could reach one through. It runs **inside the folds**, called by the
+      selector on the rows that selector owns; the per-split counts #15 and #37 read come from a
+      separate pipeline-level `screen` over the whole frame. **#15 must re-measure `rows_out` and
+      `removed` against that call.**
 - [~] **#15** Data-layer golden tests. **Written and green; the card stays `backlog`, and
       `check_board.py` is what insisted.** `tests/data/test_golden.py` pins 34 facts as one record
       and reports a deviation as a table of fact/expected/actual rather than as a bare assertion.
@@ -491,7 +496,39 @@ could mean anything. See below.
       `DataFrame`, requires exactly the fitted column set and returns it **in fitting order**:
       scikit-learn accepts a bare `ndarray` with only a `UserWarning`, which is where a permuted
       matrix becomes plausible, wrong numbers. Read it back with `scaler_from(bundle)`.
-- [ ] **#24** Port selection reading **CleanLab output**, run **inside the training folds** (L6).
+- [x] **#24** Port selection reading **CleanLab output**, run **inside the training folds** (L6).
+      **Landed 2026-09-05**, closing #14 in the same commit. `hydms/surrogate/selection.py` ports the
+      *live* selector — `Boruta_FeatEng.py`'s three stages, not REPORT §3.3's five, which exist in
+      neither file — with every threshold from `pipeline.yaml`. `select_features(frame, train)`
+      slices to `train` in its first statement and never reads the frame again, which is the whole
+      of the L6 fix; `select_across_folds(frame, split)` takes the whole matrix with #13's
+      assignment and runs one selection per outer fold of #88's `grouped_folds`. It returns
+      `consensus()`, `union()` and `stability()` rather than "the selected features": selection
+      inside the folds has one answer per fold and collapsing them is #25's decision. HG-1: **9/13**.
+      Three measurements the card asked for, and two of them contradicted its own boxes:
+      **(a)** `avg_is_alkaline` is *not* dropped by the variance filter — a zero IQR is not
+      constancy, the column has 75 distinct values over the 893 training rows and variance 0.0707,
+      and Boruta confirms it. On the real matrix the variance filter drops **nothing at all**.
+      **(b)** The `dev_Gordy_electonegativity` trade is settled: **drop the feature, keep the rows.**
+      Carrying it costs 193 of 893 training rows, concentrated in AB5 (46.9 %) and MIC (42.5 %) —
+      the classes AC-6 scores. Over the 700 rows where the comparison is controlled it *is*
+      confirmed, but twelve of the thirteen confirmed features are the same either way; its absence
+      is taken up by `dev_gilmor_number_of_valence_electron` and `temperature(K)`. It displaces
+      rather than adds.
+      **(c)** **A pass costs 676 s of Boruta** plus 14 s of CleanLab on the real matrix, so a
+      five-fold run is an hour and `python -m hydms.surrogate.select` is a **slow-lane** command.
+      The L6 live hook therefore runs the real selector under `SENTINEL_BUDGET` — ten iterations,
+      fifty trees, screening off, every other threshold configured — and a `slow`-marked test checks
+      that claim at the real budget rather than asserting it.
+      **The first real five-fold run has been done** (~50 min, tables in the gitignored
+      `reports/selection/`, publishing them is #25's job) and it produced the finding the whole card
+      exists to expose: **every one of the 21 candidates is selected by some fold, and only 14 by
+      all five** — `range_Atomic_Weight` by exactly one. "The 22 features" was never a stable
+      object. Two numbers boxed onward: per-fold selection is *larger* than the whole-split run
+      (16–20 against 14), because fewer rows make Boruta less able to reject — so the new N and the
+      old 22 were not produced under the same statistical power (#25); and CleanLab removes between
+      **15 and 144** of a fold's ~710 training rows depending on the fold, a 23 % swing in training
+      size before the model sees anything (#26).
 - [ ] **#25** Run selection once; publish the old-22 vs new-N comparison.
 - [x] **#88** `hydms/surrogate/validation.py` — `StratifiedGroupKFold` on the canonical key (L7),
       **nested** so the reported score comes from an outer fold the tuner never saw (L4).

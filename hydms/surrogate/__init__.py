@@ -10,6 +10,12 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     ``transform`` and no ``fit``; it is stored as the ``scaler`` payload of an artifact
     version and read back with :func:`~hydms.surrogate.scaler.scaler_from`.
 
+``selection.py``
+    The port of ``Boruta_FeatEng.py``'s three stages -- variance, Boruta, VIF -- run over the
+    rows of one fold rather than over the whole training split (leak L6), and over rows
+    :mod:`hydms.data.screening` has already judged. :func:`~hydms.surrogate.selection.select_across_folds`
+    is the protocol shape; ``python -m hydms.surrogate.select`` is the runnable entry point.
+
 ``validation.py``
     The project's only fold generator, and the nested protocol every score is produced
     through. Folds group on the canonical composition (leak L7) and the reported score comes
@@ -24,6 +30,19 @@ from .scaler import (
     ScalerError,
     fit_scaler,
     scaler_from,
+)
+from .selection import (
+    SENTINEL_BUDGET,
+    STAGE_NAMES,
+    FoldSelection,
+    Selection,
+    SelectionError,
+    SelectionSettings,
+    Stage,
+    select_across_folds,
+    select_features,
+    selected_names,
+    sentinel_settings,
 )
 from .validation import (
     HELD_OUT_SPLITS,
@@ -46,14 +65,21 @@ __all__ = [
     "OUTER_FOLDS",
     "QUANTILE_RANGE",
     "SCALER_PAYLOAD",
+    "SENTINEL_BUDGET",
+    "STAGE_NAMES",
     "Contender",
     "Evaluation",
     "FittedScaler",
     "Fold",
+    "FoldSelection",
     "FoldSet",
     "FoldSpace",
     "ScalerError",
     "ScoringTask",
+    "Selection",
+    "SelectionError",
+    "SelectionSettings",
+    "Stage",
     "TuningTask",
     "ValidationError",
     "fit_scaler",
@@ -61,4 +87,8 @@ __all__ = [
     "leave_one_class_out",
     "nested_scores",
     "scaler_from",
+    "select_across_folds",
+    "select_features",
+    "selected_names",
+    "sentinel_settings",
 ]

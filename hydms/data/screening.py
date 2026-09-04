@@ -48,10 +48,17 @@ are different claims:
     land in ``train`` under #13's split, so the later one is dropped.
   - ``malformed-formula`` -- a declared, named defect. :data:`MALFORMED_FORMULAE` holds the
     one this dataset has, and the reason.
-  - ``label-quality`` -- the CleanLab seam. ``label_issues`` is a boolean ``Series``, exactly
-    what ``CleanLearning(...).find_label_issues(X, y)['is_label_issue']`` returns. It is a
-    parameter rather than a call because CleanLab needs a *feature matrix*, which the
-    descriptor layer (S3) has not built yet; #24 supplies it and closes the bypass.
+  - ``label-quality`` -- the CleanLab judgement. :func:`label_issues` makes the call and
+    returns what :func:`screen` takes; it is a separate function because CleanLab needs a
+    *feature matrix*, which this layer does not build. Card #24's selector supplies one and
+    calls both, which is what closes the ``Boruta_FeatEng.py:23-25`` bypass.
+
+**Why :func:`label_issues` throws away two of CleanLab's four columns.**
+``find_label_issues`` returns ``is_label_issue``, ``label_quality``, ``given_label`` and
+``predicted_label``. That last column is ``CleanLab.py:90``'s leak in raw form -- the archival
+code wrote it into ``target`` -- so it is not returned here at all. There is no object in this
+module a caller could reach a predicted label through, which is a stronger statement than a
+rule saying not to use it.
 
 **A finding on a held-out row is reported, not acted on.** That is the contract meeting the
 data: if a duplicate or a defect lands in validation or test, it is named in the report with
@@ -87,8 +94,10 @@ __all__ = [
     "MALFORMED_FORMULA",
     "MALFORMED_FORMULAE",
     "Finding",
+    "LabelIssues",
     "Screening",
     "ScreeningError",
+    "label_issues",
     "screen",
 ]
 
@@ -248,6 +257,119 @@ def _validate(frame: pd.DataFrame, split: pd.Series) -> None:
             f"An unassigned row cannot be screened, because whether it may be dropped "
             f"depends entirely on which side of the line it is on."
         )
+
+
+@dataclass(frozen=True)
+class LabelIssues:
+    """CleanLab's verdict on a set of rows, in the two columns :func:`screen` accepts.
+
+    Attributes:
+        issues: Boolean per row -- ``find_label_issues``' ``is_label_issue``.
+        quality: The score behind it, in ``[0, 1]``, low meaning suspect.
+        rows: How many rows were judged.
+        estimator: What was cross-fitted to produce the judgement, for the report and for
+            the Chapter 1 revision. A label-quality verdict is a property of the model that
+            produced it as much as of the data, and a number nobody can attribute to a
+            method is not evidence.
+    """
+
+    issues: pd.Series
+    quality: pd.Series
+    rows: int
+    estimator: str
+
+    @property
+    def flagged(self) -> int:
+        """How many rows were flagged."""
+        return int(self.issues.sum())
+
+
+def label_issues(
+    features: pd.DataFrame,
+    target: pd.Series,
+    *,
+    estimator: object | None = None,
+    seed: int | None = None,
+) -> LabelIssues:
+    """Cross-fit a regressor over these rows and ask CleanLab which labels it cannot explain.
+
+    The only place in this project that calls CleanLab. It is deliberately given a matrix and
+    a target rather than a frame and a column name: this function must be impossible to point
+    at the whole dataset by accident, and the caller that assembles ``features`` is the one
+    that knows which rows it is entitled to (card #24 -- selection runs inside the training
+    folds, and the rows it screens are that fold's rows).
+
+    **Held-out rows must not be in ``features``.** There is no split argument here to check
+    it against; the guard is :func:`screen`, which is what acts on the verdict and which
+    refuses to remove anything that is not ``train``. This function judges what it is handed.
+
+    Args:
+        features: The matrix, one row per label. Its index is carried onto both results, so
+            :func:`screen` pairs the verdict by label rather than by position.
+        target: The labels, in **model space** -- this is the quantity a model is fitted on,
+            and CleanLab's judgement is "the cross-fitted model cannot reproduce this value".
+        estimator: The regressor to cross-fit. Defaults to the archival selector's forest --
+            ``RandomForestRegressor(max_depth=selection.boruta_max_depth)`` -- so the model
+            deciding which labels are suspect is the same family as the one deciding which
+            features matter, rather than a second, unrelated choice.
+        seed: Defaults to ``seed`` in ``pipeline.yaml``. CleanLab's own ``seed`` argument;
+            the same seed over the same rows reproduces the verdict exactly, measured.
+
+    Returns:
+        A :class:`LabelIssues`. Splat it into :func:`screen`::
+
+            verdict = label_issues(X, y)
+            screen(frame, split, label_issues=verdict.issues, label_quality=verdict.quality)
+
+    Raises:
+        ScreeningError: The target is not aligned to the matrix, or either is empty.
+    """
+    if not isinstance(features, pd.DataFrame):
+        raise ScreeningError(
+            f"label_issues needs a DataFrame so the verdict can be returned on its index, "
+            f"not a {type(features).__name__}. A verdict paired by position is leak L9 in a "
+            f"new place."
+        )
+    if len(target) != len(features) or not target.index.equals(features.index):
+        raise ScreeningError(
+            f"the target is not aligned to the matrix: {len(target)} label(s) against "
+            f"{len(features)} row(s). They are paired by label, never by position."
+        )
+    if features.empty:
+        raise ScreeningError(
+            "label_issues was given no rows. An empty verdict flags nothing, which would "
+            "read downstream as a clean dataset rather than as a check that never ran."
+        )
+
+    from cleanlab.regression.learn import CleanLearning
+    from sklearn.ensemble import RandomForestRegressor
+
+    config = load_config()
+    rng_seed = config.seed if seed is None else seed
+    model = (
+        estimator
+        if estimator is not None
+        else RandomForestRegressor(
+            n_jobs=-1, max_depth=config.selection.boruta_max_depth, random_state=rng_seed
+        )
+    )
+
+    # `.to_numpy()`, not the frame: CleanLab hands X straight to the estimator's `fit`, and a
+    # scikit-learn estimator fitted on a DataFrame remembers its column names and then warns
+    # -- or, worse, silently accepts a different order -- on every cross-fit slice.
+    verdict = CleanLearning(model, seed=rng_seed).find_label_issues(
+        X=features.to_numpy(), y=target.to_numpy()
+    )
+    return LabelIssues(
+        issues=pd.Series(
+            verdict["is_label_issue"].to_numpy(), index=features.index, name="is_label_issue"
+        ),
+        quality=pd.Series(
+            verdict["label_quality"].to_numpy(), index=features.index, name="label_quality"
+        ),
+        rows=len(features),
+        estimator=type(model).__name__,
+    )
 
 
 def screen(

@@ -39,6 +39,13 @@ dependencies = [
   "scikit-learn>=1.5",
   "catboost>=1.2",
   "cleanlab>=2.7",
+  # The two the feature selector is a port of (card #24). Both were already present in the
+  # `Project` environment for the archival pipeline, so naming them here adds nothing to it
+  # and the lock files stay valid; what changes is that they become declared rather than
+  # incidental. Boruta 0.4 is the floor because 0.3 still calls the NumPy aliases removed in
+  # 1.20 and cannot import under the pinned 1.26.
+  "Boruta>=0.4",
+  "statsmodels>=0.14",
   "PyYAML>=6.0",
   "joblib>=1.3",
 ]
@@ -172,7 +179,7 @@ disallow_incomplete_defs = true
 [[tool.mypy.overrides]]
 module = [
   "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*",
-  "sklearn.*", "scipy.*", "streamlit.*", "shap.*", "boruta.*",
+  "sklearn.*", "scipy.*", "streamlit.*", "shap.*", "boruta.*", "statsmodels.*",
   # pandas ships no inline types either; pandas-stubs is a separate distribution and the
   # conda-free lint lane installs nothing (card #68).
   "pandas",

@@ -81,6 +81,8 @@ RECORDED_PACKAGES: Final[tuple[str, ...]] = (
     "scikit-learn",
     "catboost",
     "cleanlab",
+    "Boruta",
+    "statsmodels",
     "PyYAML",
     "joblib",
     "mapie",

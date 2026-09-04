@@ -51,6 +51,17 @@ interval, not a point. This is what makes LCB ranking possible.
       **L12 sentinel** to `hydms/qa/sentinels.py`: weights must be a function of the training rows'
       own features and of nothing else. Until it exists, HG-1 cannot report green
 
+- [ ] **Screening removes between 2 % and 20 % of a fold's training rows, depending on the fold
+      (from #24).** Measured on the real five-fold cut: CleanLab flags 15, 45, 54, 71 and **144**
+      rows out of roughly 710. `outer-1` therefore fits on 571 rows where `outer-2` fits on 704 —
+      a 23 % difference in training size between two folds of one protocol, before the model sees
+      anything. Two things follow for this card. The fold-to-fold spread in any score is partly
+      this and not the model, so `Evaluation.per_fold` must be read beside
+      `reports/selection/selection-per-fold.csv` rather than alone. And the **weighting decision
+      this card owns** (#14 declined to make it, since the only archival weighting is L12's
+      target-conditioned one) now has a second candidate reason to exist: an unweighted fit
+      treats a 571-row fold and a 704-row fold as equal evidence
+
 ## Runnable check
 
 ```bash

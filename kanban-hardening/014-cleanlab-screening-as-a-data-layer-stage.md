@@ -1,6 +1,6 @@
 ---
 id: 14
-status: doing
+status: done
 priority: High
 blocked_by: [13]
 assignee: "@amirhossein"
@@ -42,7 +42,7 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
 
 ## Done when
 
-- [ ] Feature selection (24) consumes CleanLab's output, closing the bypass
+- [x] Feature selection (24) consumes CleanLab's output, closing the bypass
 - [x] **The stage drops or reweights training rows only** — no label is ever rewritten, on any split
 - [x] **Validation and test targets are byte-identical before and after this stage** — asserted, and
       covered by the L3 sentinel in ticket 71
@@ -108,11 +108,16 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       CleanLab flagged an issue. That is not L3, since a training label is not a measurement
       anyone scores against, but it is the same reflex. `screen` only ever *selects* rows, and
       asserts it: `assert_holdout_unchanged` is called a third time over every surviving row
-- [ ] **Owed to S4 — this card is not done.** The first box stays open: feature selection (#24)
-      consuming this stage's output is what closes the `Boruta_FeatEng.py:23-25` bypass, and #24
-      also supplies the feature matrix CleanLab needs to produce `label_issues` in the first place.
-      The seam is in place — `screen(frame, split, label_issues=..., label_quality=...)` takes
-      exactly what `CleanLearning(...).find_label_issues(X, y)` returns
+- [x] **The bypass is closed, and CleanLab is now called from one place.** `label_issues(X, y)`
+      is that place — a function of this module, not of #24's, because *which rows are
+      label-suspect* is what this card owns; #24 only supplies the matrix and the rows. It
+      cross-fits `RandomForestRegressor(max_depth=selection.boruta_max_depth)` so the model
+      judging labels is the same family as the one judging features rather than a second,
+      unrelated choice, and it is deterministic under `pipeline.yaml`'s seed — measured, the
+      same 27 of 893 flagged twice. **It returns two of CleanLab's four columns.**
+      `find_label_issues` also returns `predicted_label`, which is `CleanLab.py:90`'s leak in
+      raw form; there is now no object in this module a caller could reach one through, which
+      is stronger than a rule saying not to use it
 
 ## Runnable check
 
@@ -144,6 +149,28 @@ conda run --no-capture-output -n Project python -m pytest tests/leaks/test_l3_l1
   while measuring whether `(Composition, temperature(K))` could serve as the merge key; it cannot,
   and six of the seven repeats on that key are genuine replicates. This one is not, and this stage
   is the only one entitled to drop a row. (by @assistant)
+
+- 2026-09-05: **Closed by #24, in the same commit that opened it.** `hydms.data.screening.label_issues`
+  makes the CleanLab call and `hydms.surrogate.selection.select_features` consumes it, so the
+  `Boruta_FeatEng.py:23-25` bypass is gone: the rows the three selection stages fit on are the rows
+  this stage left. Two things worth keeping.
+
+  **The call belongs here even though only #24 can make it.** The tempting shape was a CleanLab
+  helper inside the selector, since the selector is what has a feature matrix. But the question
+  *which rows are label-suspect* is this card's `Owns` line, and splitting it across two modules
+  would have put the judgement in the surrogate layer and the record of it in the data layer.
+  `label_issues` therefore takes a matrix and a target — it is impossible to point at the whole
+  dataset by accident, because it has no split argument and no loader — and `screen` stays the
+  only thing entitled to act on the verdict.
+
+  **It runs inside the folds, not once over the training split.** That was not obvious: this is a
+  data-layer stage and #15's golden tests pin `screened.rows_out` as a single number. But screening
+  fitted over the whole training split would mean an outer fold's training rows were chosen with
+  that fold's held-out rows in view — L6's shape one level down — so the selector calls it on the
+  rows *it* owns. The per-split counts #37 and #15 read still come from one pipeline-level `screen`
+  call over the whole frame; that call describes the dataset, and the fold-level call is the one
+  that changes a model. Re-measure `rows_out` and `removed` on #15 against the pipeline-level call.
+  (by @assistant)
 
 - 2026-09-03: Contract and structural screening landed; **status `doing`, not `done`** — the
   CleanLab call itself needs #24's feature matrix. `hydms/data/screening.py` — `screen`,

@@ -866,6 +866,74 @@ def _l2_live() -> None:
     assert_selection_is_nested(evaluation.records, holdout_splits=HELD_OUT_SPLITS)
 
 
+def _l6_live() -> None:
+    """Card #24's selector, over the real matrix, asked twice. The wiring `unwired` demands.
+
+    `assert_selection_ignores_holdout` runs the subject rather than reading a record of it, so
+    this hook only has to supply the real one and the rows it is entitled to: the whole
+    1,278-row joined frame, and the 893 labels #13 assigns to `train`. The detector perturbs
+    the other 385 -- shuffled within the held-out block, then rescaled -- and requires the
+    same answer, order included.
+
+    **The budget is reduced and that is stated where it lives**, on
+    `hydms.surrogate.selection.SENTINEL_BUDGET`: Boruta at the configured `max_iter` costs 676
+    seconds per call and this hook makes two, while HG-1 is a FAST gate. What is not reduced
+    is anything L6 is about -- the frame, the training labels, the three stages or their order.
+
+    Cached, like `_featurisation_run` and `_validation_run`: `audit()` runs on every gate
+    invocation and on every test in `tests/leaks/`.
+    """
+    _l6_run()
+
+
+@lru_cache(maxsize=1)
+def _l6_run() -> None:
+    """The measurement behind `_l6_live`. Separate so `lru_cache` holds the cost, not the hook.
+
+    A raising call is not cached -- `lru_cache` stores no exception -- so a red sentinel is
+    re-measured on every audit rather than remembered, which is the right way round.
+    """
+    from functools import partial
+
+    from hydms.config import load as load_config
+    from hydms.data.load import load_hydride_data, parse_formula
+    from hydms.data.metadata import with_features, with_metadata
+    from hydms.data.splits import assign_splits
+    from hydms.descriptors.contract import CONTRACT, FeatureContract
+    from hydms.descriptors.featurize import featurize
+    from hydms.surrogate.selection import selected_names, sentinel_settings
+
+    names = load_config().columns
+    record = with_metadata(load_hydride_data())
+    split = assign_splits(record)
+    contract = FeatureContract.from_names(
+        [name for name in CONTRACT.names if name != _GORDY]
+    )
+    keep = [
+        label
+        for label, formula in record[names.formula].items()
+        if contract.computability(parse_formula(formula)).complete
+    ]
+    usable = record.loc[keep]
+    frame = with_features(
+        usable, featurize(usable[names.formula], usable[names.temperature], contract=contract)
+    )
+    training = [label for label in frame.index if split.loc[label] == "train"]
+    held_out = [label for label in frame.index if label not in set(training)]
+    if not training or not held_out:
+        raise ValueError(
+            f"the L6 live check needs rows on both sides of the line and has "
+            f"{len(training)} training and {len(held_out)} held-out row(s). A selector "
+            f"cannot be caught reading a holdout that is empty."
+        )
+
+    assert_selection_ignores_holdout(
+        partial(selected_names, train=training, settings=sentinel_settings()),
+        frame,
+        holdout=held_out,
+    )
+
+
 # --------------------------------------------------------------------------------------
 # The registry
 # --------------------------------------------------------------------------------------
@@ -961,6 +1029,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l6_selection_reads_the_training_rows_only,
             ),
         ),
+        live=_l6_live,
     ),
     Sentinel(
         leak="L7",
