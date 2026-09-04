@@ -133,22 +133,121 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Twenty-six cards are done and the working tree is clean: #4 gave
-a trained artifact one door and #44 gave a screen a verdict, both landed 2026-09-04 and both out of
-stage order because their blockers were already satisfied — read that as the pattern, not the
-exception. Suite **724** green, ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and
-`check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and
-HG-1 `SKIPPED` at 5 of 13. **The front is S4 and the card is #23**, which is already `doing` but has
-nothing written — `hydms/surrogate/` holds only its `__init__.py` — so start from the #4 handoff
-below for the `require_gates=False` window that closes at #34 and for why the transform-only wrapper
-belongs to the surrogate layer rather than to the store. Expect HG-1 to go **red on purpose** the
-day `hydms/surrogate/model.py`, `selection.py` or `validation.py` first appears: six sentinels name
-those modules and each is `pending` only because its subject does not exist yet, so the fix is
-always to wire the sentinel, never to re-aim it. Nothing else is in flight.
+**Next session, in one paragraph.** Thirty cards are done and nothing is `doing`. Suite
+**841** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
+`python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
+**9 of 13** — L1, L5, L11 and L12 are all that remain, and every one is owed by #26 or #29. **The
+front is S4 and the card is #25**, which has a finished five-fold run waiting for it in the
+gitignored `reports/selection/`: read the handoff below before re-running anything, because a run at
+the configured Boruta budget costs about fifty minutes. **#15 and #49 also came unblocked**, and #15
+is owed a re-measure now that screening flags rows for real. Expect HG-1 to go **red on purpose**
+the day `hydms/surrogate/model.py` first appears: L1 and L5 name it and are `pending` only because
+it does not exist, so the fix is always to wire the sentinel, never to re-aim it.
 
 ---
 
-### Handoff — 2026-09-04 (latest) · #88 closed · written for #24
+### Handoff — 2026-09-05 (latest) · #24 and #14 closed · written for #25
+
+**Where the phase is.** Thirty cards done. Suite **841** green (807 + 34), ruff and mypy clean,
+`check_board.py` and `check_freeze.py` OK, AC-2 green at 2.7285e-12, `run --fast` exits 0, and
+**HG-1 is at 9/13** — L6 went green the hour `hydms/surrogate/selection.py` appeared. **Nothing is
+`doing`**: #14 closed with #24, in one commit, which is what the previous handoff asked for.
+
+**The front is #25**, unblocked and holding the most interesting result in the phase so far. Two
+other cards came unblocked in the same commit and neither is on the S4 chain: **#15** (data-layer
+golden tests — and it is *owed* a re-measure, see below) and **#49** (ElMD novelty screen, in S5).
+
+**Read `reports/selection/` before you re-run anything.** The five-fold run at the configured budget
+has already been done — about 50 minutes — and its tables are on disk (gitignored; publishing them
+into the repo is #25's job). What they say is the finding the whole card exists to produce:
+
+> **"The 22 features" was never a stable object.** Under the group-aware fold cut, **every one of
+> the 21 candidates is selected by some fold** — the union is the whole pool — while only **14 are
+> selected by all five**. `range_Atomic_Weight` is selected by exactly one fold.
+
+Two numbers from that run are boxed onto other cards rather than acted on here. **#25**: per-fold
+selection is *larger* than a whole-split pass (16–20 features against 14), because fewer rows make
+Boruta less able to reject against its shadow features — so the new N and the published 22 were not
+produced under equal statistical power, and the write-up must say so. **#26**: CleanLab removes
+between **15 and 144** of a fold's ~710 training rows depending on the fold, so `outer-1` fits on
+571 rows where `outer-2` fits on 704 — a 23 % swing in training size before the model sees anything.
+
+**#15 is owed a re-measure and its own handoff said so.** Screening now flags rows for real, so
+`screened.rows_out` and `screened.removed` move. Note *which* call to pin: the fold-level screening
+inside the selector produces five different counts, and the numbers #15 and #37 want come from a
+**pipeline-level `screen` over the whole frame**. Nothing else in the golden record should move; if
+it does, that is the finding.
+
+#### What #24 built, that #25 and #26 use rather than re-invent
+
+```python
+from hydms.surrogate import select_features, select_across_folds, SelectionSettings
+
+folds = select_across_folds(frame, split)   # one selection per outer fold of #88's grouped_folds
+folds.consensus()   # chosen by every fold        folds.union()       # chosen by any
+folds.stability()   # how many folds chose each   folds.per_fold()    # rows, removals, features
+select_features(frame, train_labels).trace()      # the stage-by-stage funnel, for #37
+```
+
+- **`select_features` slices to `train` in its first statement and never reads the frame again.**
+  That is the whole of the L6 fix — structural, not care — and it is what
+  `assert_selection_ignores_holdout` measures. A test also deletes the held-out rows entirely, which
+  catches a stage that computes over the whole frame and then subsets.
+- **There is deliberately no "the selected features" on a `FoldSelection`.** Selection inside the
+  folds has one answer per fold; collapsing them into one is **#25's decision**, and the two obvious
+  readings are offered side by side so neither wins silently.
+- **The three stages are the three that exist.** `Boruta_FeatEng.py`'s variance filter, Boruta and
+  the iterative VIF loop — not REPORT §3.3's five, which are in neither archival selector.
+  `Feature_selection.py` is dead code reading a directory whose writer was deleted in `5c3bcb1`.
+- **CleanLab is called from `hydms.data.screening.label_issues`, not from the surrogate layer.** The
+  judgement lives with the card that owns "which rows are label-suspect" (#14); the selector only
+  supplies the matrix. It returns two of CleanLab's four columns — `predicted_label` is
+  `CleanLab.py:90`'s leak in raw form, and there is now no object a caller could reach one through.
+- **Screening runs inside the folds too**, for the same reason selection does: a verdict fitted over
+  the whole training split would choose each fold's training rows with that fold's held-out rows in
+  view.
+
+#### Three numbers for the S4 chain
+
+- **A pass costs 676 s of Boruta** at `selection.boruta_max_iter` of 2000, plus 14 s of CleanLab, on
+  the real 893 x 21 matrix. `python -m hydms.surrogate.select` is a **slow-lane command**, about 50
+  minutes. Nothing in a test or a gate may run the configured budget.
+- **`SENTINEL_BUDGET` is why HG-1 can still be `Speed.FAST`** — the L6 live hook runs the *real*
+  selector under ten Boruta iterations and a fifty-tree forest, with every other threshold
+  configured. It changes how long the stages run, not which rows they read, and a `slow`-marked test
+  checks that claim at the real budget rather than asserting it.
+- **The variance filter drops nothing on the real matrix.** The lowest variance among the 21 is
+  `dev_Covalent_Radius` at 0.0032, triple the 0.001 threshold.
+
+#### Findings of this session
+
+- **Two of #24's own boxes were wrong about the data, and measuring the premise first is what caught
+  it.** The card predicted `VarianceThreshold` would drop `avg_is_alkaline` because its
+  inter-quartile span over the training rows is exactly zero. **A zero IQR is not constancy**: the
+  column takes 75 distinct values over the 893 rows and its variance is 0.0707, seventy times the
+  threshold. It survives — raw or scaled, since a `FittedScaler` substitutes a scale of 1.0 for a
+  zero span and subtracting a median does not change a variance — and Boruta then *confirms* it. The
+  verdict is a test on the real rows, not a narrative note, because a note would not go red if the
+  featuriser ever made the column genuinely constant.
+- **The Gordy trade is settled: drop the feature, keep the rows.** #24 and #25 both carried it as an
+  open question. Measured over the 700 training rows where all 22 features are computable — same
+  seed, configured budget, only the column varying — Boruta **does** confirm
+  `dev_Gordy_electonegativity` when it can. But twelve of the thirteen confirmations are the same
+  either way; its absence is taken up by `dev_gilmor_number_of_valence_electron` and by
+  `temperature(K)`. Against that, carrying it costs **193 of 893 training rows (21.6 %)**,
+  concentrated in AB5 (67 of 143) and MIC (37 of 87) — the two classes AC-6 scores. A quarter of the
+  training rows against a substitutable descriptor is not a close trade. `--all-features` runs the
+  other way for #25's comparison.
+- **`Boruta` and `statsmodels` are now declared dependencies.** Both were already installed in
+  `Project` for the archival pipeline, so the lock files stay valid; what changed is that they are
+  in `pyproject.toml` and in `RECORDED_PACKAGES`, because a distribution whose version can change a
+  fit and which no manifest records is a provenance hole. A test in `tests/artifacts/` enforces the
+  pairing — and it parses the dependency block with a regex, so **do not put a double-quoted phrase
+  in a comment inside `dependencies = [...]`**; it will be read as a package name.
+
+---
+
+### Handoff — 2026-09-04 · #88 closed · written for #24
 
 **Where the phase is.** Twenty-eight cards done. Suite **807** green (770 + 37), ruff 0.8.4 and
 mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, AC-2 green at 2.7285e-12,
