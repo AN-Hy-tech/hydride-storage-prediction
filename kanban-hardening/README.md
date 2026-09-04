@@ -133,7 +133,8 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-one cards are done and nothing is `doing`. Suite
+**Next session, in one paragraph.** Thirty-one cards are done and nothing is `doing`; the tree is
+clean, and #25 landed in `a3ce3b2` on `feat/phase-h-emergency-hardening`. Suite
 **857** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
 `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
 **9 of 13** — L1, L5, L11 and L12 are all that remain, and every one is owed by #26 or #29. **The
