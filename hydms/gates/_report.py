@@ -127,10 +127,11 @@ def render_registry(gates: tuple[Gate, ...]) -> str:
 def write_report(report: GateReport, destination: Path) -> Path:
     """Write the run as JSON, creating the directory if it is not there yet.
 
-    Card #5 requires gate results in the artifact manifest. The manifest is card #4 and does
-    not exist yet, so this writes the same object to a standalone file under the configured
-    artifacts directory; #4 embeds it under the ``gates`` key rather than inventing a second
-    format. The ``schema`` field is what lets it know it can.
+    Card #5 requires gate results in the artifact manifest. This writes the object to a
+    standalone file under the configured artifacts directory; ``hydms.artifacts.save`` embeds
+    the same object, unmodified, under its manifest's ``gates`` key rather than carrying a
+    second format. The ``schema`` field is what lets it know it can -- the store restates it
+    as ``hydms.artifacts.manifest.GATE_SCHEMA`` and a test asserts the two still agree.
     """
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(

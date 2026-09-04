@@ -32,8 +32,9 @@ from hydms.config import Config, ConfigError, load
 from ._core import GateReport, Speed, UnknownGate, registry, run, select
 from ._report import render_registry, render_report, write_report
 
-# Written under the configured artifacts directory. Card #4's manifest embeds this object
-# under its `gates` key; until that lands it stands alone, in the same shape.
+# Written under the configured artifacts directory, beside the version directories. A saved
+# artifact embeds this same object under its manifest's `gates` key (hydms.artifacts.save),
+# and a version whose recorded gates did not all pass will not load and cannot be promoted.
 REPORT_NAME = "gate-results.json"
 
 EXIT_OK = 0

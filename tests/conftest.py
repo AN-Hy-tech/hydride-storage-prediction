@@ -10,6 +10,7 @@ Two rules shape this file:
 
 Layout, one directory per layer, mirroring `hydms/`:
 
+    tests/artifacts/  L0 — the version store, the manifest, the promotion pointer
     tests/data/       L1 — loaders, the canonical key, splits, screening
     tests/surrogate/  L3 — scaler, selection, validation protocol, calibration
     tests/screens/    L4 — the screen verdict, applicability domain, novelty

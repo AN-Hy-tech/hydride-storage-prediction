@@ -132,7 +132,90 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #22 closed, **S3 closed** · written for S4, opening at #23
+### Handoff — 2026-09-04 (latest) · #4 closed · written for S4, opening at #23
+
+**Where the phase is.** Twenty-five cards done. #4 landed out of stage order because **#23 was
+blocked by it** and S4 is a thirteen-card chain that starts there; `#23` is now unblocked and
+nothing stands in front of it. Suite **661** green, ruff 0.8.4 and mypy 1.13.0 clean,
+`check_board.py` and `check_freeze.py` OK, HG-1 `SKIPPED` at 5/13, AC-2 green, `run --fast` exits 0.
+
+**Read the next handoff down as well** — the one written when #22 closed S3. It carries #22's 13×
+finding and the four things S3 left for S4 that are not repeated here in full: `with_features` is
+the only place the record and the matrix become one
+frame, the full 22 cannot build a training matrix at all (266 of 1,279 rows refused, 265 for
+`dev_Gordy_electonegativity` alone), `featurize` has a 5 ms per-call floor so featurise in batches,
+and HG-1 goes from 5/13 to 11/13 across S4 with the sentinels already written.
+
+#### What #4 built, that S4 is expected to use rather than re-invent
+
+`hydms/artifacts/` — `manifest.py` records, `store.py` stores, and `save()` / `load()` are the only
+doors. **#23 is the first caller**: the fitted `RobustScaler` is a payload in a version, not a
+pickle beside a script.
+
+```python
+from hydms import artifacts
+artifacts.save({"model": m, "scaler": s}, contract=CONTRACT, seeds={...}, gates=report)
+bundle = artifacts.load()                 # the promoted version, gates checked
+bundle["scaler"].transform(X)             # never .fit
+```
+
+- **A version is written once.** `save` stages `.v{N}.partial` and renames it into place, refuses an
+  existing version, and never re-uses a number a dead run left behind. Do not write into a version
+  directory by hand: every payload carries a SHA-256 and `load` re-hashes it.
+- **The gate report is embedded verbatim, not re-formatted.** `save(gates=report)` takes either a
+  `GateReport` or the mapping its `to_dict()` produced — the same object
+  `python -m hydms.gates run` already writes to `artifacts/gate-results.json`.
+- **A version whose recorded gates did not all pass will not load and cannot be promoted, and a
+  `SKIPPED` gate counts.** That is stricter than `GateReport.ok`, deliberately: `ok` tolerates a
+  skip under a broad selection so CI is not red for the length of the phase, and that leniency is
+  right for a CI log and wrong for an artifact about to answer a prediction. **So a version saved
+  today cannot load without `require_gates=False`** — pass it in #23 through #33 and expect to stop
+  passing it at #34, which is blocked on #31/#32/#33 for exactly this reason.
+- **The contract is not optional and is not decorative.** `save(contract=...)` refuses anything that
+  is not a `FeatureContract` or its `as_manifest()` payload. Swapping two features in a stored
+  manifest still loads the bundle — the payload bytes are untouched — and then raises `ContractError`
+  from `bundle.contract()`, which is the AC-4 failure caught by #19's digest rather than by a person.
+- **Promotion is `current.json`.** `promote(version)` refuses an unestablished one; rollback is
+  `promote(older)`. That is card #7's contract, made structural here rather than in a workflow file.
+
+#### The opening move
+
+**#23, and S4 is thirteen cards of chain.** Fit the `RobustScaler` on train only, persist it into
+the artifact version, and make the load path expose `transform` and not `fit`. Two things to settle
+inside the card rather than around it:
+
+- **Where the transform-only wrapper lives.** The card asks that `fit` raise on the loaded object.
+  The store deliberately does not know what a scaler is — it stores objects — so the wrapper is
+  `hydms/surrogate/`'s, and `save` stores the wrapped thing. Wrapping at load time would mean the
+  store growing per-payload knowledge, which is the seam this board is shaped to keep closed.
+- **#23's `blocked_by` is satisfied but #88 is not.** #88 (group-aware nested CV) is blocked by
+  #23, and #23 needs a train split to fit on — that is #13's `hydms/data/splits.py`, which is done.
+  Use it; do not derive a split inside the surrogate layer.
+
+**And before you land a gate:** `tests/gates/` takes an `unwritten` fixture (`tests/gates/conftest.py`)
+wherever it needs "a criterion nobody has written yet". Use it for #26, #28, #30, #31, #32, #33, #77,
+#79 and #86 — naming a gate there is what card #21 had to undo.
+
+**S4's exit check:** `conda run -n Project python -m hydms.gates run --fast` · all HG-1 sentinels green.
+
+#### Findings of this session
+
+- **`joblib` needed a mypy override.** It ships neither inline types nor a `py.typed` marker and the
+  conda-free lint lane installs nothing, so `import joblib` under `hydms/` aborted the type check.
+  Added to the existing `ignore_missing_imports` block in `pyproject.toml` with the reason beside it.
+- **`versions()` sorts numerically, never lexicographically.** A string sort puts `v10` before `v9`
+  and promotes the wrong artifact on the tenth retrain. One `int()`, one test, a real incident avoided.
+- **`RECORDED_PACKAGES` is checked against `pyproject.toml` by a test,** not maintained by memory:
+  a new core dependency that nothing records leaves "it used to reproduce" as the only evidence when
+  AC-1 goes red after an upgrade.
+- **`tests/screens/` is uncommitted work on #44 that this session did not touch.** Two modules
+  under `hydms/screens/` — `protocol.py` and `window.py` — and their 63 tests are in the working
+  tree and pass; the card is still `backlog` and the files are untracked. That is the difference between the **661** reported above
+  and the **724** a bare `pytest` prints. It is #44's to land — S5's card, not S4's.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #22 closed, **S3 closed** · written for S4, opening at #23
 
 **Where the phase is.** Twenty-four cards done and **the descriptor layer is finished**. Suite
 **593** green, ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1

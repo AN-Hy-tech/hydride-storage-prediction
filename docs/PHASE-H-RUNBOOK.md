@@ -74,6 +74,23 @@ S8  Evidence & close          ──►  needs S7
 
 S2 and S3 are the only parallelism worth taking. Everything else is a chain.
 
+**Five cards sit outside that list** — #4, #6, #7, #73, #74 — foundation and CI work that slots in
+where its blockers allow. #4 is the one S4 waits on, and it landed 2026-09-04, before S4 opened:
+#23's "persist the scaler, never refit" has nowhere to persist to without it.
+
+- **`artifacts/v{N}/`** holds one `manifest.json` and one `<name>.joblib` per saved object.
+  `hydms.artifacts.save()` and `.load()` are the only doors. A version is staged under a dotted
+  name and renamed into place, so a run that dies part-way leaves nothing that looks like a
+  version, and an existing version is never overwritten — later phases pin what they consume.
+- **The manifest records five things**: the git SHA and whether the tree was dirty, every seed,
+  the resolved versions of the packages that determine a fit, the feature contract with its own
+  digest, and the gate results embedded verbatim as `hydms.gates` wrote them.
+- **A version whose recorded gates did not all pass does not load and cannot be promoted**, and a
+  `SKIPPED` gate counts. That is stricter than the harness's own `ok` flag on purpose — see §4.
+  `require_gates=False` is the deliberate, visible escape for a card that has just written a
+  version and wants it back; the delivery path never passes it.
+- **Promotion is `current.json`.** Rollback is a pointer write, not a retrain (#7).
+
 ---
 
 ## 3. Stages
@@ -608,7 +625,10 @@ Three properties are worth knowing before you write a gate:
   `Speed.SLOW` means it needs a retrain. Cards #6 and #7 select on that rather than deciding it.
 
 A run writes its results as JSON under the configured artifacts directory, behind a versioned
-`schema` key. Card #4's manifest embeds that object under `gates` when it lands.
+`schema` key, beside the version directories. `hydms.artifacts.save(..., gates=report)` embeds
+that same object under a version's manifest, and a version whose recorded gates did not all pass
+will neither load nor promote — a skip counts, which is stricter than the harness's own `ok` flag
+and deliberately so (card #4).
 
 | Gate | Card | Fails when |
 |---|---|---|

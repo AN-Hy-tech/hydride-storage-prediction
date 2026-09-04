@@ -179,6 +179,9 @@ module = [
   # PyYAML ships no inline types. types-PyYAML is in the dev extra and takes precedence
   # when installed; this keeps mypy runnable on a bare CI interpreter when it is not.
   "yaml",
+  # joblib ships neither inline types nor a py.typed marker, and the conda-free lint lane
+  # does not install it at all. It is the artifact store's persistence mechanism (card #4).
+  "joblib",
 ]
 ignore_missing_imports = true
 
