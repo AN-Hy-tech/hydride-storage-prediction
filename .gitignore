@@ -6,6 +6,7 @@ papers/
 *.pptx
 *.rar
 Plan.docx
+research/PHASE-H-PERSONAL-REPORT.md
 
 # ── Root-level duplicate output directories (kept locally, not in repo) ─────
 /models/

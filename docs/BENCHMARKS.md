@@ -49,7 +49,11 @@ what the figure this file replaces was doing — see [The 13× that was hiding](
 call**, at any size, is `require_self_consistent` re-auditing both tables' composite columns (#18's
 guard, and it is what stops a descriptor being silently zero for caesium and gadolinium). It is 2% of
 a ten-thousand-candidate batch and 57% of a batch of one. A second, smaller share is the pandas frame
-construction. **Featurise in batches.** The consequence for a per-candidate screen is boxed on #44.
+construction. **Featurise in batches.** The consequence for a per-candidate screen was boxed on #44,
+and #44 answered it structurally: `hydms.screens.Screen.verdict` takes a frame, there is no
+single-candidate entry point, and `apply_screens` calls each screen **exactly once** per run
+whatever the batch size (asserted at 1, 10 and 1,000 rows). What that still cannot see is a screen
+that loops *internally*, which is why `Verdicts.durations` reports per-screen wall clock.
 
 ---
 
@@ -74,7 +78,8 @@ under `kanban/`. If this floor is ever breached, the note belongs here and in th
 **What is still unmeasured, and it is the half that matters.** These figures cover
 `hydms.descriptors.featurize` only. One candidate evaluation is featurisation **plus** a scaler
 transform, a CatBoost MultiQuantile prediction, a conformal interval and two screens — cards #23,
-#26, #27, #44, #48 and #49, none of which exists yet. Featurisation at 22 µs/candidate is very
+#26, #27, #44, #48 and #49. **Only #44 exists** (2026-09-04) — the screen contract and one window,
+whose cost is a column comparison, so nothing here has moved. Featurisation at 22 µs/candidate is very
 unlikely to be the bottleneck; the surrogate almost certainly is. **Nothing in this file licenses a
 claim about candidates per second end to end.** Re-measure when #28's `predict()` lands, and put the
 number here beside this one.

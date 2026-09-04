@@ -31,7 +31,8 @@ preserved when cards migrated: renumbering would have broken every `blocked_by` 
 
 Three cards were pulled out of the frozen PA phase — **#44** (screen interface), **#48**
 (applicability-domain ceiling), **#49** (ElMD novelty). They are not inverse-design work: they are
-what lets the interface **refuse** to answer instead of guessing.
+what lets the interface **refuse** to answer instead of guessing. #44 landed 2026-09-04 and owns
+the contract the other two implement; both of those wait on #30.
 
 **The next free id is #90.** Scan both directories for `max(id) + 1`.
 
@@ -131,6 +132,21 @@ bash $S/show_blocked.sh .          # what is waiting on what
 bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
+
+**Next session, in one paragraph.** Twenty-six cards are done and the working tree is clean: #4 gave
+a trained artifact one door and #44 gave a screen a verdict, both landed 2026-09-04 and both out of
+stage order because their blockers were already satisfied — read that as the pattern, not the
+exception. Suite **724** green, ruff 0.8.4 and mypy 1.13.0 clean, `check_board.py` and
+`check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and
+HG-1 `SKIPPED` at 5 of 13. **The front is S4 and the card is #23**, which is already `doing` but has
+nothing written — `hydms/surrogate/` holds only its `__init__.py` — so start from the #4 handoff
+below for the `require_gates=False` window that closes at #34 and for why the transform-only wrapper
+belongs to the surrogate layer rather than to the store. Expect HG-1 to go **red on purpose** the
+day `hydms/surrogate/model.py`, `selection.py` or `validation.py` first appears: six sentinels name
+those modules and each is `pending` only because its subject does not exist yet, so the fix is
+always to wire the sentinel, never to re-aim it. Nothing else is in flight.
+
+---
 
 ### Handoff — 2026-09-04 (latest) · #44 closed · **the front is still S4 at #23 — read the next one down**
 
