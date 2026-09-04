@@ -660,6 +660,83 @@ def _l13_a_row_loses_its_class() -> None:
     )
 
 
+#: The one feature that cannot be built for most of the curated set. The citable 2024 Oliynyk
+#: edition leaves ``gordy_en`` blank for 21 of the dataset's 55 elements (#16), so the full 22
+#: refuse **266 of the 1,279** rows while the remaining 21 cover **1,278** -- every row but
+#: ``Eu1Ni5``, whose europium blocks all six JARVIS features. The hook below leaves it out so
+#: that it checks the real featuriser over almost the whole file rather than over three
+#: quarters of it. That is a statement about *this check's* coverage and nothing else: which
+#: features the project keeps is the trade cards #24 and #25 own, and the hook must not be
+#: read as having pre-empted it.
+_GORDY = "dev_Gordy_electonegativity"
+
+
+@lru_cache(maxsize=1)
+def _featurisation_run() -> tuple[Any, Any]:
+    """Card #20's featuriser over the real curated rows: the record before, the join after.
+
+    The `unwired` state exists for exactly this: the sentinel was written in S1 against a
+    four-row miniature of ``extract_features_cbfv.py``, and it only becomes a guard when it is
+    pointed at the module the drop could return to. That module is
+    ``hydms.descriptors.featurize``, and the join it must survive is
+    ``hydms.data.metadata.with_features`` -- both real, both called here exactly as a caller
+    would call them.
+
+    The rows are chosen by asking the contract, using the idiom
+    :func:`~hydms.descriptors.featurize.featurize`'s own docstring documents, rather than by
+    naming formulae: 1,278 of the 1,279 survive that question and the one that does not is
+    named by the verdict rather than by this file. Refusing to run at all on an empty
+    selection is the point of the check below -- a live hook that quietly featurises nothing
+    reports a green it never earned.
+
+    Cached: it costs ~0.35 s and ``audit()`` runs on every gate invocation.
+    """
+    from hydms.config import load as load_config
+    from hydms.data.load import load_hydride_data, parse_formula
+    from hydms.data.metadata import with_features, with_metadata
+    from hydms.descriptors.contract import CONTRACT, FeatureContract
+    from hydms.descriptors.featurize import featurize
+
+    names = load_config().columns
+    record = with_metadata(load_hydride_data())
+    contract = FeatureContract.from_names(
+        [name for name in CONTRACT.names if name != _GORDY]
+    )
+    keep = [
+        label
+        for label, formula in record[names.formula].items()
+        if contract.computability(parse_formula(formula)).complete
+    ]
+    if not keep:
+        raise ValueError(
+            f"the L13 live check could not featurise a single one of {len(record)} curated "
+            f"row(s) from the {len(contract)}-feature contract, so it would have asserted "
+            f"over an empty frame. A vacuous pass is the shape of the leak it exists to "
+            f"catch."
+        )
+
+    before = record.loc[keep]
+    features = featurize(
+        before[names.formula], before[names.temperature], contract=contract
+    )
+    return before, with_features(before, features)
+
+
+def _l13_live() -> None:
+    """Card #12's join, against the real dataset: the class arrives on the other side.
+
+    ``with_features`` asserts this itself before it returns -- the guard belongs to the
+    pipeline, not to the sentinel -- and this runs the same detector over the same frames, so
+    that weakening the guard inside the join cannot make HG-1 green.
+    """
+    from hydms.data.metadata import metadata_columns
+
+    before, after = _featurisation_run()
+    assert_metadata_survives(
+        before, after, columns=metadata_columns(), what="row metadata"
+    )
+
+
 # --------------------------------------------------------------------------------------
 # The registry
 # --------------------------------------------------------------------------------------
@@ -822,6 +899,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l13_alloy_class_carried_through,
             ),
         ),
+        live=_l13_live,
     ),
 )
 

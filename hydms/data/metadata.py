@@ -27,6 +27,13 @@ sentinel is handed. :func:`non_feature_columns` names what must never be inside 
 matrix, which is the same list plus the target in both spaces -- because the one column
 whose presence in ``X`` would be worse than L13 is the thing the model is predicting.
 
+**Two functions, one boundary.** :func:`with_metadata` is the record on its way *into*
+featurisation -- the canonical key attached and the class reconciled on it.
+:func:`with_features` is the record and the matrix meeting again on the way out, joined by
+label and refusing every way that join has silently gone wrong in this repository. It is the
+one place the two frames become one, and it is what the L13 sentinel's ``live`` hook runs:
+put the join in a function and the leak stops being something to remember.
+
 **The class is joined on the canonical key, never the formula string.** ``Ce1Mg12`` is
 labelled ``MIC`` and ``Mg12Ce1`` is labelled ``Mg``; they are one material. Joining per
 string keeps both answers and hands a leave-one-class-out fold two labels for one
@@ -78,6 +85,7 @@ from hydms.config import Columns
 from hydms.config import load as load_config
 from hydms.data.canonical import ALLOY_CLASS_PRECEDENCE, alloy_classes, group_keys
 from hydms.data.target import model_space_name
+from hydms.qa import assert_metadata_survives
 
 __all__ = [
     "CANONICAL_KEY_COLUMN",
@@ -86,6 +94,7 @@ __all__ = [
     "metadata_columns",
     "non_feature_columns",
     "refuse_non_features",
+    "with_features",
     "with_metadata",
 ]
 
@@ -258,6 +267,110 @@ def with_metadata(
     out[CANONICAL_KEY_COLUMN] = keys
     out[label] = reconciled
     return out
+
+
+def with_features(
+    record: pd.DataFrame,
+    features: pd.DataFrame,
+    *,
+    columns: Columns | None = None,
+) -> pd.DataFrame:
+    """The record and the feature matrix, side by side, joined by **label**.
+
+    The other half of the boundary. :func:`with_metadata` is the record on its way *into*
+    featurisation; this is the record and the matrix meeting again on the way out, and it is
+    the only place in this project where they are put in one frame. Card #12: leak L13 is a
+    featuriser that dropped the record, and the fix is not "remember to keep it" but a join
+    that cannot be written any other way.
+
+    Four refusals, and each is a defect that has actually happened in this repository:
+
+      - **The matrix carries a non-feature.** :func:`refuse_non_features` runs first, so the
+        alloy class -- or, far worse, the target -- cannot arrive on the feature side of the
+        join and then be handed to a fit.
+      - **The index is not the record's.** Label for label, in order. A featuriser returns its
+        matrix on the caller's index precisely so this join is by label (see
+        :func:`hydms.descriptors.featurize.featurize`); a positional ``concat`` after a row
+        was dropped upstream is leak **L9**, ``merge_datasets.py:46``.
+      - **The record is not a record.** Every column of :func:`metadata_columns` must be
+        present, because a check for a column that was never there passes vacuously -- which
+        is the shape of the leak this guards.
+      - **A column arrives from both sides with different values.** ``merge_datasets.py:49``
+        is ``df_merged.loc[:, ~df_merged.columns.duplicated()]``, which keeps whichever
+        arrived first and says nothing.
+
+    That last one has exactly one legitimate case, and it is not an exception so much as the
+    point: ``temperature(K)`` is both a column of the raw file and one of the 22 features. The
+    matrix's copy wins -- it is ``float64`` where the raw column is ``int64``, and that cast is
+    card #19's, because a candidate at 313.5 K must not become 313 -- but only after the two
+    are checked to agree exactly. Exactly, with no tolerance, because widening ``int64`` to
+    ``float64`` is exact for every value in the file: any disagreement means the matrix was
+    featurised from temperatures other than this record's, and a joined frame whose features
+    describe different conditions from its own column is a worse lie than a missing column.
+
+    Args:
+        record: The frame entering featurisation -- :func:`with_metadata`'s output, or a
+            screened subset of it. Its index labels are the row identities.
+        features: The matrix, on that same index. Its columns are appended after the
+            record's.
+        columns: Column names, defaulting to ``pipeline.yaml``'s.
+
+    Returns:
+        The record's columns, then the matrix's, on the record's index and in its order. A
+        column the matrix also names is taken from the matrix and appears once, in the
+        matrix's position.
+
+    Raises:
+        MetadataError: for any of the four refusals above, naming the columns or the rows.
+        LeakDetected: from the closing :func:`hydms.qa.detectors.assert_metadata_survives`,
+            if the join somehow lost a metadata column, a row, or a label. Unreached; it is
+            the guard that keeps the claim true, and it is the same detector the L13 sentinel
+            runs against this function.
+    """
+    names = columns if columns is not None else load_config().columns
+    wanted = metadata_columns(names)
+
+    absent = [name for name in wanted if name not in record.columns]
+    if absent:
+        raise MetadataError(
+            f"the record is missing {len(absent)} of {len(wanted)} metadata column(s): "
+            f"{_named(absent)}. These are what must survive featurisation, so a frame "
+            f"without them cannot be checked for having carried them -- pass "
+            f"with_metadata()'s output, not the raw file."
+        )
+
+    refuse_non_features(features, names)
+
+    if not features.index.equals(record.index):
+        raise MetadataError(
+            f"the feature matrix is not on the record's index: {len(record)} record row(s) "
+            f"and {len(features)} feature row(s), "
+            f"{len(record.index.intersection(features.index))} label(s) in common. Joining "
+            f"anyway would pair them by position, which is leak L9's shape exactly "
+            f"(merge_datasets.py:46). Featurise the record's own rows -- featurize() returns "
+            f"its matrix on the caller's index for this reason -- or align them explicitly."
+        )
+
+    shared = [name for name in record.columns if name in set(features.columns)]
+    for name in shared:
+        try:
+            mine = record[name].astype("float64")
+        except (TypeError, ValueError):
+            differs = list(record.index)
+        else:
+            differs = list(record.index[~mine.eq(features[name]).to_numpy()])
+        if differs:
+            raise MetadataError(
+                f"{name!r} arrives from both sides and they disagree on {len(differs)} of "
+                f"{len(record)} row(s): {_named(differs)}. The matrix's copy is the one a "
+                f"model may see, so the record's must be the values it was featurised from. "
+                f"The archival pipeline kept whichever column arrived first and said nothing "
+                f"(merge_datasets.py:49)."
+            )
+
+    joined = pd.concat([record.drop(columns=shared), features], axis=1)
+    assert_metadata_survives(record, joined, columns=wanted, what="row metadata")
+    return joined
 
 
 def class_distribution(

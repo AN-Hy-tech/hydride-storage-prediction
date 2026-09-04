@@ -22,12 +22,18 @@ Two properties, because losing a class has two shapes and only one of them is vi
     is ``Mg``, so a class re-joined on the raw formula string gives one material two answers
     and a fold that holds out ``Mg`` holds out half of it.
 
-The sentinel's subject is ``hydms.descriptors.featurize``, which does not exist yet. Card #87
-wrote this sentinel because it owns the key the class is re-joined on; card #12 carries the
-class through featurisation and must give the sentinel its ``live`` hook when it does. Until
-then :func:`hydms.qa.audit` reports L13 ``pending`` and HG-1 stays short of green.
+The sentinel's subject is ``hydms.descriptors.featurize``. Card #87 wrote this sentinel
+because it owns the key the class is re-joined on; card #20 created the subject on 2026-09-04,
+which turned the sentinel ``unwired`` -- red, on purpose -- and card #12 wired it the same day.
+The ``live`` hook now runs the real featuriser over 1,278 of the 1,279 curated rows and joins
+its matrix back with :func:`hydms.data.metadata.with_features`, so what is asserted below in
+miniature is asserted upstairs against the pipeline.
 
-Card #71 (the suite), card #87 (this sentinel).
+The miniatures stay. They are what proves the detector can still go red: a hook that runs on
+clean data proves the pipeline is clean *today*, and says nothing about whether the check would
+notice if it stopped being.
+
+Card #71 (the suite), card #87 (this sentinel), card #12 (the hook).
 """
 
 from __future__ import annotations
@@ -162,18 +168,66 @@ def test_checking_a_column_the_stage_never_received_is_a_caller_error(
 # --------------------------------------------------------------------------------------
 
 
-def test_l13_is_guarded_and_waits_on_the_featuriser() -> None:
-    """The sentinel exists; its subject does not. That is `pending`, not `deferred`.
+def test_l13_is_wired_to_the_real_featuriser() -> None:
+    """The sentinel is pointed at the module the drop would come back to, and it is green.
 
-    Card #87 gave `Alloy_class` a composition to be re-joined on and wrote this sentinel;
-    card #12 carries the class through featurisation, and the moment
-    `hydms.descriptors.featurize` exists HG-1 goes red until #12 wires the `live` hook.
+    This test previously asserted `pending`, and its docstring said so: card #87 wrote the
+    sentinel, card #20 created `hydms.descriptors.featurize`, which made it `unwired` and HG-1
+    red, and card #12 gave it the `live` hook. The subject was never re-aimed to make the
+    build green -- that would have been the leak, wearing the sentinel's name.
     """
     sentinel = for_leak("L13")
     assert sentinel is not None
     assert sentinel.subject == "hydms.descriptors.featurize"
     assert sentinel.detector == "hydms.qa.detectors.assert_metadata_survives"
+    assert sentinel.live is not None, "an unwired sentinel guards its subject in name only"
 
     row = next(entry for entry in audit() if entry.leak == "L13")
-    assert row.status == "pending"
+    assert row.status == "green", row.detail
     assert row.owed_by == 12
+
+
+def test_the_class_arrives_for_every_row_the_real_featuriser_accepts() -> None:
+    """The whole path, written the way a caller writes it, over the real file.
+
+    Not the hook -- the hook is what `audit()` runs, and `test_l13_is_wired_to_the_real_
+    featuriser` above asserts its verdict. This is the same journey spelled out here so the
+    numbers are readable: `with_metadata` in, `featurize` across, `with_features` back, and
+    the class on the other side for every row.
+
+    `featurize` refuses rather than dropping, so a row cannot be lost silently; what has to be
+    proved is that the class **arrives**. 1,278 of the 1,279 curated rows are featurisable
+    without `dev_Gordy_electonegativity` -- the one feature the citable Oliynyk edition cannot
+    build for 21 of the dataset's 55 elements -- and the row that is not is `Eu1Ni5`, named by
+    the contract's verdict rather than by a list in a test.
+    """
+    from hydms.config import load as load_config
+    from hydms.data.load import load_hydride_data, parse_formula
+    from hydms.data.metadata import metadata_columns, with_features, with_metadata
+    from hydms.descriptors.contract import CONTRACT, FeatureContract
+    from hydms.descriptors.featurize import featurize
+
+    names = load_config().columns
+    record = with_metadata(load_hydride_data())
+    contract = FeatureContract.from_names(
+        [n for n in CONTRACT.names if n != "dev_Gordy_electonegativity"]
+    )
+    keep = [
+        label
+        for label, formula in record[names.formula].items()
+        if contract.computability(parse_formula(formula)).complete
+    ]
+    assert len(keep) == 1278 and len(record) == 1279
+    refused = record.loc[[label for label in record.index if label not in set(keep)]]
+    assert list(refused[names.formula]) == ["Eu1Ni5"]
+
+    before = record.loc[keep]
+    after = with_features(
+        before, featurize(before[names.formula], before[names.temperature], contract=contract)
+    )
+
+    assert list(after.index) == list(before.index)
+    for name in metadata_columns():
+        assert name in after.columns, f"{name} did not survive featurisation"
+    assert after["Alloy_class"].equals(before["Alloy_class"])
+    assert set(contract.names) <= set(after.columns)

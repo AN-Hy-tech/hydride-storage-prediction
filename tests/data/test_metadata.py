@@ -11,9 +11,10 @@ Three questions:
   - **Can a non-feature reach the model?** ``refuse_non_features`` is the last gate before a
     fit. The worst case it catches is not the alloy class -- it is the target.
 
-The L13 sentinel's ``live`` hook is **not** here: its subject is
-``hydms.descriptors.featurize``, which does not exist until S3. These tests cover the half of
-the card the data layer owns.
+The L13 sentinel's ``live`` hook is **not** here -- it lives in ``hydms/qa/sentinels.py`` and
+runs the real featuriser, and the path it exercises end to end is asserted in
+``tests/leaks/test_l13_class_survival.py``. What is here is the join it goes through:
+``with_features``, tested on frames small enough to read, including every way it refuses.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ from hydms.data.metadata import (  # noqa: E402
     metadata_columns,
     non_feature_columns,
     refuse_non_features,
+    with_features,
     with_metadata,
 )
 from hydms.data.target import model_space_name  # noqa: E402
@@ -212,3 +214,139 @@ def test_the_message_names_every_offender_not_the_first() -> None:
     assert "2 column(s)" in message
     assert "Alloy_class" in message
     assert "Citation" in message
+
+
+# --------------------------------------------------------------------------------------
+# The join: the record and the matrix, side by side
+# --------------------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def record() -> pd.DataFrame:
+    """Three rows shaped like `with_metadata`'s output, on a non-trivial index.
+
+    The labels are deliberately neither sorted nor a range: a positional join and a label join
+    agree on a `RangeIndex`, and a fixture that cannot tell them apart is describing rather
+    than testing.
+    """
+    return pd.DataFrame(
+        {
+            "Composition": ["LaNi5", "TiFe", "Mg2Ni"],
+            "Alloy_class": ["AB5", "AB", "A2B"],
+            "Dataset": ["HydPark", "HydPark", "Extracted"],
+            "Citation": ["a", "b", "c"],
+            CANONICAL_KEY_COLUMN: ["La0.1667Ni0.8333", "Fe0.5Ti0.5", "Mg0.6667Ni0.3333"],
+            "H2_W% (max)": [1.4, 1.9, 3.6],
+            "temperature(K)": [298, 313, 573],
+        },
+        index=["r-9", "r-1", "r-5"],
+    )
+
+
+@pytest.fixture()
+def matrix(record: pd.DataFrame) -> pd.DataFrame:
+    """What a featuriser returns: float64 features on the caller's own labels."""
+    return pd.DataFrame(
+        {
+            "avg_Density": [7.9, 6.5, 3.1],
+            "temperature(K)": [298.0, 313.0, 573.0],
+        },
+        index=record.index,
+    )
+
+
+def test_the_record_and_the_matrix_come_back_as_one_frame(record, matrix) -> None:
+    joined = with_features(record, matrix)
+
+    assert list(joined.index) == list(record.index), "the record's rows, in the record's order"
+    for name in metadata_columns():
+        assert name in joined.columns
+    assert list(joined["Alloy_class"]) == ["AB5", "AB", "A2B"]
+    assert "avg_Density" in joined.columns
+    assert list(joined.columns).count("temperature(K)") == 1
+
+
+def test_the_input_frames_are_not_mutated(record, matrix) -> None:
+    with_features(record, matrix)
+    assert record["temperature(K)"].dtype == "int64"
+    assert list(matrix.columns) == ["avg_Density", "temperature(K)"]
+
+
+def test_the_matrix_may_not_carry_a_non_feature(record, matrix) -> None:
+    """The first refusal, and the one that keeps the target out of a fit."""
+    matrix["H2_W% (max)"] = [1.4, 1.9, 3.6]
+    with pytest.raises(MetadataError, match="predicting its own input"):
+        with_features(record, matrix)
+
+
+def test_a_matrix_on_another_index_is_refused_rather_than_zipped(record, matrix) -> None:
+    with pytest.raises(MetadataError, match="leak L9"):
+        with_features(record, matrix.reset_index(drop=True))
+
+
+def test_a_matrix_missing_a_row_is_refused(record, matrix) -> None:
+    """The shape a featuriser that drops what it cannot parse would produce."""
+    with pytest.raises(MetadataError) as caught:
+        with_features(record, matrix.drop(index=["r-1"]))
+    assert "3 record row(s) and 2 feature row(s)" in str(caught.value)
+
+
+def test_the_same_rows_in_another_order_are_refused(record, matrix) -> None:
+    """`concat` aligns on labels, so this one would be silently correct -- and still wrong.
+
+    A matrix whose rows arrived in a different order than the record's was built from a
+    differently ordered frame, and nothing else in the pipeline reorders. Refusing says so
+    while the cause is still findable.
+    """
+    with pytest.raises(MetadataError, match="not on the record's index"):
+        with_features(record, matrix.loc[["r-1", "r-5", "r-9"]])
+
+
+def test_a_record_without_the_metadata_columns_is_refused(record, matrix) -> None:
+    """A check for a column that was never there passes vacuously. That is the leak."""
+    with pytest.raises(MetadataError, match="missing 1 of 5 metadata column"):
+        with_features(record.drop(columns=["Alloy_class"]), matrix)
+
+
+def test_temperature_arrives_from_the_matrix_and_carries_the_cast(record, matrix) -> None:
+    """The one column both sides legitimately hold.
+
+    `temperature(K)` is a column of the raw file *and* one of the 22 features. The matrix's
+    copy wins because it is `float64` where the raw column is `int64` -- card #19's cast, so
+    that a candidate at 313.5 K does not become 313.
+    """
+    joined = with_features(record, matrix)
+    assert joined["temperature(K)"].dtype == "float64"
+    assert list(joined["temperature(K)"]) == [298.0, 313.0, 573.0]
+
+
+def test_a_matrix_featurised_at_other_temperatures_is_refused(record, matrix) -> None:
+    """Agreement is what licences the matrix's copy to win, and it is checked, not assumed."""
+    matrix.loc["r-1", "temperature(K)"] = 350.0
+
+    with pytest.raises(MetadataError) as caught:
+        with_features(record, matrix)
+    message = str(caught.value)
+    assert "'temperature(K)' arrives from both sides" in message
+    assert "'r-1'" in message, "the message must name the row"
+    assert "merge_datasets.py:49" in message
+
+
+def test_a_shared_column_that_cannot_be_compared_is_refused(record, matrix) -> None:
+    """A record column shadowed by a feature of the same name, where no comparison exists."""
+    record["avg_Density"] = ["heavy", "middling", "light"]
+
+    with pytest.raises(MetadataError, match="'avg_Density' arrives from both sides"):
+        with_features(record, matrix)
+
+
+def test_the_join_is_by_label_not_by_position(record, matrix) -> None:
+    """The property `featurize` returns the caller's index for.
+
+    Both frames hold the same labels; only the record's order is the answer. A positional
+    concat would put `r-9`'s features on `r-1` and nothing downstream would notice.
+    """
+    joined = with_features(record, matrix)
+    for label in record.index:
+        assert joined.loc[label, "avg_Density"] == matrix.loc[label, "avg_Density"]
+        assert joined.loc[label, "Alloy_class"] == record.loc[label, "Alloy_class"]

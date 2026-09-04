@@ -48,6 +48,14 @@ difference.
 - [ ] Val and test are untouched at every stage
 - [ ] Perturbing test rows leaves the selected feature set identical — the L6 sentinel in ticket 71
 - [ ] That **L6 sentinel** is wired to this module — a `live` check in `hydms/qa/sentinels.py`
+- [ ] **The training matrix is assembled by `hydms.data.metadata.with_features`, not by a
+      `concat` here (#12).** It joins the record to the matrix by label, refuses a matrix on
+      another index, and calls `refuse_non_features` before the join and
+      `assert_metadata_survives` after it. One thing to know before the first call:
+      `temperature(K)` is a column of the raw file *and* one of the 22 features, so the record
+      and the matrix both carry it — `with_features` takes the matrix's `float64` copy (card
+      #19's cast) and refuses if the record's `int64` values disagree, which is the check that
+      the features were built from *these* rows
       calling `hydms.qa.assert_selection_ignores_holdout` on the real selector. Gate HG-1 goes red
       once `hydms/surrogate/selection.py` exists without one
 - [ ] Stage-by-stage feature counts logged for the Chapter 1 revision

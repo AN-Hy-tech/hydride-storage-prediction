@@ -223,17 +223,23 @@ the same module as L3 (card #71).
       digits**, which is the only resolution that both reproduces 1115 compositions and keeps the
       widest gap it merges (3.46e-05) narrower than the closest it does not (1.01e-04); `separation()`
       asserts that over both raw files and is demonstrated red at three digits.
-- [~] **#12** Re-join `Alloy_class` on the canonical key, not the raw string. **Data-layer half
-      landed; the card is `doing`, not `done`.** `hydms/data/metadata.py` declares the boundary in
+- [x] **#12** Re-join `Alloy_class` on the canonical key, not the raw string. **Closed 2026-09-04,
+      in two halves seven stages apart.** `hydms/data/metadata.py` declares the boundary in
       two lists — `metadata_columns()` (what a featuriser must carry: formula, class, dataset,
       citation, canonical key) and `non_feature_columns()` (that, **plus the target in both
       spaces**), with `refuse_non_features(X)` checking the matrix rather than the featuriser. All
       ten classes survive, 1279 rows in and out, 13 relabelled; AC-6 is feasible, the smallest
       class being `A2B` at 24 compositions of 1115. `UNKNOWN` is settled as a **refusal** — the
-      class is complete on all 1279 rows and an eleventh label changes AC-6's fold count. What is
-      owed: the class surviving featurisation, its absence from `X`, and the L13 `live` hook, all
-      three naming `hydms.descriptors.featurize` — which **#20 created on 2026-09-04**, so all
-      three are now unblocked and HG-1 is red until they land.
+      class is complete on all 1279 rows and an eleventh label changes AC-6's fold count. The three
+      boxes that named `hydms.descriptors.featurize` closed the day #20 created it:
+      **`with_features`** is the join — `refuse_non_features` on the way in,
+      `assert_metadata_survives` on the way out, by label and never by position — and the L13
+      `live` hook runs it over **1,278 of the 1,279** curated rows, taking HG-1 to **5/13**. Writing
+      it found a third disguise of `merge_datasets.py:49`: `temperature(K)` is a column of the raw
+      file *and* one of the 22 features, so the prescribed `concat` returns that name twice, `int64`
+      beside `float64`. The matrix's copy wins — it carries #19's cast — but only after the
+      two are checked to agree, which is the only tie in the frame between a record and a matrix
+      claiming to describe it.
 - [x] **#13** The assertion becomes "no **canonical composition** spans two splits" — the current
       raw-string assertion passes while 35 rows leak. Landed: `hydms/data/splits.py` ports the
       protocol unchanged and changes only the unit. **893 / 131 / 255 rows over 780 / 111 / 224
@@ -268,17 +274,16 @@ the same module as L3 (card #71).
       those two then; nothing else should move, and if it does, that is the finding.
 
 **Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9** and L10
-sentinels go green — L10 because its subject is #14's module. **As of 2026-09-03 all four are
-green** (`4/13 leaks guarded`), and `tests/data` is 215 tests over eight files. **L13 does not, and the original
-version of this line was wrong about it.** Its site is `extract_features_cbfv.py`, so its sentinel
-guards the *featuriser*; #87 wrote the sentinel and #12 wires it, but the module it names does not
-exist until S3. Pointing it at the data layer instead would have made it green today while guarding
-a different property — that the class exists — and left the drop itself unguarded. L13 therefore
-read `pending` through S2 — **and since #20 landed on 2026-09-04 it reads `unwired`, which is
-red**: the module it names now exists and the sentinel is still pointed at a miniature of it. That
-is the design working, not a regression. It turns green when #12 carries the class through
-featurisation and gives the sentinel a `live` hook. Read
-the per-leak table with:
+sentinels go green — L10 because its subject is #14's module. **As of 2026-09-04 five are
+green** (`5/13 leaks guarded`), and `tests/data` is 226 tests over eight files. **L13 is the fifth,
+and the original version of this line was wrong about it.** Its site is `extract_features_cbfv.py`,
+so its sentinel guards the *featuriser*; #87 wrote the sentinel and #12 wires it, but the module it
+names does not exist until S3. Pointing it at the data layer instead would have made it green in S2
+while guarding a different property — that the class exists — and left the drop itself
+unguarded. L13 therefore read `pending` through S2, read `unwired` — red — from the moment
+#20 created `hydms/descriptors/featurize.py` on 2026-09-04, and went green the same day when #12
+gave it a `live` hook over the real featuriser. Three states, no re-aiming, nobody remembering: that
+is the design working. Read the per-leak table with:
 
 ```bash
 conda run -n Project python -c "from hydms.qa import audit; [print(f'{r.leak:4} {r.status:9} #{r.owed_by}  {r.title}') for r in audit()]"
@@ -395,9 +400,10 @@ could mean anything. See below.
       **(d)** **The value pin found nothing wrong.** All 22 columns against CBFV's own output over
       the sixteen fixture formulae, with CBFV's table supplied: worst **4.547e-13** absolute,
       **6.828e-15** relative. Assembly correct first time; the residue is #17's element order.
-      **(e)** **HG-1 is red on purpose.** `L13 [unwired] #12`. Eight tests fail with it, including
-      one whose docstring predicted its own death. The sentinel was not re-aimed. #12 is `doing`,
-      is now unblocked, and takes HG-1 to 5/13.
+      **(e)** **HG-1 was red on purpose, for one day.** `L13 [unwired] #12`. Eight tests failed
+      with it, including one whose docstring predicted its own death. The sentinel was not
+      re-aimed: #12 closed the same day with the `live` hook and the `with_features` join, and
+      HG-1 reads **5/13**, skipped rather than red.
 - [ ] **#21 GATE AC-2** — parity with CBFV to 1e-9 on all 1,279 formulae. **Hard gate.** If it fails,
       the reimplementation is wrong, not CBFV. **Two amendments from #16:** parity is measured against
       the reference table, not the shipped one; and no Eu-containing formula can be compared at all,
@@ -590,9 +596,9 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. Expect 8 red as of 2026-09-04, all of them HG-1 and all of them one fact: #20 created
-# `hydms.descriptors.featurize`, so the L13 sentinel reads `unwired` until #12 gives it a `live`
-# hook. See S2's #12 and S3's #20. Anything else red is a real failure.
+# Suite. 566 green as of 2026-09-04. Anything red is a real failure: the eight that were red
+# earlier that day were the L13 sentinel reading `unwired` between #20 creating its subject and
+# #12 wiring it, and both have landed.
 conda run -n Project python -m pytest -q
 conda run -n Project python -m pytest tests/leaks -q          # HG-1
 # Lint and types run OUTSIDE the environment, deliberately: neither imports the project's

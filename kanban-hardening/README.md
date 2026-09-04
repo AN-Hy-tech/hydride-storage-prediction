@@ -107,10 +107,12 @@ module exists with nothing wired to it. It has already happened once: creating `
 turned the build red with `L9 [unwired] #10 -- guarded in name only` before a wrong line had been
 written, and stayed red until #10 added the `live` hook in `hydms/qa/sentinels.py`. That is the
 mechanism working: a sentinel written six weeks early against a miniature becomes a real guard only
-when somebody points it at the real thing. #10, #13 and #14 have since wired theirs, and the audit
-reports **4 of 13 leaks guarded** — L3, L8, L9, L10. **Three cards still owe a wiring — #12 (L13,
-the moment #20 creates the featuriser), #24 (L6) and #88 (L2, L4, L7)** — one owes both a wiring and
-a sentinel, #26 (L1, L5, and L12 outright), and #29 owes L11 outright. Each carries the box.
+when somebody points it at the real thing. #10, #13, #14 and #12 have since wired theirs, and the audit
+reports **5 of 13 leaks guarded** — L3, L8, L9, L10, L13. It has now happened twice: #20 creating
+`hydms/descriptors/featurize.py` turned L13 `unwired` and took eight tests red with it, and #12
+closed it the same day. **Two cards still owe a wiring — #24 (L6) and #88 (L2, L4, L7)** — one owes
+both a wiring and a sentinel, #26 (L1, L5, and L12 outright), and #29 owes L11 outright. Each
+carries the box.
 Read the per-leak table with:
 
 ```bash
@@ -130,7 +132,78 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-### Handoff — 2026-09-04 (latest) · #20 landed · written for #12, then #21
+### Handoff — 2026-09-04 (latest) · #12 closed · written for #21, then #22
+
+**Where the phase is.** Twenty-two cards done and **the tree is green again**: 566 tests pass, ruff
+0.8.4 and mypy 1.13.0 clean, `check_board.py` and `check_freeze.py` OK, HG-1 **skipped at 5/13**
+rather than failing. The eight red tests the last handoff described were one fact and it closed the
+way it was written down: #20 created the featuriser, the L13 sentinel went `unwired`, #12 pointed it
+at the real thing. The subject string was never touched.
+
+**#12, the second half.** It landed its data half on 2026-09-03 and could not finish: three boxes
+named `hydms.descriptors.featurize`, which did not exist. All three closed here.
+`hydms.data.metadata.with_features(record, features)` is the join — `refuse_non_features` on the
+way in, `assert_metadata_survives` on the way out, by label, refusing every way that join has
+silently gone wrong in this repository — and the L13 `live` hook runs it over the real featuriser
+across **1,278 of the 1,279** curated rows. 11 new tests on the join, 1 on the end-to-end path.
+
+**Three things it taught.**
+
+- **The join needed a function, not a line.** The card prescribed `pd.concat([metadata, features],
+  axis=1)` and the hook could have written it inline. That would have made the L13 sentinel guard
+  four lines of `hydms/qa/sentinels.py` — the same mistake, in the other direction, as pointing
+  L13 at the data layer would have been in S2. So the guard lives in the pipeline (the #14 pattern:
+  `screen` calls its detector before it returns) and the sentinel re-runs it. Weakening the check
+  inside the join cannot make HG-1 green.
+- **Writing the join found that the prescribed `concat` was subtly wrong.** `temperature(K)` is a
+  column of the raw file **and** one of the 22 features, so concatenating the record with the matrix
+  returns a frame carrying that name **twice**, `int64` beside `float64`, and pandas hands it over
+  without a word. `merge_datasets.py:49` is the archival answer —
+  `df_merged.loc[:, ~df_merged.columns.duplicated()]`, keep whichever arrived first — which
+  makes this the third disguise of one defect (#10 found the second, one line below the leak).
+  `with_features` takes the **matrix's** copy, because that one carries #19's cast (313.5 K must not
+  become 313), but only after checking the two agree exactly. That check is free — widening
+  `int64` to `float64` is exact — and it is the only tie in the frame between a record and a
+  matrix that claims to describe it: featurise at other temperatures and it refuses, by row.
+- **The hook's coverage was a choice, and it is documented as one.** The full 22 featurise only
+  **1,013** of the 1,279 rows (the Gordy hole, measured again here); without
+  `dev_Gordy_electonegativity` it is **1,278**, everything but `Eu1Ni5`. The hook drops that one
+  feature so it checks the file rather than three quarters of it, and its docstring says this is a
+  statement about the *check's* coverage and **not** a decision about the feature set, which is
+  #24/#25's to make. The rows it keeps come from asking `FeatureContract.computability`, the idiom
+  `featurize`'s own docstring documents, so the refused row is named by the verdict rather than by a
+  list in a sentinel. An empty selection raises rather than asserting over nothing: a vacuous pass
+  is the shape of the leak this sentinel exists to catch.
+
+**The seam S4 must use, not re-derive.** `with_features` is now the only place the record and the
+matrix become one frame. #23, #24 and #26 each need a training matrix; none of them should write a
+`concat`. It is boxed on #24, which is the first card that builds one.
+
+#### The opening move
+
+**#21, the hard gate of S3, and it is the only card that is both unblocked and load-bearing.**
+Parity with CBFV to 1e-9 over all 1,279 formulae. It inherits three boxes from #20 — the
+`tables=` seam and how to build the reference table, "compare in one batch and here is why", and the
+news that a 16-formula version already passes at **4.547e-13**. Its remaining work is the other
+1,263 formulae, a failure output that names the column and the worst-offending formula rather than a
+boolean, and the line stating how many rows the *shipped* tables could not have featurised at all
+— because AC-2 runs against CBFV's table, where neither the Gordy hole nor the wrong-axis
+reduction is visible. Two amendments from #16 still stand: parity is measured against the reference
+table, and **no Eu-containing formula can be compared at all**, because this layer refuses where
+CBFV returns a silently-zeroed number.
+
+**Then #22**, the throughput benchmark, which starts from the numbers already measured: 10,000
+formulae in **0.31 s**, the curated 1,278 in **0.21 s**. After that S3 is closed and S4 opens at
+#23.
+
+**One card is still `doing`: #14.** It owes S4 rather than S3 — #24 consuming its output is what
+closes the `Boruta_FeatEng.py:23-25` bypass and supplies the feature matrix CleanLab needs to produce
+`label_issues` at all — so it is not in S3's way. #15 is written, green, and stays `backlog`
+behind it.
+
+---
+
+### Handoff — 2026-09-04 (earlier) · #20 landed · written for #12, then #21
 
 **Where the phase is.** Twenty-one cards done, and **the tree is red on purpose.** 554 tests,
 **546 pass and 8 fail**; every one of the eight is the same fact — `hydms/descriptors/featurize.py`

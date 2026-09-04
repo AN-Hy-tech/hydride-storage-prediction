@@ -1,6 +1,6 @@
 ---
 id: 12
-status: doing
+status: done
 priority: High
 blocked_by: [10, 87]
 assignee: "@amirhossein"
@@ -31,8 +31,12 @@ result rather than deciding again.
 ## Done when
 
 - [x] `Alloy_class` is joined on the **canonical key** from ticket 87, never the raw formula string
-- [ ] `Alloy_class` carried through featurisation as metadata, not as a model feature
-- [ ] It is never present in the feature matrix passed to the model
+- [x] `Alloy_class` carried through featurisation as metadata, not as a model feature —
+      `hydms.data.metadata.with_features` is the join, and the L13 hook runs it over 1,278 of
+      the 1,279 curated rows
+- [x] It is never present in the feature matrix passed to the model — `refuse_non_features`
+      is the *first* thing `with_features` does, so the class cannot arrive on the feature
+      side of the join and then be handed to a fit
 - [x] Class distribution matches the raw 10 classes with no rows lost — all ten present, 1279
       rows in and out, 13 relabelled: AB2 +3, A2B +5, MEA −1, LEA −2, MIC −5. Asserted class by
       class in `tests/data/test_metadata.py`, not as a total, because a total hides two classes
@@ -49,14 +53,14 @@ result rather than deciding again.
       `ALLOY_CLASS_PRECEDENCE`, and `alloy_class_table` returns the same thing per composition with
       the evidence beside it. Ten canonical compositions carried more than one label and all ten are
       resolved there; 13 of 1279 rows are relabelled. A second reconciliation here is a second answer
-- [ ] **Wire the L13 sentinel's `live` hook.** #87 wrote the sentinel — `assert_metadata_survives`,
+- [x] **Wire the L13 sentinel's `live` hook.** #87 wrote the sentinel — `assert_metadata_survives`,
       subject `hydms.descriptors.featurize` — and it is `pending` only because the featuriser does
       not exist. The moment #20 creates that module, HG-1 goes **red** (`unwired`) and stays red
       until this card gives the **L13 sentinel** a `live` check calling
       `hydms.qa.assert_metadata_survives` on the real featurisation path: `Alloy_class` present, one
       row per input row, every label unchanged. If #20 names the module differently, update the
       sentinel's `subject` string in the same commit
-- [ ] **`UNKNOWN` is this card's word, and it is not in the vocabulary.** `reconcile_class` refuses
+- [x] **`UNKNOWN` is this card's word, and it is not in the vocabulary.** `reconcile_class` refuses
       a label outside the ten `hydride_data.csv` declares, because an eleventh class changes the fold
       structure of AC-6. Nothing in the curated file needs it — the class is complete on all 1279
       rows — so the `UNKNOWN` box above is about a *future* source. Whichever way it is settled, the
@@ -81,14 +85,14 @@ result rather than deciding again.
       `reconcile_class`'s careful refusal was unreachable from the conflicted path. Fixed by
       reconciling first; #87's now-stale "a missing class is card #12's to label UNKNOWN" message
       corrected in the same commit
-- [ ] **Owed to S3 — this card is not done.** Three boxes above cannot close in the data layer:
+- [x] **Owed to S3 — closed 2026-09-04.** Three boxes above cannot close in the data layer:
       the class surviving featurisation, its absence from the feature matrix, and the L13 `live`
       hook. All three name `hydms.descriptors.featurize`, which #20 creates. When it does, HG-1
       goes red (`L13 [unwired] #12`) and this card finishes: a `live` check calling
       `hydms.qa.assert_metadata_survives(before, after, columns=hydms.data.metadata.metadata_columns())`
       on the real featurisation path, plus `refuse_non_features` called on what #20 returns
 
-- [ ] **#20 landed, so the three boxes above are now unblocked — here is the shape (from #20).**
+- [x] **#20 landed, so the three boxes above are now unblocked — here is the shape (from #20).**
       `hydms.descriptors.featurize.featurize(frame["Composition"], frame["temperature(K)"])`
       returns the 22 columns **on the caller's index**, and refuses a repeated label precisely so
       the re-attachment cannot be ambiguous. The label-aligned join is therefore
@@ -100,6 +104,18 @@ result rather than deciding again.
       `dev_Gordy_electonegativity`; and `featurize` raises rather than dropping, so
       `assert_metadata_survives` will be testing a stage that cannot lose a row silently — the
       thing it must still prove is that the class **arrives** on the other side
+
+- [x] **Found while wiring it: the prescribed `pd.concat` has a third disguise of
+      `merge_datasets.py:49` in it.** `temperature(K)` is a column of the raw file **and** one
+      of the 22 features, so concatenating the record with the matrix produces a frame with
+      that name twice — `int64` from the record, `float64` from the contract — and pandas is
+      perfectly happy to hand it over. `df_merged.loc[:, ~df_merged.columns.duplicated()]` is
+      the archival pipeline's answer and it keeps whichever arrived first. `with_features`
+      takes the **matrix's** copy, because that one carries #19's cast (313.5 K must not become
+      313) — but only after checking the two agree exactly, which is free (widening `int64` to
+      `float64` is exact) and is the only tie in the frame between the record and the matrix
+      that claims to describe it. A disagreement means the features were built from other
+      temperatures, and that is refused by row
 
 ## Runnable check
 
@@ -153,3 +169,35 @@ boundary exists for.
   came out of noticing that nothing in the repository stops the target reaching the feature
   matrix — a failure that would look like an excellent model. The two lists differ by exactly
   `H2_W% (max)` and `log_H2_W% (max)`. (by @assistant)
+
+- 2026-09-04: **Closed.** #20 created `hydms.descriptors.featurize` the same day, which flipped
+  the L13 sentinel from `pending` to `unwired` and took eight tests red with it; this card wired
+  it. `audit()` reports **5/13** and the suite is 566 green. Three things this half taught:
+
+  **The join needed a function, not a line.** The card prescribed
+  `pd.concat([metadata, features], axis=1)` and the hook could have written it inline — which
+  would have made the L13 sentinel guard four lines of `hydms/qa/sentinels.py`, exactly the
+  mistake the runbook records for the *other* direction (pointing L13 at the data layer would
+  have made it green while guarding a different property). So the join is
+  `hydms.data.metadata.with_features`, it calls `refuse_non_features` on the way in and
+  `assert_metadata_survives` on the way out — the #14 pattern, where the guard belongs to the
+  pipeline and the sentinel re-runs it — and the hook calls the real thing.
+
+  **Writing the join found that the prescribed concat was subtly wrong.** `temperature(K)` is
+  in both frames: a column of the raw file and one of the 22 features. A plain `concat` of the
+  record and the matrix returns a frame with that name **twice**, `int64` beside `float64`, and
+  the archival pipeline's habit (`merge_datasets.py:49`) is to keep whichever came first. The
+  matrix's copy wins here, because it carries #19's cast — but only after the two are checked
+  to agree exactly, which is the one tie available between a record and a matrix claiming to
+  describe it. Featurise at 350 K and join to a record that says 313 and it refuses, by row.
+
+  **The hook covers 1,278 rows, and choosing that was not a free call.** The full 22 refuse 266
+  of 1,279 (the Gordy hole, #16/#20); measured here, they featurise **1,013**. Without
+  `dev_Gordy_electonegativity` it is 1,278 — everything but `Eu1Ni5`. The hook drops that one
+  feature so it checks the file rather than three quarters of it, and says in its docstring
+  that this is a statement about the *check's* coverage and not a decision about the feature
+  set, which is #24/#25's. The rows it keeps are chosen by asking
+  `FeatureContract.computability`, using the idiom `featurize`'s own docstring documents, so the
+  refused row is named by the verdict and not by a list in a sentinel. A selection that came
+  back empty raises rather than asserting over nothing: a vacuous pass is the shape of the leak
+  this sentinel exists to catch. (by @assistant)
