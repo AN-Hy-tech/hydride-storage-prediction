@@ -50,6 +50,6 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
   it would void the artifact store (#4), collapse the fast/slow CI split (#6/#7), make versioned promotion and
   one-line rollback meaningless, and leave AC-4 (#33) with no fixed prediction to round-trip against. What
   persistence does **not** buy is a black box: `v1` is the source of truth for the *numbers*, but the pipeline
-  that produced it must stay runnable — which is exactly what AC-1 (#32) enforces. This decision is a candidate
-  for a sixth ADR under #36 (as hard to reverse and as re-litigable as the five already listed); flagged there,
-  not yet acted on, since #36 is blocked on this card. (by @assistant)
+  that produced it must stay runnable — which is exactly what AC-1 (#32) enforces. This decision is now ADR 6
+  under #36 (`0006-persist-artifacts-never-refit.md`); #36 stays blocked on this card, so the ADR is written once
+  `v1` is promoted, from the reasoning in this Narrative and #32's. (by @assistant)
