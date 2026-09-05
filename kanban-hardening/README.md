@@ -134,7 +134,7 @@ bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
 **Next session, in one paragraph.** Thirty-two cards are done and nothing is `doing`; the tree is
-clean, and #26 landed in `COMMITSHA` on `feat/phase-h-emergency-hardening`. Suite **901**
+clean, and #26 landed in `60e9db9` on `feat/phase-h-emergency-hardening`. Suite **901**
 green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
 `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
 **12 of 13** — **L11 is the only leak left**, deferred to #29 with its reason recorded. **The front
