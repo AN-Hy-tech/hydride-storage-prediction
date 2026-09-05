@@ -95,11 +95,17 @@ current performance.
 **Full inventory:** `ls .claude/skills/` (project) and `ls ~/.claude/skills/` (global). The table
 above covers the ones this project actually routes to; the rest are installed but idle here.
 
-**Caveat on `ml-model-training`.** Installed for Phase H and fine for model-fitting mechanics. It is
-**silent** on group-aware splitting, nested cross-validation, and early stopping on the scoring set,
-and its worked example is a plain `train_test_split` with no `random_state` and no grouping — which
-here would reintroduce leaks L4, L7 and L8. Authority row 4 applies: on any validation question the
-[research/](research/) memos and [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) win.
+**Caveat on the three ML skills — `ml-model-training`, `ml-fundamentals`, `ml-model-trainer`.**
+All three are installed and all three are fine for model-fitting *mechanics* and nothing more. Every
+one of them is **silent** on group-aware splitting, nested cross-validation, and early stopping on
+the scoring set. `ml-model-training`'s worked example is a plain `train_test_split` with no
+`random_state` and no grouping; `ml-fundamentals` offers `train_test_split(stratify=y)` and
+`cross_val_score(cv=5)`, and lists `GroupKFold` in a table without ever using it;
+`ml-model-trainer` is prose about "selecting a suitable algorithm" with no code at all. Following
+any of them here would reintroduce leaks L4, L7 and L8. Authority row 4 applies: on any validation
+question the [research/](research/) memos and [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md)
+win. Audited 2026-09-05 against the live pipeline — they raised **no finding this repository had not
+already guarded**, so treat them as a checklist to be exceeded, never as a source of method.
 
 **Caveat on `/ask-matt`.** It routes over a skill set this repo does not have: `/to-spec`,
 `/to-tickets`, `/implement`, `/tdd`, `/handoff`, `/wayfinder`, `/triage` and `/diagnosing-bugs` are

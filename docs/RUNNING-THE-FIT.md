@@ -4,7 +4,7 @@
 can open a terminal and run a command, and nothing else. Every step says what to type, what you
 should see, and what to do when you see something else.
 
-**What you are about to do.** Two commands. The first fits the model — about two hours. The second
+**What you are about to do.** Two commands. The first fits the model — about **1 h 40 m**, measured. The second
 puts a confidence interval around every number it produced — about a minute. Then you commit the
 result so the thesis can cite a file rather than a memory.
 
@@ -111,9 +111,18 @@ no fit has been measured on this machine: ...\model-fits.csv does not exist.
 **Read that first line.** 375 + 5 + 1 = **381 fits**. That is the whole job. The second line just
 says nobody has timed a fit on this machine yet — expected, and Step 3 fixes it.
 
-**How long will it actually take?** Measured on this machine at a reduced trial count: **17.8
-seconds a fit**, so 381 fits is roughly **1.9 hours**. (An older estimate of 3.5 h is still written
-in a few places; it predates the search-space narrowing in card #29 and is now too pessimistic.)
+**How long will it actually take?** **Measured, for real, on 2026-09-05: 1 h 41 m** (22:03:51 to
+23:44:46) for the full 25-trial run on this machine. The 3.5 h figure still written in a few places
+predates the search-space narrowing in card #29 and is now badly pessimistic.
+
+**Do not trust `--budget`'s own projection, though — it multiplies the wrong population.** It reads
+the mean of `model-fits.csv`, but that table holds only the **six scored fits** (five outer refits
+plus the deployed one), which train on the *full* fold and are the most expensive fits in the job.
+It then multiplies that mean by all 381. Neither correction is modelled: a tuning fit trains on an
+inner fold, and Optuna **pruned 2 to 19 of the 25 trials** in each outer fold on the real run. On
+2026-09-05 the mean scored fit was 22.6 s, so `--budget` would have projected ~2.4 h against an
+actual 1.6 h of tuning — an overestimate of about 45 %. Use it to sanity-check the *fit count*,
+which it gets exactly right; treat its hours as an upper bound.
 
 ---
 
@@ -168,7 +177,7 @@ No `--trials`, no `--report`. Defaults mean: the full 25 trials, writing to `rep
 
 ### Three things to expect, so you do not think it has hung
 
-1. **It prints one line and then goes quiet for nearly two hours.** After the
+1. **It prints one line and then goes quiet for about an hour and a half.** After the
    `1278 row(s) x 14 feature(s)` line there is *no output at all* until the cross-validation
    finishes. This is normal. It is a known rough edge, not a fault.
 2. **Leave the terminal open and do not background it.** A backgrounded `conda run` buffers its

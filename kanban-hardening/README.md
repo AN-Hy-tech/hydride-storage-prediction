@@ -136,22 +136,58 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-four cards are done and **#29's machinery has landed**:
-`hydms/surrogate/evaluate.py` exists, no fit re-reads `pipeline.yaml`, the search space is narrower
-by one measured bound, `Evaluation.out_of_fold` keeps the row-level predictions, and **HG-1 is
-13 of 13** — L11 was the last leak and `DEFERRED` is empty. **#29 stays `doing` because the numbers
-are owed, not the code**: the two commands in the handoff below are the maintainer's to run, once,
-and #34 promotes its artifact from that same run. Read the handoff for what changed and what not to
-undo. Standing facts that outlive this card: `CONTRACT` is the published 22 and AC-2's parity set
-while `SELECTED` is the 14 a model is fitted on and they are not interchangeable; `capacity_matrix()`
-is the one place the modelling matrix is built; `group_keys` is the one definition of "the same
-material"; `reports/model/` is versioned now and `git add -A` in it would commit a probe as a
-result; and **every number in this layer is still a probe number** — no full run has ever been made,
-which is the one thing #29 still exists to fix.
+**Next session, in one paragraph.** **#29 is done and the run has happened** — the first honest
+numbers this project has ever had are committed in `reports/model/`: **R2 0.7481 [0.6889, 0.7985]**
+wt% over 893 out-of-fold predictions in 780 canonical groups, against REPORT.md's published 0.892,
+with zero quantile crossings and the whole thing regenerable by `evaluate --emit` in a second. The
+fit took **1 h 41 m**, not the 3.5 h every older card says, because #29's own search-space narrowing
+removed the unconverged corner — re-measure before you quote a budget. **Do not run `train` again**:
+#34 promotes its artifact from *this* run, and a second fit means Chapter 1 describes a different
+model from the one that ships. Suite **1005** green in 12 min 07 s, ruff and mypy clean, gates exit
+0 with AC-2 and **HG-1 13/13**, board and freeze OK. The three gate cards **#31, #32 and #33 are
+what to do next** — they are small, already unblocked, need no new fit, and together they release
+#34; **#30** (leave-one-alloy-class-out) is also unblocked and heads the longer chain to lifting the
+freeze. Standing facts that outlive this card: `CONTRACT` is the published 22 and AC-2's parity set
+while `SELECTED` is the 14 a model is fitted on; `capacity_matrix()` is the one place the modelling
+matrix is built; `group_keys` is the one definition of "the same material"; `reports/model/` is
+versioned and still holds three untracked `conformal*.csv` probes, so **stage by name there,
+never `git add -A`**; and raw interval coverage is 0.629 against a nominal 0.8, which is the
+uncalibrated booster and is exactly what AC-3 (#31) exists to measure.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #29's machinery landed · written for the maintainer, and for #34
+### Handoff — 2026-09-06 (latest) · the run landed, #29 closed · written for #31/#32/#33, and for #34
+
+**What happened.** The maintainer ran the fit 2026-09-05 22:03:51 to 23:44:46 and this session drove
+Steps 5-8. `model-run.csv` says `probe=False`, 25 of 25 trials, screening on, 5x3 folds, `SELECTED`,
+seed 42. Eleven files committed by name in `reports/model/`; the three `conformal*.csv` probes were
+left untracked, which is the whole reason Step 7 stages a list.
+
+**The numbers, and how to quote them.** R2 **0.7481 [0.6889, 0.7985]**, RMSE 0.5616, MAE 0.3332,
+resampling **canonical compositions** — that is the interval to quote. Two others are published
+beside it so the choice can be checked: rows [0.6808, 0.7999] and per-fold [0.7085, 0.7918]. The
+per-fold one is the **narrowest and least trustworthy**, exactly as #29's Q5 box predicted, because
+the folds trained on 525-564 rows and part of what it prices is training size. #26's probe measured
+0.746 and the full run landed at 0.7481 — the probe was reading true, which vindicates that card's
+caution and is *not* licence to quote probes.
+
+**Two defects were found and one was fixed mid-run.** `describe_git` computed cleanliness over the
+whole tree, so the eight CSVs #29 un-ignored made `evaluate --emit` report a dirty tree *always* and
+`RUNNING-THE-FIT.md` Step 6 asked the operator to check for the opposite — unsatisfiable by
+construction. Fixed in `00bb16e`: `Git.dirty` is now `Git.code_modified`, `OUTPUT_PATHS` excludes
+`reports/` and `artifacts/` by git pathspec, the document reads `(code committed)`. **Do not add a
+second stamp in a caller** — `artifacts/store.py` reads the same field for #34's manifest. The
+second defect is still open and moved to **#34**: nothing records which commit a fit ran from, so
+this run fitted from `a101205` and stamps `5f696d9` (empty diff over every fitting path — checked,
+not assumed).
+
+**Do not re-run `train`.** #34 promotes from this run. Also: `--budget` over-projects by ~45 %
+because it multiplies the mean of the six *scored* fits by all 381 and models no pruning — boxed on
+#7.
+
+---
+
+### Handoff — 2026-09-05 · #29's machinery landed · written for the maintainer, and for #34
 
 **Where the phase is.** Thirty-four cards done. **#29 is still `doing`, and deliberately so:** every
 box on it but three is ticked, the machinery is committed, and what is owed is *the run*. Fast suite

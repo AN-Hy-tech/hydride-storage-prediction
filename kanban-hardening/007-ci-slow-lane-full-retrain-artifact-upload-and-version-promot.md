@@ -44,6 +44,21 @@ one-line change, not a retrain.
       `docs/ENVIRONMENT.md` puts a cold rebuild appreciably over its warm 7 minutes. A weekly
       schedule is the right cadence for that cost; a per-push one is not
 
+- [ ] **Budget this lane from a measured run, not from `--budget` (from #29's run, 2026-09-05).**
+      A full retrain is **1 h 41 m** on the maintainer's machine — measured end to end, 22:03:51 to
+      23:44:46, at the configured 25 trials. That is the number to size a CI timeout against, not
+      the 3.5 h still written in older card prose, which predates #29's search-space narrowing.
+
+      **And `train.py --budget` will over-project, so do not size the timeout with it.** It takes
+      the mean of `model-fits.csv` and multiplies by 381. But that table holds only the **six
+      scored fits** — five outer refits and the deployed one — which train on the full fold and are
+      the most expensive fits in the job; a tuning fit trains on an inner fold. Nor does it model
+      pruning, and Optuna pruned **2 to 19 of each fold's 25 trials** on the real run. Measured:
+      mean scored fit 22.6 s, so `--budget` projects ~2.4 h against 1.6 h of actual tuning, ~45 %
+      high. It gets the *fit count* exactly right; only its hours are wrong. Either widen what the
+      log records to include tuning fits, or have this lane read the wall time a previous run
+      actually took.
+
 ## Runnable check
 
 ```bash
