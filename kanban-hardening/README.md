@@ -155,7 +155,33 @@ and AC-2's parity set, `SELECTED` is the 14 a model is fitted on — and
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #27 closed · written for #28, and for #31
+### Handoff — 2026-09-05 (latest) · a training run died on a config it had not been started with
+
+**One paragraph.** A `conda run -n Project python -m hydms.surrogate.train --target capacity
+--trials 8` probe died on Optuna trial 3 with `ConfigError: pipeline.yaml:model: unknown key(s)
+['calibration_folds']`, and **no commit is broken** — HEAD loads that file cleanly
+(`Model(..., calibration_folds=5)`, `Conformal(confidence_level=0.8)`), so the first thing to do
+is simply run it again. What happened is that `hydms.config.load` is **uncached and re-parses the
+YAML on every call**, and `hydms.surrogate.model._columns` calls it through `load_config()` whenever
+`target_column` is `None` — the whole scoring path — so the running process kept re-reading the
+working tree while the #27 session was writing into it: Python had the *old* `Model` dataclass
+frozen in memory from import time, the file on disk was the *new* one, and trial 3 was the first
+read after the write. The measurement that makes this worth fixing rather than shrugging at is in
+**#34's boxes**: 210 re-reads in one sentinel-budget nested run of ~35 fits, 7.6 ms each, **21.6%
+of that run's wall time**, which scales to roughly **2,300 windows** across the configured
+381-fit, 3.5-hour run — a long run is not hermetic against its own configuration file, and it
+silently loses ~15 minutes of compute when one of those windows catches an edit. #34 owns the fix
+because #34 pays the bill: thread the target column into `ModelSettings` so `_columns` never falls
+back to disk, record the config the run actually used in the manifest (today `artifacts/store.py`
+records only `load_config().seed`), and guard it the way this project guards everything else — a
+test asserting `fit_quantile_model` reaches `hydms.config.load` zero times. Until that lands the
+operational rule is the one already in memory for this worktree: **do not edit `hydms/` or
+`pipeline.yaml` while a training run is in flight**, and prefer running a long fit from a clean
+checkout rather than the working tree two sessions are sharing.
+
+---
+
+### Handoff — 2026-09-05 · #27 closed · written for #28, and for #31
 
 **Where the phase is.** Thirty-three cards done. Suite **937** green, ruff and mypy clean,
 `check_board.py` and `check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0, AC-2 green at

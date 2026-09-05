@@ -54,6 +54,20 @@ that reason.
       be published beside the score: at `calibration_folds: 5` the deployed model grows on ~701
       rows where the cross-validation that estimated its performance fitted on folds cut from ~893.
       **Never store a pickled MAPIE object**; `conformal_from` refuses one and says why
+- [ ] **A run re-reads `pipeline.yaml` from disk while it is running, so an edit lands
+      mid-flight (measured 2026-09-05).** `hydms.config.load` is uncached and re-parses the file on
+      every call, and `hydms.surrogate.model._columns` calls it through `load_config()` whenever
+      `target_column` is `None` — which is the whole scoring path. Counted under `sentinel_settings()`:
+      **210 reads in one nested run** of ~35 fits, so about six a fit, at **7.6 ms each**; the
+      configured 381-fit run is therefore roughly **2,300 windows** in which a working-tree edit
+      changes what the run believes. It has already fired once: a `--trials 8` probe died on trial 3
+      with `unknown key(s) ['calibration_folds']` because #27 wrote the new YAML into the shared
+      worktree after the process had imported the old `Model` dataclass. **This card pays the
+      3.5-hour bill, so it owns the fix**: thread the target column into `ModelSettings` so
+      `_columns` never falls back to disk, and record the config the run actually used in the
+      manifest beside the git SHA and the seeds — `artifacts/store.py` records `load_config().seed`
+      today and nothing else about the file. A guard in the project's grain is a test asserting that
+      `fit_quantile_model` reaches `hydms.config.load` zero times
 - [ ] `current` points at `v1`
 
 ## Runnable check
@@ -68,4 +82,5 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
 
 ## Narrative
 
+- 2026-09-05: A `--trials 8` probe run died on trial 3 with `ConfigError: pipeline.yaml:model: unknown key(s) ['calibration_folds']`, and nothing was wrong with the code at any commit: the process had imported the pre-#27 `Model` dataclass and then re-read a post-#27 `pipeline.yaml` off the shared worktree. The interesting part is not the race but what it exposed — a run is not hermetic against its own configuration file. Measured while diagnosing it: one `load()` is 7.6 ms and a sentinel-budget nested run makes 210 of them, 21.6% of that run's wall time. At the configured budget that is ~2,300 re-reads spread over 3.5 hours. Recorded as a box above rather than fixed in place, because the fix changes what a published run records about itself and that is this card's subject. (by @assistant)
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
