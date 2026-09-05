@@ -23,6 +23,19 @@ and the artifact manifest's recorded seeds are decorative.
 - [ ] Pipeline run twice with the same seed produces identical metrics
 - [ ] Comparison is on the metrics table, not on model file bytes (which may differ)
 - [ ] Any nondeterministic step is identified and either seeded or documented as unavoidable
+- [ ] **Two runs on one machine hold `thread_count` constant, and that may not be the property
+      #34 needs (from the 2026-09-05 run).** `model.FIXED` pins `grow_policy`, `bootstrap_type`,
+      `task_type`, `verbose` and `allow_writing_files` — **not `thread_count`** — so CatBoost takes
+      all available cores. Under `Lossguide` with a Bayesian bootstrap that is not guaranteed
+      thread-invariant, and this gate's own home is #7's slow lane on `windows-latest`, which has a
+      different core count from the maintainer's machine.
+
+      This matters beyond the gate: #34 has an **open decision** on whether to promote a *refit* of
+      the deployed configuration rather than a persisted model, and this gate is what would license
+      it. Decide whether AC-1 must vary `thread_count` as well as repeat the seed, or whether
+      `thread_count` simply joins `FIXED` and the question goes away. See the 2026-09-06 handoff in
+      [README.md](README.md).
+
 - [ ] Registered as `AC-1` and run by the CI slow lane
 
 ## Runnable check

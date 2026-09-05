@@ -144,10 +144,12 @@ fit took **1 h 41 m**, not the 3.5 h every older card says, because #29's own se
 removed the unconverged corner — re-measure before you quote a budget. **Do not run `train` again**:
 #34 promotes its artifact from *this* run, and a second fit means Chapter 1 describes a different
 model from the one that ships. Suite **1005** green in 12 min 07 s, ruff and mypy clean, gates exit
-0 with AC-2 and **HG-1 13/13**, board and freeze OK. The three gate cards **#31, #32 and #33 are
-what to do next** — they are small, already unblocked, need no new fit, and together they release
-#34; **#30** (leave-one-alloy-class-out) is also unblocked and heads the longer chain to lifting the
-freeze. Standing facts that outlive this card: `CONTRACT` is the published 22 and AC-2's parity set
+0 with AC-2 and **HG-1 13/13**, board and freeze OK. **Your first move is a decision, not a card: persist versus
+refit.** The run wrote eight tables and **zero models** — `train.py` never saves the fitted booster
+— so #34's stated premise, "this card promotes *that* run", cannot be executed as written, and
+#31 and #33 need a fitted model too. The decision and its evidence are in the handoff below; it is
+**deliberately left open**. Settle it first, then #32, #31, #33 and #34 in that order; **#30**
+(leave-one-alloy-class-out) is independent and can run alongside any of it. Standing facts that outlive this card: `CONTRACT` is the published 22 and AC-2's parity set
 while `SELECTED` is the 14 a model is fitted on; `capacity_matrix()` is the one place the modelling
 matrix is built; `group_keys` is the one definition of "the same material"; `reports/model/` is
 versioned and still holds three untracked `conformal*.csv` probes, so **stage by name there,
@@ -156,7 +158,56 @@ uncalibrated booster and is exactly what AC-3 (#31) exists to measure.
 
 ---
 
-### Handoff — 2026-09-06 (latest) · the run landed, #29 closed · written for #31/#32/#33, and for #34
+### Handoff — 2026-09-06 (latest) · OPEN DECISION: persist versus refit · written for whoever picks this up
+
+**Read this before opening a card.** It is not a recommendation. It was found at the end of the
+session that ran the fit, and deliberately left undecided rather than settled by a tired session.
+
+**The finding.** `hydms/surrogate/train.py` **persists no model.** `final_fit` is called, handed to
+SHAP and PDP, and dropped; grep the file for `joblib`, `dump` or `save` and the only hits are
+argparse's `store_true`. So the 2026-09-05 run produced eight tables and nothing loadable. Three
+cards need a fitted model and none of them owns creating one:
+
+- **#34** says "this card promotes *that* run (decided 2026-09-05, #29 Q12)". There is nothing to
+  promote. Its premise is broken as written.
+- **#31** (AC-3) measures coverage on the held-out test set.
+- **#33** (AC-4) round-trips through `predict()`, which needs `load_surrogate` over a version dir.
+
+**The decision.** How does #34 get a model?
+
+- **A — refit the deployed configuration.** Everything needed is committed: `model-chosen.csv` gives
+  outer-0's params (the deployed choice, inner objective 0.11850), and `model-fits.csv` clocks that
+  final fit at **32.979 s**. Cheap, and it needs no second search.
+- **B — add persistence to `train.py` and re-run.** **1 h 41 m**, and the promoted model is then
+  literally the one that produced the numbers.
+- **C — some hybrid**, e.g. refit but gate promotion on a proof of equality.
+
+**What the decision actually turns on, measured rather than argued:**
+
+1. **The out-of-fold numbers are not at risk either way.** R2 0.7481 and everything in
+   `evaluation-metrics.csv` came from the **five outer-fold models**, none of which is the deployed
+   fit. A refit cannot invalidate them.
+2. **`model-shap.csv` and `model-pdp.csv` are the real stake.** Those *were* computed on the
+   deployed fit. If a refit lands on a different model, the committed explainability tables no
+   longer describe the shipped one — and REPORT.md section 6.1 being a test-set artefact (leak L11)
+   is precisely the kind of mismatch this phase exists to remove.
+3. **The fit is seeded but not thread-pinned.** `random_seed` is `settings.seed`, the stopping slice
+   is seeded, the Optuna sampler is seeded — but `model.FIXED` pins only `grow_policy`,
+   `bootstrap_type`, `task_type`, `verbose` and `allow_writing_files`. **There is no
+   `thread_count`.** CatBoost under `Lossguide` with a Bayesian bootstrap is not guaranteed
+   thread-invariant, and #7's slow lane runs on `windows-latest`, which does not have this machine's
+   core count.
+4. **So #32 as written may not be a sufficient licence for A.** "Pipeline run twice with the same
+   seed produces identical metrics" holds thread count constant if both runs are on one machine.
+   Whoever settles this should decide whether AC-1 must also vary `thread_count`, or whether
+   `thread_count` simply joins `FIXED`.
+
+**Do not run `train` again while settling this.** If the answer is B, that is a deliberate 1 h 41 m
+spend, not an accident.
+
+---
+
+### Handoff — 2026-09-06 · the run landed, #29 closed · written for #31/#32/#33, and for #34
 
 **What happened.** The maintainer ran the fit 2026-09-05 22:03:51 to 23:44:46 and this session drove
 Steps 5-8. `model-run.csv` says `probe=False`, 25 of 25 trials, screening on, 5x3 folds, `SELECTED`,

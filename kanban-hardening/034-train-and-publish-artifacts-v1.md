@@ -31,6 +31,26 @@ that reason.
       stated ground that it "pays the 3.5-hour bill". They are struck through below rather than
       deleted, so the reasoning stays legible
 
+- [ ] **OPEN DECISION — this card's premise is broken: the run persisted no model
+      (found 2026-09-05, after the fit).** The box above says this card "promotes *that* run".
+      `train.py` **saves nothing** — `final_fit` is handed to SHAP and PDP and dropped; the only
+      `store` hits in that file are argparse's `store_true`. So there is no model on disk to
+      promote, and #31 and #33 need one too.
+
+      **Left open on purpose, for a session that is not the one that just ran the fit.** Options:
+      **(A)** refit outer-0's configuration from `model-chosen.csv` — 32.979 s per `model-fits.csv`,
+      no second search needed; **(B)** add persistence to `train.py` and re-run, 1 h 41 m, so the
+      promoted model is literally the one that made the numbers; **(C)** a hybrid that refits but
+      gates promotion on proven equality.
+
+      **What it turns on.** The out-of-fold numbers are safe either way — they came from the five
+      outer-fold models, not the deployed fit. **`model-shap.csv` and `model-pdp.csv` are the
+      stake**: those were computed on the deployed fit, so a refit that lands elsewhere leaves the
+      committed explainability tables describing a model nobody ships — the same class of mismatch
+      as leak L11. And the fit is seeded (`random_seed`, the stopping slice, the Optuna sampler)
+      but **`model.FIXED` pins no `thread_count`**, while #7's slow lane runs on `windows-latest`.
+      See the 2026-09-06 handoff in [README.md](README.md) for the full framing.
+
 - [ ] Full pipeline run from `data/raw/` produces `artifacts/v1/`
 - [ ] Manifest complete: git SHA, seeds, package versions, feature contract, gate results
 - [ ] All Phase 1 gates pass and are recorded in the manifest
