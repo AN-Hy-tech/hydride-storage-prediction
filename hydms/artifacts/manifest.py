@@ -9,7 +9,7 @@ model whose feature order is unknown returns plausible, wrong numbers rather tha
 So a version directory carries a ``manifest.json`` recording five things, one per line of card
 #4's contract:
 
-  - the **git SHA** the run was made from, and whether the tree was dirty at the time;
+  - the **git SHA** the run was made from, and whether its code was modified at the time;
   - **every seed** the run used;
   - the **resolved versions** of the packages that determine a fitted model;
   - the **feature contract** -- names, order and dtype, with the digest that refuses an edit;
@@ -45,6 +45,7 @@ from typing import Any, Final
 
 __all__ = [
     "GATE_SCHEMA",
+    "OUTPUT_PATHS",
     "RECORDED_PACKAGES",
     "SCHEMA",
     "ArtifactError",
@@ -107,19 +108,45 @@ class ManifestError(ArtifactError, ValueError):
 # --------------------------------------------------------------------------------------
 
 
+#: Directories whose contents are a run's **output**, not the code that produced it, and which
+#: are therefore excluded from :attr:`Git.code_modified`.
+#:
+#: **This exists because a run dirties its own provenance stamp.** ``reports/model/`` is
+#: un-ignored (``.gitignore``'s ``!/reports/model/``, card #29) precisely so that the tables a
+#: run publishes are versioned with the code. The consequence nobody costed: the eight CSVs
+#: ``hydms.surrogate.train`` writes are then **untracked**, so ``git status --porcelain`` is
+#: non-empty for the rest of the session — and ``hydms.surrogate.evaluate --emit``, which reads
+#: this field *after* the run, could never report anything but a modified tree.
+#: ``docs/RUNNING-THE-FIT.md`` Step 6 asked an operator to check for the opposite, and the check
+#: was unsatisfiable by construction.
+#:
+#: **Named, never pattern-matched.** A blanket "ignore anything that looks like output" rule is
+#: how an actual uncommitted source edit eventually gets excused. These two directories are the
+#: two this project writes into, and adding a third is meant to be a visible diff.
+OUTPUT_PATHS: Final[tuple[str, ...]] = ("reports", "artifacts")
+
+
 @dataclass(frozen=True)
 class Git:
     """Where the code was when the artifact was made.
 
-    ``dirty`` is recorded because it is the difference between "this SHA reproduces the run" and
-    "this SHA plus some uncommitted edits nobody kept". Every field is optional: an installed
-    package in a container has no work tree, and refusing to save an artifact for that reason
-    would be worse than recording honestly that the provenance is unknown.
+    ``code_modified`` is recorded because it is the difference between "this SHA reproduces the
+    run" and "this SHA plus some uncommitted edits nobody kept". Every field is optional: an
+    installed package in a container has no work tree, and refusing to save an artifact for that
+    reason would be worse than recording honestly that the provenance is unknown.
+
+    **It is a claim about the code, not about the filesystem, and the name says so.** The field
+    was once called ``dirty`` and computed as ``bool(git status --porcelain)`` over the whole
+    tree, which answers *"did git report anything?"* -- a question no caller asks. What every
+    caller asks is *"can this output be tied to the code that produced it?"*, and a run's own
+    results are not code: see :data:`OUTPUT_PATHS` for what that cost. Renamed rather than
+    quietly redefined, because a reader who diffs ``git status``, sees output, and finds the
+    stamp claiming otherwise would be right to distrust it.
     """
 
     sha: str | None = None
     branch: str | None = None
-    dirty: bool | None = None
+    code_modified: bool | None = None
     detail: str = ""
 
     @property
@@ -130,7 +157,7 @@ class Git:
         return {
             "sha": self.sha,
             "branch": self.branch,
-            "dirty": self.dirty,
+            "code_modified": self.code_modified,
             "detail": self.detail,
         }
 
@@ -139,7 +166,7 @@ class Git:
         return cls(
             sha=payload.get("sha"),
             branch=payload.get("branch"),
-            dirty=payload.get("dirty"),
+            code_modified=payload.get("code_modified"),
             detail=str(payload.get("detail", "")),
         )
 
@@ -169,19 +196,29 @@ def _git(root: Path, *args: str) -> str | None:
 
 
 def describe_git(root: Path) -> Git:
-    """Read the current commit, branch and cleanliness of the work tree at ``root``."""
+    """Read the current commit and branch at ``root``, and whether its **code** is modified.
+
+    The status query excludes :data:`OUTPUT_PATHS`, so a run that has just written its own
+    tables does not thereby report that the code producing them was uncommitted. The exclusion
+    is done with git pathspecs rather than by filtering the output here: porcelain collapses an
+    untracked directory to a single line (``?? reports/model/``) and spells renames
+    ``R  old -> new``, so re-parsing it in Python would be a second, worse implementation of
+    something git already does exactly.
+    """
     sha = _git(root, "rev-parse", "HEAD")
     if sha is None:
         return Git(detail=f"git reported nothing for {root}: not a work tree, or git is absent")
 
     branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
-    status = _git(root, "status", "--porcelain")
+    # With no positive pathspec, git matches everything and then subtracts these.
+    excluded = [f":(exclude,top){name}" for name in OUTPUT_PATHS]
+    status = _git(root, "status", "--porcelain", "--", *excluded)
     return Git(
         sha=sha,
         branch=branch or None,
-        # `status` is "" for a clean tree and None only when the call itself failed, so the
-        # two cases must not be collapsed: an unknown cleanliness is not a clean one.
-        dirty=None if status is None else bool(status),
+        # `status` is "" for unmodified code and None only when the call itself failed, so the
+        # two cases must not be collapsed: an unknown state is not an unmodified one.
+        code_modified=None if status is None else bool(status),
         detail="" if status is not None else "git status could not be read",
     )
 

@@ -63,26 +63,32 @@ nothing below will work, and the fix is in [ENVIRONMENT.md](ENVIRONMENT.md), not
 git status --short
 ```
 
-You want **no output at all**. Not even a `??` line.
+You want **no source file listed** — no `hydms/`, `tests/`, `docs/` or `scripts/` line.
 
-**Why this matters and is not just tidiness.** The tables the run writes get stamped with the
-current git commit, so a reader can tie a number back to the code that produced it. If the tree is
-dirty, that stamp reads `working tree dirty` and the number is tied to nothing in particular.
+**Why this matters and is not just tidiness.** The document the run produces gets stamped with the
+current git commit, so a reader can tie a number back to the code that produced it. If the code is
+uncommitted, that stamp reads `uncommitted changes to code` and the number is tied to nothing in
+particular.
 
-**`?? reports/model/` counts as dirty, and it is the one you will actually see.** The stamp is
-computed from `git status --porcelain`, which lists **untracked** files too — so three leftover CSVs
-in that directory are enough to mark the run's own document dirty. That directory holds local probe
-output from card #27's calibration runs, written before it was un-ignored. Those are cost-check
-numbers, not results, and they must not be committed. Delete them:
+**`?? reports/model/` is fine, and you should expect to see it.** The stamp is computed from
+`git status --porcelain`, which lists untracked files too — but it now excludes `reports/` and
+`artifacts/`, because a run's own output is not the code that produced it
+(`hydms.artifacts.manifest.OUTPUT_PATHS`). Before that exclusion existed, the eight CSVs Step 4
+writes into that un-ignored directory marked the run's *own* document as uncommitted, and the check
+in Step 6 could never pass.
+
+You may still want to clear the directory first, for a different reason: it holds local probe output
+from card #27's calibration runs. Those are cost-check numbers, not results, and they must not be
+committed at Step 7 — where you stage by name precisely so they aren't.
 
 ```powershell
 Remove-Item -Recurse -Force .\reports\model
 ```
 
 Nothing is lost: `python -m hydms.surrogate.calibrate` regenerates them, and the run in Step 4
-recreates the directory. Then check again — `git status --short` should print nothing.
+recreates the directory.
 
-If you have other uncommitted work, commit or stash it before the run.
+If you have uncommitted work **under a source directory**, commit or stash it before the run.
 
 ---
 
@@ -251,10 +257,12 @@ code .\reports\model\evaluation.md
 Check four things:
 
 1. **No warning banner at the top.** A banner means a probe produced it (see Step 5).
-2. **`- Code:` shows a commit hash and `(clean tree)`**, not `(working tree dirty)`. If it says
-   dirty, something was uncommitted or untracked when the run started — most often leftover
-   files under `reports/model/`, which is why Step 1 clears it. The numbers are still valid;
-   what you lose is the ability to say exactly which code produced them.
+2. **`- Code:` shows a commit hash and `(code committed)`**, not `(uncommitted changes to code)`.
+   If it says uncommitted, a **source** file was modified when the run started. The run's own
+   output under `reports/` and `artifacts/` does *not* count and never did mean this — that was
+   the defect card #29 found mid-run on 2026-09-05, when the check could not be satisfied at all.
+   The numbers are still valid; what you lose is the ability to say exactly which code produced
+   them.
 3. **`- Run: full — 25 trial(s), screening on`**.
 4. **The headline R² is lower than `REPORT.md`'s published 0.892.** This is the **expected result,
    not a failure.** The published number came from a pipeline with thirteen validation leaks; the

@@ -181,7 +181,7 @@ intervals alongside point estimates by default — not as an option.
       never `git add -A` there, since the directory also holds #27's local probe CSVs — and #34
       promotes the artifact **from that same run**. Do not run `train` twice: one run is the whole
       reason this card took the bill off #34.
-- [ ] **The `(clean tree)` check cannot pass, and the defect is in this card's own emit step
+- [x] **The `(clean tree)` check cannot pass, and the defect is in this card's own emit step
       (found 2026-09-05 22:30, mid-run, by an audit session).** `RUNNING-THE-FIT.md` Step 6 check 2
       says the document must read `- Code: \`<sha>\` (clean tree)`, and Step 1 clears
       `reports/model/` so that it will. **But Step 4 then writes eight CSVs back into that
@@ -199,10 +199,29 @@ intervals alongside point estimates by default — not as an option.
 
       The fix is a naming question before it is a code change: `dirty` currently answers *"did git
       report anything?"* when every caller asks *"can this output be tied to the code that produced
-      it?"* — and the knowledge that a run's own results are not code lives only in `.gitignore` and
-      in runbook prose, which is what this card already said prose is for losing. Being planned
-      under `/grill-with-docs`; do not patch `describe_git`'s call site in `evaluate.py` to paper
-      over it, because `hydms.artifacts.store` stamps the same field into #34's manifest.
+      it?"* — and the knowledge that a run's own results are not code lived only in `.gitignore` and
+      in runbook prose, which is what this card already said prose is for losing.
+
+      **Fixed the same session, under `/grill-with-docs`.** Four decisions, in order:
+      **(1)** the exclusion lives *inside* `describe_git`, not as an `ignoring=` parameter and not
+      as a second stamp computed in `evaluate.py` — a parameter is a decision declined and pushed
+      onto every caller, and a second implementation would drift from `hydms.artifacts.store:490`,
+      which stamps the same field into #34's manifest. **(2)** The field is **renamed**
+      `dirty` → `code_modified`, and the document now reads `(code committed)` /
+      `(uncommitted changes to code)`. Keeping the word "tree" while redefining it is the
+      back-door leak: a reader who diffs `git status`, sees output and finds the stamp claiming
+      otherwise would be right to distrust it. **(3)** `OUTPUT_PATHS = ("reports", "artifacts")`
+      is **named, never pattern-matched** — a blanket "looks like output" rule is how a real
+      uncommitted source edit eventually gets excused. **(4)** Landed *during* the run rather than
+      after, because it touches no fitting code and a document regenerated later would disagree
+      with the SHA stamped inside it.
+
+      The exclusion is a git pathspec (`:(exclude,top)`), not Python filtering of porcelain:
+      porcelain collapses an untracked directory to one line and spells renames `R old -> new`,
+      so re-parsing it here would be a second, worse implementation of something git does exactly.
+      `tests/artifacts/test_manifest.py::test_a_run_writing_its_own_output_does_not_report_modified_code`
+      builds a real repository, writes into both output directories, and asserts both halves —
+      output does not count, **and a genuine source edit still does**.
 - [ ] **Boxed, not chased (Q8): the canonical count is off by one against a stated invariant.**
       CLAUDE.md says 1,149 formula strings collapse to **1,115** canonical compositions; the
       modelling matrix measures **1,114** groups over 1,278 rows. The populations genuinely differ

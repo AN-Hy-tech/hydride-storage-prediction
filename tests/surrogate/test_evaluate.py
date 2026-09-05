@@ -506,7 +506,7 @@ def test_the_document_leads_with_a_warning_unless_the_run_was_full() -> None:
         subgroups = subgroup_table(
             table, config=cfg, quantiles=QUANTILES, seed=cfg.seed, resamples=50, run=run
         )
-        document = to_markdown(metrics, subgroups, sha="abc", dirty=False, dated=dated)
+        document = to_markdown(metrics, subgroups, sha="abc", code_modified=False, dated=dated)
         assert (document.startswith("# Model evaluation")) is True
         banner = "not a result" in document.split("## What these numbers")[0]
         assert banner is warned, f"{run!r} should {'' if warned else 'not '}raise the banner"
@@ -530,8 +530,8 @@ def test_the_write_up_is_generated_and_therefore_reproducible() -> None:
         table, config=cfg, quantiles=QUANTILES, seed=cfg.seed, resamples=CHEAP
     )
     dated = datetime(2026, 9, 5, tzinfo=timezone.utc)
-    first = to_markdown(metrics, subgroups, sha="abc123def456", dirty=False, dated=dated)
-    second = to_markdown(metrics, subgroups, sha="abc123def456", dirty=False, dated=dated)
+    first = to_markdown(metrics, subgroups, sha="abc123def456", code_modified=False, dated=dated)
+    second = to_markdown(metrics, subgroups, sha="abc123def456", code_modified=False, dated=dated)
     assert first == second
     assert "abc123def456" in first
-    assert "clean tree" in first
+    assert "(code committed)" in first

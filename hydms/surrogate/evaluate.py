@@ -899,7 +899,7 @@ def to_markdown(
     subgroups: pd.DataFrame,
     *,
     sha: str | None,
-    dirty: bool | None,
+    code_modified: bool | None,
     dated: datetime,
 ) -> str:
     """The published write-up, generated from the tables and from nothing else.
@@ -934,7 +934,14 @@ def to_markdown(
         )
         lines.append("")
     stamp = sha[:12] if sha else "unknown"
-    state = "" if dirty is None else (" (working tree dirty)" if dirty else " (clean tree)")
+    # "code committed", not "clean tree": this run has just written eight CSVs into the
+    # un-ignored `reports/model/`, so the *tree* is never clean by the time this line is
+    # generated. `hydms.artifacts.manifest.OUTPUT_PATHS` is where that distinction lives.
+    state = (
+        ""
+        if code_modified is None
+        else (" (uncommitted changes to code)" if code_modified else " (code committed)")
+    )
     lines.append(f"- Run: {run}")
     lines.append(f"- Code: `{stamp}`{state}")
     lines.append(f"- Generated: {dated:%Y-%m-%d}")
@@ -1177,7 +1184,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
                     metrics,
                     subgroups,
                     sha=git.sha,
-                    dirty=git.dirty,
+                    code_modified=git.code_modified,
                     dated=datetime.now(timezone.utc),
                 ),
                 encoding="utf-8",

@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 from hydms.artifacts.manifest import (
     GATE_SCHEMA,
+    OUTPUT_PATHS,
     RECORDED_PACKAGES,
     SCHEMA,
     Git,
@@ -66,7 +67,7 @@ def manifest() -> Manifest:
     return Manifest(
         version="v1",
         created_at=now(),
-        git=Git(sha="0" * 40, branch="feat/phase-h", dirty=False),
+        git=Git(sha="0" * 40, branch="feat/phase-h", code_modified=False),
         seeds={"pipeline": 42},
         packages={"numpy": "1.26.4", "mapie": None},
         python=python_version,
@@ -93,7 +94,7 @@ def test_the_manifest_round_trips_through_json(manifest: Manifest) -> None:
 def test_the_round_trip_preserves_every_recorded_fact(manifest: Manifest) -> None:
     restored = Manifest.from_dict(json.loads(json.dumps(manifest.to_dict())))
     assert restored.git.sha == "0" * 40
-    assert restored.git.dirty is False
+    assert restored.git.code_modified is False
     assert restored.seeds == {"pipeline": 42}
     # `null` is a recorded absence, not a missing key: reading an old manifest must be able to
     # tell "mapie was not installed" from "this store did not yet record mapie".
@@ -214,7 +215,7 @@ def test_git_provenance_is_read_from_this_checkout(repo_root: Path) -> None:
     git = describe_git(repo_root)
     assert git.known
     assert git.sha is not None and re.fullmatch(r"[0-9a-f]{40}", git.sha)
-    assert git.dirty in (True, False)
+    assert git.code_modified in (True, False)
 
 
 def test_git_provenance_outside_a_repository_is_unknown_not_fatal(tmp_path: Path) -> None:
@@ -224,15 +225,54 @@ def test_git_provenance_outside_a_repository_is_unknown_not_fatal(tmp_path: Path
     if git.known:  # pragma: no cover - only if pytest's tmp dir sits inside a repository
         pytest.skip(f"{tmp_path} is inside a git work tree")
     assert git.sha is None
-    assert git.dirty is None
+    assert git.code_modified is None
     assert "not a work tree" in git.detail
+
+
+def test_a_run_writing_its_own_output_does_not_report_modified_code(tmp_path: Path) -> None:
+    """The defect this field was renamed for: a run dirties its own provenance stamp.
+
+    `reports/model/` is un-ignored on purpose (card #29), so the eight CSVs
+    `hydms.surrogate.train` writes are untracked and `git status --porcelain` is non-empty for
+    the rest of the session. `hydms.surrogate.evaluate --emit` reads this field *after* the run,
+    so before `OUTPUT_PATHS` existed it could never report anything but a modified tree -- and
+    `docs/RUNNING-THE-FIT.md` Step 6 asked an operator to check for the opposite.
+
+    A real repository rather than a mock, because what is being tested is a git pathspec: a fake
+    would assert our idea of `:(exclude,top)` rather than git's.
+    """
+    def run(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, capture_output=True, check=True)
+
+    if subprocess.run(["git", "--version"], capture_output=True, check=False).returncode != 0:
+        pytest.skip("git is absent")  # pragma: no cover
+
+    run("init", "-q")
+    run("config", "user.email", "test@example.invalid")
+    run("config", "user.name", "Test")
+    (tmp_path / "code.py").write_text("x = 1\n", encoding="utf-8")
+    run("add", "code.py")
+    run("commit", "-qm", "one")
+    assert describe_git(tmp_path).code_modified is False
+
+    for name in OUTPUT_PATHS:
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "table.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+    assert describe_git(tmp_path).code_modified is False, (
+        "a run's own output must not be reported as a modification to its code"
+    )
+
+    # And the exclusion is not a blanket amnesty: a real source edit still shows.
+    (tmp_path / "code.py").write_text("x = 2\n", encoding="utf-8")
+    assert describe_git(tmp_path).code_modified is True
 
 
 def test_an_unknown_cleanliness_is_not_a_clean_one() -> None:
     """`git status` returns "" for a clean tree and the call returns None when it failed. The
-    two must not collapse: `dirty=False` is a claim, `dirty=None` is the absence of one."""
-    assert Git(sha="a" * 40, dirty=None).dirty is None
-    assert Git(sha="a" * 40, dirty=False).dirty is False
+    two must not collapse: `code_modified=False` is a claim, `code_modified=None` is the
+    absence of one."""
+    assert Git(sha="a" * 40, code_modified=None).code_modified is None
+    assert Git(sha="a" * 40, code_modified=False).code_modified is False
 
 
 def test_every_recorded_package_is_reported_present_or_absent() -> None:
