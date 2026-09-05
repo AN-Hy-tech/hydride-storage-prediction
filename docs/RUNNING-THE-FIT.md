@@ -63,12 +63,26 @@ nothing below will work, and the fix is in [ENVIRONMENT.md](ENVIRONMENT.md), not
 git status --short
 ```
 
+You want **no output at all**. Not even a `??` line.
+
 **Why this matters and is not just tidiness.** The tables the run writes get stamped with the
 current git commit, so a reader can tie a number back to the code that produced it. If the tree is
-dirty, that stamp says `working tree dirty` and the number is tied to nothing.
+dirty, that stamp reads `working tree dirty` and the number is tied to nothing in particular.
 
-If you have uncommitted work, commit it (or stash it) before the run. `reports/model/` showing as
-untracked is expected and fine — that is where the output will go.
+**`?? reports/model/` counts as dirty, and it is the one you will actually see.** The stamp is
+computed from `git status --porcelain`, which lists **untracked** files too — so three leftover CSVs
+in that directory are enough to mark the run's own document dirty. That directory holds local probe
+output from card #27's calibration runs, written before it was un-ignored. Those are cost-check
+numbers, not results, and they must not be committed. Delete them:
+
+```powershell
+Remove-Item -Recurse -Force .\reports\model
+```
+
+Nothing is lost: `python -m hydms.surrogate.calibrate` regenerates them, and the run in Step 4
+recreates the directory. Then check again — `git status --short` should print nothing.
+
+If you have other uncommitted work, commit or stash it before the run.
 
 ---
 
@@ -237,7 +251,10 @@ code .\reports\model\evaluation.md
 Check four things:
 
 1. **No warning banner at the top.** A banner means a probe produced it (see Step 5).
-2. **`- Code:` shows a commit hash and `(clean tree)`**, not `(working tree dirty)`.
+2. **`- Code:` shows a commit hash and `(clean tree)`**, not `(working tree dirty)`. If it says
+   dirty, something was uncommitted or untracked when the run started — most often leftover
+   files under `reports/model/`, which is why Step 1 clears it. The numbers are still valid;
+   what you lose is the ability to say exactly which code produced them.
 3. **`- Run: full — 25 trial(s), screening on`**.
 4. **The headline R² is lower than `REPORT.md`'s published 0.892.** This is the **expected result,
    not a failure.** The published number came from a pipeline with thirteen validation leaks; the
