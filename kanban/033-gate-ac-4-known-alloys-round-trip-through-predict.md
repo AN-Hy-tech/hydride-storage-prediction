@@ -41,3 +41,7 @@ python -m hydms.gates run AC-4
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+- 2026-09-05: This gate is the runtime guard for the persist-vs-refit decision (record on #34): a consumer that
+  silently refit the scaler on candidate rows instead of loading the frozen one would drift the round-tripped
+  predictions and fail here — with no error raised anywhere else. Persist is the design; this is what proves the
+  design held at the seam. (by @assistant)
