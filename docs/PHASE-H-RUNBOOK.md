@@ -645,7 +645,23 @@ could mean anything. See below.
       comparing them on test is leak L2 in a new place — so the one-sided miscoverage is a model-card
       diagnostic and is not acted on. MAPIE **1.5.0** is installed in `Project` and pinned; CI now
       installs `.[dev,uq]` so the parity and ordering tests cannot silently `importorskip` away.
-- [ ] **#28** `predict()` — the surrogate's public interface.
+- [x] **#28** `predict()` — the surrogate's public interface. `hydms/surrogate/predict.py`:
+      `predict(formulas, temperatures)` → `[q0.1, q0.5, q0.9, lcb, interval_width]` in weight
+      percent, over a `Surrogate` that `load_surrogate()` pins to one gate-checked artifact
+      version. **(a) The heads keep `column_names`' spelling**, not the card's `p10/p50/p90`:
+      `model.quantiles` is configuration, and `column_names` is the project's single place where a
+      CatBoost column position becomes a name — the practical payoff is that `quantile_metrics`
+      scores this frame unchanged, which is what #29 needs. **(b) `lcb` is read off
+      `conformal.lower`**, not off column 0, so it is the bound the calibration actually targeted.
+      **(c) `interval_width` is not the stored constant doubled** — the correction is constant in
+      `log1p` space and `expm1` is convex, so three candidates at 250/400/600 K return three
+      distinct widths. **(d) The scaler is never applied, and that is measured**: a second version
+      stores a scaler that raises on `transform`, the test arms the trap and then demands identical
+      numbers. Its consumer is #48's distance-based AD, not this path. **(e) The gate check is
+      never relaxed** — `require_gates=False` is not forwarded and has no equivalent, which is
+      strictly stronger than the promotion pointer, since `promote()` already refuses incomplete
+      gates. **(f) `MODEL_PAYLOAD` and `model_from` were owed** and now sit beside `QuantileModel`,
+      completing the `scaler_from` / `conformal_from` trio.
 - [ ] **#29** Evaluation metrics with bootstrap CIs. SHAP/PDP on **train or a dedicated split, never
       test** (L11).
 - [ ] **#30 (AC-6)** Leave-one-alloy-class-out CV. Unblocked only because #87 restored `Alloy_class`.

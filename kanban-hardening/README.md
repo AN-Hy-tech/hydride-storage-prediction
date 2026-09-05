@@ -133,29 +133,110 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-three cards are done and nothing is `doing`; the tree is
-clean, #27 landed in `6e93b72` on `feat/phase-h-emergency-hardening`, and the suite is **937** green. `python -m hydms.gates run --fast` exits 0 with AC-2 green at
-2.7285e-12 and HG-1 `SKIPPED` at **12 of 13** — **L11 is the only leak left**, deferred to #29.
-**The front is #28**, the surrogate's public `predict()`, whose only blocker was #27. #27 landed:
-`hydms/surrogate/conformal.py` calibrates a fitted model's band with MAPIE's CQR in `prefit` mode
-and **stores one float**, not a calibrator — `FittedConformal.apply(heads)` widens the outer heads
-in model space and returns the same columns, `calibrated_heads(model, X, conformal=...)` gives the
-same thing in weight percent, and `CONFORMAL_PAYLOAD` / `conformal_from` is the artifact contract
-#34 will write. **MAPIE is a fit-time dependency**: it is imported lazily inside the fit and a
-subprocess test asserts the prediction path never reaches it, so #28 must not import it either.
-Two numbers to carry: the correction is **+0.030990** in model space, and the raw band covered
-**0.6628** of the calibration rows against nominal 0.80 — independently reproducing #26's 0.644 on
-a different partition. `conformal.confidence_level` is now **0.80** and `hydms.config._validate`
-refuses a file where the level and `model.quantiles` disagree; **MAPIE does not check its own
-prefit contract**, so that check is the only thing standing between a wrong band and a green AC-3.
-**#15, #32 and #49 remain unblocked**; #15 is still owed a re-measure now that screening flags rows
-for real. The two feature contracts still are not interchangeable — `CONTRACT` is the published 22
-and AC-2's parity set, `SELECTED` is the 14 a model is fitted on — and
-`hydms.surrogate.model.capacity_matrix()` is the one place that builds the modelling matrix.
+**Next session, in one paragraph.** Thirty-four cards are done and nothing is `doing`; the tree is
+clean, #28 landed on `feat/phase-h-emergency-hardening`, and the fast suite is **960** green (936
+before it). `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1
+`SKIPPED` at **12 of 13** — **L11 is the only leak left**, deferred to #29, and #28 owed no
+sentinel. **The front is #29**, evaluation metrics with bootstrap confidence intervals, whose only
+blocker was #28; it is also the card that owes L11's sentinel and carries #26's `rows_fitted` /
+`rows_scored` box. #28 landed the layer's public face: `hydms.surrogate.predict.predict(formulas,
+temperatures)` returns `[q0.1, q0.5, q0.9, lcb, interval_width]` in weight percent over a
+`Surrogate` that `load_surrogate()` pins to one gate-checked artifact version, with the model, the
+correction and the featurisation contract as private fields. **The heads are not renamed** —
+`column_names`' spelling, so `quantile_metrics` scores the frame unchanged, which is precisely what
+#29 needs. **#33 (AC-4) is now unblocked and has a trap boxed on it**: `predict()` returns the
+*calibrated* band, so a round trip against a training-time `model.predict` matches on the median and
+fails on both outer heads on a pipeline that is working. **#15, #32 and #49 remain unblocked**; #15
+is still owed a re-measure now that screening flags rows for real. The two feature contracts still
+are not interchangeable — `CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is the 14
+a model is fitted on — and `hydms.surrogate.model.capacity_matrix()` is the one place that builds
+the modelling matrix.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · a training run died on a config it had not been started with
+### Handoff — 2026-09-05 (latest) · #28 closed · written for #29, and for #33
+
+**Where the phase is.** Thirty-four cards done. Fast suite **960** green, ruff and mypy clean,
+`check_board.py` and `check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0, AC-2 green at
+2.7285e-12, **HG-1 still 12/13** — #28 touched no sentinel, and L11 remains #29's. **Nothing is
+`doing`.** The chain from here is `#29 -> #30 -> #31/#32/#33 -> #34`.
+
+**The front is #29**, evaluation metrics with bootstrap confidence intervals, whose only blocker was
+#28. It is also the card that owes the L11 sentinel and carries #26's `rows_fitted` / `rows_scored`
+box.
+
+#### What #28 left you
+
+```python
+from hydms.surrogate import load_surrogate, predict
+
+predict(["La1Ni5", "Ti1Fe1"], 298.0)              # -> q0.1 q0.5 q0.9 lcb interval_width, wt%
+predict(formulas, kelvin, version="v2", store=d)  # a named version in a named directory
+load_surrogate(store=d).feature_names             # the fitted column order, for a diagnosis
+load_surrogate(store=d).describe()                # one row: which artifact answered, and its band
+```
+
+`Surrogate` is frozen; its public surface is *facts* — `version`, `quantiles`, `feature_names`,
+`confidence_level`, `columns` — and the model, the correction and the contract are private fields.
+`clear_cache()` exists for a test that writes a version into a directory the process has read.
+New beside `QuantileModel`: `MODEL_PAYLOAD` and `model_from(bundle)`, completing the
+`scaler_from` / `conformal_from` trio that had no sibling for the model.
+
+**Three things #29 and #33 must not undo.**
+
+**The heads are not renamed.** The card's job story writes `[p10, p50, p90, ...]`; the frame carries
+`column_names(quantiles)` — `q0.1`, `q0.5`, `q0.9` — because `model.quantiles` is configuration and
+`column_names` is the one place a CatBoost column position becomes a name. The payoff is direct:
+`quantile_metrics(truth, frame.loc[:, list(HEADS)], quantiles)` scores this frame with no new
+measurement code, which is what #29 was promised.
+
+**`lcb` is read off `conformal.lower`, not off column 0**, and `interval_width` off
+`conformal.upper` minus that. It duplicates a head column deliberately — the point is that no caller
+derives the ranking key — but the derivation is by name, so a band whose quantiles are not ascending
+still gets the bound its own calibration targeted.
+
+**Nothing is clipped and nothing is refused.** A negative `lcb` survives; the temperature window,
+the AD ceiling and the novelty distance are L4 screens and the refusal is L6. A surrogate that
+silently declined rows would make the screen verdict unobservable.
+
+#### The trap that is now boxed on #33
+
+**`predict()` returns the calibrated band; the training-time heads are raw.** A round trip that
+compares all three head columns against `QuantileModel.predict(features)` will match on the median
+and fail on `q0.1` and `q0.9` by the transformed correction — on a pipeline that is working. Either
+score the median head alone, or build the reference with `calibrated_heads(model, features,
+conformal=conformal)`, which is exactly what `predict()` calls. `store=` is how AC-4 scores a
+candidate version before the promotion pointer moves.
+
+#### Two things measured rather than asserted
+
+**The scaler is never applied**, and the test proves it the only way a negative can be proved: a
+second artifact version stores a `FittedScaler` subclass that raises on `transform`, the test arms
+the trap (loads it back and confirms it still raises after a joblib round trip) and then demands
+`assert_frame_equal` against the ordinary version. The card's own box was right about *persisting*
+the scaler and wrong about where it is applied — its consumer is #48's distance-based AD. **The same
+mistake sits in #76's box list and has been boxed there.**
+
+**`interval_width` is not the stored constant doubled.** The correction is constant in `log1p` space
+and `expm1` is convex, so the same widening is a wider band at a high prediction than at a low one:
+three candidates at 250/400/600 K return three distinct widths. That is why AC-7 asks a published
+candidate to carry a width rather than reading it off the manifest.
+
+#### One decision worth knowing before #76
+
+`load_surrogate` never forwards `artifacts.load`'s `require_gates=False` and takes no equivalent, so
+a version with a `SKIPPED` criterion cannot answer a prediction at all. That is **strictly stronger
+than the promotion pointer**: `promote()` already refuses a version whose gates are incomplete, so
+*promoted* implies *gates established* and the converse is what this adds. Naming a version stays
+legal, because #33 and a rollback inspection both score a candidate before the pointer moves.
+The load is memoised by `(store, version)` — safe, because a version is written once and never
+edited — while the pointer itself is re-read every call, so a rollback takes effect on the next
+prediction rather than the next process. #76's "no global mutable state" box has been annotated:
+wrap this cache, do not add a second one.
+
+---
+
+### Handoff — 2026-09-05 · a training run died on a config it had not been started with
 
 **One paragraph.** A `conda run -n Project python -m hydms.surrogate.train --target capacity
 --trials 8` probe died on Optuna trial 3 with `ConfigError: pipeline.yaml:model: unknown key(s)

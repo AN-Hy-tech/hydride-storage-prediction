@@ -33,7 +33,27 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
 - [ ] `hydms/delivery/predict.py` exposes `predict_capacity()` and nothing else of substance
 - [ ] An `ArtifactBundle` — model, scaler, feature contract, conformal calibration, AD reference set —
       loads once, is immutable, and carries the artifact version
-- [ ] The scaler is **used**, never fitted, on this path
+- [ ] ~~The scaler is **used**, never fitted, on this path~~ — **the scaler is not used on the
+      prediction path at all (from #26 and #28).** CatBoost splits on thresholds and `FittedScaler`
+      is affine, so #26 fits on raw features and records that in `QuantileModel.feature_names`;
+      applying the persisted scaler on the way in feeds the model a matrix it was never fitted on.
+      This box is right that it is never *fitted* and wrong about where it is used: its consumer is
+      #48's distance-based applicability domain, which reads it with
+      `hydms.surrogate.scaler.scaler_from(bundle)`. `hydms/surrogate/predict.py` proves the
+      negative rather than promising it — `test_the_stored_scaler_is_never_applied` stores a scaler
+      that raises on `transform` and demands identical numbers
+- [ ] **The surrogate half of the bundle already exists: wrap it, do not re-load it (from #28).**
+      `hydms.surrogate.predict.load_surrogate(version=, store=)` returns a frozen `Surrogate` that
+      holds the model, the correction and the featurisation contract, is pinned to one version,
+      refuses a version whose gates are unestablished, and is memoised by `(store, version)` — the
+      immutability this box asks for. `ArtifactBundle` is that plus the AD reference set and the
+      ElMD reference set. A second unpickle of the same booster is what the "loads once" box is
+      trying to prevent, and calling `artifacts.load` again here is how it comes back
+- [ ] **"No global mutable state" needs a stated exception, or it is already false (from #28).**
+      `hydms.surrogate.predict._LOADED` is a module-level memo of immutable, content-addressed
+      objects; the promotion pointer is deliberately not cached, so rollback still takes effect on
+      the next call. Decide whether this layer inherits that cache or holds the bundle itself, and
+      say which in the ADR (#85) — two caches for one artifact version is the failure
 - [ ] Feature column order is asserted against the contract, not assumed
 - [ ] The domain verdict (#48) and the ElMD distance (#49) are computed on every call
 - [ ] Predictions are returned in wt%, back-transformed, with the interval transformed consistently

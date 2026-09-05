@@ -42,6 +42,13 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     sample weights are sliced free of the target before anything reads them (leak L12).
     :func:`~hydms.surrogate.model.capacity_contender` is this model as a contender for the
     protocol above; ``python -m hydms.surrogate.train`` is the runnable entry point.
+
+``predict.py``
+    The layer's public face, and the only thing outside it a caller should need:
+    :func:`~hydms.surrogate.predict.predict` takes formulas and temperatures and returns a
+    calibrated interval per candidate, with ``lcb`` as a first-class column so that no caller
+    can accidentally rank on the median. Everything above -- the booster, the scaler, the
+    constant -- is hidden behind it, and the version that answered is pinned and gate-checked.
 """
 
 # `SENTINEL_BUDGET` and `sentinel_settings` are deliberately NOT re-exported below. Two
@@ -71,6 +78,7 @@ from .conformal import (
 )
 from .model import (
     FIXED,
+    MODEL_PAYLOAD,
     SEARCH_SPACE,
     Configuration,
     FitLog,
@@ -86,10 +94,19 @@ from .model import (
     final_fit,
     fit_quantile_model,
     loss_function,
+    model_from,
     quantile_metrics,
     sample_weights,
     screened_rows,
     stopping_slice,
+)
+from .predict import (
+    INTERVAL_WIDTH,
+    LOWER_BOUND,
+    PredictionError,
+    Surrogate,
+    load_surrogate,
+    predict,
 )
 from .scaler import (
     QUANTILE_RANGE,
@@ -130,6 +147,9 @@ __all__ = [
     "CONFORMAL_PAYLOAD",
     "FIXED",
     "HELD_OUT_SPLITS",
+    "INTERVAL_WIDTH",
+    "LOWER_BOUND",
+    "MODEL_PAYLOAD",
     "OUTER_FOLDS",
     "PARITY_TOLERANCE",
     "QUANTILE_RANGE",
@@ -155,6 +175,7 @@ __all__ = [
     "ModelError",
     "ModelSettings",
     "Placeholder",
+    "PredictionError",
     "QuantileModel",
     "ScalerError",
     "ScoringTask",
@@ -163,6 +184,7 @@ __all__ = [
     "SelectionError",
     "SelectionSettings",
     "Stage",
+    "Surrogate",
     "TuningTask",
     "ValidationError",
     "calibrated_heads",
@@ -179,9 +201,12 @@ __all__ = [
     "fit_scaler",
     "grouped_folds",
     "leave_one_class_out",
+    "load_surrogate",
     "loss_function",
+    "model_from",
     "nested_scores",
     "placeholder_exposure",
+    "predict",
     "quantile_metrics",
     "row_cost",
     "sample_weights",

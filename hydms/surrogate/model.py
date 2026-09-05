@@ -82,6 +82,7 @@ from hydms.surrogate.validation import (
 
 __all__ = [
     "FIXED",
+    "MODEL_PAYLOAD",
     "SEARCH_SPACE",
     "SENTINEL_BUDGET",
     "SENTINEL_SPACE",
@@ -99,6 +100,7 @@ __all__ = [
     "final_fit",
     "fit_quantile_model",
     "loss_function",
+    "model_from",
     "quantile_metrics",
     "sample_weights",
     "screened_rows",
@@ -109,6 +111,12 @@ __all__ = [
 # Same convention as `hydms/surrogate/validation.py` and `hydms/qa/detectors.py`: a failure
 # that names two hundred rows is a failure nobody reads to the end.
 _MAX_NAMED = 8
+
+#: The payload key the fitted model is saved under, so ``artifacts/v{N}/model.joblib`` is
+#: spelled once rather than at every call site. :func:`model_from` reads it back, beside
+#: :data:`~hydms.surrogate.scaler.SCALER_PAYLOAD` and
+#: :data:`~hydms.surrogate.conformal.CONFORMAL_PAYLOAD`.
+MODEL_PAYLOAD = "model"
 
 
 class ModelError(ValueError):
@@ -830,6 +838,58 @@ class QuantileModel:
                 f"fitted against; build the batch from that contract."
             )
         return features.loc[:, list(self.feature_names)]
+
+
+def model_from(bundle: Any, *, name: str = MODEL_PAYLOAD) -> QuantileModel:
+    """The fitted model held in a loaded artifact version, checked before it is believed.
+
+    The load path, and one line rather than ``bundle[MODEL_PAYLOAD]`` for the reason
+    :func:`~hydms.surrogate.scaler.scaler_from` and
+    :func:`~hydms.surrogate.conformal.conformal_from` give: what can be wrong with a stored
+    payload does not show up until a prediction is already a number.
+
+      - **It is a bare booster rather than a QuantileModel.** A ``CatBoostRegressor`` unpickles
+        happily, has its own ``predict``, and returns an unnamed ``(n, 3)`` array -- so the
+        caller is back to identifying P10 by position, which is the trap
+        :func:`column_names` exists to remove. It also has a ``fit``.
+      - **It was fitted on no columns**, which cannot be featurised against and would let a
+        batch of anything through.
+      - **The payload is absent**, which reads as a ``KeyError`` naming what the version does
+        hold.
+
+    What it deliberately does *not* check is that the fitted columns are in the version's
+    feature contract. That cross-check belongs where the featurisation contract is built --
+    :func:`~hydms.surrogate.predict.load_surrogate` -- because that is where a name outside
+    the contract stops being an observation and becomes an unbuildable column.
+
+    Args:
+        bundle: A loaded :class:`~hydms.artifacts.store.Artifacts`.
+        name: The payload key. :data:`MODEL_PAYLOAD` unless a version stored several.
+
+    Returns:
+        The stored :class:`QuantileModel`.
+
+    Raises:
+        ModelError: the payload is not a :class:`QuantileModel`, or it records no fitted
+            columns.
+        KeyError: the version holds no such payload.
+    """
+    model = bundle[name]
+    if not isinstance(model, QuantileModel):
+        raise ModelError(
+            f"payload {name!r} of {getattr(bundle, 'version', 'this version')} is a "
+            f"{type(model).__name__}, not a QuantileModel. A bare booster predicts an "
+            f"unnamed array and carries neither the column order it was fitted on nor the "
+            f"alphas its columns follow, which is the silent failure gate AC-4 exists to "
+            f"catch; re-train the version through hydms.surrogate.model.final_fit()."
+        )
+    if not model.feature_names:
+        raise ModelError(
+            f"the stored model of {getattr(bundle, 'version', 'this version')} records no "
+            f"fitted columns, so there is nothing to featurise against and any batch at all "
+            f"would be accepted."
+        )
+    return model
 
 
 def fit_quantile_model(
