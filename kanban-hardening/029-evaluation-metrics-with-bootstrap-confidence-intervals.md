@@ -222,6 +222,25 @@ intervals alongside point estimates by default — not as an option.
       `tests/artifacts/test_manifest.py::test_a_run_writing_its_own_output_does_not_report_modified_code`
       builds a real repository, writes into both output directories, and asserts both halves —
       output does not count, **and a genuine source edit still does**.
+- [ ] **OWED — `train.py` records no git SHA, so nothing ties the eight tables to the commit that
+      produced them.** Found while fixing the box above. `_run()` writes `probe`, `optuna_trials`,
+      `screening`, folds, `feature_set`, `features` and `seed` into `model-run.csv` — but not the
+      commit. The only SHA anywhere is the one `evaluate --emit` stamps, and that is **`HEAD` when
+      the document was generated**, which is not necessarily `HEAD` when the fit ran. Q15 asked to
+      "stamp the SHA into the emitted tables" and this is the half that was missed.
+
+      **Not fixable for the 2026-09-05 run, and deliberately not attempted.** Adding a column to
+      `_run()` now would change the shape of a table this run is already going to write in the old
+      shape, and `read_run` would then be reading one shape from a run that wrote another — a way
+      to break the cheap emit step of the very run it was meant to protect. It belongs to #34, or
+      to whoever runs the next fit.
+
+      **The caveat for this run, so #37 does not have to reconstruct it:** the fit was launched
+      22:03:51 from `a101205`; `evaluate --emit` will stamp a later commit. Checked and recorded
+      rather than assumed — `git diff a101205 HEAD` over `hydms/surrogate/{train,model,validation,
+      selection,scaler}.py`, `hydms/data/`, `hydms/descriptors/` and `hydms/config/` is **empty**,
+      so the later SHA differs only in `evaluate.py`, `manifest.py`, their tests and prose. The
+      numbers are what `a101205` produced.
 - [ ] **Boxed, not chased (Q8): the canonical count is off by one against a stated invariant.**
       CLAUDE.md says 1,149 formula strings collapse to **1,115** canonical compositions; the
       modelling matrix measures **1,114** groups over 1,278 rows. The populations genuinely differ
