@@ -1,8 +1,10 @@
 """L3 -- what turns three raw quantile heads into an interval that means its own number.
 
-CatBoost's ``MultiQuantile`` heads are fitted, not calibrated. Card #26 measured what that
-costs on this data: the P10-P90 band covered **64.4 %** of held-out rows against a nominal
-80 %, and it under-covered in every one of five nested folds (0.57, 0.63, 0.70, 0.69, 0.63).
+CatBoost's ``MultiQuantile`` heads are fitted, not calibrated. Card #26's **probe** measured
+what that costs on this data: the P10-P90 band covered **64.4 %** of held-out rows against a
+nominal 80 %, and it under-covered in every one of five nested folds (0.57, 0.63, 0.70, 0.69,
+0.63). That is a reduced-trial run, not a full one -- the direction is solid because it holds
+in all five folds, and the magnitude is provisional until a full run is made (card #34).
 So this module is not a formality laid on top of an honest interval -- it is the thing that
 makes the interval honest, and gate AC-3 has a real gap to close rather than a rounding.
 

@@ -15,9 +15,10 @@ CatBoost for another regressor would require no change outside this layer.
 
 **Why the search layer never sees the model.** The optimiser (frozen, L5) proposes thousands of
 compositions and ranks them. If it could reach the booster it could call ``predict`` on the raw
-heads, and the raw heads under-cover: card #26 measured 64.4 % against a nominal 80 %, in every
-fold. Ranking on a number that means 64 % when it says 80 % is risk R1 — the optimiser walks
-into extrapolation and the interval does not widen to say so.
+heads, and the raw heads under-cover: card #26's probe measured 64.4 % against a nominal 80 %,
+in every fold. Ranking on a number that means 64 % when it says 80 % is risk R1 — the optimiser
+walks into extrapolation and the interval does not widen to say so. (A probe number: the
+direction holds in all five folds, the magnitude awaits a full run.)
 
 ``lcb`` is therefore a **column**, not something a caller derives. It is the calibrated lower
 head, looked up by the name the correction itself records (:attr:`FittedConformal.lower`)

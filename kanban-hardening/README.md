@@ -188,9 +188,12 @@ regenerate.
 
 #### The decision
 
-**The primary number is a row bootstrap over out-of-fold predictions** — a claim about the
-*procedure*, ~893 rows, no artifact required. It is the number R4 is about: #26's honest nested
-**0.746** wt% against REPORT.md's published **0.892**, now with an interval on it.
+**The primary number is a bootstrap over out-of-fold predictions, resampling canonical groups**
+— a claim about the *procedure*, no artifact required. It is the number R4 is about: #26's
+**probe** measured a nested R² of **0.746** wt% against REPORT.md's published **0.892**, and
+this card puts an interval on the real version of it. **0.746 is a probe number** — a
+reduced-trial cost check whose own output prints `These numbers are a cost check, not a result`
+— and it must not be quoted as a result. No full run has ever been made in this project.
 
 **The artifact-scored number is the second reading**, once #34 lands — a claim about **a model**
 on held-out rows. Both are legitimate and they are different claims, so every row of the record
@@ -220,14 +223,44 @@ in this card is SHAP over a MultiQuantile CatBoost — a step-3 question.
 reading; the card's own text now says it cannot run until #34, and the primary path is the one that
 does not need it.
 
-#### One open call for whoever implements
+#### The design is settled — eleven decisions, on the card
 
-Whether to **un-ignore `reports/model/`** the way #25 un-ignored `reports/feature_selection/`, so
-#37 quotes committed tables rather than a local run. This session's recommendation is yes — #37 is
-downstream of these exact numbers, and the project's pattern is that a published document is
-generated from committed tables and a test asserts the committed file is what the code produces.
-Not done, because it is the implementer's call and it changes what a slow run is expected to leave
-behind.
+A grilling session the same day settled the open questions; they are boxed on #29 under *Settled
+by a grilling session*, with the measurements behind them. The four that change what you write:
+
+**The bootstrap resamples canonical groups, not rows.** `group_keys` is the seam #13, #87 and #88
+all share, and a row resample would be a fourth meaning of "the same material". **Measured:** 893
+training rows in **780 canonical groups**, sizes 1–6, **692 singletons** — so this is worth 13 % of
+the independent units, not a halving. Principle, not magnitude, and the card says so.
+
+**The interval is knowingly too narrow, and the table must say so.** Out-of-fold predictions come
+from five models with overlapping training sets; there is no unbiased estimator of K-fold CV
+variance (Bengio & Grandvalet 2004). The caveat goes in the emitted table as a column or header
+row — **not prose**, which is what a session drops — and `Evaluation.per_fold` rides along as a
+second, cruder interval.
+
+**One resample at the split level; every breakdown computed from it.** 83 of the 780 groups span
+more than one temperature, so a resampled group carries all its temperature rows. Subgroup *n*
+varies between replicates; record its min and max so a thin bin is visible.
+
+**This card lands machinery, not published numbers.** #34 pays for the real run and its tables are
+what get committed; `reports/model/` gets un-ignored on the #25 pattern. **#37 stays blocked on
+#34** — the out-of-fold route decouples the code path, not the numbers.
+
+#### What this session got wrong, so you do not inherit it
+
+**0.746 is a probe number and this session dropped the qualifier.** [Card #26](026-catboost-multiquantile-with-honest-early-stopping.md)
+says "*the probe's* honest cross-validated R² is 0.746"; the first version of this handoff and of
+#29's box said "#26's honest nested 0.746". `train.py` prints `These numbers are a cost check, not
+a result` on every probe run. Corrected here, on the card, and in the `predict.py` and
+`conformal.py` docstrings, which stated 64.4 % just as flatly. **No full run has ever been made in
+this project.**
+
+**The verification finding underneath it.** None of this layer's headline numbers — 0.746, 64.4 %,
+0.6628, +0.030990 — is asserted by any test; they live in card prose and in docstrings, and
+`pipeline.yaml` comments *depend* on them. `git ls-files reports/` returns only
+`feature_selection/`; `git ls-files artifacts/` returns **nothing**. On a fresh clone every #26 and
+#27 number is unverifiable prose. The Q4 and Q9 boxes on #29 exist to end that.
 
 ---
 
