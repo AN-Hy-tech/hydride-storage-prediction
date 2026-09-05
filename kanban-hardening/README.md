@@ -161,7 +161,11 @@ forward), ruff and mypy clean, `check_board.py` and `check_freeze.py` OK, and
 "all 13 leaks are guarded against the real pipeline". L11 was the last one in the inventory and
 `hydms.qa.sentinels.DEFERRED` is now empty.
 
-**The one thing this handoff is for.** Two commands, once, on the maintainer's schedule:
+**The one thing this handoff is for.** Two commands, once, on the maintainer's schedule.
+**[../docs/RUNNING-THE-FIT.md](../docs/RUNNING-THE-FIT.md) is the step-by-step version** — written
+for an operator rather than a reader, with the ten-minute smoke test to run first, what each line of
+output means, the three exit codes and what each one costs you, and how to stage the results without
+committing a probe alongside them. The short version:
 
 ```bash
 conda run --no-capture-output -n Project python -m hydms.surrogate.train --target capacity
