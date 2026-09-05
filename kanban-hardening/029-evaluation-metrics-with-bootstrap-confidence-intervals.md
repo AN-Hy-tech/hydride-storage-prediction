@@ -1,6 +1,6 @@
 ---
 id: 29
-status: backlog
+status: doing
 priority: Normal
 blocked_by: [28]
 assignee: "@amirhossein"
@@ -49,11 +49,47 @@ intervals alongside point estimates by default — not as an option.
       they are different claims, so the record carries which — and the Chapter 1 revision (#37)
       quotes it from there rather than from a paragraph
 
+- [ ] **The bootstrap has no unit to resample until the predictions are kept.** Measured
+      2026-09-05, before any code was written. `hydms/surrogate/model.py:_score_fold` computes
+      `model.predict(scored)`, hands it straight to `quantile_metrics`, and **discards the
+      frame**; nothing in `validation.py` retains a row-level prediction, and
+      `Evaluation.per_fold` is one aggregate row per (model, fold). So the only thing
+      resamplable today is **five fold scores** — and the box above says that spread is
+      confounded with training size. 2000 resamples of five confounded numbers is not the
+      interval the domain memo asks for. **The first change this card makes is to keep the
+      out-of-fold predictions** `_score_fold` already computes, and hang an out-of-fold table
+      off `Evaluation` for `evaluate` to read
+- [ ] **The primary number is a row bootstrap over the out-of-fold predictions, and it is a
+      claim about the *procedure*.** ~893 training rows resampled, not five folds. This is the
+      number R4 is about — #26's honest nested **0.746** wt% against REPORT.md's published
+      **0.892** — and resampling rows is what makes the interval mean anything
+- [ ] **`--artifact current` is the *second* reading, and it cannot run yet.** `artifacts/`
+      holds only `gate-results.json`: no version directory, no `current.json`, so
+      `load_surrogate()` raises `PredictionError: nothing is promoted`. The artifact is #34,
+      behind #31/#32/#33. Routing this card's primary number through the artifact would
+      serialise the tail of S4 and make #37 wait on all of it; the out-of-fold route needs no
+      artifact at all. Once #34 lands, a fixed model scored on held-out rows is a claim about
+      **a model** rather than a procedure — a different and equally legitimate number, and the
+      record says which, exactly as #25 forced for the feature set
+- [ ] **Do not spend the session measuring the bootstrap.** 2000 resamples over a few hundred
+      rows is milliseconds. The cost in this card is SHAP over a MultiQuantile CatBoost, and
+      that is a question for the explainability step, not the metrics step
+- [ ] **#26's tables are not on disk and cost ~3.5 h to regenerate.** `reports/model/` holds
+      only #27's three conformal CSVs, because `/reports/*` is gitignored except
+      `feature_selection/`. The `model-per-fold.csv` the fold-size box above builds on comes
+      from a real `python -m hydms.surrogate.train` run. **Open call for this card:** un-ignore
+      `reports/model/` the way #25 un-ignored `reports/feature_selection/`, so #37 quotes
+      committed tables rather than somebody's local run
+
 ## Runnable check
 
 ```bash
 python -m hydms.surrogate.evaluate --artifact current
 ```
+
+The command as written is the **artifact** reading, and it cannot run until #34 promotes a
+version. The card's primary number comes from the out-of-fold predictions of a nested run and
+needs no artifact; both readings land behind this module, and the boxes above say which is which.
 
 ## Traces to
 
@@ -62,3 +98,15 @@ python -m hydms.surrogate.evaluate --artifact current
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+- 2026-09-05: Opened. Nothing implemented; the session measured the card's own premises first and
+  found two of them false. **(a)** The card asks for a 2000-resample bootstrap, but the pipeline
+  keeps no row-level predictions to resample — `_score_fold` collapses `model.predict(scored)` into
+  a metrics dict and drops the frame — so the only available bootstrap was over five fold scores
+  whose spread the card itself warns is confounded with training size. **(b)** The card's runnable
+  check names `--artifact current`, and no artifact exists: `artifacts/` holds only
+  `gate-results.json`, and the version is #34's, three gates downstream. Taking the check literally
+  would have made the primary number wait on #31/#32/#33/#34 and put #37 behind all of it. The
+  decision is therefore to keep the out-of-fold predictions and make the row bootstrap over those
+  the card's primary reading — a claim about the procedure, needing no artifact — and to keep the
+  artifact-scored reading as the second one once #34 lands, labelled as a claim about a model. Both
+  findings are boxed above. (by @assistant)

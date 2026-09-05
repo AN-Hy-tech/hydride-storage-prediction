@@ -133,28 +133,105 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-four cards are done and nothing is `doing`; the tree is
-clean, #28 landed on `feat/phase-h-emergency-hardening`, and the fast suite is **960** green (936
-before it). `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1
-`SKIPPED` at **12 of 13** — **L11 is the only leak left**, deferred to #29, and #28 owed no
-sentinel. **The front is #29**, evaluation metrics with bootstrap confidence intervals, whose only
-blocker was #28; it is also the card that owes L11's sentinel and carries #26's `rows_fitted` /
-`rows_scored` box. #28 landed the layer's public face: `hydms.surrogate.predict.predict(formulas,
-temperatures)` returns `[q0.1, q0.5, q0.9, lcb, interval_width]` in weight percent over a
-`Surrogate` that `load_surrogate()` pins to one gate-checked artifact version, with the model, the
-correction and the featurisation contract as private fields. **The heads are not renamed** —
-`column_names`' spelling, so `quantile_metrics` scores the frame unchanged, which is precisely what
-#29 needs. **#33 (AC-4) is now unblocked and has a trap boxed on it**: `predict()` returns the
-*calibrated* band, so a round trip against a training-time `model.predict` matches on the median and
-fails on both outer heads on a pipeline that is working. **#15, #32 and #49 remain unblocked**; #15
-is still owed a re-measure now that screening flags rows for real. The two feature contracts still
-are not interchangeable — `CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is the 14
-a model is fitted on — and `hydms.surrogate.model.capacity_matrix()` is the one place that builds
-the modelling matrix.
+**Next session, in one paragraph.** Thirty-four cards are done and **#29 is `doing`** — opened
+2026-09-05 with **no code written**, so the tree is otherwise clean on
+`feat/phase-h-emergency-hardening` and the fast suite is still **960** green.
+`python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
+**12 of 13** — **L11 is the only leak left** and #29 owes its sentinel. **#29's opening move is not
+the metrics module**, because two of the card's own premises turned out to be false when measured:
+`_score_fold` **discards the row-level predictions** it computes, so the only bootstrap available
+today is over five fold scores whose spread the card itself calls confounded with training size;
+and `artifacts/` holds no version, so the card's `--artifact current` check cannot run until #34,
+three gates away. The first change is therefore to **keep the out-of-fold predictions**, which
+gives ~893 rows to resample and decouples #29 from #34 entirely. The full reasoning and the four
+implementation steps are in the handoff immediately below. **#30 and the three gates #31/#32/#33
+are all unblocked**, as are #7, #15 and #49 — ask the board rather than trusting this list; #15 is
+still owed a re-measure now that screening flags rows for real. The two feature contracts still are
+not interchangeable — `CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is the 14 a
+model is fitted on — and `hydms.surrogate.model.capacity_matrix()` is the one place that builds the
+modelling matrix.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #28 closed · written for #29, and for #33
+### Handoff — 2026-09-05 (latest) · #29 opened · written for the session that implements it
+
+**Where the phase is.** Thirty-four cards done, **#29 `doing` with nothing implemented**. Fast suite
+**960** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
+`python -m hydms.gates run --fast` exits 0, AC-2 green at 2.7285e-12, **HG-1 still 12/13**. The
+only changes on disk are #29's card — its `status`, five new boxes and a narrative entry — and this
+file. **No `hydms/` file has been touched**, so nothing here is half-built.
+
+**Read the card's new boxes before writing anything.** This session did not implement; it measured
+the card's premises, and two of them were wrong. Taking the card literally would have produced
+either a meaningless interval or a four-card wait.
+
+#### What was measured, and why it changes the plan
+
+**(a) There is nothing to bootstrap.** `hydms/surrogate/model.py:_score_fold` computes
+`model.predict(scored)`, hands it to `quantile_metrics`, and **throws the frame away**. Nothing in
+`validation.py` retains a row-level prediction; `Evaluation.per_fold` is one aggregate row per
+(model, fold). So the only resamplable object today is **five fold scores** — and card #29's own
+box, inherited from #26 and #24, says that spread is confounded with training size (screening
+removes 15–144 of a fold's ~710 rows, 571 vs 704 in practice). A 2000-resample CI over five
+confounded numbers is not the interval the domain memo asks for; the memo's warning (n=239, R²
+0.916) is about resampling **rows**.
+
+**(b) The runnable check cannot run.** `artifacts/` holds only `gate-results.json` — no version
+directory, no `current.json` — so `load_surrogate()` raises `PredictionError: nothing is promoted`.
+The artifact is #34's, behind #31/#32/#33. Making the card's primary number depend on it would
+serialise the whole tail of S4 and put #37 behind all four.
+
+**(c) #26's tables are not on disk either.** `reports/model/` holds only #27's three conformal
+CSVs, because `/reports/*` is gitignored except `feature_selection/`. The `model-per-fold.csv` the
+fold-size box builds on costs a real `python -m hydms.surrogate.train` run — ~3.5 h — to
+regenerate.
+
+#### The decision
+
+**The primary number is a row bootstrap over out-of-fold predictions** — a claim about the
+*procedure*, ~893 rows, no artifact required. It is the number R4 is about: #26's honest nested
+**0.746** wt% against REPORT.md's published **0.892**, now with an interval on it.
+
+**The artifact-scored number is the second reading**, once #34 lands — a claim about **a model**
+on held-out rows. Both are legitimate and they are different claims, so every row of the record
+names which, exactly as #25 forced for the feature set.
+
+#### The four steps, in order
+
+1. **Keep the out-of-fold predictions.** `_score_fold` already computes them; stop discarding them
+   and hang an out-of-fold table off `Evaluation`. Small, and no new science.
+2. **Write `hydms/surrogate/evaluate.py`** — R²/RMSE/MAE on **both** log and wt% scales, the row
+   bootstrap at 2000 resamples, broken out per split and per temperature subgroup, with the feature
+   set (`SELECTED`, 14) named on every row. **Expect HG-1 to go red the moment this module exists**
+   and nothing is wired to it — that is the sentinel mechanism working, not a regression, and it
+   has already happened twice in this phase (#10, #12).
+3. **SHAP and PDP on train or a dedicated split, never test** (leak L11:
+   `benchmark_model_selection.py:1375,1383,1394`).
+4. **Then the L11 sentinel** in `hydms/qa/sentinels.py` — the record names no held-out split. It
+   cannot be written before step 3, which is exactly why #71 recorded it as a `Deferral` rather
+   than guessing. This is the last of the thirteen; HG-1 goes 13/13 here.
+
+#### Two things not to do
+
+**Do not measure the bootstrap.** 2000 resamples over a few hundred rows is milliseconds. The cost
+in this card is SHAP over a MultiQuantile CatBoost — a step-3 question.
+
+**Do not re-aim the runnable check to make it green.** `--artifact current` stays as the second
+reading; the card's own text now says it cannot run until #34, and the primary path is the one that
+does not need it.
+
+#### One open call for whoever implements
+
+Whether to **un-ignore `reports/model/`** the way #25 un-ignored `reports/feature_selection/`, so
+#37 quotes committed tables rather than a local run. This session's recommendation is yes — #37 is
+downstream of these exact numbers, and the project's pattern is that a published document is
+generated from committed tables and a test asserts the committed file is what the code produces.
+Not done, because it is the implementer's call and it changes what a slow run is expected to leave
+behind.
+
+---
+
+### Handoff — 2026-09-05 · #28 closed · written for #29, and for #33
 
 **Where the phase is.** Thirty-four cards done. Fast suite **960** green, ruff and mypy clean,
 `check_board.py` and `check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0, AC-2 green at
