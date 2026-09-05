@@ -11,34 +11,32 @@ about 43 hours on this machine; ``pipeline.yaml`` sets 25 and says why. ``--budg
 cheap half -- it reads the fit table an earlier run left on disk and reports the measured cost
 per fit against the configured product, so the arithmetic can be checked without paying it.
 
-**Nothing here is published as an artifact.** Card #34 owns ``artifacts/v1``: the version
-directory, the manifest, the gate report embedded beside it. This command produces the
-evidence that a version *could* honestly be cut -- the per-fold scores, the chosen
-hyperparameters, the row identities of every fit, the **row-level out-of-fold predictions**
-card #29 puts an interval around, and the deployed fit's SHAP and partial-dependence tables --
-and leaves the promotion to the card that owns it.
+**This command estimates; it does not deploy.** It produces the evidence a version could
+honestly be cut from -- the per-fold scores, the chosen hyperparameters, the row identities of
+every fit, and the **row-level out-of-fold predictions** card #29 puts an interval around. The
+model that ships is built by :mod:`hydms.surrogate.deploy` and run by
+``python -m hydms.surrogate.calibrate``, which reads the configuration this command wrote into
+``model-chosen.csv``.
 
-**It is run once, and everything downstream reads what it wrote.** The explainability tables
-are computed here rather than by :mod:`hydms.surrogate.evaluate` because they need the
-*deployed fit*, which exists only inside this run; recomputing them would mean a second fit,
-and two fits mean the chapter describes a different model from the one that ships. That is
-also why card #34 promotes from this run rather than making its own.
+**That split is not tidiness; it closes a real drift.** This command used to make a deployed
+fit of its own and explain it, while ``calibrate`` made a *different* one with a calibration
+slice carved out. The SHAP and partial-dependence tables therefore described a model with no
+band, and the conformal correction belonged to a model with no explanation -- neither was
+shippable, and nothing in the code said so. There is one deployed fit now, in one module, and
+the explainability tables moved to the command that makes it.
+
+**The out-of-fold numbers are what this run is for, and they do not depend on the deployed
+fit.** :func:`~hydms.surrogate.validation.nested_scores` scores five outer-fold models; no
+deployed fit takes any part in it. So a later change to how the deployed fit is built cannot
+move a number this command published, which is what makes rebuilding the deployed fit cheap and
+re-running this expensive protocol unnecessary.
 
 Exit codes:
 
     0   the run finished and the tables were written
     2   the invocation itself was wrong (unreadable config, unknown target, unwritable path)
-    3   the run finished and its numbers were written, but the deployed fit could not be
-        explained -- the SHAP and partial-dependence tables are missing and everything else
-        is there
 
-**Three, and not two, because of what this command costs.** A failure in the explainability
-step after three hours of boosting must not throw away the scores; the run is the expensive,
-irreproducible half and the explanation is the cheap one. So the tables are written either
-way, the failure is named on stderr, and the exit code says which of the two states this is
-rather than letting a partial success look like a whole one.
-
-Card #26; the explainability tables and the run record are card #29's.
+Card #26; the run record is card #29's, and the deployed fit is card #34's.
 """
 
 from __future__ import annotations
@@ -54,22 +52,18 @@ from typing import TextIO
 import pandas as pd
 
 from hydms.config import Config, ConfigError, load
-from hydms.surrogate.evaluate import EXPLAINABILITY, EvaluationError, pdp_table, shap_table
 from hydms.surrogate.model import (
     Configuration,
     FitLog,
     ModelSettings,
-    QuantileModel,
     capacity_contender,
     capacity_matrix,
-    final_fit,
 )
 from hydms.surrogate.scaler import TRAIN
 from hydms.surrogate.validation import Evaluation, nested_scores
 
 EXIT_OK = 0
 EXIT_BAD_INVOCATION = 2
-EXIT_UNEXPLAINED = 3
 
 #: The only target there is. The flag exists so that a run says which one it fitted -- the PRD
 #: has more objectives waiting behind the freeze (PRD section 5, S8 onward) -- and so the
@@ -84,10 +78,11 @@ REPORTS = "model"
 #: ``model-out-of-fold`` is the row-level one and it is the reason card #29 can put an interval
 #: around anything: before it, ``_score_fold`` computed ``model.predict(scored)``, handed it to
 #: the metrics and dropped the frame, so the only resamplable object a run left behind was five
-#: fold scores -- a spread card #24 measured to be confounded with training size. The
-#: explainability pair is written here rather than by ``hydms.surrogate.evaluate`` because they
-#: need the **deployed fit**, which exists only inside this run; recomputing them would mean a
-#: second fit, and two fits mean the chapter describes a different model from the one that ships.
+#: fold scores -- a spread card #24 measured to be confounded with training size.
+#:
+#: ``model-chosen`` is the seam to the deployed fit: ``hydms.surrogate.calibrate`` reads the
+#: configuration out of it, on the **inner**-fold objective this run recorded, and never on an
+#: outer score -- which is what keeps choosing a configuration from being leak L2 in a new place.
 #:
 #: ``model-run`` is the smallest and the one a reader must not lose: **a probe's tables and a
 #: real run's tables are the same shape.** This command says
@@ -101,8 +96,6 @@ TABLES = (
     "model-chosen",
     "model-fits",
     "model-out-of-fold",
-    "model-shap",
-    "model-pdp",
     "model-run",
 )
 
@@ -134,11 +127,6 @@ def _parser() -> argparse.ArgumentParser:
         "--no-screening",
         action="store_true",
         help="skip the CleanLab stage — faster, and not what a real run does",
-    )
-    parser.add_argument(
-        "--skip-final",
-        action="store_true",
-        help="stop after cross-validation; do not make the deployed fit",
     )
     parser.add_argument(
         "--budget",
@@ -177,7 +165,8 @@ def _budget(cfg: Config, settings: ModelSettings, source: Path, stream: TextIO) 
     print(
         f"{cfg.model.cv_folds} outer x {cfg.model.inner_cv_folds} inner x "
         f"{settings.optuna_trials} trial(s) = {fits} tuning fit(s), plus "
-        f"{cfg.model.cv_folds} refit(s) and one deployed fit",
+        f"{cfg.model.cv_folds} refit(s). The deployed fit is a separate command "
+        f"(`python -m hydms.surrogate.calibrate`) and is not counted here",
         file=stream,
     )
 
@@ -297,34 +286,6 @@ def _run(cfg: Config, settings: ModelSettings, *, probe: bool) -> pd.DataFrame:
     )
 
 
-def _explain(
-    model: QuantileModel, frame: pd.DataFrame, stream: TextIO
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """SHAP and partial dependence for the deployed fit, on **its own training rows**.
-
-    Leak L11: ``benchmark_model_selection.py:1375,1383,1394`` computed both on ``X_test``,
-    which is what makes ``REPORT.md`` section 6.1 a test-set artefact. The rows handed over
-    here are ``model.record.fitted`` -- the rows this fit actually grew on, after screening,
-    read off the fit's own record rather than re-derived from the split. Re-deriving them
-    would give the split's training rows, which is *not* the same set: screening drops some of
-    them, and an explanation averaged over rows the model never saw is a different object from
-    the one section 6.1 claims to be.
-
-    The population's name goes into a ``computed_on`` column on both tables, and the L11
-    sentinel asserts that name is not in
-    :data:`~hydms.surrogate.validation.HELD_OUT_SPLITS`.
-    """
-    rows = frame.loc[list(model.record.fitted)]
-    shap = shap_table(model, rows, computed_on=EXPLAINABILITY)
-    pdp = pdp_table(model, rows, computed_on=EXPLAINABILITY)
-    print(
-        f"  explained on {len(rows)} {EXPLAINABILITY!r} row(s) — never on a held-out split "
-        f"(leak L11): {len(shap)} SHAP row(s), {len(pdp)} partial-dependence point(s)",
-        file=stream,
-    )
-    return shap, pdp
-
-
 def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     """Run the protocol and report. Returns the process exit code."""
     stream = out if out is not None else sys.stdout
@@ -395,39 +356,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         print(f"  {record.model}: {scores}", file=stream)
 
     fold, configuration = _deployed(evaluation)
-    shap = pd.DataFrame()
-    pdp = pd.DataFrame()
-    unexplained = False
-    if not args.skip_final:
-        print(
-            f"deployed fit: the configuration {fold!r} chose, on its inner-fold objective "
-            f"{configuration.objective:.5f}",
-            file=stream,
-        )
-        model = final_fit(
-            frame, split, params=configuration.params, settings=settings, log=log
-        )
-        print(
-            f"  grown on {len(model.record.fitted)} row(s), stopped on "
-            f"{len(model.record.eval_on)} at iteration {model.record.best_iteration} "
-            f"({model.record.trees} tree(s), {model.record.seconds:.1f} s); "
-            f"{len(model.record.scored_on)} test row(s) named and not read",
-            file=stream,
-        )
-        try:
-            shap, pdp = _explain(model, frame, stream)
-        except EvaluationError as error:
-            # Named, not raised. Everything below still writes: a run that has already cost
-            # hours must not lose its scores because SHAP would not compute.
-            print(
-                f"could not explain the deployed fit: {error}",
-                file=sys.stderr,
-            )
-            print(
-                "the scores are written anyway; model-shap.csv and model-pdp.csv are empty.",
-                file=sys.stderr,
-            )
-            unexplained = True
+    print(
+        f"deployed configuration: the one {fold!r} chose, on its inner-fold objective "
+        f"{configuration.objective:.5f}. It is written to "
+        f"{TABLES[2]}.csv and read from there by `python -m hydms.surrogate.calibrate`, "
+        f"which builds the deployed fit itself — this command does not.",
+        file=stream,
+    )
 
     tables = dict(
         zip(
@@ -438,8 +373,6 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
                 _chosen(evaluation),
                 log.table(),
                 evaluation.out_of_fold,
-                shap,
-                pdp,
                 _run(cfg, settings, probe=probe),
             ),
             strict=True,
@@ -450,7 +383,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     except OSError as error:
         print(f"could not write the tables: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
-    return EXIT_UNEXPLAINED if unexplained else EXIT_OK
+    return EXIT_OK
 
 
 if __name__ == "__main__":  # pragma: no cover

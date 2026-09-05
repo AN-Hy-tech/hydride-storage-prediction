@@ -30,11 +30,16 @@ and the artifact manifest's recorded seeds are decorative.
       thread-invariant, and this gate's own home is #7's slow lane on `windows-latest`, which has a
       different core count from the maintainer's machine.
 
-      This matters beyond the gate: #34 has an **open decision** on whether to promote a *refit* of
-      the deployed configuration rather than a persisted model, and this gate is what would license
-      it. Decide whether AC-1 must vary `thread_count` as well as repeat the seed, or whether
-      `thread_count` simply joins `FIXED` and the question goes away. See the 2026-09-06 handoff in
-      [README.md](README.md).
+      **The #34 half of this box is gone; the gate half remains (2026-09-06).** #34's open decision
+      is settled — the deployed fit is rebuilt from `model-chosen.csv` in two minutes by
+      `calibrate --save`, so nothing is asking this gate to license an equality claim between two
+      fits any more. What is still a real question is this gate's own subject: **does AC-1 vary
+      `thread_count` as well as repeat the seed, or does `thread_count` join `FIXED` and the
+      question go away?** The second is one line and makes the gate answerable on any machine; the
+      first is a stronger claim and a slower gate. Note that adding `thread_count` to `FIXED`
+      **changes the fitted model** if the algorithm is not already thread-invariant — which is the
+      very thing nobody has measured — so it is a decision to take deliberately, and to re-run
+      `calibrate --save` after, not a tidy-up.
 
 - [ ] Registered as `AC-1` and run by the CI slow lane
 

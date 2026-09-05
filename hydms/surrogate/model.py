@@ -120,6 +120,18 @@ _MAX_NAMED = 8
 #: :data:`~hydms.surrogate.conformal.CONFORMAL_PAYLOAD`.
 MODEL_PAYLOAD = "model"
 
+#: The prefix :meth:`Configuration.row` puts on every hyperparameter column of
+#: ``model-chosen.csv``, so that a reader of that table can tell a hyperparameter from the
+#: bookkeeping beside it. Named here because **both sides of the file have to agree**:
+#: ``hydms.surrogate.calibrate`` reads the deployed configuration back out by this prefix, and
+#: it does so as an *allow*-list. It was a deny-list once -- every column except a named few --
+#: and that shipped a `features` count and a set of `param.`-prefixed names straight into
+#: ``CatBoostRegressor(**params)``, which raised
+#: ``unexpected keyword argument 'features'`` the first time anybody ran the two commands in
+#: sequence against a real table. A deny-list over a file format silently admits every column
+#: added later; an allow-list refuses them.
+PARAM_PREFIX = "param."
+
 
 class ModelError(ValueError):
     """The fit cannot run, or a caller handed it something it must refuse.
@@ -1098,7 +1110,15 @@ def final_fit(
     target_column: str | None = None,
     log: FitLog | None = None,
 ) -> QuantileModel:
-    """The deployed fit: grown on ``train``, stopped on ``val``, reported on ``test``.
+    """The three-split fit: grown on ``train``, stopped on ``val``, reported on ``test``.
+
+    **This is no longer the deployed fit.** The model this project ships carves a calibration
+    slice out of the screened training rows before growing a tree, because a band calibrated on
+    rows the trees already saw under-covers exactly where it claims not to; that sequence is
+    :func:`hydms.surrogate.deploy.deployed_fit` and it is the only thing that builds a
+    deployable model. This function remains the uncarved arrangement -- the honest answer to
+    "grow on train, stop on val, report on test" -- and is what the leak L1 argument below is
+    written about.
 
     The one place in this project that names all three splits in one call, and the site the
     audit's leak L1 lives at: ``Catboostmodel.py:604-606`` combined ``train`` and ``val`` into
@@ -1383,7 +1403,10 @@ class Configuration:
             "pruned": self.pruned,
             "seconds": round(self.seconds, 1),
             "features": len(self.features),
-            **{f"param.{name}": value for name, value in sorted(self.params.items())},
+            **{
+                f"{PARAM_PREFIX}{name}": value
+                for name, value in sorted(self.params.items())
+            },
         }
 
 

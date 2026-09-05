@@ -44,6 +44,23 @@ This catches the two silent failure modes that would otherwise poison every cand
       both paths' values for. `store=` points it at a directory, which is how this gate scores a
       candidate version before the promotion pointer moves
 
+- [x] **AC-4 passes against `artifacts/v1` (2026-09-06).** `python -m hydms.gates run --fast`
+      reports `AC-4 PASSED 0 / 1e-12`: all 30 predictions agree between the screening path and the
+      training path to 0.0000e+00 wt%, over 10 rows the model actually grew on across all 10 alloy
+      classes, 14 fitted features, calibrated band on both sides. The version it scored is
+      **v1 — the newest on disk, nothing promoted yet.**
+
+      **The circle this card was written to worry about is already closed, in code, by this card's
+      own decision.** `hydms/gates/_artifact.py` loads the bundle with `require_gates=False` — the
+      door `hydms.artifacts.store` documents for "the card that has just written a version and
+      wants it back" — and then builds the `Surrogate` through `surrogate_from`, the *same code*
+      `load_surrogate` runs once it holds a bundle. So the only line of the delivery path a gate
+      skips is the gate check whose input that gate is producing, and everything AC-4 exists to
+      catch is downstream of it. `load_surrogate` grew no parameter and lost no guarantee, and
+      `tests/gates/test_artifact.py` pins that it still refuses this very version. Recorded here
+      because a session that meets the `GatesIncomplete` refusal without reading that module will
+      re-open a settled question — as one did on 2026-09-06 before running the gate.
+
 ## Runnable check
 
 ```bash

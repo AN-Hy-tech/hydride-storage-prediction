@@ -1023,11 +1023,19 @@ def _deployed_fit() -> Any:
     The model rather than its record, because the L11 hook has to *call* it -- SHAP reads the
     trees. One fit serves both hooks; `audit()` runs on every gate invocation and on every test
     in `tests/leaks/`.
+
+    **It is `deploy.deployed_fit`, not `model.final_fit`, and the difference is the point.**
+    The fit this project ships carves a calibration slice out of the screened training rows
+    before growing a tree, so its `record.fitted` is a strictly smaller set than `final_fit`'s.
+    L1 and L11 are questions about *the deployed fit*, so when the deployed fit moved these
+    hooks moved with it; a sentinel aimed at a fit nothing ships is guarding in name only.
+    `final_fit` is still the honest three-split fit and still has its own tests -- it is simply
+    no longer what gets deployed.
     """
-    from hydms.surrogate.model import final_fit
+    from hydms.surrogate.deploy import deployed_fit
 
     frame, split = _model_matrix()
-    return final_fit(frame, split, settings=_model_settings())
+    return deployed_fit(frame, split, settings=_model_settings()).model
 
 
 def _final_fit_record() -> Any:

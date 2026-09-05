@@ -18,16 +18,28 @@ held-out data is exactly what AC-3 certifies (card #31), and a command that prin
 would invite the calibration to be adjusted until the gate passed -- which is leak L2 wearing
 new clothes.
 
-**Nothing here is published as an artifact.** Card #34 owns ``artifacts/v1``. This produces the
-constant and the evidence that it is honest; :data:`~hydms.surrogate.conformal.CONFORMAL_PAYLOAD`
-is the key it will be stored under.
+**This command builds the deployed fit, and it is the only one that does.**
+:func:`hydms.surrogate.deploy.deployed_fit` is the single definition -- screen, carve, fit,
+calibrate -- and the model it returns is the one that ships. ``hydms.surrogate.train`` used to
+build a second, uncarved fit of its own and explain *that*; the two were different models, so
+the SHAP and partial-dependence tables described something with no band and the correction
+belonged to something with no explanation. Both tables are written here now, off the same fit
+the correction belongs to.
+
+**With ``--save`` it persists that fit as an artifact version, and nothing more.** The version
+carries **no gate report**, which :func:`hydms.artifacts.store.save` documents as the honest
+state for a model nobody has certified: it cannot be promoted and
+:func:`~hydms.surrogate.predict.load_surrogate` refuses it. Card #34 owns promotion.
 
 Exit codes:
 
     0   the run finished and the tables were written
     2   the invocation itself was wrong (unreadable config, unknown target, unwritable path)
+    3   the fit and its calibration were written, but the deployed fit could not be
+        explained -- the SHAP and partial-dependence tables are empty and everything else
+        is there
 
-Card #27.
+Cards #27 and #34.
 """
 
 from __future__ import annotations
@@ -48,28 +60,34 @@ from hydms.surrogate.conformal import (
     ConformalError,
     FittedConformal,
     calibrated_heads,
-    calibration_slice,
     compare_metrics,
-    fit_conformal,
 )
+from hydms.surrogate.deploy import DeployedFit, deployed_fit, explain, rows_table, save_deployed
+from hydms.surrogate.evaluate import EvaluationError
 from hydms.surrogate.model import (
+    PARAM_PREFIX,
     FitLog,
     ModelError,
     ModelSettings,
     QuantileModel,
     capacity_matrix,
-    fit_quantile_model,
     quantile_metrics,
-    screened_rows,
 )
 from hydms.surrogate.scaler import TRAIN
 from hydms.surrogate.train import REPORTS, TARGETS
 
 EXIT_OK = 0
 EXIT_BAD_INVOCATION = 2
+EXIT_UNEXPLAINED = 3
 
 #: One file per question, the convention ``hydms.surrogate.train`` set.
-TABLES = ("conformal", "conformal-coverage", "conformal-rows")
+#:
+#: ``model-shap`` and ``model-pdp`` moved here from ``hydms.surrogate.train`` when the deployed
+#: fit did. They describe **the model this command builds** -- the one with the calibration
+#: carve in it, and therefore the only one that can carry a band. While ``train`` wrote them
+#: they described its own uncarved fit, which nothing could ship: an explanation of a model
+#: that does not exist downstream is leak L11's shape arriving by another door.
+TABLES = ("conformal", "conformal-coverage", "conformal-rows", "model-shap", "model-pdp")
 
 #: Where the deployed configuration comes from when an earlier run left one. Written by
 #: ``python -m hydms.surrogate.train``; absent on a clean checkout, in which case this command
@@ -106,6 +124,13 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="a directory to write the CSV tables into; defaults to the configured reports path",
+    )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="persist the deployed fit as a new artifact version — the model, its conformal "
+        "correction and the scaler. The version carries no gate report, so it cannot be "
+        "promoted and predict() refuses it until one is recorded (card #34)",
     )
     return parser
 
@@ -144,12 +169,23 @@ def _params(destination: Path, out: TextIO) -> tuple[Mapping[str, Any] | None, s
         print(f"{table} records no configuration; using CatBoost's defaults.", file=out)
         return None, "catboost defaults"
     best = chosen.loc[chosen["objective"].idxmin()]
-    ignore = {"model", "fold", "objective", "seconds", "trials", "pruned"}
+    # An allow-list, not a deny-list. Every hyperparameter column carries `PARAM_PREFIX`; the
+    # rest of the table is bookkeeping -- `objective`, `trials`, `pruned`, `seconds`, and a
+    # `features` **count**. Selecting by "not one of these six" fed that count to
+    # `CatBoostRegressor(**params)` as `features=14`, and kept the prefix on the names besides.
     params = {
-        str(name): best[name]
+        str(name)[len(PARAM_PREFIX) :]: best[name]
         for name in chosen.columns
-        if name not in ignore and pd.notna(best[name])
+        if str(name).startswith(PARAM_PREFIX) and pd.notna(best[name])
     }
+    if not params:
+        print(
+            f"{table} has no {PARAM_PREFIX!r} column, so it records no hyperparameters this "
+            f"command can read; using CatBoost's defaults. That table was written by a "
+            f"different version of `hydms.surrogate.train` than the one installed.",
+            file=out,
+        )
+        return None, "catboost defaults"
     where = str(best.get("fold", "?"))
     print(
         f"deployed configuration: the one {where!r} chose, on its inner-fold objective "
@@ -159,33 +195,33 @@ def _params(destination: Path, out: TextIO) -> tuple[Mapping[str, Any] | None, s
     return params, f"{CHOSEN}:{where}"
 
 
-def _rows_table(
-    model: QuantileModel, calibrating: tuple[object, ...], split: pd.Series
-) -> pd.DataFrame:
-    """The row accounting, including the cost the carve imposes -- stated, not hidden.
+def _save(
+    fit: DeployedFit, *, settings: ModelSettings, probe: bool, stream: TextIO
+) -> int:
+    """``--save``: persist the deployed fit, and say what the version can and cannot do.
 
-    The deployed model grows on the training rows *minus* the calibration slice, while the
-    cross-validation that estimated its performance fitted on folds cut from all of them. That
-    asymmetry is real and card #27 requires it reported rather than left to be inferred from
-    two numbers in different files.
+    A probe's model and a real run's model are the same shape, exactly as their tables are, so
+    the reduced budget goes into the version's ``notes`` where a reader of
+    ``artifacts/v{N}/manifest.json`` will meet it. An artifact that does not say it came from a
+    probe is an artifact somebody will promote.
     """
-    train_rows = int((split == TRAIN).sum())
-    return pd.DataFrame(
-        [
-            {
-                "split_train": train_rows,
-                "screened_out": len(model.record.removed),
-                "calibration": len(calibrating),
-                "grown_on": len(model.record.fitted),
-                "stopped_on": len(model.record.eval_on),
-                "scored_on_named": len(model.record.scored_on),
-                "grown_on_share_of_train": (
-                    len(model.record.fitted) / train_rows if train_rows else float("nan")
-                ),
-            }
-        ],
-        index=pd.Index(["final fit"], name="fit"),
+    from hydms.artifacts.manifest import ArtifactError
+
+    note = "screening off — a probe, not a deployable fit" if probe else "deployed fit"
+    try:
+        manifest = save_deployed(fit, settings=settings, notes=note)
+    except ArtifactError as error:
+        print(f"could not save the deployed fit: {error}", file=sys.stderr)
+        return EXIT_BAD_INVOCATION
+
+    print(
+        f"saved {manifest.version}: {', '.join(sorted(fit.payloads))} — "
+        f"**no gate report**, so it cannot be promoted and predict() refuses it. Card #34 "
+        f"records the gates; read it back meanwhile with "
+        f"hydms.artifacts.store.load({manifest.version!r}, require_gates=False).",
+        file=stream,
     )
+    return EXIT_OK
 
 
 def _coverage(
@@ -277,31 +313,18 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     log = FitLog()
     started = time.perf_counter()
     try:
-        kept = screened_rows(frame, rows[TRAIN], settings=settings)
-        fitting, calibrating = calibration_slice(
-            frame, kept.kept, settings=settings, config=cfg
-        )
-        print(
-            f"calibration carve: {len(calibrating)} row(s) held out of "
-            f"{len(kept.kept)} screened training row(s); the trees grow on {len(fitting)}",
-            file=stream,
-        )
-        model = fit_quantile_model(
-            frame,
-            train=fitting,
-            eval_on=rows["val"],
-            scored_on=rows["test"],
-            where="final fit",
-            params=params,
-            settings=settings,
-            removed=kept.removed,
-            log=log,
-        )
-        conformal = fit_conformal(frame, model, calibrate_on=calibrating, config=cfg)
+        fit = deployed_fit(frame, split, params=params, settings=settings, config=cfg, log=log)
     except (ConformalError, ModelError) as error:
         print(f"the calibration failed: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
     elapsed = time.perf_counter() - started
+    model, conformal, calibrating = fit.model, fit.conformal, fit.calibration
+    print(
+        f"calibration carve: {len(calibrating)} row(s) held out of "
+        f"{len(fit.fitting) + len(calibrating)} screened training row(s); the trees grow on "
+        f"{len(fit.fitting)}",
+        file=stream,
+    )
 
     print(
         f"conformal correction {conformal.correction:+.6f} in model space, from "
@@ -334,13 +357,37 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         file=stream,
     )
 
+    shap = pd.DataFrame()
+    pdp = pd.DataFrame()
+    unexplained = False
+    try:
+        shap, pdp = explain(fit, frame)
+        print(
+            f"  explained on {len(fit.model.record.fitted)} row(s) the trees grew on — never "
+            f"on a held-out split (leak L11): {len(shap)} SHAP row(s), {len(pdp)} "
+            f"partial-dependence point(s)",
+            file=stream,
+        )
+    except EvaluationError as error:
+        # Named, not raised. The tables below still write: the fit is the irreproducible half
+        # and the explanation is the cheap one, which is the reading
+        # `hydms.surrogate.train` took when it owned this step.
+        print(f"could not explain the deployed fit: {error}", file=sys.stderr)
+        print(
+            "the calibration is written anyway; model-shap.csv and model-pdp.csv are empty.",
+            file=sys.stderr,
+        )
+        unexplained = True
+
     tables = dict(
         zip(
             TABLES,
             (
                 conformal.describe(),
                 coverage,
-                _rows_table(model, calibrating, split),
+                rows_table(fit, split),
+                shap,
+                pdp,
             ),
             strict=True,
         )
@@ -350,7 +397,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     except OSError as error:
         print(f"could not write the tables: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
-    return EXIT_OK
+
+    if args.save:
+        code = _save(fit, settings=settings, probe=args.no_screening, stream=stream)
+        if code != EXIT_OK:
+            return code
+
+    return EXIT_UNEXPLAINED if unexplained else EXIT_OK
 
 
 if __name__ == "__main__":  # pragma: no cover

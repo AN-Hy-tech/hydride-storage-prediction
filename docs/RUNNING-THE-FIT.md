@@ -4,17 +4,30 @@
 can open a terminal and run a command, and nothing else. Every step says what to type, what you
 should see, and what to do when you see something else.
 
-**What you are about to do.** Two commands. The first fits the model — about **1 h 40 m**, measured. The second
-puts a confidence interval around every number it produced — about a minute. Then you commit the
-result so the thesis can cite a file rather than a memory.
+**What you are about to do.** Three commands, and they answer three different questions:
 
-> **The single most important rule on this page: run the training command _once_.**
+| | Command | What it produces | Cost |
+|---|---|---|---|
+| **Step 4** | `hydms.surrogate.train` | The **estimate**: how well this pipeline does, from five outer folds | **1 h 41 m**, measured |
+| **Step 5** | `hydms.surrogate.calibrate` | The **deployed model**: one fit, its band, its explanation, saved as an artifact | about 2 minutes |
+| **Step 6** | `hydms.surrogate.evaluate` | The **document**: intervals around Step 4's numbers | about a minute |
+
+> **You may not need Step 4.** Steps 4 and 5 are independent. The cross-validation scores every
+> number Chapter 1 quotes and takes no part in building the deployed model; the deployed model is
+> built from the configuration Step 4 wrote into `model-chosen.csv`, which is **committed in this
+> repository**. So if the estimate you want is the one already in `reports/model/`, skip to Step 5
+> — it is two minutes, and re-running Step 4 would reproduce numbers you already have.
+
+> **The single most important rule on this page: run the _training_ command (Step 4) once.**
 >
-> Card #34 will promote the shipped model from *this* run's output. If you run it twice — once "to
-> see", once "for real" — Chapter 1 ends up describing a different model from the one that ships,
-> and there is no way to tell afterwards which numbers belong to which. That is the whole reason
-> card #29 exists. If a run fails, that is fine: fix it and run again. Just never run a *second*
-> one because the first was untidy.
+> If you run it twice — once "to see", once "for real" — Chapter 1 ends up describing a different
+> model from the one that ships, and there is no way to tell afterwards which numbers belong to
+> which. That is the whole reason card #29 exists. If a run fails, that is fine: fix it and run
+> again. Just never run a *second* one because the first was untidy.
+>
+> **Step 5 carries no such rule.** It is cheap, deterministic, and can be re-run as often as you
+> like — with one caveat, in Step 5 itself: each `--save` writes a *new* artifact version, because
+> a version is written once and never edited.
 
 ---
 
@@ -77,9 +90,11 @@ particular.
 writes into that un-ignored directory marked the run's *own* document as uncommitted, and the check
 in Step 6 could never pass.
 
-You may still want to clear the directory first, for a different reason: it holds local probe output
-from card #27's calibration runs. Those are cost-check numbers, not results, and they must not be
-committed at Step 7 — where you stage by name precisely so they aren't.
+You may still want to clear the directory first, for a different reason: it can hold local probe
+output from earlier calibration runs. Those are cost-check numbers, not results, and they must not
+be committed at Step 8 — where you stage by name precisely so they aren't. (The three
+`conformal*.csv` files were exactly this until Step 5 existed to produce them for real: they sat
+untracked while three committed documents quoted their row counts.)
 
 ```powershell
 Remove-Item -Recurse -Force .\reports\model
@@ -128,9 +143,12 @@ which it gets exactly right; treat its hours as an upper bound.
 
 ## Step 3 — A ten-minute smoke test, into a scratch directory
 
-**Do not skip this.** It is the cheapest possible insurance: it runs the *entire* code path —
-matrix, folds, tuning, scoring, deployed fit, SHAP, every table — at a tiny budget. If something is
-broken, you find out in ten minutes instead of at minute 110 of the real run.
+**Do not skip this.** It is the cheapest possible insurance: it runs the *entire* cross-validation
+path — matrix, folds, tuning, scoring, every table — at a tiny budget. If something is broken, you
+find out in ten minutes instead of at minute 110 of the real run.
+
+**Skip it if you are skipping Step 4.** It smoke-tests the cross-validation, which is the only
+expensive thing here. Step 5 is its own two-minute smoke test.
 
 ```powershell
 conda run --no-capture-output -n Project python -m hydms.surrogate.train --target capacity --trials 2 --report .\reports\_smoke
@@ -140,7 +158,7 @@ Two flags to understand:
 
 - `--trials 2` runs 2 hyperparameter trials instead of 25. Same code, ~1/12th the work.
 - `--report .\reports\_smoke` sends the output to a **scratch** directory, so it cannot be confused
-  with the real run's tables. This is important — see the warning in Step 6.
+  with the real run's tables. This is important — see the warning in Step 7.
 
 **What you should see.** The first line is the loudest thing on the page:
 
@@ -149,17 +167,17 @@ PROBE: 2 trial(s) against the configured 25. These numbers are a cost check, not
 1278 row(s) x 14 feature(s) (dev_Zunger_radii_sum, ...); 893 in 'train'
 nested cross-validation: 5 outer fold(s) in 10.4 min
   catboost-multiquantile: ... r2=0.7457 ...
-deployed fit: the configuration 'outer-0' chose, on its inner-fold objective 0.11882
-  grown on 873 row(s), stopped on 131 at iteration 8636 ...
-  explained on 873 'train' row(s) — never on a held-out split (leak L11): 42 SHAP row(s), ...
+deployed configuration: the one 'outer-0' chose, on its inner-fold objective 0.11882. It is
+written to model-chosen.csv and read from there by `python -m hydms.surrogate.calibrate`, which
+builds the deployed fit itself — this command does not.
 wrote ...\model-per-fold.csv
-... (eight `wrote` lines in total)
+... (six `wrote` lines in total)
 ```
 
 **Do not write that `r2=0.7457` down anywhere.** It is a probe number. The command says so itself,
 on its own first line, because a probe's output files look *exactly* like a real run's.
 
-**If it finishes with eight `wrote` lines, you are ready.** Delete the scratch directory:
+**If it finishes with six `wrote` lines, you are ready.** Delete the scratch directory:
 
 ```powershell
 Remove-Item -Recurse -Force .\reports\_smoke
@@ -192,7 +210,7 @@ No `--trials`, no `--report`. Defaults mean: the full 25 trials, writing to `rep
 
 ### What "finished" looks like
 
-The last thing you should see is **eight** `wrote ...` lines. Then check the exit code:
+The last thing you should see is **six** `wrote ...` lines. Then check the exit code:
 
 ```powershell
 echo $LASTEXITCODE
@@ -202,14 +220,78 @@ echo $LASTEXITCODE
 |---|---|---|
 | **0** | The run finished and everything was written | Go to Step 5 |
 | **2** | The *invocation* was wrong — bad config, unwritable path. Nothing was fitted | Read the error, fix it, run again. You have lost nothing |
-| **3** | The run finished and **its numbers are safe**, but SHAP/PDP failed. `model-shap.csv` and `model-pdp.csv` are empty | **Do not re-run the fit.** Go to Step 5; the scores are intact. Raise the SHAP failure as its own problem |
-
-That code 3 exists on purpose: a failure in the cheap explainability step must never throw away two
-hours of boosting.
 
 ---
 
-## Step 5 — Put intervals on the numbers
+## Step 5 — Build the deployed fit
+
+This is the model that ships. It is a **different fit** from anything Step 4 made, and the
+difference is deliberate: it carves a calibration slice out of the training rows *before* growing a
+tree, so that the conformal band can be estimated on rows the trees never saw. A band calibrated on
+rows the model was fitted on under-covers exactly where it claims not to.
+
+```powershell
+conda run --no-capture-output -n Project python -m hydms.surrogate.calibrate --target capacity --save
+```
+
+**About two minutes.** It reads `model-chosen.csv` for the configuration — the one an outer fold's
+search chose on its *inner*-fold objective, never on a score anybody published — makes one fit,
+calibrates it, explains it, and saves it.
+
+**You can run this without running Step 4**, as long as `reports/model/model-chosen.csv` is on disk.
+It is committed, so on a fresh checkout it already is.
+
+**What you should see:**
+
+```text
+1278 row(s) x 14 feature(s); 893 in 'train'
+deployed configuration: the one 'outer-0' chose, on its inner-fold objective 0.11850
+calibration carve: 172 row(s) held out of 873 screened training row(s); the trees grow on 701
+conformal correction +0.0xxxxx in model space, from 172 calibration row(s), for a 0.8 band ...
+  on the calibration rows — raw coverage is a held-out measurement, calibrated coverage is
+  nominal by construction:
+    interval_coverage: 0.6xxx -> 0.8xxx (+0.1xxx)
+  the test split was not read. Coverage on held-out data is gate AC-3's (card #31) ...
+  explained on 701 row(s) the trees grew on — never on a held-out split (leak L11): ...
+wrote ...\conformal.csv
+... (five `wrote` lines in total)
+saved v1: conformal, model, scaler — **no gate report**, so it cannot be promoted and predict()
+refuses it. Card #34 records the gates; read it back meanwhile with
+hydms.artifacts.store.load('v1', require_gates=False).
+```
+
+### Three things to read carefully
+
+1. **`the trees grow on 701`, not 893.** That is the price of a calibrated band, and it is not a
+   defect. The cross-validation in Step 4 scored folds cut from all 893 training rows, so the
+   deployed model grows on fewer rows than the estimate was made with. That asymmetry is real and
+   `conformal-rows.csv` publishes it. **Report it beside the score, never separately.**
+2. **`raw` coverage is the honest number; `calibrated` is nominal by construction.** The calibrated
+   figure on those rows is 0.8 *because the constant was fitted to make it 0.8*. It says nothing
+   about generalisation. Coverage on genuinely held-out data is gate AC-3's job — card #31 — and
+   this command deliberately does not touch the test split.
+3. **`saved v1` — and it cannot be promoted.** The version carries **no gate report**, so
+   `predict()` refuses it and `promote()` refuses it. That is correct: nobody has certified this
+   model yet. Card #34 owns turning it into something promotable.
+
+### Exit codes
+
+| Code | Meaning | What to do |
+|---|---|---|
+| **0** | Fitted, calibrated, explained, saved | Go to Step 6 |
+| **2** | The invocation or the calibration was wrong. Nothing was saved | Read the error and fix it. You have lost two minutes |
+| **3** | The fit and its calibration are on disk, but SHAP/PDP failed — `model-shap.csv` and `model-pdp.csv` are empty | The calibration is intact. Raise the SHAP failure as its own problem |
+
+### If you run it more than once
+
+Each `--save` writes a **new** version — `v1`, then `v2` — because an artifact version is written
+once and never edited. That is a feature, not a leak: two versions on disk is a fact you can see,
+where one silently overwritten version is not. Re-running without `--save` costs nothing and
+overwrites only the CSVs.
+
+---
+
+## Step 6 — Put intervals on the numbers
 
 ```powershell
 conda run --no-capture-output -n Project python -m hydms.surrogate.evaluate --emit
@@ -257,7 +339,7 @@ model. The most confident-looking number is the worst one. That is why all three
 
 ---
 
-## Step 6 — Look at the document before you commit it
+## Step 7 — Look at the document before you commit it
 
 ```powershell
 code .\reports\model\evaluation.md
@@ -265,7 +347,7 @@ code .\reports\model\evaluation.md
 
 Check four things:
 
-1. **No warning banner at the top.** A banner means a probe produced it (see Step 5).
+1. **No warning banner at the top.** A banner means a probe produced it (see Step 6).
 2. **`- Code:` shows a commit hash and `(code committed)`**, not `(uncommitted changes to code)`.
    If it says uncommitted, a **source** file was modified when the run started. The run's own
    output under `reports/` and `artifacts/` does *not* count and never did mean this — that was
@@ -280,7 +362,7 @@ Check four things:
 
 ---
 
-## Step 7 — Commit the results
+## Step 8 — Commit the results
 
 > **Never run `git add -A` or `git add reports/` here.** `reports/model/` also contains CSVs from
 > earlier local probes. Committing those would put cost-check numbers into the repository looking
@@ -295,9 +377,12 @@ $files = @(
     "reports/model/model-chosen.csv"
     "reports/model/model-fits.csv"
     "reports/model/model-out-of-fold.csv"
+    "reports/model/model-run.csv"
+    "reports/model/conformal.csv"
+    "reports/model/conformal-coverage.csv"
+    "reports/model/conformal-rows.csv"
     "reports/model/model-shap.csv"
     "reports/model/model-pdp.csv"
-    "reports/model/model-run.csv"
     "reports/model/evaluation-metrics.csv"
     "reports/model/evaluation-subgroups.csv"
     "reports/model/evaluation.md"
@@ -305,12 +390,21 @@ $files = @(
 git add $files
 ```
 
+**If you skipped Step 4**, stage only what Steps 5 and 6 rewrote — the `conformal*` trio, the two
+explainability tables, and the three evaluation files. Leave Step 4's tables alone: they are the
+committed record of the run that produced them, and re-staging identical bytes is noise while
+re-staging *different* bytes means you re-ran something you meant to skip.
+
 ```powershell
 git status --short
 ```
 
-Read that `git status` output before committing. Every staged line should be one of the eleven files
-above. If anything else is staged, unstage it with `git restore --staged <file>`.
+Read that `git status` output before committing. Every staged line should be one of the files above.
+If anything else is staged, unstage it with `git restore --staged <file>`.
+
+**`artifacts/v1/` is not on that list and must not be.** `artifacts/` is gitignored: a fitted
+booster does not belong in git history, and the artifact is reproducible from the committed tables
+in about two minutes. What travels between machines is card #7's CI upload, not a commit.
 
 Now write the commit message. Put it **outside the repository**, so it cannot itself be committed
 by accident:
@@ -336,22 +430,29 @@ sidesteps it entirely — along with `%`, `"` and `$`, which need no escaping in
 
 ---
 
-## Step 8 — Close the loop
+## Step 9 — Close the loop
 
-1. **Tick the `OWED` box on card #29** — `kanban-hardening/029-…md` — and add a `## Narrative`
-   entry with the headline numbers and the date.
-2. **Move #29 to `done`** and check the board still validates:
+1. **Add a `## Narrative` entry** to the card the run belonged to, with the headline numbers, the
+   artifact version, and the date. Card #29 owns the cross-validation numbers; card #34 owns the
+   artifact.
+2. **Check the board still validates:**
    ```powershell
    python scripts\check_board.py --root .
    ```
-3. **Tell #34 the run exists.** #34 promotes `artifacts/v1` **from this run's output**. It must not
-   fit its own model.
+3. **Tell #34 which version to promote**, by name. #34 does not fit its own model: it records a
+   gate run against the version Step 5 saved and promotes that. If Step 5 was run more than once,
+   say *which* version — `artifacts/` holds every save and only the manifest says which is which.
+4. **Note the saved version's limits where they will be read.** It carries no gate report, so
+   `predict()` and `promote()` both refuse it. That is the correct state until #31, #32 and #33
+   have run, and it is not something to work around.
 
 ---
 
-## What the eight tables are
+## What the tables are
 
-Written to `reports/model/` by Step 4.
+Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model/`.
+
+**Step 4 — the estimate:**
 
 | File | What it holds |
 |---|---|
@@ -359,12 +460,20 @@ Written to `reports/model/` by Step 4.
 | `model-record.csv` | The averaged score per model, with the feature set named |
 | `model-chosen.csv` | The hyperparameters each fold's search settled on |
 | `model-fits.csv` | Every fit: which rows it grew on, stopped on, was scored on, and how long it took. This is what `--budget` reads next time |
-| `model-out-of-fold.csv` | **One row per training row**: the truth and what the model that had *not* seen it predicted. Everything in Step 5 is computed from this |
-| `model-shap.csv` | Feature importance per quantile head, with a `computed_on` column |
-| `model-pdp.csv` | Partial-dependence curves, same |
-| `model-run.csv` | One row saying whether this was a full run or a probe. Step 5 reads it and refuses to publish a document that does not say |
+| `model-out-of-fold.csv` | **One row per training row**: the truth and what the model that had *not* seen it predicted. Everything in Step 6 is computed from this |
+| `model-run.csv` | One row saying whether this was a full run or a probe. Step 6 reads it and refuses to publish a document that does not say |
 
-Step 5 adds `evaluation-metrics.csv`, `evaluation-subgroups.csv` and `evaluation.md`.
+**Step 5 — the deployed model:**
+
+| File | What it holds |
+|---|---|
+| `conformal.csv` | The conformal correction: one number, the band it targets, and how many rows produced it |
+| `conformal-coverage.csv` | Raw against calibrated coverage on the calibration rows. The **raw** column is the real measurement |
+| `conformal-rows.csv` | The row accounting the carve implies: 893 train, 20 screened out, 172 calibration, 701 grown on |
+| `model-shap.csv` | Feature importance per quantile head, with a `computed_on` column. **Of the deployed fit** — it moved here from Step 4 when the deployed fit did |
+| `model-pdp.csv` | Partial-dependence curves, same |
+
+**Step 6 — the document:** `evaluation-metrics.csv`, `evaluation-subgroups.csv` and `evaluation.md`.
 
 ---
 
@@ -376,18 +485,26 @@ Step 5 adds `evaluation-metrics.csv`, `evaluation-subgroups.csv` and `evaluation
 | The command prints nothing at all | `--no-capture-output` is missing | Add it |
 | `PredictionError: nothing is promoted` | You used `--artifact current` | That flag is the *second* reading and needs card #34. Run `evaluate` **without** it |
 | `ModelError: the settings carry no target column` | Settings were built by hand somewhere | A code bug, not an operator error. Report it |
-| `run: unknown` in Step 5 | No `model-run.csv` beside the tables | You are pointed at the wrong directory, or at output from before this feature existed |
-| `run: PROBE ...` in Step 5 | Those tables came from a reduced run | Point `--report` at the real directory |
-| Exit code 3 | The fit worked; SHAP did not | Keep the numbers. Do **not** re-run the fit |
+| `run: unknown` in Step 6 | No `model-run.csv` beside the tables | You are pointed at the wrong directory, or at output from before this feature existed |
+| `run: PROBE ...` in Step 6 | Those tables came from a reduced run | Point `--report` at the real directory |
+| Exit code 3 from Step 5 | The fit and its calibration worked; SHAP did not | Keep the calibration. Raise the SHAP failure separately |
+| `ArtifactError: ... v1 already exists` | You ran Step 5 with `--save` twice | Expected — a version is written once. Save again and it writes `v2`, or drop `--save` |
+| `GatesIncomplete` from anything that predicts | The saved version carries no gate report | Correct behaviour, not a fault. Card #34 records the gates |
 | It has printed nothing for an hour | Normal (see Step 4) | Check CPU is climbing in a second window |
 
 ---
 
 ## The one thing to remember
 
-Everything on this page is cheap and repeatable **except Step 4**. Steps 2, 3, 5, 6 and 7 can be
-redone as often as you like. Step 4 happens once, and everything downstream — the artifact, the
-model card, Chapter 1 — describes *that* run.
+Everything on this page is cheap and repeatable **except Step 4**. Steps 2, 3, 5, 6, 7 and 8 can be
+redone as often as you like. Step 4 happens once, and the numbers Chapter 1 quotes describe *that*
+run.
+
+**Step 5 is not part of that rule, and it matters that it is not.** The deployed model is rebuilt
+from Step 4's committed `model-chosen.csv` in about two minutes, and rebuilding it cannot move a
+single number Step 6 published — the estimate comes from five outer-fold models that no deployed
+fit takes any part in. So a mistake in the deployed fit is cheap to correct, which is exactly what
+you want of the artifact that ships.
 
 Related: [PHASE-H-RUNBOOK.md](PHASE-H-RUNBOOK.md) for why each of these guards exists,
 [../kanban-hardening/029-evaluation-metrics-with-bootstrap-confidence-intervals.md](../kanban-hardening/029-evaluation-metrics-with-bootstrap-confidence-intervals.md)

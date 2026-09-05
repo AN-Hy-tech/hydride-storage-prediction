@@ -113,6 +113,21 @@ python -m hydms.surrogate.calibrate --target capacity
 
 ## Narrative
 
+- 2026-09-06: **This card's headline numbers were measured on CatBoost's defaults, not on the
+  deployed configuration, and are corrected in [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md)
+  S4.** The calibration run that produced 0.6628 / +0.030990 / 0.7317 → 0.9155 ran at 14:35 on
+  2026-09-05; `model-chosen.csv` was not written until 23:44, so `_params` took its documented
+  "no deployed configuration on disk" branch and fitted with library defaults. The command *said*
+  so, on stdout, which is where the note went to die — the same failure `model-run.csv` exists to
+  prevent for the training command, and the conformal tables have no equivalent. Re-run against the
+  deployed configuration the numbers are **0.6744 → 0.8081, correction +0.037355, width
+  0.6741 → 0.8951**, zero crossings either way; the row accounting (893/20/172/701) is unchanged,
+  because the carve does not depend on the hyperparameters. The prose above is left as written —
+  it is the record of what this card measured — and this note is the correction. **A box for
+  whoever next touches this module: `conformal.csv` should carry its own provenance column the way
+  `model-run.csv` does**, so that "which configuration produced this constant" is answerable from
+  the file rather than from a terminal nobody kept. (by @assistant)
+
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
 
 - 2026-08-30: **API check before implementation — MAPIE 1.x is not 0.x.** `MapieRegressor(...)`

@@ -31,8 +31,36 @@ that reason.
       stated ground that it "pays the 3.5-hour bill". They are struck through below rather than
       deleted, so the reasoning stays legible
 
-- [ ] **OPEN DECISION — this card's premise is broken: the run persisted no model
-      (found 2026-09-05, after the fit).** The box above says this card "promotes *that* run".
+- [x] **SETTLED 2026-09-06 — neither persist nor refit: the deployed fit was the wrong object.**
+      The decision below was framed as "how does #34 get a model", and both its options assumed the
+      thing to get was `train.py`'s `final_fit`. Measured before choosing: **that fit cannot carry a
+      band.** `calibrate.py` carved a calibration slice out of the screened training rows *before*
+      fitting and conformalised the model grown on the remainder; `train.py`'s fit had no carve, so
+      its 873-row model had no correction that belonged to it while the 701-row model with the
+      correction had no explanation. Two models, and the committed `model-shap.csv` and
+      `model-pdp.csv` described the one nothing could ship — leak L11's shape arriving by another
+      door, exactly as option A's objection feared, but already true and not caused by any refit.
+
+      **So the question dissolved.** `hydms/surrogate/deploy.py` now holds the one definition of the
+      deployed fit — screen, carve, fit, calibrate — and `python -m hydms.surrogate.calibrate --save`
+      builds and persists it in about two minutes from the `model-chosen.csv` this repository
+      already commits. `train.py` builds no deployed fit at all.
+
+      **Option B's 1 h 41 m was measured to buy nothing.** `nested_scores` never touches a deployed
+      fit (`--skip-final` already separated the two halves); `evaluate` reads only
+      `model-out-of-fold`, `model-per-fold` and `model-run`, never the explainability tables; and
+      `git diff a101205 HEAD` over `hydms/surrogate/`, `hydms/data/`, `hydms/descriptors/` and
+      `hydms/config/` is empty. A re-run would have reproduced R² 0.7481 and changed nothing else.
+
+      **What this card still owes:** the gate report. `save_deployed` writes the version with
+      `gates=None`, which `hydms.artifacts.store.save` documents as the honest state for a model
+      nobody has certified — it cannot be promoted and `predict()` refuses it. Turning that into
+      `artifacts/v1` with the gates embedded, and pointing `current` at it, is this card and is
+      unchanged.
+
+- [ ] ~~**OPEN DECISION — this card's premise is broken: the run persisted no model
+      (found 2026-09-05, after the fit).**~~ **SETTLED — see the box above.** Left in full because
+      the reasoning that dissolved it is only legible beside the reasoning that framed it. The box above says this card "promotes *that* run".
       `train.py` **saves nothing** — `final_fit` is handed to SHAP and PDP and dropped; the only
       `store` hits in that file are argparse's `store_true`. So there is no model on disk to
       promote, and #31 and #33 need one too.
@@ -52,6 +80,11 @@ that reason.
       See the 2026-09-06 handoff in [README.md](README.md) for the full framing.
 
 - [ ] Full pipeline run from `data/raw/` produces `artifacts/v1/`
+- [ ] **Name the version explicitly when you promote.** `save_deployed` takes the next free `v<N>`,
+      and every `--save` writes another one because a version is written once and never edited. So
+      `artifacts/` may hold `v1`, `v2`, ... from repeated operator runs and only the manifest says
+      which came from which configuration. Read `manifest.json`'s `notes` and `git` fields before
+      choosing; a probe run says so in its notes
 - [ ] Manifest complete: git SHA, seeds, package versions, feature contract, gate results
 - [ ] All Phase 1 gates pass and are recorded in the manifest
 
@@ -85,7 +118,10 @@ that reason.
       `hydms.surrogate.calibrate` does and what `final_fit` does *not* — and the row asymmetry must
       be published beside the score: at `calibration_folds: 5` the deployed model grows on ~701
       rows where the cross-validation that estimated its performance fitted on folds cut from ~893.
-      **Never store a pickled MAPIE object**; `conformal_from` refuses one and says why
+      **Never store a pickled MAPIE object**; `conformal_from` refuses one and says why.
+      **Both halves of this box are now done, 2026-09-06** — `hydms.surrogate.deploy.deployed_fit`
+      carves before it fits, and `deploy.rows_table` publishes the asymmetry into
+      `conformal-rows.csv` beside the score. What is left here is the manifest, not the modelling
 - [ ] ~~**A run re-reads `pipeline.yaml` from disk while it is running, so an edit lands
       mid-flight (measured 2026-09-05).**~~ **MOVED TO #29 (2026-09-05)**, by this box's own
       rule — "this card pays the 3.5-hour bill, so it owns the fix" — now that #29 pays it. It

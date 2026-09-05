@@ -136,25 +136,49 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **#29 is done and the run has happened** — the first honest
-numbers this project has ever had are committed in `reports/model/`: **R2 0.7481 [0.6889, 0.7985]**
-wt% over 893 out-of-fold predictions in 780 canonical groups, against REPORT.md's published 0.892,
-with zero quantile crossings and the whole thing regenerable by `evaluate --emit` in a second. The
-fit took **1 h 41 m**, not the 3.5 h every older card says, because #29's own search-space narrowing
-removed the unconverged corner — re-measure before you quote a budget. **Do not run `train` again**:
-#34 promotes its artifact from *this* run, and a second fit means Chapter 1 describes a different
-model from the one that ships. Suite **1005** green in 12 min 07 s, ruff and mypy clean, gates exit
-0 with AC-2 and **HG-1 13/13**, board and freeze OK. **Your first move is a decision, not a card: persist versus
-refit.** The run wrote eight tables and **zero models** — `train.py` never saves the fitted booster
-— so #34's stated premise, "this card promotes *that* run", cannot be executed as written, and
-#31 and #33 need a fitted model too. The decision and its evidence are in the handoff below; it is
-**deliberately left open**. Settle it first, then #32, #31, #33 and #34 in that order; **#30**
-(leave-one-alloy-class-out) is independent and can run alongside any of it. Standing facts that outlive this card: `CONTRACT` is the published 22 and AC-2's parity set
-while `SELECTED` is the 14 a model is fitted on; `capacity_matrix()` is the one place the modelling
-matrix is built; `group_keys` is the one definition of "the same material"; `reports/model/` is
-versioned and still holds three untracked `conformal*.csv` probes, so **stage by name there,
-never `git add -A`**; and raw interval coverage is 0.629 against a nominal 0.8, which is the
-uncalibrated booster and is exactly what AC-3 (#31) exists to measure.
+**Next session, in one paragraph.** **`artifacts/v1` exists** — model, conformal correction and
+scaler, written 2026-09-06 by `python -m hydms.surrogate.calibrate --target capacity --save` in
+**0.7 min**, with **no gate report**, which is the honest state for a model nobody has certified: it
+cannot be promoted and `predict()` refuses it. #34's open decision is **settled, and the answer was
+neither option it offered**: the deployed fit was two different models — `train.py` grew one on 873
+screened rows and explained it, `calibrate.py` carved a calibration slice first and conformalised a
+701-row model — so the committed `model-shap.csv`/`model-pdp.csv` described something with no band
+while the correction belonged to something with no explanation. `hydms/surrogate/deploy.py` is now
+the single definition (screen → carve → fit → calibrate), `train.py` builds no deployed fit at all,
+the two explainability tables moved to the command that does, and the L1/L11 sentinels were re-aimed
+at the real deployed fit. **Do not re-run `train`:** its 1 h 41 m buys nothing measurable —
+`nested_scores` never touches a deployed fit, `evaluate` reads only `model-out-of-fold`,
+`model-per-fold` and `model-run`, and `git diff a101205 HEAD` over every fitting path is empty, so
+**R2 0.7481 [0.6889, 0.7985] stands untouched**. **Two latent defects surfaced only because the
+command was actually run, and both had been invisible for a day:** `calibrate._params` selected
+hyperparameters by a *deny*-list, so against a real `model-chosen.csv` it handed
+`CatBoostRegressor` a `features=14` count and a set of `param.`-prefixed names and died — it is an
+allow-list on `PARAM_PREFIX` now; and every conformal number this project had quoted was measured on
+**CatBoost's defaults**, because the 2026-09-05 calibration ran at 14:35, nine hours before
+`model-chosen.csv` was written, and `_params` took its "no configuration on disk" branch and said so
+only on stdout. The real figures are **correction +0.037355, raw coverage 0.6744 → 0.8081, width
+0.6741 → 0.8951, zero crossings**, carve 172 of 873 so the trees grow on 701; `docs/PHASE-H-RUNBOOK.md`
+S4 and card #27's narrative are corrected, the handoffs below are left as the record of what those
+sessions believed, and `research/PHASE-H-PERSONAL-REPORT.md` still quotes the old ones (the freeze
+denies `research/**`, so it is owed a pass when the freeze lifts). **Verified here:** suite **1005 green in 13 min 55 s**, ruff and
+mypy clean, board and freeze OK, and `python -m hydms.gates run --fast` is **4 passed, 0 failed** in
+23.8 s — **AC-3 and AC-4 both pass against `v1`**, which the harness finds as the newest version on
+disk. AC-3 reads **coverage 0.7795 against nominal 0.8** on 254 held-out test rows (raw 0.6575 on
+the same heads), inside its 0.05 tolerance but by about two binomial standard errors, so it passes
+and does not pass by much; AC-4 agrees to 0.0000e+00 across all 10 alloy classes. HG-1 stays 13/13.
+**So #31 and #33 are nearly closed already** — their gates are green and the boxes left on them are
+bookkeeping, not design. Do not re-open the "a gate cannot reach the version it certifies" question:
+`hydms/gates/_artifact.py` settled it on #33 by loading with `require_gates=False` and then building
+the `Surrogate` through the same `surrogate_from` the delivery path uses; this session re-opened it
+for an hour before running the gate, which is the mistake to avoid. Remaining order: **#32** (the one
+real decision left — whether `thread_count` joins `FIXED` or AC-1 varies it; pinning it *changes the
+fitted model* if CatBoost is not already thread-invariant, so it means re-running the two-minute
+save), then close **#31** and **#33**, then **#34**, which now owes only the manifest and the
+promotion, never a fit. **#30** is independent and can run alongside any of it. Standing facts that outlive this: `CONTRACT` is the published 22 and AC-2's
+parity set while `SELECTED` is the 14 a model is fitted on; `group_keys` is the one definition of
+"the same material"; every `--save` writes a **new** version because a version is written once, so
+name the version you promote and read its manifest `notes` first; and `artifacts/` is gitignored —
+stage `reports/model/` by name, never `git add -A`.
 
 ---
 
