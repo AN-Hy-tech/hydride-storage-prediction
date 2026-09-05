@@ -443,8 +443,26 @@ sidesteps it entirely — along with `%`, `"` and `$`, which need no escaping in
    gate run against the version Step 5 saved and promotes that. If Step 5 was run more than once,
    say *which* version — `artifacts/` holds every save and only the manifest says which is which.
 4. **Note the saved version's limits where they will be read.** It carries no gate report, so
-   `predict()` and `promote()` both refuse it. That is the correct state until #31, #32 and #33
-   have run, and it is not something to work around.
+   `predict()` and `promote()` both refuse it. That is the correct state until the gates have run
+   against it, and it is not something to work around.
+
+5. **Certify it, when there is something to certify** (added 2026-09-06):
+   ```powershell
+   conda run --no-capture-output -n Project python -m hydms.surrogate.promote --dry-run
+   ```
+   This **fits nothing**. It reads the version Step 5 saved, runs every registered gate against it,
+   and prints the table. Add `--version v2` to certify a version other than the newest. Drop
+   `--dry-run` and, *only if every criterion passed*, it writes a new version carrying the report
+   and points `current` at it — a new version because a manifest is sealed when it is written, so
+   the report of a run against `v1` cannot go into `v1`.
+
+   **Expect it to refuse, and expect that to be correct.** `promote` requires every registered
+   criterion to have passed and counts `SKIPPED` as not-passed. As of 2026-09-06 that is **5 passed,
+   7 skipped**, and three of the seven (AC-5, AC-7, AC-8) belong to phases the freeze has stopped.
+   The refusal names each one and the card that owes it. Whether Phase H should be able to certify a
+   *phase-scoped* subset is an open decision on card #34 — do not work around it here.
+
+   Runs AC-1, which fits twice: about **two minutes**, most of the command's wall time.
 
 ---
 

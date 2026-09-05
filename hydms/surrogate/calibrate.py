@@ -50,7 +50,7 @@ import time
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TextIO
 
 import pandas as pd
 
@@ -62,10 +62,16 @@ from hydms.surrogate.conformal import (
     calibrated_heads,
     compare_metrics,
 )
-from hydms.surrogate.deploy import DeployedFit, deployed_fit, explain, rows_table, save_deployed
+from hydms.surrogate.deploy import (
+    DeployedFit,
+    deployed_fit,
+    deployed_params,
+    explain,
+    rows_table,
+    save_deployed,
+)
 from hydms.surrogate.evaluate import EvaluationError
 from hydms.surrogate.model import (
-    PARAM_PREFIX,
     FitLog,
     ModelError,
     ModelSettings,
@@ -88,12 +94,6 @@ EXIT_UNEXPLAINED = 3
 #: they described its own uncarved fit, which nothing could ship: an explanation of a model
 #: that does not exist downstream is leak L11's shape arriving by another door.
 TABLES = ("conformal", "conformal-coverage", "conformal-rows", "model-shap", "model-pdp")
-
-#: Where the deployed configuration comes from when an earlier run left one. Written by
-#: ``python -m hydms.surrogate.train``; absent on a clean checkout, in which case this command
-#: uses CatBoost's own defaults and says so, the way ``--budget`` does about its fit times.
-CHOSEN = "model-chosen.csv"
-
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -145,54 +145,6 @@ def _write(tables: Mapping[str, pd.DataFrame], destination: Path, out: TextIO) -
         path = destination / f"{name}.csv"
         table.to_csv(path)
         print(f"wrote {path}", file=out)
-
-
-def _params(destination: Path, out: TextIO) -> tuple[Mapping[str, Any] | None, str]:
-    """The hyperparameters the deployed fit uses, from an earlier run's table if there is one.
-
-    Chosen on an inner-fold objective, never on an outer score -- the reading
-    ``hydms.surrogate.train._deployed`` makes, and the reason it is a reading rather than a
-    re-selection here: picking a configuration by any number this command can see would be
-    selecting on data the calibration is about to be certified against.
-    """
-    table = destination / CHOSEN
-    if not table.exists():
-        print(
-            f"no deployed configuration on disk ({table} is absent), so this fit uses "
-            f"CatBoost's own defaults. That is a smoke test of the calibration path, not the "
-            f"deployed band — run `python -m hydms.surrogate.train` first for that.",
-            file=out,
-        )
-        return None, "catboost defaults"
-    chosen = pd.read_csv(table)
-    if chosen.empty or "objective" not in chosen.columns:
-        print(f"{table} records no configuration; using CatBoost's defaults.", file=out)
-        return None, "catboost defaults"
-    best = chosen.loc[chosen["objective"].idxmin()]
-    # An allow-list, not a deny-list. Every hyperparameter column carries `PARAM_PREFIX`; the
-    # rest of the table is bookkeeping -- `objective`, `trials`, `pruned`, `seconds`, and a
-    # `features` **count**. Selecting by "not one of these six" fed that count to
-    # `CatBoostRegressor(**params)` as `features=14`, and kept the prefix on the names besides.
-    params = {
-        str(name)[len(PARAM_PREFIX) :]: best[name]
-        for name in chosen.columns
-        if str(name).startswith(PARAM_PREFIX) and pd.notna(best[name])
-    }
-    if not params:
-        print(
-            f"{table} has no {PARAM_PREFIX!r} column, so it records no hyperparameters this "
-            f"command can read; using CatBoost's defaults. That table was written by a "
-            f"different version of `hydms.surrogate.train` than the one installed.",
-            file=out,
-        )
-        return None, "catboost defaults"
-    where = str(best.get("fold", "?"))
-    print(
-        f"deployed configuration: the one {where!r} chose, on its inner-fold objective "
-        f"{float(best['objective']):.5f}",
-        file=out,
-    )
-    return params, f"{CHOSEN}:{where}"
 
 
 def _save(
@@ -309,7 +261,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         file=stream,
     )
 
-    params, provenance = _params(destination, stream)
+    params, provenance = deployed_params(destination, stream)
     log = FitLog()
     started = time.perf_counter()
     try:

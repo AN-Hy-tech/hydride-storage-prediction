@@ -136,7 +136,40 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **`artifacts/v1` exists** — model, conformal correction and
+**Next session, in one paragraph.** **S4's three gates are written and green, and #34 has hit a wall
+that is not a bug.** AC-1, AC-3 and AC-4 all pass against `artifacts/v1` and are reproducible from
+this commit — AC-3 coverage **0.7795** against nominal 0.8 on 254 held-out test rows (raw **0.6575**
+on the same heads, widths 0.8630 vs 0.6485 wt%), 0.82 of a binomial standard error inside a 0.05
+bar, so it passes and not by much; AC-4 **0.0000e+00** over 30 predictions across all ten alloy
+classes; AC-1 identical metrics across two fits at 1 thread and 20, 120 s. **#32's decision
+dissolved when the premise was measured**: the deployed fit is thread-invariant — 1, 4 and 20
+threads give a bit-identical head matrix over all 1,279 rows, same 2,584 trees, same correction — so
+`thread_count` stays out of `model.FIXED`, **no re-save is owed**, and AC-1 varies the thread count
+because the stronger claim was free. **#33's knot dissolved the same way**: `load_surrogate` is two
+things, and only *locating a version* has an opinion about gates, so `surrogate_from(bundle)` is now
+the assembly half and `hydms/gates/_artifact.py` runs it after loading with `require_gates=False` —
+the guarantee lost nothing and a test asserts both sides of that in one place. **The wall is on
+#34**, which now has the mechanism it owed (`python -m hydms.surrogate.promote` gates a candidate,
+writes a new version carrying the report because a manifest is sealed when written, and moves the
+pointer) and cannot use it: `hydms.artifacts.promote` requires **every** registered criterion to have
+passed, `SKIPPED` counts, and 7 of 12 are unwritten — of which **AC-5, AC-7 and AC-8 belong to frozen
+phases and no Phase H work will ever turn them green.** So on the rule as written this phase ends
+with a correct model that can never be promoted, and since `load_surrogate` refuses an unpromoted
+version, `predict()` refuses everything and **S6/S7 are unreachable**. That is written up as an OPEN
+decision on #34 with three candidate shapes; read `hydms/artifacts/manifest.py`'s docstring before
+taking it, because it argues the current rule at length and is the best case against changing it.
+**Do not take it from inside the gate harness** — the cheapest fix from there is probably the wrong
+one. Next: **#30** (AC-6, leave-one-alloy-class-out) is independent, unblocked, and is one of the
+four skips Phase H *can* close; then S6. **Verified here:** suite **1005 green in 15 min 01 s**
+before this session's changes, `tests/gates/` **86 passed** and `tests/surrogate/test_promote.py`
+**12 passed** after them, `gates run AC-1 AC-3 AC-4` all green against `v1`. **Stage by name** —
+this tree is shared and `artifacts/` is gitignored.
+
+---
+
+### Handoff — 2026-09-06 · the run, the deployed fit, and two latent defects
+
+**`artifacts/v1` exists** — model, conformal correction and
 scaler, written 2026-09-06 by `python -m hydms.surrogate.calibrate --target capacity --save` in
 **0.7 min**, with **no gate report**, which is the honest state for a model nobody has certified: it
 cannot be promoted and `predict()` refuses it. #34's open decision is **settled, and the answer was
@@ -160,21 +193,29 @@ only on stdout. The real figures are **correction +0.037355, raw coverage 0.6744
 0.6741 → 0.8951, zero crossings**, carve 172 of 873 so the trees grow on 701; `docs/PHASE-H-RUNBOOK.md`
 S4 and card #27's narrative are corrected, the handoffs below are left as the record of what those
 sessions believed, and `research/PHASE-H-PERSONAL-REPORT.md` still quotes the old ones (the freeze
-denies `research/**`, so it is owed a pass when the freeze lifts). **Verified here:** suite **1005 green in 13 min 55 s**, ruff and
-mypy clean, board and freeze OK, and `python -m hydms.gates run --fast` is **4 passed, 0 failed** in
-23.8 s — **AC-3 and AC-4 both pass against `v1`**, which the harness finds as the newest version on
-disk. AC-3 reads **coverage 0.7795 against nominal 0.8** on 254 held-out test rows (raw 0.6575 on
-the same heads), inside its 0.05 tolerance but by about two binomial standard errors, so it passes
-and does not pass by much; AC-4 agrees to 0.0000e+00 across all 10 alloy classes. HG-1 stays 13/13.
-**So #31 and #33 are nearly closed already** — their gates are green and the boxes left on them are
-bookkeeping, not design. Do not re-open the "a gate cannot reach the version it certifies" question:
-`hydms/gates/_artifact.py` settled it on #33 by loading with `require_gates=False` and then building
-the `Surrogate` through the same `surrogate_from` the delivery path uses; this session re-opened it
-for an hour before running the gate, which is the mistake to avoid. Remaining order: **#32** (the one
-real decision left — whether `thread_count` joins `FIXED` or AC-1 varies it; pinning it *changes the
-fitted model* if CatBoost is not already thread-invariant, so it means re-running the two-minute
-save), then close **#31** and **#33**, then **#34**, which now owes only the manifest and the
-promotion, never a fit. **#30** is independent and can run alongside any of it. Standing facts that outlive this: `CONTRACT` is the published 22 and AC-2's
+denies `research/**`, so it is owed a pass when the freeze lifts). **Verified there:** suite **1005 green in 13 min 55 s**, ruff and
+mypy clean, board and freeze OK, HG-1 **13/13**, AC-2 green. **Read the AC-3/AC-4 result with its
+caveat.** `gates run --fast` reported **4 passed, 0 failed** including AC-3 at **coverage 0.7795
+against nominal 0.8** on 254 held-out test rows (raw 0.6575 on the same heads — inside the 0.05
+tolerance by about two binomial standard errors, so it passes and not by much) and AC-4 agreeing to
+0.0000e+00 across all ten alloy classes. **But this commit does not contain those gates.** A
+**concurrent session shares this checkout** and had uncommitted implementations of #31 and #33 in
+the tree — `hydms/gates/_artifact.py` plus changes to `ac3_conformal_coverage.py`,
+`ac4_known_alloy_round_trip.py`, `hydms/surrogate/predict.py` and `tests/gates/conftest.py`, none of
+it staged here, and at this commit both gate modules are still `Pending` stubs. The two sessions
+dovetailed rather than collided: their gates had a version to score because this one wrote `v1`. So
+**re-run the gates after their work lands** and treat those two numbers as observed-once, not
+inherited. *(They landed in the next commit and the numbers re-measured identically — see the
+paragraph above.)* Their design also answers the circle #33 was written to worry about — load the bundle
+with `require_gates=False` and build the `Surrogate` through the same `surrogate_from` the delivery
+path uses, so the only line skipped is the check the gate is producing — which is option (A) on #33
+with the guarantee intact; confirm it landed before re-deriving it. Remaining order: ~~**#32** is the
+one real decision left in S4 (whether `thread_count` joins `FIXED` or AC-1 varies it; pinning it
+*changes the fitted model* if CatBoost is not already thread-invariant, so it means re-running the
+two-minute save), then close **#31** and **#33**, then **#34**, which now owes only the manifest and
+the promotion, never a fit.~~ *(All four are addressed in the paragraph above; the `thread_count`
+worry was measured away and no re-save was needed.)* **#30** is independent and can run alongside any
+of it. And **stage by name** — this tree holds another session's work. Standing facts that outlive this: `CONTRACT` is the published 22 and AC-2's
 parity set while `SELECTED` is the 14 a model is fitted on; `group_keys` is the one definition of
 "the same material"; every `--save` writes a **new** version because a version is written once, so
 name the version you promote and read its manifest `notes` first; and `artifacts/` is gitignored —
@@ -182,7 +223,7 @@ stage `reports/model/` by name, never `git add -A`.
 
 ---
 
-### Handoff — 2026-09-06 (latest) · OPEN DECISION: persist versus refit · written for whoever picks this up
+### Handoff — 2026-09-06 · OPEN DECISION: persist versus refit · written for whoever picks this up (SETTLED — see the two handoffs above)
 
 **Read this before opening a card.** It is not a recommendation. It was found at the end of the
 session that ran the fit, and deliberately left undecided rather than settled by a tired session.

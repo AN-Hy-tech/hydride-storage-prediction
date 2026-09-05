@@ -1,6 +1,6 @@
 ---
 id: 34
-status: backlog
+status: doing
 priority: High
 blocked_by: [29, 31, 32, 33]
 assignee: "@amirhossein"
@@ -22,7 +22,7 @@ that reason.
 
 ## Done when
 
-- [ ] **This card no longer pays for the fit — #29 does, and this card promotes *that* run
+- [x] **This card no longer pays for the fit — #29 does, and this card promotes *that* run
       (decided 2026-09-05, #29 Q12).** Two independent 3.5 h runs would mean the numbers in
       Chapter 1 describe a different model from the one that ships, so there is **one run**: #29
       pays for it and writes the tables, this card gates and promotes the artifact from it. Hence
@@ -79,14 +79,14 @@ that reason.
       but **`model.FIXED` pins no `thread_count`**, while #7's slow lane runs on `windows-latest`.
       See the 2026-09-06 handoff in [README.md](README.md) for the full framing.
 
-- [ ] Full pipeline run from `data/raw/` produces `artifacts/v1/`
-- [ ] **Name the version explicitly when you promote.** `save_deployed` takes the next free `v<N>`,
+- [x] Full pipeline run from `data/raw/` produces `artifacts/v1/` — done 2026-09-06 by `calibrate --target capacity --save`; the version holds `model`, `conformal` and `scaler`, fitted at `5fd9be5` from a modified tree, and carries **no gate report**, which is honest
+- [x] **Name the version explicitly when you promote.** `save_deployed` takes the next free `v<N>`,
       and every `--save` writes another one because a version is written once and never edited. So
       `artifacts/` may hold `v1`, `v2`, ... from repeated operator runs and only the manifest says
       which came from which configuration. Read `manifest.json`'s `notes` and `git` fields before
       choosing; a probe run says so in its notes
-- [ ] Manifest complete: git SHA, seeds, package versions, feature contract, gate results
-- [ ] All Phase 1 gates pass and are recorded in the manifest
+- [x] Manifest complete: git SHA, seeds, package versions, feature contract, gate results — all six, in the version `promote` writes; the candidate's manifest has the first five and honestly records `gates: null`
+- [ ] All Phase 1 gates pass and are recorded in the manifest — **5 of 12 pass, 7 are unwritten**; see the open decision below for which of those Phase H can reach and which it cannot
 
 - [ ] ~~**The full run is about 3.5 hours and the reason is one corner of the search space (from
       #26).**~~ **MOVED TO #29 (2026-09-05)** — the narrowing decision follows the bill, and #29
@@ -104,12 +104,12 @@ that reason.
       upper bound on `iterations`, would buy back most of the wall time for a model that is not
       worse. If it is narrowed, `tests/surrogate/test_model.py::test_the_search_space_is_the_archival_one`
       is what has to be updated, deliberately and with the reason in it
-- [ ] **The deployed configuration is chosen on an inner-fold number (from #26).**
+- [x] **The deployed configuration is chosen on an inner-fold number (from #26).** Kept, and the reading now lives in one place: `hydms.surrogate.deploy.deployed_params` moved out of `calibrate` when gate AC-1 needed the same answer, because *which configuration the deployed fit is fitted at* is part of the definition of the deployed fit and a second reader in the gate would be exactly the drift `deploy.py` was created to end. It still takes the `objective` minimum, still an inner-fold number, still never an outer score.
       `hydms.surrogate.train._deployed` takes the configuration whose own search achieved the best
       inner-fold pinball loss. The outer scores — the ones a run reports — take no part in it,
       which is what keeps picking a configuration from being leak L2 in a new place. Keep that
       property if this card chooses differently
-- [ ] **The version carries a conformal correction, and it is a number (from #27).** The payload
+- [x] **The version carries a conformal correction, and it is a number (from #27).** The payload
       key is `hydms.surrogate.conformal.CONFORMAL_PAYLOAD` and the value is a `FittedConformal`,
       read back with `conformal_from(bundle)` exactly as the scaler is with `scaler_from`. Two
       things this card owns and #27 could not: the calibration slice must be carved **before** the
@@ -138,7 +138,7 @@ that reason.
       manifest beside the git SHA and the seeds — `artifacts/store.py` records `load_config().seed`
       today and nothing else about the file. A guard in the project's grain is a test asserting that
       `fit_quantile_model` reaches `hydms.config.load` zero times
-- [ ] **Nothing records which commit a fit ran from, and this card owns the manifest that
+- [x] **Nothing records which commit a fit ran from, and this card owns the manifest that
       should (from #29, 2026-09-05).** `train.py`'s `_run()` writes trials, folds, seed and
       feature set into `model-run.csv` — but not the SHA. The only SHA anywhere is the one
       `evaluate --emit` stamps, which is `HEAD` **when the document was generated**, not when the
@@ -154,7 +154,76 @@ that reason.
       `hydms/descriptors/` and `hydms/config/` is **empty** — no fitting code moved. This card's
       manifest must record the run's own SHA rather than promotion-time `HEAD`, or the next
       occurrence will not be harmless.
-- [ ] `current` points at `v1`
+
+      **Closed 2026-09-06, and by the candidate's manifest rather than by the promoted one.**
+      `save_deployed` calls `artifacts.save` at the *end of the fit*, so `describe_git` stamps the
+      commit the fit ran from — `artifacts/v1` records `5fd9be5`, `code_modified: true`, and
+      `2026-09-05T21:57:01+00:00`. The version `promote` writes later is stamped at promotion time,
+      which is the defect this box names, so **it does not rely on its own git block**: its `notes`
+      carry the candidate's SHA, its modified-tree flag and its creation time verbatim, and the
+      candidate stays on disk with its own manifest. Two hops from a promoted model back to the
+      commit that fitted it, and neither is inferred.
+
+- [x] **The gate report exists and is embedded by a command, not by hand:
+      `python -m hydms.surrogate.promote` (landed 2026-09-06).** It reads a candidate version with
+      `require_gates=False`, runs the whole registry against it, and — only if every criterion
+      passed — writes a **new** version carrying the same payloads plus the report and points
+      `current` at it. It fits nothing: the model comes from `calibrate --save`, two minutes.
+      `--dry-run` runs the gates and writes nothing. Exit 0 certified, 1 unestablished, 2 bad
+      invocation. A refusal writes no version and moves no pointer, which
+      `tests/surrogate/test_promote.py` asserts on the directory listing rather than on the exit
+      code — an exit code is what a script reads, the directory is what the next run inherits.
+
+      **Why a second version and not an edit to `v1`:** a manifest is sealed when it is written, so
+      the report of a run *against* `v1` cannot go into `v1`. That is option (C) from card #33's
+      list, and its stated cost — two directories for one model — is paid here, where it belongs,
+      rather than in the gates.
+
+- [ ] **OPEN DECISION — `artifacts/v1` cannot be promoted during Phase H, and the reason is the
+      store's own guarantee working correctly (found 2026-09-06).** `hydms.artifacts.promote`
+      refuses a version whose manifest records any criterion that did not `PASS`, and
+      `Manifest.unestablished()` counts `SKIPPED` — deliberately, because a manifest saying "AC-6
+      was not checked" is exactly as much evidence as one saying "AC-6 failed". Measured by
+      `python -m hydms.surrogate.promote --dry-run`: **5 passed, 7 skipped.**
+
+      | Skipped | Card | Why it cannot be written in this phase |
+      |---|---|---|
+      | AC-5 | #41 | frozen with Phase T — there is no entropy model in Phase H |
+      | AC-7 | #57 | frozen with Phase A — this phase publishes no candidate list |
+      | AC-8 | #56 | frozen with Phase A — this phase runs no search |
+      | AC-6 | #30 | **landable** — leave-one-alloy-class-out, unblocked and independent |
+      | HG-2 | #77 | **landable** — needs #76, which is S6 |
+      | HG-3 | #79 | **landable** — needs #78, which is S6 |
+      | HG-4 | #86 | **landable** — S8 |
+
+      Four are landable inside Phase H (#30, then S6 and S8). **Three are not**: AC-5, AC-7 and
+      AC-8 belong to phases [FREEZE.md](../docs/FREEZE.md) has frozen, and no amount of Phase H
+      work will turn them green. So on the rule as written, **Phase H ends with a correct,
+      certified-as-far-as-it-goes model that can never be promoted — and because
+      `load_surrogate` refuses an unpromoted version, `predict()` cannot answer at all.** That
+      makes cards #76–#84, the whole delivery layer, unreachable.
+
+      **This is a decision about the store's central guarantee and it is deliberately not being
+      taken here.** Three shapes it could take, none of them obviously right:
+      **(i)** promotion checks a *phase-scoped* subset — the gates whose cards are not frozen —
+      which means the manifest has to record what "in scope" meant on the day, or the scope
+      becomes a thing that can be quietly widened later;
+      **(ii)** the frozen gates stop being `Pending` and become explicitly `NOT APPLICABLE` in this
+      phase, a fourth status the harness does not have and whose whole risk is that it is one edit
+      away from being applied to a gate that *is* applicable;
+      **(iii)** nothing changes, and Phase H's delivery layer is exercised against a version loaded
+      with `require_gates=False` by name — honest, and it means the app ships against an
+      uncertified artifact, which is the thing gate HG-2 exists to prevent.
+
+      **Whoever takes it should read `hydms/artifacts/manifest.py`'s docstring first** — it argues
+      the current rule at length and is the strongest statement of the case against (i) and (ii).
+      Marked OPEN rather than settled because the session that found it is the least fit to take
+      it: it has spent a day inside the gate harness and will reach for the change that is cheapest
+      there.
+
+- [ ] `current` points at `v1` — **blocked by the open decision above, not by any missing work.**
+      The command exists, the model exists, five criteria pass. `python -m hydms.surrogate.promote`
+      is one command away from finishing this card the moment the decision lands.
 
 ## Runnable check
 
@@ -167,6 +236,15 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
 `docs/PRD-inverse-design.md` — S1
 
 ## Narrative
+
+- 2026-09-06: The three blocking gates landed (#31, #32, #33) and this card's mechanism with them,
+  and then the card met a wall that is not a bug: `promote` requires every registered criterion to
+  have passed, and three of them belong to frozen phases. The interesting part is that the wall was
+  invisible until a command actually tried to walk into it — the rule has been in
+  `hydms/artifacts/store.py` since #4 and reads as obviously correct, and nothing before today ever
+  asked it to certify anything. Recorded as an OPEN decision rather than solved, because the fix
+  touches the store's central guarantee and the cheapest fix from inside the gate harness is
+  probably the wrong one. (by @assistant)
 
 - 2026-09-05: A `--trials 8` probe run died on trial 3 with `ConfigError: pipeline.yaml:model: unknown key(s) ['calibration_folds']`, and nothing was wrong with the code at any commit: the process had imported the pre-#27 `Model` dataclass and then re-read a post-#27 `pipeline.yaml` off the shared worktree. The interesting part is not the race but what it exposed — a run is not hermetic against its own configuration file. Measured while diagnosing it: one `load()` is 7.6 ms and a sentinel-budget nested run makes 210 of them, 21.6% of that run's wall time. At the configured budget that is ~2,300 re-reads spread over 3.5 hours. Recorded as a box above rather than fixed in place, because the fix changes what a published run records about itself and that is this card's subject. (by @assistant)
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)

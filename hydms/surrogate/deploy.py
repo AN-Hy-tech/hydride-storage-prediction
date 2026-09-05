@@ -42,7 +42,7 @@ from __future__ import annotations
 from collections.abc import Hashable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 import pandas as pd
 
@@ -58,6 +58,7 @@ from hydms.surrogate.conformal import (
 )
 from hydms.surrogate.model import (
     MODEL_PAYLOAD,
+    PARAM_PREFIX,
     FitLog,
     ModelError,
     ModelSettings,
@@ -68,11 +69,18 @@ from hydms.surrogate.model import (
 from hydms.surrogate.scaler import SCALER_PAYLOAD, TRAIN, FittedScaler, fit_scaler
 
 __all__ = [
+    "CHOSEN",
     "DEPLOYED",
     "DeployedFit",
     "deployed_fit",
+    "deployed_params",
     "save_deployed",
 ]
+
+#: Where the deployed configuration comes from when an earlier run left one. Written by
+#: ``python -m hydms.surrogate.train``; absent on a clean checkout, in which case a fit uses
+#: CatBoost's own defaults and whoever asked is told so.
+CHOSEN = "model-chosen.csv"
 
 #: The fit's name, as it appears in a :class:`~hydms.surrogate.model.FitRecord` and in every
 #: failure message about it. Spelled once: the leak sentinels read records back by this name,
@@ -121,6 +129,72 @@ class DeployedFit:
             CONFORMAL_PAYLOAD: self.conformal,
             SCALER_PAYLOAD: self.scaler,
         }
+
+
+def deployed_params(
+    destination: Path, out: TextIO | None = None
+) -> tuple[Mapping[str, Any] | None, str]:
+    """The hyperparameters the deployed fit uses, from an earlier run's table if there is one.
+
+    Here rather than in ``hydms.surrogate.calibrate`` because this module is the one definition
+    of the deployed fit, and *which configuration it is fitted at* is part of that definition.
+    Gate AC-1 has to fit the same model twice and needs the same answer this reading gives, and
+    a second reader in the gate would be the drift this module was created to end.
+
+    Chosen on an inner-fold objective, never on an outer score -- the reading
+    :func:`hydms.surrogate.train._deployed` makes, and the reason it is a reading rather than a
+    re-selection: picking a configuration by any number visible downstream would be selecting
+    on the data the calibration is about to be certified against.
+
+    Args:
+        destination: The reports directory holding :data:`CHOSEN`.
+        out: Where to narrate what was found. ``None`` says nothing, which is what a gate
+            wants -- it puts the provenance in its own result instead.
+
+    Returns:
+        ``(params, provenance)``. ``params`` is ``None`` when no configuration is on disk,
+        which means CatBoost's own defaults; ``provenance`` says which, in one clause.
+    """
+
+    def say(message: str) -> None:
+        if out is not None:
+            print(message, file=out)
+
+    table = destination / CHOSEN
+    if not table.exists():
+        say(
+            f"no deployed configuration on disk ({table} is absent), so this fit uses "
+            f"CatBoost's own defaults. That is a smoke test of the calibration path, not the "
+            f"deployed band -- run `python -m hydms.surrogate.train` first for that."
+        )
+        return None, "catboost defaults"
+    chosen = pd.read_csv(table)
+    if chosen.empty or "objective" not in chosen.columns:
+        say(f"{table} records no configuration; using CatBoost's defaults.")
+        return None, "catboost defaults"
+    best = chosen.loc[chosen["objective"].idxmin()]
+    # An allow-list, not a deny-list. Every hyperparameter column carries `PARAM_PREFIX`; the
+    # rest of the table is bookkeeping -- `objective`, `trials`, `pruned`, `seconds`, and a
+    # `features` **count**. Selecting by "not one of these six" fed that count to
+    # `CatBoostRegressor(**params)` as `features=14`, and kept the prefix on the names besides.
+    params = {
+        str(name)[len(PARAM_PREFIX) :]: best[name]
+        for name in chosen.columns
+        if str(name).startswith(PARAM_PREFIX) and pd.notna(best[name])
+    }
+    if not params:
+        say(
+            f"{table} has no {PARAM_PREFIX!r} column, so it records no hyperparameters this "
+            f"command can read; using CatBoost's defaults. That table was written by a "
+            f"different version of `hydms.surrogate.train` than the one installed."
+        )
+        return None, "catboost defaults"
+    where = str(best.get("fold", "?"))
+    say(
+        f"deployed configuration: the one {where!r} chose, on its inner-fold objective "
+        f"{float(best['objective']):.5f}"
+    )
+    return params, f"{CHOSEN}:{where}"
 
 
 def deployed_fit(

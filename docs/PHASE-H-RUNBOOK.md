@@ -734,18 +734,43 @@ could mean anything. See below.
       outer-fold models and no deployed fit takes any part in it — which is why this cost two
       minutes and not a second 1 h 41 m run.
 - [ ] **#30 (AC-6)** Leave-one-alloy-class-out CV. Unblocked only because #87 restored `Alloy_class`.
-- [ ] **#31 AC-3** conformal coverage · **#32 AC-1** seed reproducibility · **#33 AC-4** known alloys
-      round-trip. **AC-3 and AC-4 both pass against `artifacts/v1` as of 2026-09-06** — coverage
-      **0.7795** against nominal 0.8 on 254 held-out test rows (raw 0.6575 on the same heads), inside
-      the 0.05 tolerance by about two binomial standard errors; AC-4 agrees to 0.0000e+00 across all
-      ten alloy classes. The version carries **no gate report**, which is the honest state for a model
-      nobody has certified, and reaching it is already solved: `hydms/gates/_artifact.py` loads with
-      `require_gates=False` and builds the `Surrogate` through the same `surrogate_from` the delivery
-      path uses, so the only line skipped is the check the gate is producing. **#32 is the one real
-      decision left in S4.**
+- [x] **#31 AC-3** conformal coverage · **#32 AC-1** seed reproducibility · **#33 AC-4** known alloys
+      round-trip. **All three landed 2026-09-06 and all three pass against `artifacts/v1`**, and the
+      numbers below are now reproducible from the repository — the paragraph that recorded them as
+      "observed in a shared tree, gates still `Pending` stubs" is superseded.
+      **AC-3**: coverage **0.7795** against nominal 0.8 on 254 held-out `test` rows, raw coverage
+      **0.6575** on the same heads with mean widths 0.8630 and 0.6485 wt%. Inside the 0.05 tolerance
+      by 0.82 of a binomial standard error (0.0251 at this n), so it passes and does not pass by
+      much. That raw number is worth carrying: #26's 64.4 % was a per-fold probe, and 0.6575 is the
+      same finding on the split the thesis reports.
+      **AC-4**: 30 predictions, **0.0000e+00** disagreement against a 1e-12 bar, over ten rows the
+      model grew on across all ten alloy classes.
+      **AC-1**: every metric identical across two fits at **1 thread and 20**, same 2,584 trees,
+      same best iteration, same correction — see below.
+
+      **#32's open decision is settled by measurement, and neither of its options was taken.** Both
+      assumed the fit might not be thread-invariant. It is: fitting the deployed configuration at
+      `thread_count` 1, 4 and 20 gives a **bit-identical** head matrix over all 1,279 rows. So
+      `thread_count` stays out of `model.FIXED` — pinning it would change nothing measurable and
+      cap a 1 h 41 m run's parallelism — **no re-save is owed**, and AC-1 *varies* the thread count
+      because the stronger claim turned out to be free.
+
+      **#33's knot is untied without weakening anything.** `load_surrogate` is two things —
+      locating a version and assembling a `Surrogate` from a bundle — and only the first has an
+      opinion about gates. `surrogate_from(bundle)` is now the second half; `hydms/gates/_artifact.py`
+      loads with `require_gates=False` and runs that same assembly, so the only line of the delivery
+      path a gate skips is the check whose input it is producing. `load_surrogate` grew no parameter.
 - [ ] **#34** Train and publish `artifacts/v1`. Its "persist versus refit" decision is **settled**:
       neither. The deployed fit is rebuilt in two minutes from the committed `model-chosen.csv`, and
-      rebuilding it cannot move a published number.
+      rebuilding it cannot move a published number. **The certification mechanism landed 2026-09-06**
+      — `python -m hydms.surrogate.promote` gates a candidate version and, only if everything
+      passed, writes a new version carrying the report and moves the pointer. **Promotion itself is
+      blocked, and not by missing work:** `promote` requires every registered criterion to have
+      passed and 7 of 12 are unwritten, three of them (AC-5, AC-7, AC-8) frozen out of this phase
+      entirely. On the rule as written, Phase H ends with a model that can never be promoted and a
+      `predict()` that therefore refuses everything — which makes S6 and S7 unreachable. **That is
+      an OPEN decision recorded on #34 with three candidate shapes**; it touches the store's central
+      guarantee and is not the gate harness's to take.
 
 **Exit check:** `conda run -n Project python -m hydms.gates run --fast` · all HG-1 sentinels green.
 

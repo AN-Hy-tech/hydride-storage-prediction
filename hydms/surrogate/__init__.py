@@ -99,6 +99,7 @@ from .deploy import (
     DEPLOYED,
     DeployedFit,
     deployed_fit,
+    deployed_params,
     save_deployed,
 )
 from .model import (
@@ -224,6 +225,7 @@ __all__ = [
     "compare_metrics",
     "conformal_from",
     "deployed_fit",
+    "deployed_params",
     "final_fit",
     "fit_conformal",
     "fit_quantile_model",

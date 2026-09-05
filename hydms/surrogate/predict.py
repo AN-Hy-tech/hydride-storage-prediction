@@ -65,6 +65,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -84,6 +85,7 @@ __all__ = [
     "clear_cache",
     "load_surrogate",
     "predict",
+    "surrogate_from",
 ]
 
 #: The ranking key: the calibrated lower confidence bound, in weight percent. Named here so
@@ -117,10 +119,11 @@ class PredictionError(ValueError):
 class Surrogate:
     """One artifact version, ready to answer, with nothing of its machinery reachable.
 
-    Constructed only by :func:`load_surrogate`. The three private fields are the whole of the
-    hidden state; everything public about this object is a *fact* — which version answered,
-    which heads it carries, what level its band targets — and none of it is an object a caller
-    could call ``fit`` on.
+    Constructed only by :func:`surrogate_from`, which :func:`load_surrogate` calls once it has
+    located the version. The three private fields are the whole of the hidden state;
+    everything public about this object is a *fact* — which version answered, which heads it
+    carries, what level its band targets — and none of it is an object a caller could call
+    ``fit`` on.
 
     Immutable, and pinned to one version for its lifetime. A prediction path that can silently
     pick up a different model between two calls cannot honour AC-4 and cannot be reasoned
@@ -244,7 +247,11 @@ def load_surrogate(
     ``require_gates=False`` for the card that has just written a version and wants it back;
     this function does not forward it and takes no equivalent, so an artifact whose gates are
     unestablished — a run that died, a version saved before AC-3 was written, anything a
-    ``SKIPPED`` appears in — cannot answer a prediction at all. That is what card #28's
+    ``SKIPPED`` appears in — cannot answer a prediction at all. Card #33 met that as a circle
+    — a gate needs a certified version, certification needs the gate — and resolved it by
+    splitting this function rather than weakening it: :func:`surrogate_from` is everything
+    below the version lookup, and a gate loads the bundle itself with ``require_gates=False``
+    and calls that. Nothing about *this* function moved. That is what card #28's
     "refuses to run against an unpromoted version" buys, and it is strictly stronger than the
     promotion pointer: :func:`hydms.artifacts.store.promote` already refuses to point at a
     version whose gates are incomplete, so *promoted* implies *gates established* and the
@@ -270,7 +277,46 @@ def load_surrogate(
     if cached is not None:
         return cached
 
-    bundle = artifacts.load(resolved, store=root)
+    surrogate = surrogate_from(artifacts.load(resolved, store=root))
+    _LOADED[key] = surrogate
+    return surrogate
+
+
+def surrogate_from(bundle: Any) -> Surrogate:
+    """Assemble a :class:`Surrogate` from an already-loaded artifact bundle.
+
+    The whole of what :func:`load_surrogate` does once it holds the bundle — read the two
+    payloads back, check the model against the manifest's own contract, and build the
+    featuriser from the fitted names — with the *locating* of the version left to the caller.
+    Named on the ``_from`` idiom :func:`~hydms.surrogate.model.model_from`,
+    :func:`~hydms.surrogate.conformal.conformal_from` and
+    :func:`~hydms.surrogate.scaler.scaler_from` already use for "read this payload back".
+
+    **It exists because a gate has to score a version before that version has any gates**, and
+    the alternative was worse. ``load_surrogate`` refuses a version whose gate run is
+    unestablished and takes no way round that — but the first thing ever recorded against a
+    freshly-saved version *is* a gate run, so gates AC-3 and AC-4 would have had to either
+    relax that refusal or re-assemble the prediction path themselves. Both were rejected on
+    card #33: relaxing it puts a hole in the one guarantee card #28 was built to make
+    hole-free, and a second assembly is the duplication AC-4 exists to catch. Splitting the
+    function instead means the gates load the bundle through
+    :func:`hydms.artifacts.store.load` with ``require_gates=False`` — the door the store
+    documents for exactly this case — and then run **this** code, so the only line of the
+    delivery path a gate does not exercise is the gate check whose input it is producing.
+
+    Args:
+        bundle: A :class:`hydms.artifacts.store.Artifacts`, however it was loaded.
+
+    Returns:
+        A :class:`Surrogate` holding that bundle's model and calibration and nothing else.
+
+    Raises:
+        PredictionError: the model was fitted on a column its own feature contract does not
+            declare.
+        ModelError, ConformalError: a payload is not the type it is stored under, or the model
+            and the correction came from different runs.
+        KeyError: the bundle holds no model, or no calibration.
+    """
     model = model_from(bundle)
     conformal = conformal_from(bundle)
 
@@ -286,7 +332,7 @@ def load_surrogate(
                 f"runs."
             )
 
-    surrogate = Surrogate(
+    return Surrogate(
         version=bundle.version,
         _model=model,
         _conformal=conformal,
@@ -296,8 +342,6 @@ def load_surrogate(
         # difference would cost eight columns per candidate that nothing ever reads.
         _contract=FeatureContract.from_names(model.feature_names),
     )
-    _LOADED[key] = surrogate
-    return surrogate
 
 
 # --------------------------------------------------------------------------------------
