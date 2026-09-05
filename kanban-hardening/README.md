@@ -133,30 +133,28 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **Implement steps 0–4 below, together, in one session** — the
-config-race fix and the search-space narrowing first, then out-of-fold predictions, `evaluate.py`,
-SHAP/PDP, and the L11 sentinel that takes HG-1 to 13/13. Commit them, verify against a
-sentinel-budget probe, and hand the maintainer one command for the ~3.5 h run; **do not run it
-yourself**. Thirty-four cards are done and **#29 is `doing`** — opened 2026-09-05 with **no
-implementation**, only docstring corrections in `predict.py` and `conformal.py`, so
-`feat/phase-h-emergency-hardening` is otherwise clean. The fast suite is
-**961** green in 11 min 44 s — **measured this session, and it is not the 960 the handoffs below
-record**. Nothing in this session touched `tests/`, so 960 was already wrong when it was written;
-the older handoffs keep it because they are history. `python -m hydms.gates run --fast` exits 0
-with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at **12 of 13** — **L11 is the only leak left**
-and #29 owes its sentinel. **#29's opening move is not
-the metrics module**, because two of the card's own premises turned out to be false when measured:
-`_score_fold` **discards the row-level predictions** it computes, so the only bootstrap available
-today is over five fold scores whose spread the card itself calls confounded with training size;
-and `artifacts/` holds no version, so the card's `--artifact current` check cannot run until #34,
-three gates away. The first change is therefore to **keep the out-of-fold predictions**, which
-gives ~893 rows to resample and decouples #29 from #34 entirely. The full reasoning and the four
-implementation steps are in the handoff immediately below. **#30 and the three gates #31/#32/#33
-are all unblocked**, as are #7, #15 and #49 — ask the board rather than trusting this list; #15 is
-still owed a re-measure now that screening flags rows for real. The two feature contracts still are
-not interchangeable — `CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is the 14 a
-model is fitted on — and `hydms.surrogate.model.capacity_matrix()` is the one place that builds the
-modelling matrix.
+**Next session, in one paragraph.** Thirty-four cards are done, **#29 is `doing` with nothing
+implemented** — only docstring corrections in `predict.py` and `conformal.py`, so
+`feat/phase-h-emergency-hardening` is otherwise clean, the fast suite is **961** green in 11 min
+44 s (measured 2026-09-05; the handoffs below say 960 and were wrong when written), and
+`python -m hydms.gates run --fast` exits 0 with AC-2 at 2.7285e-12 and HG-1 `SKIPPED` at 12 of 13.
+**Implement steps 0–4 from the handoff immediately below, together, in one session:** the
+config-race fix and the search-space narrowing first — both moved here from #34 because ownership
+follows the bill, and both must land *before* any real fit — then keep `_score_fold`'s out-of-fold
+predictions on a defaulted `Evaluation.out_of_fold` field, write `hydms/surrogate/evaluate.py`
+(both scales, 2000 resamples **over canonical groups** not rows, per split and per temperature
+subgroup, the too-narrow caveat as a table column and `per_fold` beside it as a second interval),
+compute SHAP and PDP on the deployed fit's **training** rows with a `computed_on` column, and
+close **L11** with the sentinel asserting that column is not in `HELD_OUT_SPLITS` — which takes
+**HG-1 to 13/13**, the last of the thirteen leaks. Expect HG-1 to go red the moment `evaluate.py`
+exists unwired; that is the mechanism, not a regression. Then commit, verify the whole path against
+a **sentinel-budget probe**, and hand the maintainer **one command** for the ~3.5 h run — **do not
+run it yourself**, and do not let #34 run a second fit, because one run is what keeps Chapter 1
+describing the model that actually ships. Standing facts that outlive this card: `CONTRACT` is the
+published 22 and AC-2's parity set while `SELECTED` is the 14 a model is fitted on and they are not
+interchangeable; `capacity_matrix()` is the one place the modelling matrix is built; `group_keys`
+is the one definition of "the same material"; and **every number in this layer is still a probe
+number** — no full run has ever been made, which is exactly what #29 now exists to fix.
 
 ---
 
