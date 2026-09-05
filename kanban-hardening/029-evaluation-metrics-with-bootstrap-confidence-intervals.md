@@ -181,6 +181,28 @@ intervals alongside point estimates by default — not as an option.
       never `git add -A` there, since the directory also holds #27's local probe CSVs — and #34
       promotes the artifact **from that same run**. Do not run `train` twice: one run is the whole
       reason this card took the bill off #34.
+- [ ] **The `(clean tree)` check cannot pass, and the defect is in this card's own emit step
+      (found 2026-09-05 22:30, mid-run, by an audit session).** `RUNNING-THE-FIT.md` Step 6 check 2
+      says the document must read `- Code: \`<sha>\` (clean tree)`, and Step 1 clears
+      `reports/model/` so that it will. **But Step 4 then writes eight CSVs back into that
+      directory, and `.gitignore` un-ignores it** (`!/reports/model/`, decided by this card), so by
+      the time Step 5 runs, `git status --porcelain` is non-empty again — and
+      `hydms.artifacts.manifest.describe_git` computes `dirty` as `bool(status)` over exactly that.
+      **Every real run therefore stamps `(working tree dirty)`, and the check an operator is told
+      to make is unsatisfiable by construction.** Commit `a101205` saw half of this — untracked
+      counts as dirty — and fixed Step 1; it did not notice that the run re-dirties the tree before
+      the stamp is read.
+
+      **Not a reason to cancel a run.** `train.py` writes no git stamp at all — only
+      `evaluate --emit` does, it fits nothing, and it can be re-run any number of times. The numbers
+      are unaffected; what is wrong is the provenance line above them.
+
+      The fix is a naming question before it is a code change: `dirty` currently answers *"did git
+      report anything?"* when every caller asks *"can this output be tied to the code that produced
+      it?"* — and the knowledge that a run's own results are not code lives only in `.gitignore` and
+      in runbook prose, which is what this card already said prose is for losing. Being planned
+      under `/grill-with-docs`; do not patch `describe_git`'s call site in `evaluate.py` to paper
+      over it, because `hydms.artifacts.store` stamps the same field into #34's manifest.
 - [ ] **Boxed, not chased (Q8): the canonical count is off by one against a stated invariant.**
       CLAUDE.md says 1,149 formula strings collapse to **1,115** canonical compositions; the
       modelling matrix measures **1,114** groups over 1,278 rows. The populations genuinely differ
