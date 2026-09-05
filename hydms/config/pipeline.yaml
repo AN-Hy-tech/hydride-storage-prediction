@@ -1,0 +1,44 @@
+# HydMS pipeline configuration — the single owner of every path, seed and threshold.
+#
+# This file replaces the six data-directory names and the absolute Windows drive paths the
+# audit found scattered across the nine legacy scripts (PRD §2.2). After card #3, moving the
+# repository or changing where data lives means editing this file and nothing else: no path,
+# seed or threshold is hard-coded anywhere in `hydms/`.
+#
+# Every path is relative to the repository root and is resolved to an absolute path by
+# `hydms.config.load()`. The schema is a contract: `load()` rejects any key not declared in
+# `hydms/config/__init__.py`, so adding a knob here means adding its typed field there too.
+
+paths:
+  # --- Inputs (archival, read-only) -------------------------------------------------------
+  # The raw datasets behind REPORT.md. They live under Machine_Model/ because that tree is
+  # the frozen record and is never rewritten (PRD §7.2); the new pipeline reads them, it does
+  # not move or edit them.
+  raw_capacity: Machine_Model/data/raw/hydride_data.csv        # formula + T -> capacity (wt%)
+  raw_thermo: Machine_Model/data/raw/ML-HYDPARK_v0.0.5.csv     # thermodynamics (cards #38-#43)
+
+  # --- Outputs (created by a run) ---------------------------------------------------------
+  # Root under which every versioned run writes its artifacts and manifest. The layout
+  # beneath this directory is owned by the artifact store (card #4); this file only names
+  # where that root sits. Kept out of Machine_Model/ so runs never touch the archival tree.
+  artifacts_root: artifacts
+
+seeds:
+  # One global seed threads through every stochastic step — splits, CleanLab, selection,
+  # CatBoost. Recorded into each run's manifest so a result can be reproduced (S1, AC-1).
+  global: 42
+
+splits:
+  # Stratified, unique-formula train/val/test fractions (card #13). train is the remainder,
+  # so test + val must be < 1. Matches the legacy split_data.py (test 0.20, val 0.10).
+  test_fraction: 0.20
+  val_fraction: 0.10
+
+thresholds:
+  # Feature-selection knobs (card #24, porting the five-stage selection).
+  variance: 0.001            # drop features with variance below this (VarianceThreshold)
+  mutual_info: 0.001         # drop features with mutual information below this
+  vif: 30.0                  # iterative VIF ceiling for multicollinearity pruning
+  # CleanLab / outlier screening (card #14): a residual is an outlier past this many robust
+  # standard deviations (MAD-scaled) from the clean-training residual distribution.
+  outlier_residual_sigma: 3.0
