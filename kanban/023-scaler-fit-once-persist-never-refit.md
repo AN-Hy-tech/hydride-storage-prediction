@@ -41,3 +41,7 @@ python -m pytest tests/surrogate/test_scaler.py -q
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+- 2026-09-05: The persist-vs-refit decision (record on #34) is what turns this card's "never refit" from a hope
+  into a structural fact: the scaler is frozen inside `v1` and consumers only ever `load()` it, so the
+  transform-only wrapper here has an actual object to be. AC-4 (#33) is the runtime guard that no one silently
+  refits it. (by @assistant)

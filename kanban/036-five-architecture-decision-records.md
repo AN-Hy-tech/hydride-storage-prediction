@@ -44,3 +44,8 @@ ls docs/adr/*.md | wc -l
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+- 2026-09-05: **Candidate sixth ADR — persist-vs-refit.** Resolved on #34 (persist by default; AC-1 on #32 the
+  single sanctioned refit). It is as hard to reverse and as re-litigable as the five listed — a future reader
+  will otherwise re-suggest "just retrain each run" — so it likely warrants `0006-persist-artifacts-never-refit.md`.
+  Flagged, not decided: whether to widen this card from five to six is a board-scope call for @amirhossein, and
+  the Narrative on #34/#32 already carries the reasoning an ADR would be written from. (by @assistant)

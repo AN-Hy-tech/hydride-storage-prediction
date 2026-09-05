@@ -42,3 +42,7 @@ python -m pytest tests/artifacts -q
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+- 2026-09-05: Persist-vs-refit resolved in favour of persist — `save()`/`load()` is the *only* path to a trained
+  model for every consumer and every gate except AC-1 (#32), the one sanctioned refit. This is what "Loading a
+  version whose gate results are incomplete raises" is protecting: the store, not a retrain, is the source of
+  truth. Full record on #34. (by @assistant)
