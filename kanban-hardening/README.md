@@ -134,10 +134,13 @@ bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
 **Next session, in one paragraph.** Thirty-four cards are done and **#29 is `doing`** — opened
-2026-09-05 with **no code written**, so the tree is otherwise clean on
-`feat/phase-h-emergency-hardening` and the fast suite is still **960** green.
-`python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
-**12 of 13** — **L11 is the only leak left** and #29 owes its sentinel. **#29's opening move is not
+2026-09-05 with **no implementation**, only docstring corrections in `predict.py` and
+`conformal.py`, so `feat/phase-h-emergency-hardening` is otherwise clean. The fast suite is
+**961** green in 11 min 44 s — **measured this session, and it is not the 960 the handoffs below
+record**. Nothing in this session touched `tests/`, so 960 was already wrong when it was written;
+the older handoffs keep it because they are history. `python -m hydms.gates run --fast` exits 0
+with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at **12 of 13** — **L11 is the only leak left**
+and #29 owes its sentinel. **#29's opening move is not
 the metrics module**, because two of the card's own premises turned out to be false when measured:
 `_score_fold` **discards the row-level predictions** it computes, so the only bootstrap available
 today is over five fold scores whose spread the card itself calls confounded with training size;
@@ -156,10 +159,17 @@ modelling matrix.
 ### Handoff — 2026-09-05 (latest) · #29 opened · written for the session that implements it
 
 **Where the phase is.** Thirty-four cards done, **#29 `doing` with nothing implemented**. Fast suite
-**960** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
-`python -m hydms.gates run --fast` exits 0, AC-2 green at 2.7285e-12, **HG-1 still 12/13**. The
-only changes on disk are #29's card — its `status`, five new boxes and a narrative entry — and this
-file. **No `hydms/` file has been touched**, so nothing here is half-built.
+**961** green in 11 min 44 s, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
+AC-2 green at 2.7285e-12, **HG-1 still 12/13**. The changes on disk are #29's card, #36's card,
+this file, and **docstring-only corrections** in `hydms/surrogate/predict.py` and
+`hydms/surrogate/conformal.py` — no behaviour, nothing half-built.
+
+**The suite count is 961, not the 960 every handoff below quotes.** Measured here by running it;
+this session touched no test file, so the number was already wrong when it was written. The older
+handoffs are left as they stand, because they are the record of what those sessions believed.
+Quote 961, and **re-measure rather than copying forward** — an off-by-one nobody checks is how the
+1,114 / 1,115 canonical discrepancy boxed on #29 got there too. Note that `pyproject.toml` already
+sets `-q`; adding your own `-q` suppresses the `N passed` line the handoff needs.
 
 **Read the card's new boxes before writing anything.** This session did not implement; it measured
 the card's premises, and two of them were wrong. Taking the card literally would have produced
