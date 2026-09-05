@@ -56,12 +56,56 @@ coverage = regression_coverage_score(y_test, y_pis)[0]     # compare against 0.9
 width = (y_pis[:, 1, 0] - y_pis[:, 0, 0]).mean()
 ```
 
-**RISK for card #27.** The plan is CatBoost `MultiQuantile` (#26) *then* MAPIE calibration (#27).
-MAPIE's `ConformalizedQuantileRegressor` expects a scikit-learn-style quantile estimator, and a
-single CatBoost `MultiQuantile` model emitting all quantiles at once is not obviously that shape.
-Card #27 should establish, before building on it, whether CQR accepts the MultiQuantile model
-directly, needs one CatBoost model per quantile, or whether `SplitConformalRegressor` around the
-median prediction is the honest fit. This is unresolved here.
+### Settled by card #27, against MAPIE 1.5.0's source
+
+The RISK this section used to carry — whether CQR accepts a `MultiQuantile` model, needs one
+CatBoost per quantile, or should be replaced by `SplitConformalRegressor` around the median — is
+resolved. **CQR, via `prefit=True`, with three one-column adapters over the single model.** The
+four facts that decide it were read out of `mapie/regression/quantile_regression.py`, because the
+hosted documentation for these internals 404s:
+
+- **`prefit=False` accepts four estimators and CatBoost is not one of them.** The class docstring
+  names `QuantileRegressor`, `GradientBoostingRegressor`, `HistGradientBoostingRegressor` and
+  `LGBMRegressor`; `_fit_estimators` looks the estimator up in `quantile_estimator_params` by class
+  name and raises otherwise. No duck typing gets in.
+- **`prefit=True` takes `[lower, upper, median]` — the median LAST.**
+  `_initialize_and_check_prefit_estimators` does `self.single_estimator_ = self.estimators_[2]`, and
+  `conformalize` reads positions 0 and 1 as the band. `_check_prefit_params` only counts to three;
+  it never checks which quantile an estimator predicts. Hand it the wrong order and you get a
+  plausible, wrong interval and no error. This is the positional trap `column_names` exists to kill,
+  reappearing at the library boundary, so `hydms.surrogate.conformal` asserts it two ways.
+- **Each estimator must `predict` one column**, which a `(n, 3)` MultiQuantile booster does not —
+  hence the adapters. Each carries `fitted_ = True` and deliberately **not** `n_features_in_`:
+  `check_sklearn_user_model_is_fitted` probes any estimator that has the latter by calling
+  `predict(np.zeros((1, n)))`, and an adapter that refuses an unnamed array on purpose fails it.
+- **The heads must match the level exactly**: lower `(1 - confidence_level) / 2`, upper
+  `(1 + confidence_level) / 2`, median `0.5`. `pipeline.yaml` shipped violating this — heads at
+  `[0.1, 0.5, 0.9]` beside `confidence_level: 0.90` — and nothing raised because nothing read
+  either key. `hydms.config._validate` now refuses the pair.
+
+The alternatives were rejected on measurement: one CatBoost per quantile triples a search budget
+already at 3.5 h **and** forfeits the zero-crossing property card #26 measured, since nothing holds
+independent heads in order and CQR's widening cannot repair a crossing; `SplitConformalRegressor`
+with the `"absolute"` score would replace a width distribution with CV 0.572 by a single number,
+collapsing lower-confidence-bound ranking to mean ranking minus a constant.
+
+Two more calls worth writing down, both used by `fit_conformal`:
+
+```python
+# symmetric_correction=True: ONE constant for both heads, not MAPIE's default of one per head.
+point, intervals = calibrator.predict_interval(X_calib, symmetric_correction=True)
+low, high = intervals[:, 0, 0], intervals[:, 1, 0]
+```
+
+`predict_interval` returns `(n, 2, 1)`; the third axis exists only for consistency with the other
+regressors. And `_check_lower_upper_bounds` **logs** ill-sorted predictions at INFO — it does not
+raise — so a crossed head passes through silently and has to be counted elsewhere
+(`quantile_metrics(...)["crossings"]`).
+
+**What HydMS stores is the constant, not the calibrator.** MAPIE is a fit-time dependency: the
+constant is read back off `predict_interval`'s own output, checked to be a single number, and
+asserted to reproduce that output to 1e-12 before it is returned. Nothing on the prediction path
+imports MAPIE.
 
 ---
 
@@ -158,7 +202,7 @@ script's parameter block turned out to contain three things nobody had checked.
 
 | File | Was | Now | Why |
 |---|---|---|---|
-| `pyproject.toml` | `mapie>=0.8` | `mapie>=1.0` | 0.8 predates the `fit`/`conformalize`/`predict_interval` API documented above. The old floor would have silently allowed a version whose interface does not match any code written against these notes. |
+| `pyproject.toml` | `mapie>=0.8` | `mapie>=1.0` | 0.8 predates the `fit`/`conformalize`/`predict_interval` API documented above. The old floor would have silently allowed a version whose interface does not match any code written against these notes. Card #27 installed **1.5.0** into `Project` and pinned it in `requirements-lock.txt`; pip resolved it without moving any existing pin. |
 
 `pymoo>=0.6`, `streamlit>=1.30` and `ElMD>=0.5` are unchanged — nothing found contradicts them,
 though only pymoo was checked against upstream docs in this pass.

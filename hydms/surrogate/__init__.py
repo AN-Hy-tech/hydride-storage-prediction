@@ -28,6 +28,14 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     from an outer fold the hyperparameter search never saw (leak L4), recorded as a
     :class:`~hydms.qa.detectors.SelectionRecord` per model compared.
 
+``conformal.py``
+    What turns three raw quantile heads into an interval that means its own number. MAPIE's
+    conformalized quantile regression estimates one constant on rows carved out of ``train``
+    by :func:`~hydms.surrogate.conformal.calibration_slice`, and what is *stored* is that
+    number rather than the calibrator -- so MAPIE is a fit-time dependency and the prediction
+    path never imports it. ``python -m hydms.surrogate.calibrate`` is the runnable entry
+    point.
+
 ``model.py``
     The capacity model and its quantile heads. A fit cannot be made without naming the rows
     it will be *scored* against, and that is the first thing checked (leaks L1 and L5); the
@@ -47,6 +55,19 @@ from .comparison import (
     Placeholder,
     placeholder_exposure,
     row_cost,
+)
+from .conformal import (
+    CONFORMAL_PAYLOAD,
+    PARITY_TOLERANCE,
+    SYMMETRIC,
+    ConformalError,
+    FittedConformal,
+    calibrated_heads,
+    calibration_groups,
+    calibration_slice,
+    compare_metrics,
+    conformal_from,
+    fit_conformal,
 )
 from .model import (
     FIXED,
@@ -106,20 +127,25 @@ from .validation import (
 )
 
 __all__ = [
+    "CONFORMAL_PAYLOAD",
     "FIXED",
     "HELD_OUT_SPLITS",
     "OUTER_FOLDS",
+    "PARITY_TOLERANCE",
     "QUANTILE_RANGE",
     "SCALER_PAYLOAD",
     "SEARCH_SPACE",
     "STAGE_NAMES",
+    "SYMMETRIC",
     "Comparison",
     "ComparisonError",
     "Configuration",
+    "ConformalError",
     "Contender",
     "Evaluation",
     "FitLog",
     "FitRecord",
+    "FittedConformal",
     "FittedScaler",
     "Fold",
     "FoldSelection",
@@ -139,10 +165,16 @@ __all__ = [
     "Stage",
     "TuningTask",
     "ValidationError",
+    "calibrated_heads",
+    "calibration_groups",
+    "calibration_slice",
     "capacity_contender",
     "capacity_matrix",
     "column_names",
+    "compare_metrics",
+    "conformal_from",
     "final_fit",
+    "fit_conformal",
     "fit_quantile_model",
     "fit_scaler",
     "grouped_folds",

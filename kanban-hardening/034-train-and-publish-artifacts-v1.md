@@ -44,6 +44,16 @@ that reason.
       inner-fold pinball loss. The outer scores — the ones a run reports — take no part in it,
       which is what keeps picking a configuration from being leak L2 in a new place. Keep that
       property if this card chooses differently
+- [ ] **The version carries a conformal correction, and it is a number (from #27).** The payload
+      key is `hydms.surrogate.conformal.CONFORMAL_PAYLOAD` and the value is a `FittedConformal`,
+      read back with `conformal_from(bundle)` exactly as the scaler is with `scaler_from`. Two
+      things this card owns and #27 could not: the calibration slice must be carved **before** the
+      deployed fit — `calibration_slice(frame, kept.kept)` over the screened training rows, then
+      `fit_quantile_model(train=fitting, eval_on=val, scored_on=test)`, which is what
+      `hydms.surrogate.calibrate` does and what `final_fit` does *not* — and the row asymmetry must
+      be published beside the score: at `calibration_folds: 5` the deployed model grows on ~701
+      rows where the cross-validation that estimated its performance fitted on folds cut from ~893.
+      **Never store a pickled MAPIE object**; `conformal_from` refuses one and says why
 - [ ] `current` points at `v1`
 
 ## Runnable check

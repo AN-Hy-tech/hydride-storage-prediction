@@ -612,10 +612,39 @@ could mean anything. See below.
       to the declared features in its first statement, and `assert_weights_ignore_target` perturbs
       the target twice — shuffled-and-rescaled, then replaced by a ramp — because the first
       perturbation alone passed `np.where(y > 9, 2, 1)` over a batch topping out at 5 wt%.
-- [ ] **#27** MAPIE conformal calibration. **MAPIE 1.x, not 0.x**: `fit()` → `conformalize()` →
-      `predict_interval()`, `confidence_level` not `alpha`. Choose between CQR-on-MultiQuantile, one
-      model per quantile, or `SplitConformalRegressor` around the median — see
-      [LIBRARY-APIS.md](LIBRARY-APIS.md).
+- [x] **#27** MAPIE conformal calibration. **Landed 2026-09-05.** The open question — CQR on the
+      MultiQuantile model, one CatBoost per quantile, or `SplitConformalRegressor` around the
+      median — is settled in favour of **CQR via MAPIE `prefit=True` with three one-column adapters
+      over #26's single model**, and [LIBRARY-APIS.md](LIBRARY-APIS.md) now records the four
+      source-level facts that decide it rather than a RISK block.
+      **(a) The config contradicted itself and nothing raised.** `conformal.confidence_level: 0.90`
+      sat beside `model.quantiles: [0.1, 0.5, 0.9]`, an 80 % band. MAPIE's prefit contract is exact
+      — lower `(1-cl)/2`, upper `(1+cl)/2`, median 0.5 — and MAPIE *does not check it*, so the pair
+      would have calibrated the wrong band silently. The **level** moved to 0.80, not the heads,
+      because moving the heads refits the model and invalidates #26's 64.4 % baseline; `_validate`
+      now refuses a file where the two disagree, which is what turned
+      `test_an_alpha_passed_as_a_confidence_level_is_caught` from "accepted, reader warned" into a
+      real refusal.
+      **(b) The gap reproduced on a second partition.** Raw coverage on the 172 calibration rows is
+      **0.6628** against nominal 0.80 — #26 measured 0.644 over its five nested folds, on different
+      rows and different hyperparameters. The correction is **+0.030990** in model space; calibrated
+      coverage on those rows is 0.8081 and the mean width goes 0.7317 → 0.9155, a 25 % widening.
+      **Zero crossings before and after**, as #26 found.
+      **(c) The artifact stores a number, not a calibrator.** `FittedConformal` holds one float and
+      the accounting that says what it means; MAPIE is imported lazily inside the fit and a
+      subprocess test asserts the prediction path never touches it. What buys the right to throw
+      MAPIE away is a parity assertion at fit time — applying the stored constant reproduces
+      `predict_interval` to 1e-12 — repeated independently in the test suite against MAPIE directly,
+      the AC-2 pattern.
+      **(d) The row cost, stated.** `model.calibration_folds: 5` carves 172 rows off the 873
+      screened training rows, so the deployed model grows on **701** where the cross-validation that
+      estimated its performance fitted on folds cut from all 893. `conformal-rows.csv` reports that
+      asymmetry rather than leaving it to be inferred from two files.
+      **(e) One constant, chosen a priori.** `symmetric_correction=True`. The two rules cannot be
+      compared on evidence — calibration-set coverage is nominal by construction for both, and
+      comparing them on test is leak L2 in a new place — so the one-sided miscoverage is a model-card
+      diagnostic and is not acted on. MAPIE **1.5.0** is installed in `Project` and pinned; CI now
+      installs `.[dev,uq]` so the parity and ordering tests cannot silently `importorskip` away.
 - [ ] **#28** `predict()` — the surrogate's public interface.
 - [ ] **#29** Evaluation metrics with bootstrap CIs. SHAP/PDP on **train or a dedicated split, never
       test** (L11).

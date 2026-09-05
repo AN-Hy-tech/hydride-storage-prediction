@@ -119,10 +119,37 @@ model:
   # reason cv_folds carries above.
   stopping_folds: 5
 
+  # The conformal calibration slice is one fold of this many, cut out of the TRAINING rows by
+  # the same generator (card #27). Five means ~179 of the ~893 training rows go to
+  # calibration and never to the trees.
+  #
+  # It is not `val`: val chose the stopping iteration, so conformalising on it would recycle
+  # data the model has already been selected against and the coverage guarantee would be a
+  # claim rather than a guarantee. It is not a fourth entry in `SPLIT_NAMES` either -- that
+  # would reach back into card #13 and move every split-size number in the docs.
+  #
+  # **State the cost**: the deployed model then grows on ~714 rows where the cross-validation
+  # that estimated its performance fitted on ~893. That asymmetry is real and is reported,
+  # not hidden. Keep it at or below split.min_stratum_size, for the reason cv_folds carries.
+  calibration_folds: 5
+
 conformal:
-  # MAPIE 1.x takes confidence_level, NOT alpha. 0.9 means a 90% interval; passing 0.1 here
-  # would silently produce a 10% one. The loader range-checks it for that reason.
-  confidence_level: 0.90
+  # MAPIE 1.x takes confidence_level, NOT alpha. 0.8 means an 80% interval; passing 0.2 here
+  # would silently produce a 20% one. The loader range-checks it for that reason.
+  #
+  # 0.80, not the 0.90 this file shipped with, and the change is a correction rather than a
+  # preference. MAPIE's conformalized quantile regression in `prefit` mode has an exact
+  # contract on the heads it is handed: lower = (1 - confidence_level) / 2, upper =
+  # (1 + confidence_level) / 2, median = 0.5. `model.quantiles` above is [0.1, 0.5, 0.9],
+  # which is an 80% band; 0.90 here told MAPIE to expect heads at 0.05 and 0.95, which the
+  # model does not have. The two keys asserted incompatible things and nothing read either
+  # of them, so nothing raised.
+  #
+  # The confidence level moves rather than the heads because moving the heads would refit the
+  # model and invalidate card #26's measured 64.4% raw coverage, which is the baseline card
+  # #27 exists to close and gate AC-3 is scored against. `_validate` now refuses a
+  # configuration where the two disagree, so this pair cannot drift apart again.
+  confidence_level: 0.80
 
 domain:
   # Measured span of temperature(K) across all 1279 rows: min 195, max 773. The refusal path

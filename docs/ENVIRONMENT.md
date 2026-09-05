@@ -50,7 +50,7 @@ single-file `conda env create` provably cannot rebuild this environment, for the
 |---|---|---|
 | `environment.yml` | 248 conda packages, exact versions, no build strings | 1 — different OS or architecture |
 | `environment.lock.yml` | 248 conda packages with build strings — the resolved solve | 1 — same platform |
-| `requirements-lock.txt` | 208 pip packages, exact versions | 2 — both cases |
+| `requirements-lock.txt` | 209 pip packages, exact versions | 2 — both cases |
 
 All have the machine-local `prefix:` line stripped; it records wherever the exporting machine
 happened to keep its envs, and conda ignores it on create.
@@ -91,7 +91,7 @@ ERROR: ResolutionImpossible
 CondaEnvException: Pip failed
 ```
 
-The 208 pip packages accreted incrementally over the life of the project. The environment works,
+The 209 pip packages accreted incrementally over the life of the project. The environment works,
 but its pins were never simultaneously solvable, and pip's modern resolver refuses to install a
 set it cannot prove consistent. Re-exporting will not help; the conflict is in the environment
 itself, not in how it was written down.

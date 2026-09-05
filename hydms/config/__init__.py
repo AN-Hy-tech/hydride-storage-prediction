@@ -45,6 +45,12 @@ ROOT_MARKERS = ("pyproject.toml", "hydms")
 
 DEFAULT_CONFIG = Path(__file__).with_name("pipeline.yaml")
 
+#: How close a configured quantile must be to the level `conformal.confidence_level` implies.
+#: `(1 - 0.8) / 2` is `0.09999999999999998` in binary floating point and the file says `0.1`,
+#: so this comparison cannot be an equality. 1e-12 is the tolerance this project uses
+#: throughout — see `tests/descriptors/test_contract.py` and the AC-2 gate.
+_QUANTILE_TOLERANCE = 1e-12
+
 T = TypeVar("T")
 
 
@@ -173,11 +179,18 @@ class Model:
     cv_folds: int
     inner_cv_folds: int
     stopping_folds: int
+    calibration_folds: int
 
 
 @dataclass(frozen=True)
 class Conformal:
-    """MAPIE 1.x takes `confidence_level`, not `alpha`. Card #27."""
+    """MAPIE 1.x takes `confidence_level`, not `alpha`. Card #27.
+
+    Not independent of `model.quantiles`. MAPIE's conformalized quantile regression in
+    `prefit` mode requires the heads it is handed to be exactly `(1 - confidence_level) / 2`,
+    `(1 + confidence_level) / 2` and `0.5`, so this value and that list are two statements
+    about one band. `_validate` refuses a configuration where they disagree.
+    """
 
     confidence_level: float
 
@@ -292,7 +305,7 @@ def _validate(cfg: Config) -> None:
     if len(set(quantiles)) != len(quantiles):
         problems.append(f"model.quantiles must not repeat, got {quantiles}")
 
-    for name in ("cv_folds", "inner_cv_folds", "stopping_folds"):
+    for name in ("cv_folds", "inner_cv_folds", "stopping_folds", "calibration_folds"):
         count = getattr(cfg.model, name)
         if count < 2:
             problems.append(
@@ -315,12 +328,47 @@ def _validate(cfg: Config) -> None:
             f"({cfg.split.min_stratum_size}), so a stratum can hold fewer compositions than "
             f"there are folds to spread them over"
         )
-
-    if not 0.0 < cfg.conformal.confidence_level < 1.0:
+    if cfg.model.calibration_folds > cfg.split.min_stratum_size:
+        # The calibration slice is cut by that same generator, so it inherits the same bound.
         problems.append(
-            f"conformal.confidence_level must be in (0, 1), got {cfg.conformal.confidence_level}. "
-            "MAPIE 1.x takes a confidence level, not an alpha — 0.9, not 0.1."
+            f"model.calibration_folds ({cfg.model.calibration_folds}) exceeds "
+            f"split.min_stratum_size ({cfg.split.min_stratum_size}), so a stratum can hold "
+            f"fewer compositions than there are folds to spread them over"
         )
+
+    level = cfg.conformal.confidence_level
+    if not 0.0 < level < 1.0:
+        problems.append(
+            f"conformal.confidence_level must be in (0, 1), got {level}. "
+            "MAPIE 1.x takes a confidence level, not an alpha — 0.8, not 0.2."
+        )
+    elif quantiles and list(quantiles) == sorted(set(quantiles)):
+        # The band and the heads are two statements about one interval, and MAPIE's
+        # conformalized quantile regression in `prefit` mode enforces the relation exactly:
+        # the estimators it is handed must predict (1 - level) / 2, (1 + level) / 2 and 0.5.
+        # This file shipped with 0.90 beside heads at [0.1, 0.5, 0.9] -- an 80% band told to
+        # calibrate as a 90% one -- and nothing raised, because nothing read either key. The
+        # check is here rather than in the calibrator so that the contradiction is refused at
+        # load time, before a run has cost anything. Card #27.
+        #
+        # A tolerance, not equality: (1 - 0.8) / 2 is 0.09999999999999998 in binary floating
+        # point and the file says 0.1. 1e-12 is this project's tolerance throughout.
+        wanted = ((1.0 - level) / 2.0, (1.0 + level) / 2.0)
+        got = (quantiles[0], quantiles[-1])
+        if any(abs(a - b) > _QUANTILE_TOLERANCE for a, b in zip(wanted, got, strict=True)):
+            problems.append(
+                f"conformal.confidence_level {level} wants outer quantiles "
+                f"({wanted[0]:g}, {wanted[1]:g}) and model.quantiles has "
+                f"({got[0]:g}, {got[1]:g}). MAPIE's prefit CQR contract is exact: lower "
+                f"(1 - level) / 2, upper (1 + level) / 2. Move whichever of the two is "
+                f"wrong — they describe one band"
+            )
+        if not any(abs(q - 0.5) <= _QUANTILE_TOLERANCE for q in quantiles):
+            problems.append(
+                f"model.quantiles {list(quantiles)} has no median head. MAPIE's prefit CQR "
+                f"takes three estimators — lower, upper and 0.5 — and the median is the "
+                f"point prediction the interval is reported around"
+            )
 
     if cfg.domain.temperature_min_k >= cfg.domain.temperature_max_k:
         problems.append("domain.temperature_min_k must be below domain.temperature_max_k")

@@ -133,33 +133,111 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-two cards are done and nothing is `doing`; the tree is
-clean and the suite is green. `python -m hydms.gates run --fast` exits 0 with AC-2 green at
+**Next session, in one paragraph.** Thirty-three cards are done and nothing is `doing`; the tree is
+clean and the suite is **937** green. `python -m hydms.gates run --fast` exits 0 with AC-2 green at
 2.7285e-12 and HG-1 `SKIPPED` at **12 of 13** — **L11 is the only leak left**, deferred to #29.
-**The front is #27**, MAPIE conformal calibration, and its design is now **settled rather than
-open**: the seven boxes at the top of its `## Done when` are the outcome of a grilling session and
-they decide the thing its old narrative left hanging. In short — **CQR via MAPIE `prefit=True` with
-three thin adapters over #26's single MultiQuantile model**, because MAPIE's `prefit=False` accepts
-only four named sklearn estimators and CatBoost is not one of them; **the band is 80 %**, so
-`conformal.confidence_level` moves 0.90 → 0.80 rather than moving #26's heads, which would
-invalidate its measured 64.4 % baseline; **calibration happens once on the final fit**, not per
-fold, from a group-disjoint carve out of `train` behind a new `model.calibration_folds`; **the
-artifact stores the conformal constant as a number, not a pickled MAPIE object**, so MAPIE is
-fit-time only and a parity test asserts the stored constant reproduces `predict_interval` to
-1e-12 — the AC-2 pattern again; and **one constant, not two**, chosen a priori because the two
-options cannot be compared on evidence without leaking. Read `research/` before reopening any of
-it. Two traps are written down there rather than left to be rediscovered: MAPIE's prefit list is
-ordered **[lower, upper, median]** with the median *last* (`single_estimator_ = estimators_[2]`),
-which is the positional trap #26's `column_names` exists to kill, reappearing at the library
-boundary; and **MAPIE is not installed in `Project`**, so #27 begins by touching the lock files.
-**#15, #32 and #49 remain unblocked** and none is on the S4 chain; #15 is still owed a re-measure
-now that screening flags rows for real. The two feature contracts still are not interchangeable —
-`CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is the 14 a model is fitted on —
-and `hydms.surrogate.model.capacity_matrix()` is the one place that builds the modelling matrix.
+**The front is #28**, the surrogate's public `predict()`, whose only blocker was #27. #27 landed:
+`hydms/surrogate/conformal.py` calibrates a fitted model's band with MAPIE's CQR in `prefit` mode
+and **stores one float**, not a calibrator — `FittedConformal.apply(heads)` widens the outer heads
+in model space and returns the same columns, `calibrated_heads(model, X, conformal=...)` gives the
+same thing in weight percent, and `CONFORMAL_PAYLOAD` / `conformal_from` is the artifact contract
+#34 will write. **MAPIE is a fit-time dependency**: it is imported lazily inside the fit and a
+subprocess test asserts the prediction path never reaches it, so #28 must not import it either.
+Two numbers to carry: the correction is **+0.030990** in model space, and the raw band covered
+**0.6628** of the calibration rows against nominal 0.80 — independently reproducing #26's 0.644 on
+a different partition. `conformal.confidence_level` is now **0.80** and `hydms.config._validate`
+refuses a file where the level and `model.quantiles` disagree; **MAPIE does not check its own
+prefit contract**, so that check is the only thing standing between a wrong band and a green AC-3.
+**#15, #32 and #49 remain unblocked**; #15 is still owed a re-measure now that screening flags rows
+for real. The two feature contracts still are not interchangeable — `CONTRACT` is the published 22
+and AC-2's parity set, `SELECTED` is the 14 a model is fitted on — and
+`hydms.surrogate.model.capacity_matrix()` is the one place that builds the modelling matrix.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #26 closed · written for #27, and for the rest of S4
+### Handoff — 2026-09-05 (latest) · #27 closed · written for #28, and for #31
+
+**Where the phase is.** Thirty-three cards done. Suite **937** green, ruff and mypy clean,
+`check_board.py` and `check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0, AC-2 green at
+2.7285e-12, **HG-1 still 12/13** — #27 touched no sentinel, and L11 remains #29's. **Nothing is
+`doing`.** The chain from here is `#28 -> #29 -> #30 -> #31/#32/#33 -> #34`.
+
+**The front is #28**, the surrogate's public `predict()`, whose only blocker was #27.
+
+#### What #27 left you
+
+`hydms/surrogate/conformal.py`, and the whole of its interface is four calls:
+
+```python
+fitting, calibrating = calibration_slice(frame, screened_train_rows)  # one fold of 5, grouped
+conformal = fit_conformal(frame, model, calibrate_on=calibrating)     # the only step needing MAPIE
+conformal.apply(model.predict_model_space(X))                         # model space -> model space
+calibrated_heads(model, X, conformal=conformal)                       # -> weight percent
+```
+
+Plus `CONFORMAL_PAYLOAD` and `conformal_from(bundle)`, which is the artifact contract #34 writes,
+and `compare_metrics(raw, calibrated)`, which is how a before-and-after table is built.
+`python -m hydms.surrogate.calibrate --target capacity` runs the lot in about 25 s and writes
+`conformal.csv`, `conformal-coverage.csv` and `conformal-rows.csv` under `reports/model/`.
+
+**Three things #28 must not undo.**
+
+**MAPIE is never on the prediction path.** It is imported lazily inside `fit_conformal`, the
+artifact stores a float, and `test_applying_a_stored_correction_does_not_import_mapie` asserts it in
+a subprocess. A `predict()` that imports `hydms.surrogate.conformal` is fine; one that reaches
+`mapie` is a regression that test will catch.
+
+**`apply` returns the same columns in the same order**, which is what lets
+`quantile_metrics(truth, raw_or_calibrated, quantiles)` score either frame with no new measurement
+code. Do not let `predict()` rename or reorder the heads on the way out.
+
+**Rank on the calibrated lower bound, never the raw one.** The point of the constant is that the
+raw P10 does not mean 10 %.
+
+#### Two numbers, and the cost
+
+Raw coverage on the 172 calibration rows is **0.6628** against nominal 0.80 — a second, independent
+measurement of the gap #26 found at 0.644 across its nested folds, on different rows and with
+different hyperparameters. The correction is **+0.030990** in model space, calibrated coverage on
+those rows is 0.8081, and the mean width goes 0.7317 -> 0.9155. **Zero crossings** before and after.
+
+**The cost, stated because it must be reported and not inferred.** `model.calibration_folds: 5`
+carves 172 rows off the 873 screened training rows, so the deployed model grows on **701** where the
+cross-validation that estimated its performance fitted on folds cut from 893. `conformal-rows.csv`
+carries the whole accounting in one row for exactly that reason.
+
+#### The trap that was not in the design
+
+**MAPIE does not check its own prefit contract.** `_check_prefit_params` counts to three and never
+asks which quantile an estimator predicts, so `confidence_level: 0.90` beside heads at
+`[0.1, 0.5, 0.9]` — which is what `pipeline.yaml` shipped — would have produced a calibrated
+interval silently, and the only thing that would ever have noticed is AC-3, the gate the
+calibration exists to let pass. The level is now **0.80**, and `hydms.config._validate` refuses a
+file where it and `model.quantiles` disagree. That flipped a landed test:
+`test_an_alpha_passed_as_a_confidence_level_is_caught` used to assert 0.10 was *accepted* with a
+warning, and now asserts 0.20 is *refused*. Do not relax it back.
+
+Related: MAPIE's prefit list is `[lower, upper, median]` with the median **last**, and
+`fit_conformal` asserts that two ways — MAPIE's public `predict` must return the median head, and
+the estimator list must hold the adapters this module put there. `docs/LIBRARY-APIS.md` now carries
+the four source-level facts instead of a RISK block.
+
+#### For #31 (AC-3) specifically
+
+`hydms.surrogate.calibrate` deliberately **does not read `test`**. Coverage on held-out data is
+AC-3's to measure, and printing it here would invite the calibration to be adjusted until the gate
+passed — leak L2 in new clothes. What #31 needs is a calibrated model over the test split and the
+nominal level from `conformal.confidence_level`; the calibrated coverage this command prints is
+nominal *by construction* and establishes nothing about generalisation.
+
+MAPIE **1.5.0** is installed in `Project` and pinned in `requirements-lock.txt` (**209** packages;
+the misfiled-name check in `docs/ENVIRONMENT.md` still reports `none`). It stays in the optional
+`uq` extra because it is genuinely fit-time — but **CI now installs `.[dev,uq]`**, since the parity
+and prefit-ordering tests are the only checks of a number whose wrongness is otherwise invisible.
+
+---
+
+### Handoff — 2026-09-05 · #26 closed · written for #27, and for the rest of S4
 
 **Where the phase is.** Thirty-two cards done. Suite **901** green, ruff and mypy clean,
 `check_board.py` and `check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0, AC-2 green at

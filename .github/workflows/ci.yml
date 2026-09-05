@@ -107,8 +107,17 @@ jobs:
       # installed as a dependency of a GPL-3.0 deliverable. The tests that diff against it use
       # importorskip and therefore skip here; card #21 owns proving parity, in an environment
       # that has it.
+      #
+      # `uq` IS installed, and the asymmetry with `parity` is the point. MAPIE is BSD-3, a
+      # 555 kB pure-Python wheel needing only numpy and scikit-learn, which this lane already
+      # has. It is installed because of what the tests that need it assert: that the conformal
+      # constant card #27 stores reproduces MAPIE's own `predict_interval` to 1e-12, and that
+      # MAPIE reads its prefit estimator list as [lower, upper, median]. Both are the only
+      # checks of a number whose wrongness is otherwise invisible — it under- or over-covers
+      # by a few points, which is precisely and only what gate AC-3 measures — so letting them
+      # `importorskip` away in CI would leave the guarantee unchecked on every push.
       - name: Install hydms and its test dependencies
-        run: python -m pip install --disable-pip-version-check -e ".[dev]"
+        run: python -m pip install --disable-pip-version-check -e ".[dev,uq]"
 
       - name: pytest
         run: python -m pytest

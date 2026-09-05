@@ -142,13 +142,13 @@ def test_an_unknown_top_level_key_raises(tmp_path: Path, valid_text: str) -> Non
 
 def test_an_unknown_section_key_raises(tmp_path: Path, valid_text: str) -> None:
     """The typo case. Silently ignoring this leaves a default quietly in force."""
-    text = valid_text.replace("  confidence_level: 0.90", "  confidence_levle: 0.90")
+    text = valid_text.replace("  confidence_level: 0.80", "  confidence_levle: 0.80")
     with pytest.raises(ConfigError, match="unknown key"):
         load(_write(tmp_path, text))
 
 
 def test_a_missing_section_key_raises(tmp_path: Path, valid_text: str) -> None:
-    text = valid_text.replace("  confidence_level: 0.90", "")
+    text = valid_text.replace("  confidence_level: 0.80", "")
     with pytest.raises(ConfigError, match="missing key"):
         load(_write(tmp_path, text))
 
@@ -174,12 +174,18 @@ def test_out_of_range_values_are_rejected(
 
 
 def test_an_alpha_passed_as_a_confidence_level_is_caught(tmp_path: Path, valid_text: str) -> None:
-    """MAPIE 0.x took alpha, 1.x takes confidence_level. Passing 0.1 by habit would give a
-    10% interval that looks like a working 90% one. It is in range, so this asserts the
-    error message carries the warning rather than pretending the value is invalid."""
-    text = valid_text.replace("  confidence_level: 0.90", "  confidence_level: 0.10")
-    cfg = load(_write(tmp_path, text))
-    assert cfg.conformal.confidence_level == 0.10  # accepted: it is a legal confidence level
+    """MAPIE 0.x took alpha, 1.x takes confidence_level. Passing 0.2 by habit would give a
+    20% interval that looks like a working 80% one.
+
+    A range check alone cannot catch it -- 0.2 is a legal confidence level -- and this test
+    used to assert exactly that, that the value was accepted and the reader warned. Card #27
+    made it catchable: MAPIE's prefit CQR contract fixes the heads at `(1 - level) / 2` and
+    `(1 + level) / 2`, so a level and a quantile list are two statements about one band and
+    the loader can refuse a file where they disagree. 0.2 beside [0.1, 0.5, 0.9] does.
+    """
+    text = valid_text.replace("  confidence_level: 0.80", "  confidence_level: 0.20")
+    with pytest.raises(ConfigError, match="prefit CQR contract"):
+        load(_write(tmp_path, text))
 
 
 @pytest.mark.parametrize(

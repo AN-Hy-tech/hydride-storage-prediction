@@ -59,6 +59,17 @@ dependencies = [
 # Conformal calibration of the surrogate's prediction intervals. The >=1.0 floor is not
 # cosmetic: 0.x exposes MapieRegressor(...).predict(X, alpha=...), while 1.x replaced it with
 # fit() / conformalize() / predict_interval(confidence_level=...). See docs/LIBRARY-APIS.md.
+#
+# Installed into `Project` by card #27, which is what first needed it: 1.5.0, and pip resolved
+# it against the existing pins without moving one of them — MAPIE needs only numpy>=1.23 and
+# scikit-learn>=1.4, both already there. `requirements-lock.txt` carries the pin.
+#
+# It stays OPTIONAL deliberately, and that is a design statement rather than caution. MAPIE is
+# a **fit-time** dependency: `hydms.surrogate.conformal` imports it lazily inside the function
+# that fits, a calibrated artifact stores the conformal constant as a float rather than a
+# pickled calibrator, and nothing on the prediction path can reach it. A service that only
+# predicts therefore never installs it, and a MAPIE upgrade cannot change what a saved `v1`
+# does. `tests/surrogate/test_conformal.py` proves the import claim in a subprocess.
 uq = ["mapie>=1.0"]
 
 # NSGA-II on the composition simplex, plus the hypervolume and convergence diagnostics.
