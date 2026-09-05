@@ -134,19 +134,28 @@ bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
 **Next session, in one paragraph.** Thirty-two cards are done and nothing is `doing`; the tree is
-clean, and #26 landed in `60e9db9` on `feat/phase-h-emergency-hardening`. Suite **901**
-green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
-`python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
-**12 of 13** — **L11 is the only leak left**, deferred to #29 with its reason recorded. **The front
-is #27**, MAPIE conformal calibration, whose only blocker was #26. Before writing a line of it, read
-the handoff below for the number it exists to fix: the raw quantile heads cover **64.4 %** of
-held-out rows against a nominal 80 %, under-covered in every one of the five folds, with **zero
-crossings** on real rows. `hydms.surrogate.model.quantile_metrics` already reports coverage, width
-and crossings, so the before-and-after is a column comparison. **#15 and #49 remain unblocked**, and
-#15 is still owed a re-measure now that screening flags rows for real. The two feature contracts
-still are not interchangeable — `CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is
-the 14 a model is fitted on — and `hydms.surrogate.model.capacity_matrix()` is now the one place
-that builds the modelling matrix, so call it rather than assembling a second one.
+clean and the suite is green. `python -m hydms.gates run --fast` exits 0 with AC-2 green at
+2.7285e-12 and HG-1 `SKIPPED` at **12 of 13** — **L11 is the only leak left**, deferred to #29.
+**The front is #27**, MAPIE conformal calibration, and its design is now **settled rather than
+open**: the seven boxes at the top of its `## Done when` are the outcome of a grilling session and
+they decide the thing its old narrative left hanging. In short — **CQR via MAPIE `prefit=True` with
+three thin adapters over #26's single MultiQuantile model**, because MAPIE's `prefit=False` accepts
+only four named sklearn estimators and CatBoost is not one of them; **the band is 80 %**, so
+`conformal.confidence_level` moves 0.90 → 0.80 rather than moving #26's heads, which would
+invalidate its measured 64.4 % baseline; **calibration happens once on the final fit**, not per
+fold, from a group-disjoint carve out of `train` behind a new `model.calibration_folds`; **the
+artifact stores the conformal constant as a number, not a pickled MAPIE object**, so MAPIE is
+fit-time only and a parity test asserts the stored constant reproduces `predict_interval` to
+1e-12 — the AC-2 pattern again; and **one constant, not two**, chosen a priori because the two
+options cannot be compared on evidence without leaking. Read `research/` before reopening any of
+it. Two traps are written down there rather than left to be rediscovered: MAPIE's prefit list is
+ordered **[lower, upper, median]** with the median *last* (`single_estimator_ = estimators_[2]`),
+which is the positional trap #26's `column_names` exists to kill, reappearing at the library
+boundary; and **MAPIE is not installed in `Project`**, so #27 begins by touching the lock files.
+**#15, #32 and #49 remain unblocked** and none is on the S4 chain; #15 is still owed a re-measure
+now that screening flags rows for real. The two feature contracts still are not interchangeable —
+`CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is the 14 a model is fitted on —
+and `hydms.surrogate.model.capacity_matrix()` is the one place that builds the modelling matrix.
 
 ---
 
