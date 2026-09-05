@@ -46,6 +46,11 @@ dependencies = [
   # 1.20 and cannot import under the pinned 1.26.
   "Boruta>=0.4",
   "statsmodels>=0.14",
+  # The hyperparameter search card #26 ports from Catboostmodel.py:542. Already present in
+  # the `Project` environment for the archival pipeline, so naming it here adds nothing to
+  # that environment and the lock files stay valid; what changes is that it becomes declared
+  # rather than incidental.
+  "optuna>=3.0",
   "PyYAML>=6.0",
   "joblib>=1.3",
 ]
@@ -178,7 +183,7 @@ disallow_incomplete_defs = true
 # stubs and they are what breaks.
 [[tool.mypy.overrides]]
 module = [
-  "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*",
+  "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*", "optuna.*",
   "sklearn.*", "scipy.*", "streamlit.*", "shap.*", "boruta.*", "statsmodels.*",
   # pandas ships no inline types either; pandas-stubs is a separate distribution and the
   # conda-free lint lane installs nothing (card #68).

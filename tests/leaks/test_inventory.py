@@ -128,9 +128,11 @@ def test_each_sentinel_guards_a_leak_that_exists_exactly_once() -> None:
 def test_each_deferral_is_owed_by_a_card_whose_text_says_so(cards: dict[int, Path]) -> None:
     """A deferral recorded only in code is a deferral the owning card never hears about.
 
-    Three of the thirteen are deferred, and each one is a `## Done when` box on the card that
-    will be able to write it. This is what turns "someone will remember" into work that has a
-    place on the board.
+    A deferred leak is one whose sentinel cannot be written yet, and each one is a
+    `## Done when` box on the card that will be able to write it. This is what turns "someone
+    will remember" into work that has a place on the board. The count is deliberately not
+    asserted here -- it falls as cards land, and a number in this docstring would be one more
+    thing to update: card #26 wrote L12's and left L11 owed to #29.
     """
     for entry in DEFERRED:
         assert entry.owed_by in cards, f"{entry.leak} is deferred to a card that does not exist"

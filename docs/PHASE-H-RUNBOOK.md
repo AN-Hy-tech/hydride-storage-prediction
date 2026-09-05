@@ -165,7 +165,8 @@ them** — no `[tool.ruff]`, no `[tool.pytest.ini_options]`, no `[tool.mypy]`, n
 | L7, L8 | No **canonical** composition appears in two splits, and none in two CV folds | `assert_disjoint_groups` |
 | L9 | Reordering an input never changes the merged result silently, and a row the merge cannot key raises | `assert_merge_is_keyed` |
 | L13 | `Alloy_class` survives featurisation: the column, every row, every label unchanged | `assert_metadata_survives` |
-| L11, L12 | **Deferred** — each needs a decision its owning card has not made. Boxed on #29, #26 | — |
+| L12 | Perturbing the target does not change any sample weight, twice over: shuffled-and-rescaled, then replaced by a ramp | `assert_weights_ignore_target` |
+| L11 | **Deferred** — it needs a decision its owning card has not made. Boxed on #29 | — |
 
 Three things about the design are load-bearing; the reasoning is in #71's `## Narrative`:
 
@@ -572,10 +573,45 @@ could mean anything. See below.
       `outer=` argument**, not a second scoring path. Fold ids are issued for *content* — the set
       of compositions held out — so `tuned_on ∩ scored_on` is a real question rather than an empty
       one, and `tuned_on` is the folds the search actually read. HG-1: **8/13**.
-- [ ] **#26** CatBoost MultiQuantile with `use_best_model=True` and the **validation** split as
-      `eval_set` — CatBoost raises at fit time on an empty eval set, the mechanical guard against L1.
-      `MultiQuantile` is CPU-only. Assert the quantile column order: position is the only thing
-      identifying the columns.
+- [x] **#26** CatBoost MultiQuantile with `use_best_model=True` and the **validation** split as
+      `eval_set`. **Landed 2026-09-05.** `hydms/surrogate/model.py` is the model,
+      `python -m hydms.surrogate.train` runs it through #88's protocol, and HG-1 is **12/13** —
+      L11 is the only leak left and it is #29's.
+      `fit_quantile_model(frame, train=, eval_on=, scored_on=, where=)` **cannot be called without
+      naming the rows the result will be claimed about**, and its first statement hands those
+      identities to `assert_early_stopping_is_honest`; there is no path through the module that
+      fits without it, which is what lets the L1 and L5 sentinels point at the real function.
+      `tests/surrogate/test_no_test_leak.py` asserts the blindness by **value** as well — the
+      scored rows are `NaN` and the fit is expected to succeed — and that test found a real read
+      on the way past, a target transformed over the whole frame, now scoped to the rows a fit
+      owns. Fits inside the training split stop on one fold of the new `model.stopping_folds`,
+      cut by `grouped_folds` so no composition spans the two sides; the final fit stops on `val`.
+      Four measurements, three of which corrected something:
+      **(a)** `early_stopping_rounds: 5000` was **paying four times over for an identical model** —
+      26.9 s at 5000, 6.9 s at 500, 5.4 s at 200, and best iteration 1042 with R² 0.7050 in all
+      three. `od_wait` only multiplies the trees grown after the optimum, which `use_best_model`
+      discards. Now 500.
+      **(b)** **The budget: 4,500 fits is 42 hours.** A real end-to-end probe ran 35 fits in
+      **19.4 min** — 33 s a fit — so `optuna_trials` came down from 300 to **25**, projecting
+      ~3.5 h. The nesting was untouched. The hours live in one corner of the ported space:
+      `learning_rate` 1e-4 with `iterations` 30,000 costs **397 s** against 7 s at the fast corner,
+      has not converged at iteration 29,999, and scores **worse** (R² 0.691 vs 0.705). The space is
+      still ported verbatim; narrowing it is boxed onto #34, which pays the bill.
+      **(c)** **One of the archival search's nine dimensions did nothing.** `bagging_temperature`
+      is Bayesian-only and CatBoost's CPU default is not Bayesian: measured, temperatures 0.0 and
+      1.0 give a bit-identical fit under the default and 0.1444 vs 0.1526 under `Bayesian`. `FIXED`
+      pins the bootstrap. Two other beliefs were checked and were wrong — `depth=25` under
+      `Lossguide` is accepted, and `od_type='IncToDec'` beside `early_stopping_rounds` is a
+      redundancy rather than a conflict — and `MedianPruner(n_warmup_steps=10)` over ten folds
+      **never pruned**, because every step index was below the warmup.
+      **(d)** **The raw interval under-covers: 64.4 % against a nominal 80 %**, in every fold
+      (0.57–0.70), with **zero crossings** on real rows. That is #27's gap, measured before #27
+      starts. The probe's honest nested R² is **0.746** in weight percent, against REPORT.md's
+      published 0.892.
+      **L12 is closed and its sentinel written**: the fit is **unweighted**, `sample_weights` slices
+      to the declared features in its first statement, and `assert_weights_ignore_target` perturbs
+      the target twice — shuffled-and-rescaled, then replaced by a ramp — because the first
+      perturbation alone passed `np.where(y > 9, 2, 1)` over a batch topping out at 5 wt%.
 - [ ] **#27** MAPIE conformal calibration. **MAPIE 1.x, not 0.x**: `fit()` → `conformalize()` →
       `predict_interval()`, `confidence_level` not `alpha`. Choose between CQR-on-MultiQuantile, one
       model per quantile, or `SplitConformalRegressor` around the median — see

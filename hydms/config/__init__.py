@@ -172,6 +172,7 @@ class Model:
     optuna_trials: int
     cv_folds: int
     inner_cv_folds: int
+    stopping_folds: int
 
 
 @dataclass(frozen=True)
@@ -291,13 +292,21 @@ def _validate(cfg: Config) -> None:
     if len(set(quantiles)) != len(quantiles):
         problems.append(f"model.quantiles must not repeat, got {quantiles}")
 
-    for name in ("cv_folds", "inner_cv_folds"):
+    for name in ("cv_folds", "inner_cv_folds", "stopping_folds"):
         count = getattr(cfg.model, name)
         if count < 2:
             problems.append(
                 f"model.{name} must be at least 2; one fold is not a partition and nothing "
                 f"can be held out of it"
             )
+    if cfg.model.stopping_folds > cfg.split.min_stratum_size:
+        # Same reason as cv_folds below: the early-stopping slice is cut by the same
+        # group-aware, stratified generator, so it inherits the same bound.
+        problems.append(
+            f"model.stopping_folds ({cfg.model.stopping_folds}) exceeds "
+            f"split.min_stratum_size ({cfg.split.min_stratum_size}), so a stratum can hold "
+            f"fewer compositions than there are folds to spread them over"
+        )
     if cfg.model.cv_folds > cfg.split.min_stratum_size:
         # StratifiedGroupKFold cannot place a stratum holding fewer compositions than there
         # are folds, and split.min_stratum_size is exactly what bounds that from below.

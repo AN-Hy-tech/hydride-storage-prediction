@@ -78,11 +78,27 @@ model:
   # Used with use_best_model=True against the VALIDATION split. CatBoost raises at fit time
   # on an empty eval_set, which is the mechanical guard against leak L1 — the archival code
   # passed the test set here (Catboostmodel.py:604-606).
-  early_stopping_rounds: 5000
+  #
+  # 500, not the archival 5000, and the difference is wall time rather than model. Measured
+  # on a real inner fold: at 5000 the fit costs 26.9 s, at 500 it costs 6.9 s and at 200 it
+  # costs 5.4 s, and all three return THE SAME MODEL — best iteration 1042 in every case,
+  # R² 0.7050 to four decimals. od_wait is a multiplier on the iterations grown after the
+  # optimum and nothing else, so 5000 was paying 4x for trees use_best_model then discards.
+  # 500 is the smallest tested value with margin: 200 already recovered the same optimum.
+  early_stopping_rounds: 500
 
   # Catboostmodel.py:588 used 300; benchmark_model_selection.py used 100 for the published
   # run and 200 in its later rewrite.
-  optuna_trials: 300
+  #
+  # 25, and the arithmetic is card #26's to defend. The budget is a product — cv_folds x
+  # inner_cv_folds x this — and 300 makes it 4,500 fits. Measured across the ported search
+  # space on a real inner fold, a fit costs between 7 s and 397 s and averages about 75 s;
+  # with the median pruner that is ~105 s a trial, so 300 trials is 43.7 hours and 25 is
+  # about 3.6. The nesting is NOT what gets cut to afford it: three inner folds tuned and
+  # scored in one pass is leak L4 coming back. If 25 trials over nine dimensions proves too
+  # thin, the next lever is the search space — whose low-learning-rate corner costs 60x the
+  # fast one and scores worse — and not this ratio.
+  optuna_trials: 25
 
   # Outer folds of the nested, group-aware protocol in card #88. The archival code used a
   # row-level StratifiedKFold with no grouping, which is leak L7. Keep this at or below
@@ -94,6 +110,14 @@ model:
   # search runs. It is a separate number from cv_folds because the cost is the product:
   # 5 x 3 x optuna_trials fits. Three is the smallest that still averages.
   inner_cv_folds: 3
+
+  # The early-stopping slice is one fold of this many, cut out of the rows a fit already
+  # owns by the same group-aware generator every other fold uses. Five means the slice is a
+  # fifth of them. It exists because a fit inside the training split has no `val` to stop
+  # on and reaching for `test` is leak L1 (Catboostmodel.py:604-606); the final fit, which
+  # does have `val`, uses that instead. Keep it at or below split.min_stratum_size, for the
+  # reason cv_folds carries above.
+  stopping_folds: 5
 
 conformal:
   # MAPIE 1.x takes confidence_level, NOT alpha. 0.9 means a 90% interval; passing 0.1 here

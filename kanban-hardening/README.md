@@ -111,9 +111,9 @@ mechanism working: a sentinel written six weeks early against a miniature become
 when somebody points it at the real thing. #10, #13, #14 and #12 have since wired theirs, and the audit
 reports **5 of 13 leaks guarded** — L3, L8, L9, L10, L13. It has now happened twice: #20 creating
 `hydms/descriptors/featurize.py` turned L13 `unwired` and took eight tests red with it, and #12
-closed it the same day. **Two cards still owe a wiring — #24 (L6) and #88 (L2, L4, L7)** — one owes
-both a wiring and a sentinel, #26 (L1, L5, and L12 outright), and #29 owes L11 outright. Each
-carries the box.
+closed it the same day. #24, #88 and #26 have since wired
+theirs, the last of them writing the L12 sentinel it also owed, and the audit now reports **12 of
+13**. **One card still owes a sentinel outright: #29, for L11.**
 Read the per-leak table with:
 
 ```bash
@@ -133,24 +133,153 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-one cards are done and nothing is `doing`; the tree is
-clean, and #25 landed in `a3ce3b2` on `feat/phase-h-emergency-hardening`. Suite
-**857** green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
+**Next session, in one paragraph.** Thirty-two cards are done and nothing is `doing`; the tree is
+clean, and #26 landed in `COMMITSHA` on `feat/phase-h-emergency-hardening`. Suite **901**
+green, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,
 `python -m hydms.gates run --fast` exits 0 with AC-2 green at 2.7285e-12 and HG-1 `SKIPPED` at
-**9 of 13** — L1, L5, L11 and L12 are all that remain, and every one is owed by #26 or #29. **The
-front is S4 and the card is #26**, whose three blockers all landed. Before writing a line of it,
-read the handoff below on the **two feature contracts**: `CONTRACT` is the published 22 and stays
-the candidate pool and AC-2's parity set, while `hydms.descriptors.contract.SELECTED` — the
-consensus 14 that #25 declared — is what a model is fitted on. Do **not** re-run selection inside
-#26's tuning loop: Boruta is 676 s a pass against a 4,500-fit budget. **#15 and #49 remain
-unblocked**, and #15 is still owed a re-measure now that screening flags rows for real. Expect HG-1
-to go **red on purpose** the day `hydms/surrogate/model.py` first appears: L1 and L5 name it and are
-`pending` only because it does not exist, so the fix is always to wire the sentinel, never to
-re-aim it.
+**12 of 13** — **L11 is the only leak left**, deferred to #29 with its reason recorded. **The front
+is #27**, MAPIE conformal calibration, whose only blocker was #26. Before writing a line of it, read
+the handoff below for the number it exists to fix: the raw quantile heads cover **64.4 %** of
+held-out rows against a nominal 80 %, under-covered in every one of the five folds, with **zero
+crossings** on real rows. `hydms.surrogate.model.quantile_metrics` already reports coverage, width
+and crossings, so the before-and-after is a column comparison. **#15 and #49 remain unblocked**, and
+#15 is still owed a re-measure now that screening flags rows for real. The two feature contracts
+still are not interchangeable — `CONTRACT` is the published 22 and AC-2's parity set, `SELECTED` is
+the 14 a model is fitted on — and `hydms.surrogate.model.capacity_matrix()` is now the one place
+that builds the modelling matrix, so call it rather than assembling a second one.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #25 closed · written for #26, and for the rest of S4
+### Handoff — 2026-09-05 (latest) · #26 closed · written for #27, and for the rest of S4
+
+**Where the phase is.** Thirty-two cards done. Suite **901** green, ruff and mypy clean,
+`check_board.py` and `check_freeze.py` OK, `python -m hydms.gates run --fast` exits 0, AC-2 green at
+2.7285e-12, and **HG-1 is 12/13** — L1, L5 and L12 all went green in this card, and **L11 is the
+only leak left in the inventory**. It is #29's, deferred with its reason recorded. **Nothing is
+`doing`.**
+
+**The front is #27** (MAPIE conformal calibration), whose only blocker was #26. **#15 and #49
+remain unblocked** and neither is on the S4 chain; #15 is still owed a re-measure now that screening
+flags rows for real. The chain from here is `#27 → #28 → #29 → #30 → #31/#32/#33 → #34`.
+
+#### The number #27 exists to fix, measured before #27 starts
+
+**The raw quantile heads under-cover: 64.4 % against a nominal 80 %.** Fold by fold, in a nested,
+group-aware five-fold run over the real matrix: 0.57, 0.63, 0.70, 0.69, 0.63. Under-covered in
+*every* fold, so this is not noise and #27 is not a formality on top of an already-honest interval.
+What is already good: **zero crossings on real rows** — the P10/P50/P90 heads came back ordered on
+every one of them, where a small synthetic fit crossed on 23 %. So the monotonicity CQR would want
+is there to start with, and `crossings` is reported as a number rather than assumed away.
+
+`hydms.surrogate.model.quantile_metrics` already emits `interval_coverage`, `interval_width` and
+`crossings`, so #27's before-and-after is a column comparison rather than new measurement code.
+
+#### What #26 built
+
+```python
+from hydms.surrogate.model import capacity_contender, capacity_matrix, final_fit, fit_quantile_model
+
+frame, split = capacity_matrix()                 # 1,278 rows x the 14 SELECTED features
+fit_quantile_model(frame, train=, eval_on=, scored_on=, where=)   # one honest fit
+final_fit(frame, split)                          # grown on train, stopped on val, reported on test
+capacity_contender(settings=, log=)              # this model as a #88 contender
+```
+
+```bash
+python -m hydms.surrogate.train --target capacity            # the slow lane, ~3.5 h
+python -m hydms.surrogate.train --target capacity --trials 2 # a probe, and it says so in its output
+python -m hydms.surrogate.train --target capacity --budget   # fits nothing; the arithmetic
+```
+
+- **The honesty check is in the signature.** `fit_quantile_model` cannot be called without naming
+  the rows the resulting model will be *claimed about*, and the first statement of the body hands
+  those identities to `assert_early_stopping_is_honest`. There is no path through the module that
+  fits without it, which is why the L1 and L5 sentinels point at the real function rather than at a
+  copy of it. `scored_on` is never read.
+- **`tests/surrogate/test_no_test_leak.py` asserts that by value as well as by identity**: the
+  scored rows are filled with `NaN` and the fit is expected to succeed. Write a stray
+  `to_model_space(frame[target])` over the whole frame and it goes red — which is exactly what it
+  found on the first run, and the transform is now scoped to the two row sets a fit owns.
+- **Two refusals beyond the inventory**, both `ModelError` so that a raised `LeakDetected` always
+  means L1: fitting on the scored rows, and *growing* on the eval set. The second is the one worth
+  remembering — early stopping that watches rows the trees are already growing on never fires, and
+  the result reads afterwards as a model that happened not to overfit.
+- **The eval set inside the folds is a cut, not a config value.** `stopping_slice` takes one fold of
+  the new `model.stopping_folds` (5) out of the rows a fit already owns, using `grouped_folds`, so
+  no composition spans the two sides. The final fit needs no cut: `val` is already a group-disjoint
+  tenth, which is what `pipeline.yaml`'s `early_stopping_rounds` comment has said all along.
+  **#27's calibration split must be disjoint from whichever rows that cut chose**, per fit — read
+  `reports/model/model-fits.csv`, do not assume a fixed slice.
+- **No scaler.** CatBoost splits on thresholds and `FittedScaler` is affine, so the fit is invariant
+  to it. A model from here consumes **raw** features and records that in `feature_names`; applying
+  the persisted scaler on the way into `predict` would feed it a matrix it was never fitted on.
+  The scaler still has a job — #48's applicability domain is distance-based — and #28 carries the
+  box.
+- **Two prediction spaces.** `predict` returns weight percent; `predict_model_space` returns the
+  `log1p` the booster emits. The back-transform is exact, not approximate: `expm1` is strictly
+  increasing and a quantile is equivariant under a monotone map. Nothing is clipped.
+
+#### Four measurements, three of which corrected something
+
+- **`early_stopping_rounds: 5000` was paying four times over for an identical model.** At `od_wait`
+  5000 a real inner fold costs **26.9 s**; at 500, **6.9 s**; at 200, **5.4 s** — and all three
+  return the same model, best iteration 1042 and R² 0.7050 to four decimals. `od_wait` only
+  multiplies the trees grown *after* the optimum, which `use_best_model` then discards.
+  `pipeline.yaml` now says 500, with the measurement beside it.
+- **The budget: 4,500 fits is 42 hours; 25 trials is 3.5.** A real end-to-end probe ran 35 fits in
+  **19.4 min**, so **33 s a fit** on this machine. `optuna_trials` came down from the archival 300
+  to **25**. The nesting was not touched, which is the one thing the card forbade. **Where the hours
+  are:** the ported space pairs `learning_rate` down to 1e-4 with `iterations` up to 30,000, and at
+  that corner one fit costs **397 s** against 7 s at the fast corner, has *not converged* at
+  iteration 29,999, and scores **worse** — R² 0.691 against 0.705. Sixty times the cost for a worse
+  model. The space is still ported verbatim, because the card's instruction was to lower the trial
+  count; **narrowing it is boxed onto #34**, which is the card that has to pay the bill.
+- **One of the archival search's nine dimensions did nothing.** `bagging_temperature` is a
+  Bayesian-bootstrap parameter and CatBoost's CPU default is not Bayesian. Measured: under the
+  default, temperature 0.0 and 1.0 give a bit-identical fit — same trees, same best iteration, the
+  same loss to six decimals — while under `Bayesian` they give 0.1444 and 0.1526. `FIXED` pins the
+  bootstrap; it is the one departure from the archival parameters, and it is what makes a sampled
+  dimension mean something.
+- **Two other beliefs about that space were checked and were wrong.** `depth=25` under `Lossguide`
+  is **accepted**, not refused (`max_leaves` makes it mostly inert), so the bound is ported verbatim
+  rather than clamped. `od_type='IncToDec'` alongside `early_stopping_rounds` is **accepted** too —
+  a redundancy, not a conflict — and the module sets only the one `pipeline.yaml` declares. And
+  `MedianPruner(n_startup_trials=5, n_warmup_steps=10, interval_steps=3)` at `Catboostmodel.py:541`
+  reported one step per fold over ten folds, steps 0 to 9, every one below the ten-step warmup: **the
+  archival pruner never pruned.** The warmup here is 1, over three inner folds.
+
+#### L12 is closed, and the sentinel needed two perturbations
+
+The weighting decision is **unweighted**, and the whole of the decision is the blindness. L12 is not
+the number 3 — raising it to 4 fixes nothing — it is that the weighting is a function of `y`. So
+`sample_weights(frame, settings)` slices to the declared features in its first statement and never
+reads the frame again, the same guard `select_features` uses for L6, and
+`assert_weights_ignore_target` measures the consequence rather than trusting the statement.
+
+**A test is what found the detector's first version too weak.** Written with one perturbation —
+shuffle plus a 1.5× affine — it *passed* `np.where(y > 9, 2, 1)` over a batch topping out at 5 wt%,
+because that weighting is constant before and after. The second pass replaces the column with a ramp
+over a millionfold range. What remains uncoverable is stated on the detector rather than hidden: on
+the rows it is given, a threshold beyond even the ramp *is* a constant function, and no behavioural
+check can say otherwise.
+
+**The fold-size argument the card offered as a second reason to weight does not land.** A 571-row
+fold and a 704-row fold being treated as equal evidence is an argument about how folds are
+*aggregated*, not about how rows inside one fit are weighted. It is answered by carrying
+`rows_fitted` and `rows_scored` as metrics, so the spread sits in the same table as the scores —
+#29 carries that box.
+
+#### One number to quote carefully
+
+The probe's honest cross-validated **R² is 0.746** in weight percent — median head, nested,
+group-aware, five outer folds, screening off. Against REPORT.md's published test R² of 0.892 and the
+committed CSVs' 0.376. It is a **probe**: two trials against the configured 25, and the run says so
+in its own first line. The configured run is #34's to execute and publish; quote this one as a cost
+check, which is what it was.
+
+---
+
+### Handoff — 2026-09-05 (earlier) · #25 closed · written for #26, and for the rest of S4
 
 **Where the phase is.** Thirty-one cards done. Suite **857** green (842 + 15 — note the previous
 handoff's 841 does not reproduce on this tree, and the one-test difference is not in #25's files).

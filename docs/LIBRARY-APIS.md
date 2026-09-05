@@ -124,7 +124,33 @@ preds = model.predict(X_test)      # shape (n, 3), columns in alpha order
 - **`early_stopping_rounds` sets `od_type='Iter'` and `od_wait`.**
 - **`use_best_model=True` requires a non-empty `eval_set`** and raises at fit time otherwise.
   This is the mechanical guard against the audit's *early-stopping-on-test* leak (PRD §2.2.3):
-  the honest `eval_set` is the **validation** split, never the test split.
+  the honest `eval_set` is the **validation** split, never the test split. Verified against
+  catboost 1.2.8: `CatBoostError: To employ param {'use_best_model': True} provide non-empty
+  'eval_set'.`
+
+### Measured against catboost 1.2.8 while card #26 ported the archival parameters
+
+Everything above was read from documentation. These four were **run**, because the archival
+script's parameter block turned out to contain three things nobody had checked.
+
+- **`bagging_temperature` does nothing unless `bootstrap_type="Bayesian"`.** CatBoost's CPU
+  default is not Bayesian, and it accepts the parameter anyway rather than warning. Measured on
+  an identical fit: temperature 0.0 and 1.0 give the same tree count, the same best iteration
+  and the same loss to six decimals under the default; under `Bayesian` they give 0.1444 and
+  0.1526. `Catboostmodel.py:549` sampled it without pinning the bootstrap, so one of the
+  search's nine dimensions was noise. Pin the bootstrap, or drop the dimension.
+- **`depth` beyond 16 is accepted under `grow_policy="Lossguide"`.** `depth=25` fits without
+  complaint; `max_leaves` is what bounds the tree, so a 64-leaf tree cannot be 25 deep and the
+  parameter is mostly inert there. Only `max_leaves` itself is refused outside Lossguide:
+  `max_leaves option works only with lossguide tree growing`.
+- **`od_type='IncToDec'` + `od_pval` alongside `early_stopping_rounds` is accepted**, not a
+  conflict. On a fit where both could act they stopped at the same iteration. It is a
+  redundancy to remove rather than an error to resolve — set the one you mean.
+- **`early_stopping_rounds` is a wall-time multiplier, not a model choice.** `od_wait` only
+  governs how many non-improving iterations are grown *after* the optimum, which
+  `use_best_model` then discards. Measured on a real inner fold: 26.9 s at 5000, 6.9 s at 500,
+  5.4 s at 200 — with best iteration 1042 and R² 0.7050 in **all three**. Same model, four
+  times the cost.
 
 ---
 

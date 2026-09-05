@@ -26,6 +26,13 @@ intervals alongside point estimates by default — not as an option.
 - [ ] R2, RMSE, MAE reported on both log and wt% scales
 - [ ] Bootstrap confidence intervals (2000 resamples) accompany every point metric
 - [ ] Metrics computed per split and per temperature subgroup
+
+- [ ] **The per-fold table already carries its own row counts, and that is not decoration (from
+      #26).** `hydms.surrogate.model` returns `rows_fitted` and `rows_scored` as metrics, so
+      `Evaluation.per_fold` and `reports/model/model-per-fold.csv` put the fold sizes in the same
+      table as the fold scores. Screening removes between 15 and 144 of a fold's ~710 training
+      rows (#24), so part of any fold-to-fold spread is training size and not the model. A
+      bootstrap CI over the folds that does not say so is a CI over two different things
 - [ ] Output is a structured table written to `reports/`, ready for the thesis
 - [ ] SHAP and PDP are computed on train or a dedicated split, **never on test**. Leak L11:
       `benchmark_model_selection.py:1375,1383,1394` computed both on `X_test`, which makes REPORT §6.1

@@ -37,6 +37,19 @@ accidentally rank on the mean.
 - [ ] Single public function taking formulas and temperatures, returning the interval frame
 - [ ] Loads the pinned artifact version; refuses to run against an unpromoted version
 - [ ] Applies the feature contract and the persisted scaler internally
+
+- [ ] **The model consumes raw, unscaled features (from #26).** CatBoost splits on thresholds and
+      `FittedScaler` is affine, so the tree ensemble is invariant to it; #26 therefore fits on raw
+      features and records that in `QuantileModel.feature_names`. Applying the persisted scaler on
+      the way into `predict` would feed the model a matrix it was never fitted on. The scaler is
+      still in the bundle and still has a job — the applicability domain (#48) is distance-based
+      and needs it — so the box above is right about *persisting* it and wrong about where it is
+      applied
+- [ ] **Two prediction spaces, and the public one is weight percent (from #26).**
+      `QuantileModel.predict` returns wt%, `predict_model_space` returns the `log1p` the booster
+      emits. The back-transform is exact rather than approximate: `expm1` is strictly increasing
+      and a quantile is equivariant under a monotone map. Nothing is clipped — a negative lower
+      band is the signal cards #48 and #77 act on
 - [ ] Callers never see the model object, the scaler or the calibrator
 
 ## Runnable check

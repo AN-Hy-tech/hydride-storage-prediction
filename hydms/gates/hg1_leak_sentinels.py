@@ -82,12 +82,29 @@ class LeakSentinels:
 
         owing = sorted({row.owed_by for row in rows if row.status != "green"})
         detail = "\n".join(_lines(rows, states=("pending", "deferred")))
+        # Two different kinds of incompleteness, and describing a *deferral* as "the module
+        # does not exist yet" is untrue: a deferred leak has no sentinel at all, because the
+        # decision it would assert has not been made. The wording follows whichever states are
+        # actually present, so the last leak standing is described accurately rather than by
+        # whichever case happened to be in the majority when this was written.
+        pending = sum(1 for row in rows if row.status == "pending")
+        waiting = sum(1 for row in rows if row.status == "deferred")
+        reasons = []
+        if pending:
+            reasons.append(
+                f"{pending} sentinel(s) are written and still go red on their miniatures, but "
+                f"the modules they guard do not exist yet"
+            )
+        if waiting:
+            reasons.append(
+                f"{waiting} leak(s) have no sentinel at all yet, because the decision one "
+                f"would assert has not been made"
+            )
         return GateResult(
             self.name,
             Status.SKIPPED,
-            f"{guarded} of {total} leaks are guarded against the real pipeline. The "
-            f"sentinels for the rest are written and still go red on their miniatures, but "
-            f"the modules they guard do not exist yet -- cards "
+            f"{guarded} of {total} leaks are guarded against the real pipeline. "
+            f"{'; '.join(reasons)} -- cards "
             f"{', '.join(f'#{card}' for card in owing)}:\n{detail}",
             measured=measured,
             threshold=threshold,

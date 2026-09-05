@@ -1,14 +1,15 @@
 """The mechanical guards behind the leak sentinels.
 
-Seven functions, each answering one question about what a stage did to its data, and each
-raising :class:`LeakDetected` with the offending items named. Between them they cover eleven
+Eight functions, each answering one question about what a stage did to its data, and each
+raising :class:`LeakDetected` with the offending items named. Between them they cover twelve
 of the thirteen leaks in ``docs/PHASE-H-RUNBOOK.md`` section 1; ``hydms/qa/sentinels.py``
-records which, and which two are still owed.
+records which, and which one is still owed.
 
-Six of the seven ask about *held-out* data. The seventh, :func:`assert_metadata_survives`,
-asks the opposite question -- whether a stage carried through something the next stage needs
--- because L13 is a leak of a different shape: nothing is contaminated, a column simply
-stops existing and takes a validation criterion with it.
+Six of the eight ask about *held-out* data. :func:`assert_metadata_survives` asks the
+opposite question -- whether a stage carried through something the next stage needs --
+because L13 is a leak of a different shape: nothing is contaminated, a column simply stops
+existing and takes a validation criterion with it. :func:`assert_weights_ignore_target` asks
+a third: whether a stage read the *answer* while deciding how to weigh the question.
 
 **Why these live in the package and not in ``tests/``.** They are not test helpers. Several
 of them are the guard the runbook asks the *pipeline itself* to carry -- card #10's merge
@@ -51,6 +52,7 @@ __all__ = [
     "assert_metadata_survives",
     "assert_selection_ignores_holdout",
     "assert_selection_is_nested",
+    "assert_weights_ignore_target",
 ]
 
 # A failure that names two hundred formulae is a failure nobody reads to the end. The total
@@ -638,4 +640,167 @@ def assert_metadata_survives(
             f"the stage rewrote {name!r} for {len(changed)} of {len(labels)} row(s): "
             f"{_named(changed)}. Carrying {what} through means carrying it unchanged; a "
             f"relabelled row folds into the wrong class (leak L13)."
+        )
+
+
+# --------------------------------------------------------------------------------------
+# L12 -- the sample weights
+# --------------------------------------------------------------------------------------
+
+
+def _weights(value: Any, *, labels: Sequence[Hashable], where: str) -> tuple[str, ...]:
+    """One weight per row, as exact text, or a ``ValueError`` saying what arrived instead.
+
+    ``repr`` rather than ``float``: the comparison below asks whether the weighting function
+    *moved at all*, so it must separate values a tolerance would merge, and it must give the
+    same answer for two ``nan`` values. This is the same exactness
+    :func:`assert_holdout_unchanged` means by "byte-identical", written for a one-dimensional
+    result rather than a frame.
+    """
+    try:
+        listed = list(value)
+    except TypeError as exc:
+        raise ValueError(
+            f"the weighting returned {type(value).__name__}, which is not one weight per "
+            f"row ({where})."
+        ) from exc
+    if len(listed) != len(labels):
+        raise ValueError(
+            f"the weighting returned {len(listed)} weight(s) for {len(labels)} row(s) "
+            f"({where}). A weight vector that is not the length of the batch is paired by "
+            f"position onto whichever rows it reaches, which is leak L9's shape."
+        )
+    rendered: list[str] = []
+    for label, entry in zip(labels, listed, strict=True):
+        try:
+            number = float(entry)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"the weighting returned {entry!r} for row {label!r} ({where}), which is "
+                f"not a number."
+            ) from exc
+        rendered.append(repr(number))
+    return tuple(rendered)
+
+
+def assert_weights_ignore_target(
+    weigh: Callable[[Any], Any],
+    frame: Any,
+    *,
+    target_column: str,
+    seed: int = 0,
+) -> None:
+    """Sample weights may be computed from the rows' features; never from their labels.
+
+    Guards **L12** (``Catboostmodel.py:516-518``::
+
+        combined_y_original = np.expm1(combined_y)
+        # Modified weights: double weight for capacities > 3
+        weights_combined = np.where(combined_y_original > 3, 2.0, 1.0)
+
+    and the same three lines again at ``:570-572`` inside every cross-validation fold. Rows
+    were weighted by their own answer, at a threshold chosen by hand, so the fit was told
+    which examples matter *because of what they measure* -- and every metric computed
+    afterwards is a metric of a model that was shown the shape of its own target).
+
+    The defect is not the number 3, and raising it to 4 would not fix anything: it is that the
+    weighting is a function of ``y``. So the property asserted here is a **blindness**, not a
+    bound, and it is measured by changing the target twice and requiring the weights not to
+    move either time.
+
+      1. **Shuffled, then rescaled.** The values stay a permutation of themselves, so a
+         weighting keyed on a *quantile of the batch* -- which a shuffle alone leaves intact --
+         is caught by the affine step moving that quantile; and one keyed on a row's own value
+         is caught by the shuffle moving it.
+      2. **Replaced by a ramp spanning a millionfold range.** Step 1 has a bounded image, so a
+         threshold outside it survives: ``np.where(y > 9, 2, 1)`` over a batch topping out at
+         5 wt% is constant before *and* after, and would pass. Replacing the column outright
+         is the stronger reading of the property, which is not "the weights survive a nudge"
+         but "the target is not an input at all".
+
+    **What remains uncovered**, since a behavioural check has a limit and it should be a stated
+    one: a weighting whose dependence on the target is constant across both perturbations --
+    a threshold beyond even the ramp, say. On the rows it is given, such a weighting *is* a
+    constant function, and no measurement of its behaviour can say otherwise.
+
+    Like :func:`assert_selection_ignores_holdout`, this runs the subject rather than reading a
+    record of it, which is why it takes a callable. It is also the cheapest of these
+    detectors: a weighting function fits nothing, so the live check costs two calls and no
+    model.
+
+    **What it does not cover.** Blindness to the *target* is the measurable half of "a
+    function of the training rows' own features and of nothing else". A weighting that read
+    rows it does not own would be leak L6's shape at a different stage, and
+    :func:`assert_selection_ignores_holdout` is the detector for that; the weighting here is
+    only ever handed the rows a fit owns, so there is no holdout inside ``frame`` to read.
+
+    Args:
+        weigh: Takes the frame, returns one weight per row in row order. Hand it the real
+            weighting function, bound to whatever else it needs, so this checks the code the
+            fit calls rather than a paraphrase of it.
+        frame: The rows a fit owns, features and target side by side, label-indexed.
+        target_column: The label column to perturb. It must be present and numeric; a check
+            against a column that is not there passes vacuously, which is exactly how a
+            target-conditioned weighting would survive this.
+        seed: Fixes the perturbation, so a failure reproduces exactly.
+
+    Raises:
+        LeakDetected: The weights changed when only the target changed.
+        ValueError: The frame is empty, the target column is absent or not numeric, or the
+            weighting did not return one number per row -- caller and subject errors, not
+            leaks, so that a detector which reports L12 is always reporting L12.
+    """
+    if len(frame) == 0:
+        raise ValueError(
+            "assert_weights_ignore_target was given no rows. A weighting over nothing is "
+            "unchanged by any perturbation, so this check would pass whatever it does."
+        )
+    if target_column not in frame.columns:
+        raise ValueError(
+            f"{target_column!r} is not a column of the frame, so perturbing it would perturb "
+            f"nothing and this check would pass vacuously. It carries: "
+            f"{_named(frame.columns)}."
+        )
+    if frame[target_column].dtype.kind not in "fiu":
+        raise ValueError(
+            f"{target_column!r} is {frame[target_column].dtype}, which cannot be perturbed "
+            f"numerically. The target a model is fitted on is a number "
+            f"(hydms.data.target.to_model_space)."
+        )
+
+    labels = list(frame.index)
+    baseline = _weights(weigh(frame), labels=labels, where="on the frame as given")
+
+    # stdlib `random`, for the reason `assert_selection_ignores_holdout` gives: the lint lane
+    # runs outside the pinned environment, and a reproduction must not depend on which NumPy
+    # is installed.
+    rng = random.Random(seed)
+    shuffled = [float(value) for value in frame[target_column].tolist()]
+    rng.shuffle(shuffled)
+    span = 1_000_000.0
+    ramp = [
+        -span + 2.0 * span * position / max(len(labels) - 1, 1) for position in range(len(labels))
+    ]
+
+    for description, replacement in (
+        ("shuffled and rescaled", [value * 1.5 + 1.0 for value in shuffled]),
+        ("replaced by a ramp over a millionfold range", ramp),
+    ):
+        perturbed = frame.copy(deep=True)
+        perturbed[target_column] = replacement
+        again = _weights(
+            weigh(perturbed), labels=labels, where=f"after the target was {description}"
+        )
+        if again == baseline:
+            continue
+        moved = [
+            label
+            for label, before, after in zip(labels, baseline, again, strict=True)
+            if before != after
+        ]
+        raise LeakDetected(
+            f"with {target_column!r} {description}, the sample weight of {len(moved)} of "
+            f"{len(labels)} row(s) changed: {_named(moved)}. The weighting is a function of "
+            f"the target, which is what `np.where(np.expm1(y) > 3, 2.0, 1.0)` was -- rows "
+            f"weighted by their own answer (leak L12)."
         )

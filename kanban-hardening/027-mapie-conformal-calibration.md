@@ -28,6 +28,22 @@ validation would recycle data already used for early stopping and model selectio
 - [ ] Calibrator persisted into the artifact directory alongside the model
 - [ ] Documented which nominal coverage level is targeted
 
+- [ ] **The raw quantile heads under-cover, and by how much is measured (from #26).** CatBoost's
+      `MultiQuantile` P10/P90 band covered **64.4 %** of held-out rows against a nominal 80 %, in
+      a nested five-fold probe over the real matrix — fold by fold 0.57, 0.63, 0.70, 0.69, 0.63,
+      under-covered in every one. So this card is not a formality on top of an already-honest
+      interval; it is what makes the interval mean its own number, and gate AC-3 has a real gap
+      to close rather than a rounding. The heads did **not** cross on any real row, so the
+      monotonicity CQR would want is there to start with. `hydms.surrogate.model.quantile_metrics`
+      already reports `interval_coverage`, `interval_width` and `crossings`, so the before-and-
+      after is one column comparison rather than new measurement code
+- [ ] **The early-stopping split this must be disjoint from is not a config value but a cut
+      (from #26).** `hydms.surrogate.model.stopping_slice` carves one fold of `model.stopping_folds`
+      out of the rows a fit owns, per fit, with `grouped_folds`. A calibration split "disjoint
+      from the early-stopping split" therefore has to be disjoint from *whichever* rows that cut
+      chose, which is recorded per fit in `FitLog` / `model-fits.csv` — read it rather than
+      assuming a fixed slice
+
 ## Runnable check
 
 ```bash

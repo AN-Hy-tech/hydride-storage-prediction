@@ -27,7 +27,19 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     through. Folds group on the canonical composition (leak L7) and the reported score comes
     from an outer fold the hyperparameter search never saw (leak L4), recorded as a
     :class:`~hydms.qa.detectors.SelectionRecord` per model compared.
+
+``model.py``
+    The capacity model and its quantile heads. A fit cannot be made without naming the rows
+    it will be *scored* against, and that is the first thing checked (leaks L1 and L5); the
+    sample weights are sliced free of the target before anything reads them (leak L12).
+    :func:`~hydms.surrogate.model.capacity_contender` is this model as a contender for the
+    protocol above; ``python -m hydms.surrogate.train`` is the runnable entry point.
 """
+
+# `SENTINEL_BUDGET` and `sentinel_settings` are deliberately NOT re-exported below. Two
+# modules own one each -- `selection` reduces Boruta's iterations, `model` reduces the search
+# space -- and a package-level name would have to pick one of them silently. Import them from
+# the module whose budget you mean.
 
 from .comparison import (
     Comparison,
@@ -35,6 +47,28 @@ from .comparison import (
     Placeholder,
     placeholder_exposure,
     row_cost,
+)
+from .model import (
+    FIXED,
+    SEARCH_SPACE,
+    Configuration,
+    FitLog,
+    FitRecord,
+    Hyperparameter,
+    ModelError,
+    ModelSettings,
+    QuantileModel,
+    ScreenedRows,
+    capacity_contender,
+    capacity_matrix,
+    column_names,
+    final_fit,
+    fit_quantile_model,
+    loss_function,
+    quantile_metrics,
+    sample_weights,
+    screened_rows,
+    stopping_slice,
 )
 from .scaler import (
     QUANTILE_RANGE,
@@ -45,7 +79,6 @@ from .scaler import (
     scaler_from,
 )
 from .selection import (
-    SENTINEL_BUDGET,
     STAGE_NAMES,
     FoldSelection,
     Selection,
@@ -55,7 +88,6 @@ from .selection import (
     select_across_folds,
     select_features,
     selected_names,
-    sentinel_settings,
 )
 from .validation import (
     HELD_OUT_SPLITS,
@@ -74,39 +106,57 @@ from .validation import (
 )
 
 __all__ = [
+    "FIXED",
     "HELD_OUT_SPLITS",
     "OUTER_FOLDS",
     "QUANTILE_RANGE",
     "SCALER_PAYLOAD",
-    "SENTINEL_BUDGET",
+    "SEARCH_SPACE",
     "STAGE_NAMES",
     "Comparison",
     "ComparisonError",
+    "Configuration",
     "Contender",
     "Evaluation",
+    "FitLog",
+    "FitRecord",
     "FittedScaler",
     "Fold",
     "FoldSelection",
     "FoldSet",
     "FoldSpace",
+    "Hyperparameter",
+    "ModelError",
+    "ModelSettings",
     "Placeholder",
+    "QuantileModel",
     "ScalerError",
     "ScoringTask",
+    "ScreenedRows",
     "Selection",
     "SelectionError",
     "SelectionSettings",
     "Stage",
     "TuningTask",
     "ValidationError",
+    "capacity_contender",
+    "capacity_matrix",
+    "column_names",
+    "final_fit",
+    "fit_quantile_model",
     "fit_scaler",
     "grouped_folds",
     "leave_one_class_out",
+    "loss_function",
     "nested_scores",
     "placeholder_exposure",
+    "quantile_metrics",
     "row_cost",
+    "sample_weights",
     "scaler_from",
+    "screened_rows",
     "select_across_folds",
     "select_features",
     "selected_names",
-    "sentinel_settings",
+    "stopping_slice",
 ]

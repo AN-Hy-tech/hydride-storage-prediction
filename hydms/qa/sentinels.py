@@ -43,6 +43,7 @@ from .detectors import (
     assert_metadata_survives,
     assert_selection_ignores_holdout,
     assert_selection_is_nested,
+    assert_weights_ignore_target,
 )
 from .leaks import INVENTORY, by_id
 
@@ -935,6 +936,221 @@ def _l6_run() -> None:
 
 
 # --------------------------------------------------------------------------------------
+# L12 -- the sample weights
+# --------------------------------------------------------------------------------------
+
+_CAPACITY = "H2_W% (max)"
+
+
+def _weighting_frame() -> Any:
+    """Six rows straddling 3 wt%, the threshold the archival weighting was hand-tuned to.
+
+    Two features and the target, because the whole question is which of the three columns a
+    weighting reads.
+    """
+    pd = _pandas()
+    return pd.DataFrame(
+        {
+            "avg_atomic_mass": [58.7, 47.9, 24.3, 91.2, 88.9, 140.1],
+            "temperature(K)": [298.0, 303.0, 573.0, 323.0, 298.0, 598.0],
+            _CAPACITY: [1.5, 2.0, 2.5, 3.5, 4.0, 5.0],
+        },
+        index=list(_ROW_LABELS),
+    )
+
+
+def _l12_weights_conditioned_on_the_target() -> None:
+    """`Catboostmodel.py:516-518` -- np.where(np.expm1(y) > 3, 2.0, 1.0), rows weighted by y."""
+    assert_weights_ignore_target(
+        lambda frame: [2.0 if value > 3.0 else 1.0 for value in frame[_CAPACITY]],
+        _weighting_frame(),
+        target_column=_CAPACITY,
+    )
+
+
+def _l12_weights_conditioned_on_a_feature() -> None:
+    """The same expression, one column to the left.
+
+    The minimal difference the contract asks for: same ``np.where(x > threshold, 2, 1)``
+    shape, same two weights, same rows -- only the column it reads changes. A twin that
+    returned a flat 1.0 would also pass, and would prove less: it would leave open whether
+    the detector objects to *thresholding* rather than to reading the answer.
+    """
+    assert_weights_ignore_target(
+        lambda frame: [2.0 if value > 300.0 else 1.0 for value in frame["temperature(K)"]],
+        _weighting_frame(),
+        target_column=_CAPACITY,
+    )
+
+
+# --------------------------------------------------------------------------------------
+# The real model -- card #26
+# --------------------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def _model_settings() -> Any:
+    """Card #26's settings under its `SENTINEL_BUDGET`, and the matrix they describe."""
+    from hydms.surrogate.model import sentinel_settings
+
+    return sentinel_settings()
+
+
+@lru_cache(maxsize=1)
+def _model_matrix() -> tuple[Any, Any]:
+    """The fourteen-feature matrix the capacity model is fitted on, and #13's split over it.
+
+    `capacity_matrix` is the function the training command and card #34 call, so these hooks
+    check the real matrix rather than one assembled a second way beside it.
+    """
+    from hydms.surrogate.model import capacity_matrix
+
+    return capacity_matrix(settings=_model_settings())
+
+
+@lru_cache(maxsize=1)
+def _final_fit_record() -> Any:
+    """The deployed fit, under the reduced budget: what rows it stopped on and was scored on.
+
+    **The budget is reduced and that is stated where it lives**, on
+    `hydms.surrogate.model.SENTINEL_BUDGET`: a real trial grows up to 30,000 boosted trees and
+    HG-1 is a FAST gate. What L1 asks is not affected by it. The question is which rows chose
+    the stopping iteration and which rows the result is reported against, and a row identity
+    does not depend on how many trees were grown.
+    """
+    from hydms.surrogate.model import final_fit
+
+    frame, split = _model_matrix()
+    return final_fit(frame, split, settings=_model_settings()).record
+
+
+@lru_cache(maxsize=1)
+def _model_run() -> tuple[Any, Any]:
+    """Card #88's nested protocol with card #26's model in it. The evaluation, and every fit.
+
+    Every fit, including the search's: `log_trials=True` is affordable here and only here,
+    because `SENTINEL_BUDGET` cuts the search to two trials. So the L5 hook below checks the
+    real thing -- each of the fits a fold actually made -- rather than the five that scored.
+
+    Cached, like `_validation_run` and `_l6_run`: `audit()` runs on every gate invocation and
+    on every test in `tests/leaks/`.
+    """
+    from hydms.surrogate.model import FitLog, capacity_contender
+    from hydms.surrogate.validation import nested_scores
+
+    frame, split = _model_matrix()
+    settings = _model_settings()
+    log = FitLog()
+    evaluation = nested_scores(
+        frame,
+        split,
+        [capacity_contender(settings=settings, log=log, log_trials=True)],
+    )
+    return evaluation, log
+
+
+def _l1_live() -> None:
+    """The deployed fit stopped on the validation split, and is reported on the test split.
+
+    The premise is checked before the conclusion, as `_l4_live` does. `assert_early_stopping_
+    is_honest` compares two sets of row labels, and would pass just as happily on two sets
+    that were not the splits at all -- an eval set quietly cut out of the training rows would
+    satisfy it while leaving `val` unused and the audit's arrangement unexamined. So this
+    first asks whether the fit's eval set *is* the validation split and its scored rows *are*
+    the test split, and only then asks whether they overlap.
+    """
+    frame, split = _model_matrix()
+    record = _final_fit_record()
+    expected = {
+        "eval_on": set(frame.index[split == "val"]),
+        "scored_on": set(frame.index[split == "test"]),
+    }
+    for field, wanted in expected.items():
+        got = set(getattr(record, field))
+        if got != wanted:
+            raise ValueError(
+                f"the final fit's {field} is {len(got)} row(s) where the split assigns "
+                f"{len(wanted)}, differing on {len(got ^ wanted)}. This hook checks the "
+                f"arrangement L1 is about -- stop on val, report on test -- and it cannot "
+                f"check an arrangement the fit did not use."
+            )
+    assert_early_stopping_is_honest(
+        eval_rows=record.eval_on,
+        scored_rows=record.scored_on,
+        use_best_model=True,
+        where=record.where,
+    )
+
+
+def _l5_live() -> None:
+    """No fit inside the protocol early-stops on rows it is scored on, or on a held-out split.
+
+    Two questions, and the second is not the detector's. `assert_early_stopping_is_honest`
+    runs once per recorded fit -- the search's as well as the five that scored, since
+    `_model_run` logs them all. But a fit could satisfy it and still be dishonest in the way
+    L1 was, by stopping on rows from `val` or `test`: those are disjoint from an inner fold's
+    scored rows, so the detector would pass them. Cross-validation is entitled to the
+    training split and nothing else, so that is asserted here directly.
+    """
+    frame, split = _model_matrix()
+    evaluation, log = _model_run()
+    if not log.records:
+        raise ValueError(
+            "the nested run recorded no fits, so this hook checked nothing. It reads "
+            "hydms.surrogate.model.FitLog, which capacity_contender fills."
+        )
+
+    held_out = set(frame.index[split != "train"])
+    for record in log.records:
+        assert_early_stopping_is_honest(
+            eval_rows=record.eval_on,
+            scored_rows=record.scored_on,
+            use_best_model=True,
+            where=record.where,
+        )
+        reached = held_out.intersection(record.eval_on) | held_out.intersection(record.fitted)
+        if reached:
+            raise LeakDetected(
+                f"{record.where}: {len(reached)} row(s) from a held-out split were used to "
+                f"fit or to stop a cross-validation fit. Cross-validation runs inside the "
+                f"training split; a fold that stops on `val` passes the disjointness check "
+                f"and is still leak L1's arrangement (leak L5)."
+            )
+
+    scored = {frozenset(record.scored_on) for record in log.records}
+    for fold in evaluation.outer:
+        if frozenset(fold.test) not in scored:
+            raise ValueError(
+                f"outer fold {fold.name!r} holds out {len(fold.test)} row(s) that no recorded "
+                f"fit was scored on. The log is what this hook checks, so a fold missing from "
+                f"it is a fold nobody checked."
+            )
+
+
+def _l12_live() -> None:
+    """The real weighting function, over the real matrix, cannot see the target.
+
+    `assert_weights_ignore_target` runs the subject rather than reading a record of it, so
+    this hook supplies `hydms.surrogate.model.sample_weights` itself -- bound to the settings
+    a fit binds it to, which is where the decision to slice the frame down to the declared
+    features lives. Perturbing the capacity column must leave every weight where it was.
+
+    The cheapest of the live checks: a weighting function fits nothing, so this costs two
+    calls and no model.
+    """
+    from functools import partial
+
+    from hydms.config import load as load_config
+    from hydms.surrogate.model import sample_weights
+
+    frame, _ = _model_matrix()
+    assert_weights_ignore_target(
+        partial(sample_weights, settings=_model_settings()),
+        frame,
+        target_column=load_config().columns.target,
+    )
+
+# --------------------------------------------------------------------------------------
 # The registry
 # --------------------------------------------------------------------------------------
 
@@ -956,6 +1172,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l1_eval_set_is_the_validation_split,
             ),
         ),
+        live=_l1_live,
     ),
     Sentinel(
         leak="L2",
@@ -1016,6 +1233,7 @@ SENTINELS: tuple[Sentinel, ...] = (
                 _l5_fold_stops_on_an_inner_slice,
             ),
         ),
+        live=_l5_live,
     ),
     Sentinel(
         leak="L6",
@@ -1084,6 +1302,20 @@ SENTINELS: tuple[Sentinel, ...] = (
         live=_l10_live,
     ),
     Sentinel(
+        leak="L12",
+        title="sample weights are blind to the target",
+        detector="hydms.qa.detectors.assert_weights_ignore_target",
+        subject="hydms.surrogate.model",
+        reproductions=(
+            Reproduction(
+                "rows weighted by their own capacity, at a hand-tuned threshold",
+                _l12_weights_conditioned_on_the_target,
+                _l12_weights_conditioned_on_a_feature,
+            ),
+        ),
+        live=_l12_live,
+    ),
+    Sentinel(
         leak="L13",
         title="Alloy_class survives featurisation for every row",
         detector="hydms.qa.detectors.assert_metadata_survives",
@@ -1111,12 +1343,6 @@ DEFERRED: tuple[Deferral, ...] = (
         owed_by=29,
         reason="the sentinel asserts that the explainability record names no held-out split, "
         "and there is no such record until #29 defines what SHAP and PDP are computed on",
-    ),
-    Deferral(
-        leak="L12",
-        owed_by=26,
-        reason="the sentinel asserts that sample weights are a function of nothing but the "
-        "training rows' own features; the weighting scheme is #26's decision to make",
     ),
 )
 

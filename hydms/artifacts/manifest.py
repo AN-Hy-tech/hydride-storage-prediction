@@ -83,6 +83,7 @@ RECORDED_PACKAGES: Final[tuple[str, ...]] = (
     "cleanlab",
     "Boruta",
     "statsmodels",
+    "optuna",
     "PyYAML",
     "joblib",
     "mapie",
