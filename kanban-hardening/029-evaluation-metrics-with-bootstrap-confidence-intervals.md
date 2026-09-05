@@ -112,14 +112,40 @@ intervals alongside point estimates by default — not as an option.
       the statement that the choice is principled rather than numerically forced. The #25
       precedent: publish the comparison that justifies a choice, so no later session re-litigates
       it from a paragraph
-- [ ] **This card lands machinery, not published numbers (Q9).** No full run has ever been made in
-      this project — every number in this layer comes from a probe. #34 pays for the real run and
-      its tables are what get committed; this card lands the emit path plus a test that it
-      reproduces whatever is committed, verified against a sentinel-budget probe. **Consequence,
-      stated rather than discovered: #37 stays blocked on #34.** The out-of-fold route decouples
-      the *code path* from #34, not the *publishable numbers* — an earlier handoff said "entirely"
-      and that was too strong. Probe tables are **not** committed as a stopgap: a labelled probe
-      number is exactly how 0.746 escaped its qualifier
+- [ ] **~~This card lands machinery, not published numbers (Q9).~~ REVERSED 2026-09-05 — this card
+      produces the real numbers (Q12–Q15).** Q9 originally deferred the run to #34; that was
+      overturned deliberately, and the reason it was overturned is the reason it must not drift
+      back. **If #29 and #34 each run their own 3.5 h fit, the numbers in Chapter 1 describe a
+      different model from the one that ships.** So there is **one run**: this card pays for it,
+      writes the tables, and #34 promotes the artifact *from that same run*. Cost, measured:
+      `cv_folds 5 x inner_cv_folds 3 x optuna_trials 25` = 375 tuning fits + 6 = **381 fits at
+      ~33 s = ~3.5 h**
+- [ ] **Three of #34's boxes have the wrong owner now, because ownership followed the bill (Q13,
+      Q14).** #34 justified owning both in its own words — "this card pays the 3.5-hour bill, so it
+      owns the fix". The bill moved here, so they move here:
+      **(i) the config re-read race.** `hydms.config.load` is uncached and `model._columns` calls
+      it through `load_config()` on the whole scoring path — ~6 reads a fit, **~2,300 windows** in
+      a 381-fit run in which a working-tree edit changes what the run believes. It has already
+      fired once, killing a probe on trial 3, and **two sessions share this worktree**. Fix before
+      the run: thread the target column into `ModelSettings` so `_columns` never falls back to
+      disk, plus a test asserting `fit_quantile_model` reaches `hydms.config.load` **zero** times.
+      A 3.5 h run that reads a half-edited config produces numbers that look fine and are wrong.
+      **(ii) narrowing the search space.** The ported space pairs `learning_rate` 1e-4 with
+      `iterations` 30,000: **397 s a fit against 7 s**, unconverged at iteration 29,999, and it
+      scores *worse* (R² 0.691 vs 0.705). Narrow it — an upper bound on `iterations` or a lower
+      bound on `learning_rate` — **before** the run this thesis quotes, with the reason written
+      into `tests/surrogate/test_model.py::test_the_search_space_is_the_archival_one`, which is the
+      test that must be updated deliberately. Narrowing afterwards would publish a model the
+      project then changed, which is the mismatch (i) exists to prevent arriving by another door
+- [ ] **Commit the machinery, then run from that commit (Q15).** A table produced from an
+      uncommitted tree cannot be tied to the code that made it, and #34's manifest records a git
+      SHA. Land and commit steps 1–2 plus the Q13 fix, run from that commit, and **stamp the SHA
+      into the emitted tables**. If the run dies at hour three, nothing is lost but the run
+- [ ] **The heavy run is the maintainer's to execute, not the agent's (standing rule, 2026-09-05).**
+      This card's deliverable is therefore **machinery plus one documented command**, verified end
+      to end against a sentinel-budget probe so that the 3.5 h is not spent discovering a crash.
+      The card stays `doing` across the gap between the machinery landing and the numbers arriving;
+      a box below names what is owed. Do not start a multi-hour fit unasked
 - [ ] **The explainability record names what it ran on, and the sentinel reads that (Q10).** SHAP
       and PDP run on **the training rows of the deployed fit**. The record carries an explicit
       `computed_on` column, and the L11 sentinel asserts its value is not in
@@ -185,3 +211,18 @@ needs no artifact; both readings land behind this module, and the boxes above sa
   `feature_selection/` while `git ls-files artifacts/` returns nothing. On a fresh clone every
   #26 and #27 number is unverifiable prose. That is what the Q4 and Q9 boxes exist to end.
   (by @assistant)
+- 2026-09-05: **Q9 reversed by the maintainer, and four more decisions settled (Q12–Q15).** This
+  card produces the real numbers rather than deferring them to #34. The argument that carried it is
+  not cost but identity: **two independent 3.5 h runs would mean Chapter 1 reports a different
+  model from the one that ships.** So there is one run — this card pays, #34 promotes from it, and
+  #34 gained `blocked_by: 29`. Ownership followed the bill, so two of #34's boxes moved here: the
+  **config re-read race** (~2,300 windows in a 381-fit run; it has already killed a probe on trial
+  3, and two sessions share this worktree) and the **search-space narrowing** (the 1e-4 x 30,000
+  corner costs 397 s against 7 s and scores worse). Both must land *before* the run — narrowing
+  afterwards would publish a model the project then changed, which is the same mismatch arriving by
+  another door. The machinery is committed before the run so its tables carry a SHA. **A standing
+  rule was set at the same time: the maintainer executes multi-hour runs, not the agent**, so this
+  card's deliverable is machinery plus one documented command, verified against a sentinel-budget
+  probe, and the card stays `doing` across the gap until the numbers arrive. Note for whoever
+  implements: the earlier Q9 box is struck through rather than deleted, because a reversed decision
+  that leaves no trace is one a later session re-reverses. (by @assistant)

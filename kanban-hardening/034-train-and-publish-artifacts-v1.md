@@ -2,7 +2,7 @@
 id: 34
 status: backlog
 priority: High
-blocked_by: [31, 32, 33]
+blocked_by: [29, 31, 32, 33]
 assignee: "@amirhossein"
 tags: [p1, l3, S1]
 ---
@@ -22,12 +22,24 @@ that reason.
 
 ## Done when
 
+- [ ] **This card no longer pays for the fit — #29 does, and this card promotes *that* run
+      (decided 2026-09-05, #29 Q12).** Two independent 3.5 h runs would mean the numbers in
+      Chapter 1 describe a different model from the one that ships, so there is **one run**: #29
+      pays for it and writes the tables, this card gates and promotes the artifact from it. Hence
+      the new `blocked_by: 29`. **Two boxes below moved to #29 with the bill** — the config
+      re-read race and the search-space narrowing — because this card owned them only on the
+      stated ground that it "pays the 3.5-hour bill". They are struck through below rather than
+      deleted, so the reasoning stays legible
+
 - [ ] Full pipeline run from `data/raw/` produces `artifacts/v1/`
 - [ ] Manifest complete: git SHA, seeds, package versions, feature contract, gate results
 - [ ] All Phase 1 gates pass and are recorded in the manifest
 
-- [ ] **The full run is about 3.5 hours and the reason is one corner of the search space (from
-      #26).** Measured: 33 s a fit on this machine, and the configured budget is
+- [ ] ~~**The full run is about 3.5 hours and the reason is one corner of the search space (from
+      #26).**~~ **MOVED TO #29 (2026-09-05)** — the narrowing decision follows the bill, and #29
+      now pays it. Narrowing must happen *before* the run Chapter 1 quotes, otherwise this card
+      improves a model the thesis has already reported. Left here for its measurements:
+      Measured: 33 s a fit on this machine, and the configured budget is
       `cv_folds` x `inner_cv_folds` x `optuna_trials` = 5 x 3 x 25 = 375 tuning fits plus six
       more. `optuna_trials` came down from the archival 300 — which would be 42 h — and the
       nesting was not touched. **Where the hours are**: the ported space pairs `learning_rate`
@@ -54,8 +66,10 @@ that reason.
       be published beside the score: at `calibration_folds: 5` the deployed model grows on ~701
       rows where the cross-validation that estimated its performance fitted on folds cut from ~893.
       **Never store a pickled MAPIE object**; `conformal_from` refuses one and says why
-- [ ] **A run re-reads `pipeline.yaml` from disk while it is running, so an edit lands
-      mid-flight (measured 2026-09-05).** `hydms.config.load` is uncached and re-parses the file on
+- [ ] ~~**A run re-reads `pipeline.yaml` from disk while it is running, so an edit lands
+      mid-flight (measured 2026-09-05).**~~ **MOVED TO #29 (2026-09-05)**, by this box's own
+      rule — "this card pays the 3.5-hour bill, so it owns the fix" — now that #29 pays it. It
+      must land *before* #29's run. Left here in full, because the measurements are this card's: `hydms.config.load` is uncached and re-parses the file on
       every call, and `hydms.surrogate.model._columns` calls it through `load_config()` whenever
       `target_column` is `None` — which is the whole scoring path. Counted under `sentinel_settings()`:
       **210 reads in one nested run** of ~35 fits, so about six a fit, at **7.6 ms each**; the

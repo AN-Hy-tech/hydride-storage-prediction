@@ -133,9 +133,13 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-four cards are done and **#29 is `doing`** — opened
-2026-09-05 with **no implementation**, only docstring corrections in `predict.py` and
-`conformal.py`, so `feat/phase-h-emergency-hardening` is otherwise clean. The fast suite is
+**Next session, in one paragraph.** **Implement steps 0–4 below, together, in one session** — the
+config-race fix and the search-space narrowing first, then out-of-fold predictions, `evaluate.py`,
+SHAP/PDP, and the L11 sentinel that takes HG-1 to 13/13. Commit them, verify against a
+sentinel-budget probe, and hand the maintainer one command for the ~3.5 h run; **do not run it
+yourself**. Thirty-four cards are done and **#29 is `doing`** — opened 2026-09-05 with **no
+implementation**, only docstring corrections in `predict.py` and `conformal.py`, so
+`feat/phase-h-emergency-hardening` is otherwise clean. The fast suite is
 **961** green in 11 min 44 s — **measured this session, and it is not the 960 the handoffs below
 record**. Nothing in this session touched `tests/`, so 960 was already wrong when it was written;
 the older handoffs keep it because they are history. `python -m hydms.gates run --fast` exits 0
@@ -209,20 +213,34 @@ reduced-trial cost check whose own output prints `These numbers are a cost check
 on held-out rows. Both are legitimate and they are different claims, so every row of the record
 names which, exactly as #25 forced for the feature set.
 
-#### The four steps, in order
+#### The work, in order — steps 0–4 land together, then the run
+
+**Step 0 — before anything else, the two boxes that moved from #34.** Thread the target column into
+`ModelSettings` so `model._columns` never falls back to `hydms.config.load`, with a test asserting
+`fit_quantile_model` reaches it **zero** times; and narrow the search space, updating
+`tests/surrogate/test_model.py::test_the_search_space_is_the_archival_one` deliberately, with the
+reason in it. Both are prerequisites of a run anyone can trust.
 
 1. **Keep the out-of-fold predictions.** `_score_fold` already computes them; stop discarding them
-   and hang an out-of-fold table off `Evaluation`. Small, and no new science.
-2. **Write `hydms/surrogate/evaluate.py`** — R²/RMSE/MAE on **both** log and wt% scales, the row
-   bootstrap at 2000 resamples, broken out per split and per temperature subgroup, with the feature
-   set (`SELECTED`, 14) named on every row. **Expect HG-1 to go red the moment this module exists**
-   and nothing is wired to it — that is the sentinel mechanism working, not a regression, and it
-   has already happened twice in this phase (#10, #12).
-3. **SHAP and PDP on train or a dedicated split, never test** (leak L11:
-   `benchmark_model_selection.py:1375,1383,1394`).
-4. **Then the L11 sentinel** in `hydms/qa/sentinels.py` — the record names no held-out split. It
-   cannot be written before step 3, which is exactly why #71 recorded it as a `Deferral` rather
-   than guessing. This is the last of the thirteen; HG-1 goes 13/13 here.
+   and hang an `out_of_fold: pd.DataFrame` field off `Evaluation`, defaulted empty so the L2 and L4
+   sentinels are untouched. Small, and no new science.
+2. **Write `hydms/surrogate/evaluate.py`** — R²/RMSE/MAE on **both** log and wt% scales, the
+   bootstrap at 2000 resamples **over canonical groups**, broken out per split and per temperature
+   subgroup, the feature set (`SELECTED`, 14) named on every row, the too-narrow caveat as a table
+   column, and `per_fold` beside it as the second interval. **Expect HG-1 to go red the moment this
+   module exists** and nothing is wired to it — the sentinel mechanism working, not a regression;
+   it has already happened twice this phase (#10, #12).
+3. **SHAP and PDP on the deployed fit's training rows, never test** (leak L11:
+   `benchmark_model_selection.py:1375,1383,1394`), with an explicit `computed_on` column.
+4. **Then the L11 sentinel** in `hydms/qa/sentinels.py`: assert `computed_on` is not in
+   `hydms.surrogate.validation.HELD_OUT_SPLITS`. It cannot be written before step 3, which is why
+   #71 recorded it as a `Deferral` rather than guessing. Last of the thirteen — **HG-1 goes 13/13**.
+
+**Then commit, and hand the run over.** The tables must be traceable to a SHA, so commit steps 0–4,
+verify the whole path end to end against a sentinel-budget probe, and only then give the maintainer
+**one command** to run. Stamp the SHA into the emitted tables. The `--emit` flag rebuilds the prose
+from the tables in a second, on the #25 pattern, with a test asserting the committed document is
+what the code produces.
 
 #### Two things not to do
 
@@ -253,9 +271,27 @@ second, cruder interval.
 more than one temperature, so a resampled group carries all its temperature rows. Subgroup *n*
 varies between replicates; record its min and max so a thin bin is visible.
 
-**This card lands machinery, not published numbers.** #34 pays for the real run and its tables are
-what get committed; `reports/model/` gets un-ignored on the #25 pattern. **#37 stays blocked on
-#34** — the out-of-fold route decouples the code path, not the numbers.
+**#29 produces the real numbers — this reverses the first version of this handoff.** An earlier
+round settled that #34 would pay for the run; that was overturned the same day, and the reason
+matters more than the decision: **two independent 3.5 h runs mean Chapter 1 describes a different
+model from the one that ships.** So there is **one run** — #29 pays for it and writes the tables,
+#34 gates and promotes the artifact from that same run, and #34 has gained `blocked_by: 29`.
+`reports/model/` gets un-ignored on the #25 pattern. Budget, measured: `5 x 3 x 25` = 375 tuning
+fits + 6 = **381 fits at ~33 s = ~3.5 h**.
+
+**Two of #34's boxes moved to #29, because ownership followed the bill.** #34 owned both on its own
+stated ground — "this card pays the 3.5-hour bill, so it owns the fix". Both must land *before* the
+run. **(i) The config re-read race:** `hydms.config.load` is uncached and the scoring path calls it
+~6 times a fit — **~2,300 windows** in a 381-fit run where a working-tree edit changes what the run
+believes. It has already killed a probe on trial 3, and two sessions share this worktree. **(ii)
+Search-space narrowing:** the `learning_rate` 1e-4 x `iterations` 30,000 corner costs 397 s against
+7 s, is unconverged at iteration 29,999, and scores *worse*. Narrow before the run, not after —
+narrowing afterwards publishes a model the project then changed.
+
+**The heavy run is the maintainer's to execute.** Standing rule from 2026-09-05: the agent builds
+and verifies against a sentinel-budget probe; the maintainer runs the multi-hour fit. So #29's
+deliverable is **machinery plus one documented command**, and #29 stays `doing` across the gap
+between the machinery landing and the numbers arriving. **Do not start a multi-hour fit unasked.**
 
 #### What this session got wrong, so you do not inherit it
 
