@@ -113,7 +113,10 @@ reports **5 of 13 leaks guarded** — L3, L8, L9, L10, L13. It has now happened 
 `hydms/descriptors/featurize.py` turned L13 `unwired` and took eight tests red with it, and #12
 closed it the same day. #24, #88 and #26 have since wired
 theirs, the last of them writing the L12 sentinel it also owed, and the audit now reports **12 of
-13**. **One card still owes a sentinel outright: #29, for L11.**
+13**. **#29 closed the last one, L11, on 2026-09-05: the audit now reports 13 of 13 and
+`hydms.qa.sentinels.DEFERRED` is empty.** The empty tuple is kept rather than deleted — a gap
+nobody wrote down is indistinguishable from coverage, and the next leak this project finds should
+be recorded there on the day it is found.
 Read the per-leak table with:
 
 ```bash
@@ -133,32 +136,146 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** Thirty-four cards are done, **#29 is `doing` with nothing
-implemented** — only docstring corrections in `predict.py` and `conformal.py`, so
-`feat/phase-h-emergency-hardening` is otherwise clean, the fast suite is **961** green in 11 min
-44 s (measured 2026-09-05; the handoffs below say 960 and were wrong when written), and
-`python -m hydms.gates run --fast` exits 0 with AC-2 at 2.7285e-12 and HG-1 `SKIPPED` at 12 of 13.
-**Implement steps 0–4 from the handoff immediately below, together, in one session:** the
-config-race fix and the search-space narrowing first — both moved here from #34 because ownership
-follows the bill, and both must land *before* any real fit — then keep `_score_fold`'s out-of-fold
-predictions on a defaulted `Evaluation.out_of_fold` field, write `hydms/surrogate/evaluate.py`
-(both scales, 2000 resamples **over canonical groups** not rows, per split and per temperature
-subgroup, the too-narrow caveat as a table column and `per_fold` beside it as a second interval),
-compute SHAP and PDP on the deployed fit's **training** rows with a `computed_on` column, and
-close **L11** with the sentinel asserting that column is not in `HELD_OUT_SPLITS` — which takes
-**HG-1 to 13/13**, the last of the thirteen leaks. Expect HG-1 to go red the moment `evaluate.py`
-exists unwired; that is the mechanism, not a regression. Then commit, verify the whole path against
-a **sentinel-budget probe**, and hand the maintainer **one command** for the ~3.5 h run — **do not
-run it yourself**, and do not let #34 run a second fit, because one run is what keeps Chapter 1
-describing the model that actually ships. Standing facts that outlive this card: `CONTRACT` is the
-published 22 and AC-2's parity set while `SELECTED` is the 14 a model is fitted on and they are not
-interchangeable; `capacity_matrix()` is the one place the modelling matrix is built; `group_keys`
-is the one definition of "the same material"; and **every number in this layer is still a probe
-number** — no full run has ever been made, which is exactly what #29 now exists to fix.
+**Next session, in one paragraph.** Thirty-four cards are done and **#29's machinery has landed**:
+`hydms/surrogate/evaluate.py` exists, no fit re-reads `pipeline.yaml`, the search space is narrower
+by one measured bound, `Evaluation.out_of_fold` keeps the row-level predictions, and **HG-1 is
+13 of 13** — L11 was the last leak and `DEFERRED` is empty. **#29 stays `doing` because the numbers
+are owed, not the code**: the two commands in the handoff below are the maintainer's to run, once,
+and #34 promotes its artifact from that same run. Read the handoff for what changed and what not to
+undo. Standing facts that outlive this card: `CONTRACT` is the published 22 and AC-2's parity set
+while `SELECTED` is the 14 a model is fitted on and they are not interchangeable; `capacity_matrix()`
+is the one place the modelling matrix is built; `group_keys` is the one definition of "the same
+material"; `reports/model/` is versioned now and `git add -A` in it would commit a probe as a
+result; and **every number in this layer is still a probe number** — no full run has ever been made,
+which is the one thing #29 still exists to fix.
 
 ---
 
-### Handoff — 2026-09-05 (latest) · #29 opened · written for the session that implements it
+### Handoff — 2026-09-05 (latest) · #29's machinery landed · written for the maintainer, and for #34
+
+**Where the phase is.** Thirty-four cards done. **#29 is still `doing`, and deliberately so:** every
+box on it but three is ticked, the machinery is committed, and what is owed is *the run*. Fast suite
+**1004** green in 11 min 37 s (it was 961 before this card; measure it, do not copy this number
+forward), ruff and mypy clean, `check_board.py` and `check_freeze.py` OK, and
+`python -m hydms.gates run --fast` exits 0 with AC-2 at 2.7285e-12 and **HG-1 `PASSED` at 13/13** —
+"all 13 leaks are guarded against the real pipeline". L11 was the last one in the inventory and
+`hydms.qa.sentinels.DEFERRED` is now empty.
+
+**The one thing this handoff is for.** Two commands, once, on the maintainer's schedule:
+
+```bash
+conda run --no-capture-output -n Project python -m hydms.surrogate.train --target capacity
+conda run --no-capture-output -n Project python -m hydms.surrogate.evaluate --emit
+```
+
+The first is the ~3.5 h fit — **now cheaper than that, see the search space below** — and writes
+seven tables into `reports/model/`, which this card un-ignored on #25's precedent. The second reads
+them, puts an interval on every number and regenerates `evaluation.md` in about a second, stamping
+the git SHA into the document. Then commit `reports/model/` **by name**: the directory also holds
+#27's local probe CSVs, and `git add -A` there would commit a cost check as a result.
+
+**Do not run `train` twice.** That is the whole reason the bill moved from #34 to #29: two
+independent runs would mean Chapter 1 reports a different model from the one that ships. #34
+promotes the artifact **from this same run**, and it has `blocked_by: 29` for that reason.
+
+#### What changed in the code, in the order it matters
+
+**The search space is narrower by one bound, and the bound is a measurement.** #26 recorded that the
+`learning_rate` 1e-4 x `iterations` 30,000 corner cost 397 s against 7 s and scored worse, and left
+it ported. This session measured the whole decade — one real fit per rate, one real inner fold,
+everything else held:
+
+| learning_rate | best iteration | seconds | R² |
+|---|---|---|---|
+| 0.005 | 813 | 4.4 | 0.6800 |
+| 0.001 | 4,230 | 12.9 | 0.6847 |
+| 0.0005 | 8,501 | 25.7 | 0.6831 |
+| 0.0003 | 13,991 | 44.1 | 0.6816 |
+| 0.0001 | **29,999** | 82.4 | 0.6803 |
+
+The best iteration goes as roughly `4.2 / learning_rate`, **R² is flat across the decade**, and at
+the archival lower bound the optimum *is* the cap — the fit never converged. Since `iterations` is
+sampled from 10,000, the new bound is **5e-4**: the measured rate whose optimum still falls inside
+the smallest budget the space can hand a trial. Nineteen times the wall time for the same model,
+removed **before** the run this thesis quotes, because narrowing afterwards would publish a model
+the project then changed. `test_the_search_space_is_the_archival_one_but_for_one_measured_bound`
+is the deliberate update, and the table is on `SEARCH_SPACE`.
+
+**No fit re-reads `pipeline.yaml`.** `ModelSettings` now carries the target and temperature column
+names; `from_config` resolves them once and `_resolve` **refuses** rather than falling back to disk.
+A fallback that fires only sometimes is the same race with a smaller window, and a smaller window is
+harder to find. A test counts the reads inside `fit_quantile_model` and requires **zero**.
+
+**The out-of-fold predictions are kept, through a seam that checks them.** `ScoringTask` gained a
+`keep` sink (defaulted to a no-op, so both sentinels and every existing contender are untouched),
+and `nested_scores` supplies one per (contender, fold) that asserts what arrives **is** that fold's
+held-out labels, in both directions, before keeping it. A contender handing back rows it was
+*fitted* on would look like out-of-fold predictions, would score beautifully, and nothing downstream
+could tell. `Evaluation.out_of_fold` is Q11's defaulted field.
+
+**`hydms/surrogate/evaluate.py` is the module.** It fits nothing. Bootstraps 2,000 resamples over
+**canonical compositions**; reports R², RMSE, MAE and the quantile metrics on **both** scales, each
+taken from the model's own two prediction methods rather than from a round trip (#11 measured
+`expm1(log1p(y))` returning `y` exactly on only 794 of 1,279 rows); breaks out per outer fold and
+per temperature band from **one** split-level resample, recording each band's smallest and largest
+*n* across replicates; publishes the group-versus-row comparison side by side; and carries
+`reading`, `feature_set` and the full too-narrow sentence as **columns on every row**, because a row
+is what gets quoted into a chapter. `--artifact current` stays as the second reading and **refuses
+by name**, saying it needs #34 and that the primary path needs no artifact.
+
+**SHAP is native and cheap, which is the opposite of what the card budgeted.** CatBoost answers
+`get_feature_importance(type="ShapValues")` for a `MultiQuantile` loss, returning
+`(rows, heads, features + 1)` — exact TreeSHAP, one explanation per head, base value last — in
+**0.02 s** on a 200-tree fit over 708 rows. The `shap` package is installed and is not used. PDP is
+hand-rolled over each feature's own observed quantiles, because this model predicts three columns
+at once and scikit-learn's estimator checks are written for one; a Cartesian grid in composition
+space walks straight out of the applicability domain, and quantiles do not.
+
+**L11 is closed and HG-1 is 13/13.** The detector is
+`hydms.qa.detectors.assert_explanation_is_not_held_out`, and it treats a record with **no**
+`computed_on` column as the same defect as one naming `test` — that missing column is the archival
+state proper, where a figure existed and the population did not. The live hook explains the real
+deployed fit under the sentinel budget, and checks the *premise* before the conclusion: a record
+covering three of fourteen features while `computed_on` said `train` would satisfy the detector and
+explain a different model.
+
+#### Two findings from verifying it, that the card did not predict
+
+**The *cruder* interval is the *tighter* one.** At the sentinel budget the three readings of R² wt%
+came out as groups `[0.6289, 0.7256]` (width 0.097), rows `[0.6247, 0.7262]` (0.102) and per-fold
+`[0.6537, 0.7020]` (**0.048**). The group correction is worth about 5 % of the width — small, as the
+13 %-fewer-units measurement predicted — while the per-fold interval is **half the width of either**.
+The card expected the two to disagree and did not say which way. A reader who picks the
+authoritative-looking number picks the *most* overconfident one, which is why all three ride in one
+table with `interval_from` on every row instead of one being chosen for them.
+
+**The group-versus-row difference is inside Monte-Carlo noise at this n, and that is the point.**
+On the real two-trial tables the group interval came out slightly *narrower* than the row one
+(`[0.6860, 0.8019]` against `[0.6769, 0.8012]`); at the sentinel budget it was slightly wider. So
+the 13 %-fewer-independent-units correction is real in principle and not measurable in the bound.
+That is the strongest form of the card's own "principle, not magnitude" framing, and it is exactly
+why both readings are published rather than one asserted.
+
+**A probe's tables and a real run's tables are the same shape, and `--emit` did not care.** The first
+document generated in this session came from a two-trial probe and read as a finished result:
+`train.py` prints `These numbers are a cost check, not a result` to stdout, and stdout is not what
+#37 reads six weeks later. `train.py` now writes an eighth table, `model-run.csv`, and `evaluate`
+leads the document with a warning banner unless it says the run was full. An **absent** record
+defaults to "unknown", not to the good case.
+
+#### Two things not to undo
+
+**`reports/model/` is versioned now, and `git add -A` in it is a trap.** `train.py --trials` prints
+`These numbers are a cost check, not a result` because a probe's CSV is the same shape as a
+result's. Stage by name.
+
+**The run's numbers are not yet in this repository, and no number in this layer is a result yet.**
+0.746, 64.4 %, 0.6628 and every figure in the table above are probe numbers from reduced runs. The
+card's last unticked box says exactly what is owed and how to close it.
+
+---
+
+### Handoff — 2026-09-05 · #29 opened · written for the session that implements it
 
 **Where the phase is.** Thirty-four cards done, **#29 `doing` with nothing implemented**. Fast suite
 **961** green in 11 min 44 s, ruff and mypy clean, `check_board.py` and `check_freeze.py` OK,

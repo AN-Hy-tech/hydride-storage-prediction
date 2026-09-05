@@ -52,6 +52,11 @@ def _settings(**overrides: object) -> ModelSettings:
             "seed": 42,
             "features": ("avg_atomic_mass", TEMPERATURE),
             "screen_labels": False,
+            # Resolved here rather than left to `pipeline.yaml`: a fit that re-reads the
+            # configuration is card #29's box (i), and these settings never went through
+            # `ModelSettings.from_config`, so they have to say what the target is.
+            "target": TARGET,
+            "temperature": TEMPERATURE,
             **overrides,
         }
     )
@@ -173,16 +178,27 @@ def test_predicting_from_an_array_is_refused() -> None:
 # --------------------------------------------------------------------------------------
 
 
-def test_the_search_space_is_the_archival_one() -> None:
-    """`Catboostmodel.py:545-563`, parameter for parameter and bound for bound.
+def test_the_search_space_is_the_archival_one_but_for_one_measured_bound() -> None:
+    """`Catboostmodel.py:545-563`, parameter for parameter -- and one bound deliberately not.
 
-    Written out here rather than derived, because that is the whole content of the claim:
-    if somebody widens a bound to make a run cheaper, this is what says so out loud. The
-    two dimensions that are known to be expensive or inert are documented on `SEARCH_SPACE`
-    and are still ported -- the card's instruction is to lower the trial count, not the space.
+    Written out here rather than derived, because that is the whole content of the claim: if
+    somebody widens a bound to make a run cheaper, or narrows one to make it faster, this is
+    what says so out loud. It is the test card #29 was told to update *deliberately*.
+
+    **`learning_rate` starts at 5e-4, not the archival 1e-4.** Measured on a real inner fold,
+    one fit per rate, everything else held: the best iteration goes as roughly
+    `4.2 / learning_rate` -- 813 at 0.005, 8,501 at 0.0005, 13,991 at 0.0003 and **29,999 at
+    0.0001, which is the `iterations` cap itself**, so the fit at the archival lower bound
+    never converged. R2 over that whole decade is 0.6800 to 0.6847: flat. Since `iterations`
+    is sampled from 10,000, the bound is the measured rate whose optimum still falls inside
+    the *smallest* budget the space can hand a trial. Nineteen times the wall time for the
+    same model, and the full table is on `SEARCH_SPACE`.
+
+    Every other bound is the archival one, including `depth` to 25 -- inert under `Lossguide`
+    rather than expensive, so there is no run to protect from it.
     """
     assert {knob.name: (knob.kind, knob.low, knob.high, knob.log) for knob in SEARCH_SPACE} == {
-        "learning_rate": ("float", 0.0001, 0.005, True),
+        "learning_rate": ("float", 0.0005, 0.005, True),
         "depth": ("int", 7, 25, False),
         "iterations": ("int", 10000, 30000, False),
         "l2_leaf_reg": ("float", 1.0, 10.0, False),
@@ -201,6 +217,79 @@ def test_a_hyperparameter_refuses_a_range_nothing_can_be_sampled_from() -> None:
         Hyperparameter("learning_rate", "float", 0.0, 1.0, log=True)
     with pytest.raises(ModelError, match="'int' or 'float'"):
         Hyperparameter("depth", "integer", 1, 2)
+
+
+def test_a_fit_never_reads_the_configuration_file() -> None:
+    """The race card #29 moved off #34, asserted rather than reasoned about.
+
+    `hydms.config.load` parses and revalidates `pipeline.yaml` on every call and caches
+    nothing. `_columns` used to reach for it from inside the scoring path -- about six reads a
+    fit, some 2,300 in a 381-fit run, and every one of them a window in which an edit to the
+    working tree changes what the run believes it is fitting. It has already fired once,
+    killing a probe on its third trial, and two sessions share this checkout.
+
+    A 3.5-hour run that reads a half-written configuration produces numbers that look fine and
+    are wrong, and nothing downstream can tell. So the count is zero, not "few": the target
+    column is resolved once, into `ModelSettings`, by `from_config`.
+    """
+    import hydms.surrogate.model as module
+    from hydms.surrogate.model import fit_quantile_model
+
+    frame = _frame(rows=40)
+    settings = _settings()
+    reads: list[str] = []
+
+    original = module.load_config
+    module.load_config = lambda *a, **k: reads.append("read") or original(*a, **k)  # type: ignore[assignment]
+    try:
+        fit_quantile_model(
+            frame,
+            train=list(frame.index[:24]),
+            eval_on=list(frame.index[24:32]),
+            scored_on=list(frame.index[32:]),
+            where="a fit that must not read the configuration",
+            params=CHEAP,
+            settings=settings,
+        )
+    finally:
+        module.load_config = original  # type: ignore[assignment]
+
+    assert reads == [], (
+        f"fit_quantile_model read pipeline.yaml {len(reads)} time(s). Every column name a fit "
+        f"needs is on ModelSettings; reaching for the file mid-run is card #29's box (i)."
+    )
+
+
+def test_settings_from_the_configuration_carry_the_column_names() -> None:
+    """What makes the zero above reachable rather than an accident of this fixture."""
+    settings = ModelSettings.from_config()
+    cfg = load()
+    assert settings.target == cfg.columns.target
+    assert settings.temperature == cfg.columns.temperature
+    # And they survive the substitution the sentinels make.
+    assert sentinel_settings(settings).target == cfg.columns.target
+
+
+def test_a_fit_with_no_target_anywhere_refuses_rather_than_reading_the_file() -> None:
+    """The alternative to refusing is a fallback that fires only sometimes.
+
+    That would be the same race with a smaller window, and a smaller window is harder to find
+    than an obvious one. A settings object with no target did not come from `from_config`, and
+    saying so by name is cheaper than a run whose answer depends on when it ran.
+    """
+    from hydms.surrogate.model import fit_quantile_model
+
+    frame = _frame(rows=40)
+    with pytest.raises(ModelError, match="ModelSettings.from_config"):
+        fit_quantile_model(
+            frame,
+            train=list(frame.index[:24]),
+            eval_on=list(frame.index[24:32]),
+            scored_on=list(frame.index[32:]),
+            where="a fit with no target named",
+            params=CHEAP,
+            settings=_settings(target=None),
+        )
 
 
 def test_the_bootstrap_is_pinned_so_bagging_temperature_is_not_a_dead_dimension() -> None:

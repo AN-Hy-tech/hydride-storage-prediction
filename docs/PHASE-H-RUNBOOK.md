@@ -154,7 +154,11 @@ them** — no `[tool.ruff]`, no `[tool.pytest.ini_options]`, no `[tool.mypy]`, n
       one lands. It slots in here rather than in a stage of its own because #71 and every AC gate
       is blocked behind it.
 - [x] **#71 (HG-1)** `hydms/qa/` and `tests/leaks/` — one sentinel per leak, each passing **only
-      because the leak is absent**. Ten of the thirteen are written; three are recorded deferrals.
+      because the leak is absent**. Ten of the thirteen were written in S1; three were recorded
+      deferrals, closed one at a time by the cards that could decide them. **#29 closed the last,
+      L11, on 2026-09-05, and `DEFERRED` is now empty — thirteen of thirteen.** The empty tuple is
+      kept rather than deleted: a gap nobody wrote down is indistinguishable from coverage, and the
+      next leak this project finds should be recorded there on the day it is found.
 
 | Leak | Sentinel | Detector |
 |---|---|---|
@@ -166,7 +170,7 @@ them** — no `[tool.ruff]`, no `[tool.pytest.ini_options]`, no `[tool.mypy]`, n
 | L9 | Reordering an input never changes the merged result silently, and a row the merge cannot key raises | `assert_merge_is_keyed` |
 | L13 | `Alloy_class` survives featurisation: the column, every row, every label unchanged | `assert_metadata_survives` |
 | L12 | Perturbing the target does not change any sample weight, twice over: shuffled-and-rescaled, then replaced by a ramp | `assert_weights_ignore_target` |
-| L11 | **Deferred** — it needs a decision its owning card has not made. Boxed on #29 | — |
+| L11 | The explainability record **names the rows it ran on**, and that name is not a held-out split. A record that names *nothing* is the same defect: it is the archival state, in which the figure existed and the population did not | `assert_explanation_is_not_held_out` |
 
 Three things about the design are load-bearing; the reasoning is in #71's `## Narrative`:
 
@@ -575,8 +579,18 @@ could mean anything. See below.
       one, and `tuned_on` is the folds the search actually read. HG-1: **8/13**.
 - [x] **#26** CatBoost MultiQuantile with `use_best_model=True` and the **validation** split as
       `eval_set`. **Landed 2026-09-05.** `hydms/surrogate/model.py` is the model,
-      `python -m hydms.surrogate.train` runs it through #88's protocol, and HG-1 is **12/13** —
-      L11 is the only leak left and it is #29's.
+      `python -m hydms.surrogate.train` runs it through #88's protocol, and HG-1 was **12/13** at
+      the time — L11 was the last leak, and #29 closed it on 2026-09-05.
+      **The search space this card ported has since been narrowed, once, by measurement.** #26
+      recorded that the `learning_rate` 1e-4 x `iterations` 30,000 corner cost 397 s against 7 s and
+      scored worse, and left it ported because narrowing is a modelling decision. #29 measured the
+      whole decade on one real inner fold: the best iteration goes as roughly `4.2 / learning_rate`
+      — 813 at 0.005, 4,230 at 0.001, 8,501 at 0.0005, 13,991 at 0.0003 and **29,999 at 0.0001,
+      which is the cap itself**, so the fit at the archival lower bound never converged. R² across
+      that decade is 0.6800 to 0.6847: flat. Since `iterations` is sampled from 10,000, the bound is
+      **5e-4** — the measured rate whose optimum still falls inside the smallest budget the space can
+      hand a trial. Nineteen times the wall time for the same model, removed before the run this
+      thesis quotes rather than after it.
       `fit_quantile_model(frame, train=, eval_on=, scored_on=, where=)` **cannot be called without
       naming the rows the result will be claimed about**, and its first statement hands those
       identities to `assert_early_stopping_is_honest`; there is no path through the module that
@@ -662,8 +676,42 @@ could mean anything. See below.
       strictly stronger than the promotion pointer, since `promote()` already refuses incomplete
       gates. **(f) `MODEL_PAYLOAD` and `model_from` were owed** and now sit beside `QuantileModel`,
       completing the `scaler_from` / `conformal_from` trio.
-- [ ] **#29** Evaluation metrics with bootstrap CIs. SHAP/PDP on **train or a dedicated split, never
-      test** (L11).
+- [~] **#29** Evaluation metrics with bootstrap CIs. **Machinery landed 2026-09-05; the numbers are
+      owed by the one run.** `hydms/surrogate/evaluate.py` bootstraps over **canonical compositions**
+      rather than rows (a row resample would be a fourth meaning of "the same material"), reports R²,
+      RMSE and MAE on **both** scales, breaks out per outer fold and per temperature band from a
+      single split-level resample, and carries the too-narrow caveat as a **column** on every row
+      with the cruder per-fold interval beside it. SHAP and PDP run on the deployed fit's own
+      training rows — read off `model.record.fitted`, not re-derived from the split, because
+      screening drops some of them — and **HG-1 is 13/13**.
+      Three things were measured rather than assumed. **(a) There was nothing to bootstrap:**
+      `_score_fold` computed `model.predict(scored)` and dropped the frame, so a nested run left
+      behind five fold scores whose spread #24 had already measured to be confounded with training
+      size. `Evaluation.out_of_fold` now keeps the row-level predictions, through a sink on
+      `ScoringTask` that checks what arrives against the fold's own held-out labels — a contender
+      handing back rows it was *fitted* on would score beautifully and nothing downstream could
+      tell. **(b) SHAP over a MultiQuantile CatBoost is cheap, not expensive**, which is the
+      opposite of what the card budgeted: the booster answers `get_feature_importance(
+      type="ShapValues")` natively, returning `(rows, heads, features + 1)` in 0.02 s on a 200-tree
+      fit over 708 rows. No `shap` dependency, and the cost of this card is not where it was
+      expected. **(c) The two boxes that moved here from #34 are in**: no fit re-reads
+      `pipeline.yaml` (the column names live on `ModelSettings`, and a test asserts zero reads),
+      and the search space is narrowed — see the measurement under #26 below. **The narrowing
+      roughly halves the run:** measured at `--trials 2` with screening on, the real command did 35
+      fits in 10.4 min — **17.8 s a fit** against the 33 s #26 measured under the old space — so 381
+      fits projects to **~1.9 h**, not 3.5.
+      Two things verification found that the card had not predicted. **The *cruder* interval is the
+      *tighter* one:** at the sentinel budget, R² wt% read `[0.6289, 0.7256]` over groups (width
+      0.097), `[0.6247, 0.7262]` over rows (0.102) and `[0.6537, 0.7020]` over the five fold scores
+      (**0.048**). The group correction is worth ~5 % of the width, small exactly as the
+      13 %-fewer-units measurement predicted; the per-fold interval is **half the width of either**,
+      so a reader picking the authoritative-looking number picks the most overconfident one. All
+      three therefore ride in one table with `interval_from` on every row. **And a probe's tables
+      are the same shape as a real run's:** the first `--emit` in that session produced a document
+      from a two-trial probe that read as a finished result, because `train.py`'s
+      `These numbers are a cost check, not a result` goes to stdout and #37 reads files. `train.py`
+      now writes `model-run.csv` and `evaluate` leads with a warning banner unless it says the run
+      was full — an **absent** record defaults to "unknown", never to the good case.
 - [ ] **#30 (AC-6)** Leave-one-alloy-class-out CV. Unblocked only because #87 restored `Alloy_class`.
 - [ ] **#31 AC-3** conformal coverage · **#32 AC-1** seed reproducibility · **#33 AC-4** known alloys
       round-trip.

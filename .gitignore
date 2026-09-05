@@ -17,6 +17,17 @@ research/PHASE-H-PERSONAL-REPORT.md
 # contract is versioned with it — that is the whole of what went wrong with REPORT.md.
 /reports/*
 !/reports/feature_selection/
+# And `reports/model/` on the same reasoning, decided by card #29. Every headline number in
+# this layer — the nested R², the conformal coverage, the interval bounds Chapter 1 quotes —
+# lived only in card prose and in docstrings, and `git ls-files reports/` returned nothing but
+# the line above: on a fresh clone they were unverifiable. The tables are the evidence, they
+# cost a 3.5-hour run to regenerate, and #37 must quote committed ones rather than somebody's
+# local run. That is the whole of what went wrong with REPORT.md.
+#
+# **What belongs here is the real run's output, not a probe's.** `train.py --trials` prints
+# `These numbers are a cost check, not a result` for exactly this reason; a probe's CSV is the
+# same shape as a result's. Stage the files by name — never `git add -A` in this directory.
+!/reports/model/
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

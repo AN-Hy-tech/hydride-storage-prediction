@@ -196,6 +196,25 @@ script's parameter block turned out to contain three things nobody had checked.
   5.4 s at 200 — with best iteration 1042 and R² 0.7050 in **all three**. Same model, four
   times the cost.
 
+### Measured against catboost 1.2.8 while card #29 explained the deployed fit
+
+- **`MultiQuantile` supports SHAP natively, and it is fast.**
+  `booster.get_feature_importance(Pool(X), type="ShapValues")` returns an
+  **`(n_rows, n_heads, n_features + 1)`** array — one exact TreeSHAP explanation per quantile
+  head, with the **base value last** on the trailing axis. Measured: 0.02 s on a 200-tree fit
+  over 708 rows x 14 features. Card #29 had budgeted this as the expensive step of the card;
+  it is not, and the `shap` package (which is installed) is not needed for it.
+- **`type="LossFunctionChange"` refuses on a `Pool` with no label**:
+  `catboost/private/libs/target/data_providers.cpp:552: Regression loss/metrics require target
+  data`. `PredictionValuesChange` works on an unlabelled pool and returns one number per
+  feature — collapsed across heads, so it cannot answer a per-head question.
+- **There is no partial-dependence helper for a multi-output regressor.**
+  `sklearn.inspection.partial_dependence` is written for one output and its estimator checks
+  reject this model; the curve is short enough to own directly (hold every other column, set
+  one to a grid value, average the predictions), which also lets the grid sit on the feature's
+  **own observed quantiles** rather than on a Cartesian box that walks out of the applicability
+  domain.
+
 ---
 
 ## Corrections made to committed work

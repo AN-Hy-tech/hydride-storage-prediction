@@ -95,6 +95,8 @@ def _settings(**overrides: object) -> ModelSettings:
             "seed": 42,
             "features": FEATURES,
             "screen_labels": False,
+            "target": TARGET,
+            "temperature": TEMPERATURE,
             **overrides,
         }
     )

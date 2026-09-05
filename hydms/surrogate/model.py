@@ -54,7 +54,7 @@ Card #26.
 from __future__ import annotations
 
 import time
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -64,7 +64,7 @@ import pandas as pd
 from hydms.config import Config
 from hydms.config import load as load_config
 from hydms.data.load import load_hydride_data, parse_formula
-from hydms.data.metadata import with_features, with_metadata
+from hydms.data.metadata import CANONICAL_KEY_COLUMN, with_features, with_metadata
 from hydms.data.screening import label_issues, screen
 from hydms.data.splits import SPLIT_NAMES, assign_splits
 from hydms.data.target import model_space_name, to_model_space, to_wt_pct
@@ -102,7 +102,9 @@ __all__ = [
     "loss_function",
     "model_from",
     "quantile_metrics",
+    "quantile_metrics_from_arrays",
     "sample_weights",
+    "scored_table",
     "screened_rows",
     "sentinel_settings",
     "stopping_slice",
@@ -210,24 +212,50 @@ class Hyperparameter:
         return trial.suggest_float(self.name, float(self.low), float(self.high), log=self.log)
 
 
-#: The archival search space, ported parameter for parameter from
-#: ``Machine_Model/src/Catboostmodel.py:545-563`` -- the *live* study at ``:542``, not the two
-#: commented-out earlier ones above it, whose bounds are different.
+#: The search space: ported from ``Machine_Model/src/Catboostmodel.py:545-563`` -- the *live*
+#: study at ``:542``, not the two commented-out earlier ones above it -- with **one bound
+#: changed**, and the change is a measurement.
 #:
-#: **It is ported, not endorsed**, and two of its properties are measurements rather than
-#: opinions. ``iterations`` runs to 30,000 while ``learning_rate`` runs down to 1e-4, and at
-#: that corner the fit costs **397 s** against 7 s at the fast one, reaches its best iteration
-#: at 29,999 -- it was still improving when the budget ran out -- and scores *worse* (R2 0.691
-#: against 0.705). That corner is where the wall time of a run lives and it buys nothing.
+#: **``learning_rate`` starts at 5e-4, where the archival study started at 1e-4.** The
+#: archival pairing let the search reach 1e-4 with ``iterations`` capped at 30,000, and at
+#: that corner the fit does not converge: measured on a real inner fold at the configured
+#: ``early_stopping_rounds``, the best iteration is **29,999** -- the cap itself, still
+#: improving when the budget ran out. The whole decade, one fit each, same fold, same
+#: parameters otherwise:
+#:
+#: ===============  ==============  =========  ======
+#: learning_rate    best iteration  seconds    R2
+#: ===============  ==============  =========  ======
+#: 0.005                       813        4.4  0.6800
+#: 0.001                     4,230       12.9  0.6847
+#: 0.0005                    8,501       25.7  0.6831
+#: 0.0003                   13,991       44.1  0.6816
+#: 0.0001                   29,999       82.4  0.6803
+#: ===============  ==============  =========  ======
+#:
+#: The best iteration goes as roughly ``4.2 / learning_rate`` and **R2 is flat across the
+#: whole decade**. So the low corner buys nothing and costs everything: nineteen times the
+#: wall time for the same model, and at the bottom for a model that never finished. Card #26
+#: measured the same corner at **397 s against 7 s** under its own parameters and scored it
+#: *worse* (0.691 against 0.705); it left the space ported because narrowing it is a
+#: modelling decision, and boxed the decision onto the card that would pay for the run.
+#:
+#: **Why 5e-4 exactly, and not a rounder number.** ``iterations`` is sampled from 10,000, so
+#: the binding question is whether a trial converges inside the *smallest* budget the space
+#: can hand it. At 5e-4 the optimum is at 8,501 -- inside 10,000 -- and at 3e-4 it is at
+#: 13,991, which is not. The bound is therefore the measured point at which every corner of
+#: this space converges within its own iteration budget, rather than a round number chosen
+#: for looking like one.
+#:
 #: ``depth`` is sampled to 25, which CatBoost accepts under ``Lossguide`` and which
-#: ``max_leaves`` then makes mostly inert: a 64-leaf tree cannot be 25 deep.
+#: ``max_leaves`` then makes mostly inert: a 64-leaf tree cannot be 25 deep. That one is
+#: recorded and still ported -- it is inert, not expensive, and there is no run to protect
+#: from it.
 #:
-#: Both are recorded rather than fixed. Card #26's instruction is to port the space and lower
-#: the *trial count* if the product is prohibitive, so that is what ``pipeline.yaml`` does;
-#: narrowing the space is the next lever after that one, and it is a modelling decision with
-#: an owner, not a budget cut.
+#: Card #29, box (ii). The narrowing lands **before** the run this thesis quotes, because
+#: narrowing afterwards would publish a model the project then changed.
 SEARCH_SPACE: tuple[Hyperparameter, ...] = (
-    Hyperparameter("learning_rate", "float", 0.0001, 0.005, log=True),
+    Hyperparameter("learning_rate", "float", 0.0005, 0.005, log=True),
     Hyperparameter("depth", "int", 7, 25),
     Hyperparameter("iterations", "int", 10000, 30000),
     Hyperparameter("l2_leaf_reg", "float", 1.0, 10.0),
@@ -299,6 +327,20 @@ class ModelSettings:
         space: The search space. :data:`SEARCH_SPACE` for a real run.
         screen_labels: Whether CleanLab screens the rows a fit owns. ``True`` is the real
             path; it is the same stage card #24's selector runs, over the same rows.
+        target: The raw target column, in weight percent. ``None`` means nobody said, and a
+            fit then **refuses** rather than reaching for the file -- see below.
+        temperature: The temperature column, carried into the row-level prediction record so
+            card #29's per-temperature breakdown does not have to re-read the matrix.
+
+    **The two column names are here because a fit must not re-read ``pipeline.yaml``.**
+    ``hydms.config.load`` parses and revalidates the file on every call and caches nothing.
+    Before these fields existed, ``_columns`` reached for it from inside the scoring path --
+    about six reads a fit, some 2,300 in a 381-fit run, each one a window in which an edit to
+    the working tree changes what the run believes it is fitting. It has already fired once,
+    killing a probe on its third trial, and two sessions share this checkout. So the names are
+    resolved **once**, by :meth:`from_config`, and a settings object built by hand without
+    them makes :func:`fit_quantile_model` refuse by name rather than silently read a file that
+    may be half-written. Card #29, box (i).
     """
 
     quantiles: tuple[float, ...]
@@ -309,6 +351,8 @@ class ModelSettings:
     features: tuple[str, ...] = SELECTED.names
     space: tuple[Hyperparameter, ...] = SEARCH_SPACE
     screen_labels: bool = True
+    target: str | None = None
+    temperature: str | None = None
 
     @classmethod
     def from_config(cls, config: Any | None = None) -> ModelSettings:
@@ -320,6 +364,8 @@ class ModelSettings:
             optuna_trials=cfg.model.optuna_trials,
             stopping_folds=cfg.model.stopping_folds,
             seed=cfg.seed,
+            target=cfg.columns.target,
+            temperature=cfg.columns.temperature,
         )
 
 
@@ -527,7 +573,7 @@ def screened_rows(
     if not active.screen_labels:
         return ScreenedRows(kept=tuple(owned.index), offered=len(owned))
 
-    target = _target(owned, target_column)
+    target = _target(owned, _resolve(active, target_column))
     verdict = label_issues(
         owned.loc[:, list(active.features)], target, seed=active.seed
     )
@@ -572,9 +618,37 @@ def _owned(
 
 
 def _columns(target_column: str | None) -> tuple[str, str]:
-    """The raw and model-space names of the target, in that order."""
+    """The raw and model-space names of the target, in that order.
+
+    **No fit reaches the fallback below.** Every entry point in this module resolves the name
+    once through :func:`_resolve`, from :attr:`ModelSettings.target`, and hands a string down;
+    the ``None`` branch is left for the callers that have no settings to resolve from --
+    :func:`hydms.surrogate.conformal.fit_conformal`, which calibrates once, and tests that
+    build a frame and no settings. Putting a configuration read on the scoring path is what
+    card #29's box (i) is about, and :class:`ModelSettings` says what it cost.
+    """
     raw = target_column if target_column is not None else load_config().columns.target
     return raw, model_space_name(raw)
+
+
+def _resolve(settings: ModelSettings, target_column: str | None) -> str:
+    """The target column this call means: the override, else what the settings carry.
+
+    Refuses rather than falling back to ``pipeline.yaml``. A settings object with no target is
+    one that did not come from :meth:`ModelSettings.from_config`, and the honest thing to do
+    with it is to say so: reading the file here is the race box (i) removed, and doing it
+    only sometimes would be the same race with a smaller window.
+    """
+    if target_column is not None:
+        return target_column
+    if settings.target is not None:
+        return settings.target
+    raise ModelError(
+        "the settings carry no target column and none was passed. Build them with "
+        "ModelSettings.from_config(), which resolves it once, or pass target_column= "
+        "explicitly. This does not fall back to pipeline.yaml: a fit that re-reads the "
+        "configuration is a fit whose answer depends on when it ran."
+    )
 
 
 def _target(frame: pd.DataFrame, target_column: str | None) -> pd.Series:
@@ -940,6 +1014,9 @@ def fit_quantile_model(
         LeakDetected: ``eval_on`` overlaps ``scored_on``, or is empty -- leaks L1 and L5.
     """
     active = settings if settings is not None else ModelSettings.from_config()
+    # Resolved once, here, so that nothing below this line reaches for `pipeline.yaml`. See
+    # `_resolve` and `ModelSettings`: this function used to read the file twice per fit.
+    target = _resolve(active, target_column)
 
     # First, before anything is read and long before anything is fitted. A leak that raises
     # after twenty minutes of boosting is a leak somebody comments out.
@@ -974,8 +1051,8 @@ def fit_quantile_model(
     # harmlessly, and then indistinguishably from reading them on purpose. Scoping it is what
     # lets `tests/surrogate/test_no_test_leak.py` fill the scored rows with NaN and still
     # expect this to succeed.
-    grown_on = _target(fitting, target_column)
-    stopped_on = _target(stopping, target_column)
+    grown_on = _target(fitting, target)
+    stopped_on = _target(stopping, target)
 
     pool = _pool()
     booster = _regressor(active, params)
@@ -1064,9 +1141,8 @@ def final_fit(
             f"{TRAIN!r}, stops on the validation split and is reported on the test split."
         )
 
-    kept = screened_rows(
-        frame, rows[TRAIN], settings=active, target_column=target_column
-    )
+    target = _resolve(active, target_column)
+    kept = screened_rows(frame, rows[TRAIN], settings=active, target_column=target)
     return fit_quantile_model(
         frame,
         train=kept.kept,
@@ -1075,7 +1151,7 @@ def final_fit(
         where="final fit",
         params=params,
         settings=active,
-        target_column=target_column,
+        target_column=target,
         removed=kept.removed,
         log=log,
     )
@@ -1148,9 +1224,34 @@ def quantile_metrics(
             f"{len(actual)}. They are paired by label, never by position."
         )
 
-    truth = actual.to_numpy(dtype="float64")
-    heads = predicted.to_numpy(dtype="float64")
-    median = heads[:, len(names) // 2]
+    return quantile_metrics_from_arrays(
+        actual.to_numpy(dtype="float64"), predicted.to_numpy(dtype="float64"), quantiles
+    )
+
+
+def quantile_metrics_from_arrays(
+    truth: np.ndarray, heads: np.ndarray, quantiles: Sequence[float]
+) -> dict[str, float]:
+    """The arithmetic behind :func:`quantile_metrics`, on arrays that are already aligned.
+
+    Public, and separate from the frame-level function above, because card #29's bootstrap
+    calls it tens of thousands of times: 2,000 replicates across every subgroup and both
+    scales. Paying for a ``DataFrame`` construction and a column-name check on each of those
+    would make the interval cost more than the run that produced the predictions, and
+    re-implementing the seven metrics beside it would mean the published interval was around
+    a *different* statistic from the published point estimate -- which is the failure mode a
+    thesis chapter cannot survive. One definition, two entry points, and the checking lives
+    at the frame-level one where a caller can still make the mistake it catches.
+
+    Args:
+        truth: ``(n,)`` observations, in whatever space the caller is reporting.
+        heads: ``(n, len(quantiles))`` predictions, columns in ``quantiles`` order.
+        quantiles: The alphas, ascending.
+
+    Returns:
+        The dictionary :func:`quantile_metrics` documents.
+    """
+    median = heads[:, len(quantiles) // 2]
     residual = truth - median
 
     total = float(((truth - truth.mean()) ** 2).sum())
@@ -1177,6 +1278,71 @@ def quantile_metrics(
         "interval_width": float(np.mean(high - low)),
         "crossings": crossings,
     }
+
+
+def scored_table(
+    frame: pd.DataFrame,
+    model: QuantileModel,
+    *,
+    settings: ModelSettings,
+    target_column: str,
+) -> pd.DataFrame:
+    """One row per scored row: what the truth was, what the heads said, in both spaces.
+
+    **The unit the bootstrap resamples.** Before this existed, :func:`_score_fold` computed
+    ``model.predict(scored)``, handed it to :func:`quantile_metrics` and dropped the frame, so
+    the only resamplable object a nested run left behind was five fold scores -- a spread card
+    #24 measured to be confounded with training size, since screening removes between 15 and
+    144 of a fold's ~710 rows. Card #29 needs an interval over *rows*, so the rows are kept.
+
+    **Both spaces, neither derived from the other.** The booster is fitted on ``log1p``
+    capacity and :meth:`QuantileModel.predict` back-transforms with ``expm1``; taking the
+    model-space columns by re-transforming the weight-percent ones would be a round trip, and
+    card #11 measured that ``expm1(log1p(y))`` returns ``y`` exactly on only 794 of 1,279
+    rows. So the heads come from :meth:`QuantileModel.predict` and
+    :meth:`QuantileModel.predict_model_space` separately, and the truth from the frame's own
+    two columns.
+
+    **What rides along, and why each one.** The canonical key, because
+    :func:`~hydms.data.canonical.group_keys` is the project's one definition of "the same
+    material" and card #29's bootstrap resamples groups rather than rows -- re-deriving it
+    downstream would be a fourth meaning of the phrase. The temperature, because the card
+    asks for a per-temperature breakdown and reading it back out of the matrix would mean
+    re-featurising 1,278 rows to recover one column.
+
+    Args:
+        frame: The rows being scored, record and matrix side by side.
+        model: The fitted model. Called, never refitted.
+        settings: The settings the fit was made under. ``temperature`` is read from them.
+        target_column: The raw target, already resolved -- see :func:`_resolve`.
+
+    Returns:
+        A frame on ``frame``'s index, carrying the truth in both spaces, one column per head
+        in both spaces, the canonical key and the temperature.
+
+    Raises:
+        ModelError: the frame carries neither target column, or has lost the canonical key.
+    """
+    raw, transformed = _columns(target_column)
+    table = pd.DataFrame(index=frame.index)
+    table[raw] = _truth(frame, target_column)
+    table[transformed] = _target(frame, target_column)
+
+    for name, values in (("", model.predict(frame)), ("log_", model.predict_model_space(frame))):
+        for column in values.columns:
+            table[f"{name}{column}"] = values[column]
+
+    if CANONICAL_KEY_COLUMN not in frame.columns:
+        raise ModelError(
+            f"the scored rows carry no {CANONICAL_KEY_COLUMN!r} column, so the predictions "
+            f"cannot be grouped by material. It is attached by "
+            f"hydms.data.metadata.with_metadata, which capacity_matrix calls; a frame "
+            f"assembled some other way has to attach it too."
+        )
+    table[CANONICAL_KEY_COLUMN] = frame[CANONICAL_KEY_COLUMN]
+    if settings.temperature is not None and settings.temperature in frame.columns:
+        table[settings.temperature] = frame[settings.temperature]
+    return table
 
 
 # --------------------------------------------------------------------------------------
@@ -1237,7 +1403,7 @@ def _prepare(
     fold: Fold,
     *,
     settings: ModelSettings,
-    target_column: str | None,
+    target_column: str,
 ) -> _FoldRows:
     """Screen a fold's training rows and cut its stopping slice. Once, before the trials.
 
@@ -1266,11 +1432,20 @@ def _score_fold(
     params: Mapping[str, Any],
     *,
     settings: ModelSettings,
-    target_column: str | None,
+    target_column: str,
     where: str,
     log: FitLog | None,
+    keep: Callable[[pd.DataFrame], None] | None = None,
 ) -> dict[str, float]:
-    """Fit on one fold's rows and score it on the rows that fit never saw."""
+    """Fit on one fold's rows and score it on the rows that fit never saw.
+
+    ``keep`` is where the row-level predictions go when somebody wants them, and it is
+    ``None`` everywhere else. The distinction is not tidiness: the *search* calls this
+    function once per trial per inner fold -- 375 times in a configured run, thousands at the
+    archival trial count -- and holding a frame for each of those would be a record of every
+    fit the search made rather than of the run's result. Only the scored fits, one per outer
+    fold, hand their predictions on; that is card #29's out-of-fold table.
+    """
     model = fit_quantile_model(
         frame,
         train=rows.fitting,
@@ -1288,6 +1463,12 @@ def _score_fold(
     metrics = quantile_metrics(truth, model.predict(scored), settings.quantiles)
     metrics["rows_fitted"] = float(len(rows.fitting))
     metrics["rows_scored"] = float(len(rows.scoring))
+    if keep is not None:
+        keep(
+            scored_table(
+                scored, model, settings=settings, target_column=target_column
+            )
+        )
     return metrics
 
 
@@ -1337,11 +1518,13 @@ def capacity_contender(
         A :class:`~hydms.surrogate.validation.Contender`.
     """
     active = settings if settings is not None else ModelSettings.from_config()
+    # Once, when the contender is built -- not once per fit. See `_resolve`.
+    target = _resolve(active, target_column)
 
     def tune(task: TuningTask) -> Configuration:
         started = time.perf_counter()
         prepared = [
-            _prepare(task.frame, fold, settings=active, target_column=target_column)
+            _prepare(task.frame, fold, settings=active, target_column=target)
             for fold in task.folds
         ]
 
@@ -1354,7 +1537,7 @@ def capacity_contender(
                     rows,
                     params,
                     settings=active,
-                    target_column=target_column,
+                    target_column=target,
                     where=f"{task.outer} / {rows.fold.name} / trial {trial.number}",
                     log=log if log_trials else None,
                 )
@@ -1378,7 +1561,7 @@ def capacity_contender(
 
     def score(configuration: Any, task: ScoringTask) -> Mapping[str, float]:
         kept = screened_rows(
-            task.train, list(task.train.index), settings=active, target_column=target_column
+            task.train, list(task.train.index), settings=active, target_column=target
         )
         fitting, stopping = stopping_slice(
             task.train, kept.kept, settings=active, name=f"{task.fold.name}-stop"
@@ -1396,9 +1579,13 @@ def capacity_contender(
             rows,
             configuration.params,
             settings=active,
-            target_column=target_column,
+            target_column=target,
             where=task.fold.name,
             log=log,
+            # The one place predictions are kept. `task.keep` is the protocol's sink; a
+            # contender that never calls it leaves `Evaluation.out_of_fold` empty, which is
+            # exactly what every contender did before card #29.
+            keep=task.keep,
         )
 
     return Contender(name=name, tune=tune, score=score)

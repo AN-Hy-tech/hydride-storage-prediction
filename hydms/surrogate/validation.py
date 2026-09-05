@@ -517,6 +517,15 @@ class TuningTask:
     outer: str
 
 
+def _discard(predictions: pd.DataFrame) -> None:
+    """What becomes of row-level predictions nobody asked to keep.
+
+    The default of :attr:`ScoringTask.keep`, so that a contender written before card #29 --
+    or one that has nothing row-level to offer, like the constant baseline the L2 and L4
+    sentinels run -- needs no change and leaves :attr:`Evaluation.out_of_fold` empty.
+    """
+
+
 @dataclass(frozen=True)
 class ScoringTask:
     """The one fit that is scored: refit on the outer fold's training rows, scored on its test.
@@ -525,11 +534,18 @@ class ScoringTask:
         train: The outer fold's training rows -- the same rows the search saw.
         test: The outer fold's held-out rows, seen here for the first time.
         fold: The outer fold itself, whose id lands in the record's ``scored_on``.
+        keep: Where a contender hands back its row-level predictions on this fold. Supplied
+            by :func:`nested_scores`, which checks what arrives against the fold's own held-out
+            rows and stacks it into :attr:`Evaluation.out_of_fold`. A sink rather than a second
+            return value from ``score``: the protocol asks a contender for a score, and one
+            concept split across two returns is how a caller comes to use one and forget the
+            other.
     """
 
     train: pd.DataFrame
     test: pd.DataFrame
     fold: Fold
+    keep: Callable[[pd.DataFrame], None] = _discard
 
 
 @dataclass(frozen=True)
@@ -568,6 +584,23 @@ class Evaluation:
             says which hyperparameters won.
         space: The numbering the ids were drawn from, so a reader can ask whether two ids
             could have collided rather than assuming they could not.
+        out_of_fold: One row per scored row per contender -- what the truth was and what that
+            fold's model said about it, for every row of the training split, each prediction
+            made by a model that had not seen the row. Empty unless a contender used
+            :attr:`ScoringTask.keep`.
+
+    **Why the out-of-fold table is here and not returned beside this object.** It is the same
+    evidence as ``per_fold``, one level down: ``per_fold`` is five aggregate rows, and card
+    #24 measured the spread across them to be confounded with training size -- screening
+    removes between 15 and 144 of a fold's ~710 rows -- so a bootstrap over five fold scores
+    resamples two things at once. Card #29's interval is over the rows, and this is the only
+    place in the protocol they survive. Defaulted empty on purpose: every existing
+    construction, and both the L2 and L4 sentinels, are untouched by its arrival.
+
+    **It is not a held-out score.** Each row here was predicted by the outer fold's model,
+    which was tuned and fitted without it -- so this is a claim about the *procedure*, made
+    from five different models with overlapping training sets. The ``val`` and ``test``
+    splits are not in it at all.
     """
 
     records: tuple[SelectionRecord, ...]
@@ -575,6 +608,7 @@ class Evaluation:
     per_fold: pd.DataFrame
     chosen: Mapping[tuple[str, str], Any] = field(default_factory=dict)
     space: FoldSpace = field(default_factory=FoldSpace)
+    out_of_fold: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def record(self, model: str) -> SelectionRecord:
         """The record for one contender.
@@ -629,6 +663,42 @@ def _averaged(scores: Sequence[Mapping[str, float]], *, model: str) -> dict[str,
     return {
         key: sum(entry[key] for entry in scores) / len(scores) for key in sorted(scores[0])
     }
+
+
+def _keeper(
+    into: list[pd.DataFrame], *, model: str, fold: Fold
+) -> Callable[[pd.DataFrame], None]:
+    """The sink handed to one contender for one outer fold, and the check it performs.
+
+    A contender could hand back anything, and the one thing that would be catastrophic is
+    predictions for rows it was *fitted* on: they would look like out-of-fold predictions,
+    they would score beautifully, and nothing downstream could tell. So what arrives is
+    checked against the fold's own held-out labels before it is kept -- exactly, as a set, in
+    both directions. A short table is as wrong as a leaking one: a fold that quietly returns
+    half its rows produces an interval over a subset nobody chose.
+
+    The model and fold names are stamped on here rather than by the contender, for the reason
+    ``rows`` is assembled here too: the protocol knows which fold it is running, and a
+    contender that had to say so could say something else.
+    """
+
+    def keep(frame: pd.DataFrame) -> None:
+        expected = set(fold.test)
+        got = set(frame.index)
+        if got != expected:
+            raise ValidationError(
+                f"{model!r} handed back predictions for {len(got)} row(s) on fold "
+                f"{fold.name!r}, which holds out {len(expected)}; they differ on "
+                f"{len(got ^ expected)} label(s): {_named(sorted(map(str, got ^ expected)))}. "
+                f"Out-of-fold predictions are the fold's held-out rows and nothing else -- a "
+                f"row the model was fitted on would score like a prediction and is not one."
+            )
+        stamped = frame.copy()
+        stamped.insert(0, "model", model)
+        stamped.insert(1, "fold", fold.name)
+        into.append(stamped)
+
+    return keep
 
 
 def nested_scores(
@@ -718,6 +788,7 @@ def nested_scores(
     scores: dict[str, list[dict[str, float]]] = {contender.name: [] for contender in contenders}
     chosen: dict[tuple[str, str], Any] = {}
     rows: list[dict[str, Any]] = []
+    predictions: list[pd.DataFrame] = []
 
     for fold in outer_set:
         fold_train = training.loc[list(fold.train)]
@@ -750,7 +821,13 @@ def nested_scores(
 
             metrics = _metrics(
                 contender.score(
-                    configuration, ScoringTask(train=fold_train, test=fold_test, fold=fold)
+                    configuration,
+                    ScoringTask(
+                        train=fold_train,
+                        test=fold_test,
+                        fold=fold,
+                        keep=_keeper(predictions, model=contender.name, fold=fold),
+                    ),
                 ),
                 model=contender.name,
                 fold=fold.name,
@@ -775,4 +852,7 @@ def nested_scores(
         per_fold=pd.DataFrame.from_records(rows),
         chosen=chosen,
         space=space,
+        out_of_fold=(
+            pd.concat(predictions) if predictions else pd.DataFrame()
+        ),
     )

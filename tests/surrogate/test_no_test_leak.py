@@ -64,6 +64,8 @@ def _settings(**overrides: object) -> ModelSettings:
         seed=42,
         features=("avg_atomic_mass", TEMPERATURE),
         screen_labels=False,
+        target=TARGET,
+        temperature=TEMPERATURE,
         **overrides,  # type: ignore[arg-type]
     )
 

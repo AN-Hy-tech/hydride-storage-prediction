@@ -554,3 +554,88 @@ def test_nothing_else_in_the_package_generates_folds() -> None:
         f"{offenders} generate cross-validation folds outside "
         f"hydms/surrogate/validation.py, which is the project's only fold generator"
     )
+
+
+# --------------------------------------------------------------------------------------
+# The out-of-fold table -- card #29
+# --------------------------------------------------------------------------------------
+
+
+def test_a_contender_that_keeps_nothing_leaves_the_table_empty(nested: Any) -> None:
+    """The default, and why it is one. Every contender written before card #29 keeps nothing.
+
+    Including the constant baseline the L2 and L4 sentinels run, which has no row-level
+    prediction to offer at all. A required sink would have made those sentinels carry a frame
+    they do not have.
+    """
+    assert nested.out_of_fold.empty
+
+
+def test_kept_predictions_are_stamped_with_the_model_and_the_fold(
+    alloys: pd.DataFrame, training: pd.Series
+) -> None:
+    """The protocol stamps them, not the contender: it knows which fold it is running."""
+
+    def score(configuration: int, task: ScoringTask) -> dict[str, float]:
+        task.keep(pd.DataFrame({"predicted": 1.0}, index=task.test.index))
+        return {"outer": float(len(task.test))}
+
+    evaluation = nested_scores(
+        alloys,
+        training,
+        [Contender("keeper", _counting_contender().tune, score)],
+        outer=partial(grouped_folds, name="outer", settings=SMALL),
+        settings=SMALL,
+    )
+    kept = evaluation.out_of_fold
+    assert not kept.empty
+    assert set(kept.columns) == {"model", "fold", "predicted"}
+    assert set(kept["model"]) == {"keeper"}
+    assert set(kept["fold"]) == {fold.name for fold in evaluation.outer}
+    # Every held-out row of every outer fold, exactly once: the folds partition the training
+    # split, so the table is the training split with one prediction each.
+    assert len(kept) == sum(len(fold.test) for fold in evaluation.outer)
+
+
+def test_predictions_for_rows_the_model_was_fitted_on_are_refused(
+    alloys: pd.DataFrame, training: pd.Series
+) -> None:
+    """The catastrophic case, and the reason the sink checks rather than accepts.
+
+    Training-row predictions handed back as out-of-fold predictions would score beautifully
+    and nothing downstream could tell -- the interval, the subgroup breakdown and the chapter
+    would all be about a model scored on its own training data.
+    """
+
+    def score(configuration: int, task: ScoringTask) -> dict[str, float]:
+        task.keep(pd.DataFrame({"predicted": 1.0}, index=task.train.index))
+        return {"outer": float(len(task.test))}
+
+    with pytest.raises(ValidationError, match="fitted on would score like a prediction"):
+        nested_scores(
+            alloys,
+            training,
+            [Contender("leaking", _counting_contender().tune, score)],
+            outer=partial(grouped_folds, name="outer", settings=SMALL),
+            settings=SMALL,
+        )
+
+
+def test_a_short_table_is_refused_too(
+    alloys: pd.DataFrame, training: pd.Series
+) -> None:
+    """A fold that quietly returns half its rows gives an interval over a subset nobody chose."""
+
+    def score(configuration: int, task: ScoringTask) -> dict[str, float]:
+        half = task.test.index[: len(task.test) // 2]
+        task.keep(pd.DataFrame({"predicted": 1.0}, index=half))
+        return {"outer": float(len(task.test))}
+
+    with pytest.raises(ValidationError, match="handed back predictions for"):
+        nested_scores(
+            alloys,
+            training,
+            [Contender("partial", _counting_contender().tune, score)],
+            outer=partial(grouped_folds, name="outer", settings=SMALL),
+            settings=SMALL,
+        )

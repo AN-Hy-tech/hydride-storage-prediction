@@ -47,6 +47,7 @@ __all__ = [
     "SelectionRecord",
     "assert_disjoint_groups",
     "assert_early_stopping_is_honest",
+    "assert_explanation_is_not_held_out",
     "assert_holdout_unchanged",
     "assert_merge_is_keyed",
     "assert_metadata_survives",
@@ -365,6 +366,77 @@ def assert_selection_is_nested(
 # --------------------------------------------------------------------------------------
 # L6 -- feature selection
 # --------------------------------------------------------------------------------------
+
+
+def assert_explanation_is_not_held_out(
+    record: Any,
+    *,
+    held_out: Iterable[str],
+    where: str,
+    column: str = "computed_on",
+) -> None:
+    """An explainability record must say what it ran on, and it must not be a held-out split.
+
+    Guards **L11** (``benchmark_model_selection.py:1375,1383,1394`` computed SHAP values and
+    partial-dependence curves on ``X_test``, which is what makes ``REPORT.md`` section 6.1 a
+    test-set artefact: an explanation of how a model uses its features, averaged over the rows
+    the model's score is claimed on).
+
+    **The record has to name its population, and a record that does not is the defect.** An
+    explanation with no ``computed_on`` column is not "probably fine" -- it is exactly the
+    archival state, in which nobody wrote down which rows the plot came from and the answer had
+    to be recovered from the script three years later. So a missing column is a leak here, not
+    a ``ValueError``: this detector's whole subject is whether the record says.
+
+    ``held_out`` is passed in rather than imported so that this module stays free of
+    ``hydms.surrogate`` -- every detector takes data, never a module -- and the caller passes
+    :data:`~hydms.surrogate.validation.HELD_OUT_SPLITS`, which is the project's one definition
+    of a held-out name.
+
+    Args:
+        record: A table with a ``computed_on`` column -- what
+            :func:`hydms.surrogate.evaluate.shap_table` and
+            :func:`~hydms.surrogate.evaluate.pdp_table` return. Anything with ``columns`` and
+            indexable columns will do; a mapping of column name to values works too.
+        held_out: The split names an explanation may not have been computed on.
+        where: What is being checked, for the message.
+        column: The column carrying the population's name.
+
+    Raises:
+        LeakDetected: The record names a held-out split, or names nothing at all.
+        ValueError: ``held_out`` is empty, which would make the check vacuous.
+    """
+    forbidden = list(held_out)
+    if not forbidden:
+        raise ValueError(
+            "assert_explanation_is_not_held_out was given no held-out split names, so it "
+            "would pass on any record at all, including one computed on the test set."
+        )
+
+    columns = list(getattr(record, "columns", record))
+    if column not in columns:
+        raise LeakDetected(
+            f"{where}: the explainability record has no {column!r} column, so nothing says "
+            f"which rows SHAP and the partial-dependence curves were computed over. That is "
+            f"leak L11 in its original form -- benchmark_model_selection.py:1375,1383,1394 "
+            f"computed both on X_test and wrote down nothing. The record holds: "
+            f"{_named(columns)}."
+        )
+
+    named = {str(value) for value in record[column]}
+    if not named:
+        raise LeakDetected(
+            f"{where}: the explainability record is empty, so it names no population. An "
+            f"explanation nobody computed is not an explanation computed honestly (leak L11)."
+        )
+    offending = sorted(named.intersection(forbidden))
+    if offending:
+        raise LeakDetected(
+            f"{where}: the explainability record was computed on {_named(offending)}, which "
+            f"is held out ({_named(forbidden)}). SHAP and partial dependence over the rows a "
+            f"model is scored on describe the model's fit to its own report card -- leak L11, "
+            f"and REPORT.md section 6.1 is that artefact."
+        )
 
 
 def assert_selection_ignores_holdout(

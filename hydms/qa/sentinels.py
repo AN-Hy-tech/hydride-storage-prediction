@@ -38,6 +38,7 @@ from .detectors import (
     SelectionRecord,
     assert_disjoint_groups,
     assert_early_stopping_is_honest,
+    assert_explanation_is_not_held_out,
     assert_holdout_unchanged,
     assert_merge_is_keyed,
     assert_metadata_survives,
@@ -1009,19 +1010,29 @@ def _model_matrix() -> tuple[Any, Any]:
 
 
 @lru_cache(maxsize=1)
-def _final_fit_record() -> Any:
-    """The deployed fit, under the reduced budget: what rows it stopped on and was scored on.
+def _deployed_fit() -> Any:
+    """The deployed fit, under the reduced budget. The model, cached, fitted once.
 
     **The budget is reduced and that is stated where it lives**, on
     `hydms.surrogate.model.SENTINEL_BUDGET`: a real trial grows up to 30,000 boosted trees and
     HG-1 is a FAST gate. What L1 asks is not affected by it. The question is which rows chose
     the stopping iteration and which rows the result is reported against, and a row identity
-    does not depend on how many trees were grown.
+    does not depend on how many trees were grown. Nor is what L11 asks: which rows an
+    explanation was computed over does not depend on the size of the ensemble explained.
+
+    The model rather than its record, because the L11 hook has to *call* it -- SHAP reads the
+    trees. One fit serves both hooks; `audit()` runs on every gate invocation and on every test
+    in `tests/leaks/`.
     """
     from hydms.surrogate.model import final_fit
 
     frame, split = _model_matrix()
-    return final_fit(frame, split, settings=_model_settings()).record
+    return final_fit(frame, split, settings=_model_settings())
+
+
+def _final_fit_record() -> Any:
+    """What the deployed fit stopped on and was scored on. `_deployed_fit`'s record."""
+    return _deployed_fit().record
 
 
 @lru_cache(maxsize=1)
@@ -1149,6 +1160,103 @@ def _l12_live() -> None:
         frame,
         target_column=load_config().columns.target,
     )
+
+# --------------------------------------------------------------------------------------
+# L11 -- explainability
+# --------------------------------------------------------------------------------------
+
+_EXPLAINED_FEATURES = ("avg_atomic_mass", "temperature(K)")
+
+
+def _explanation(computed_on: str) -> Any:
+    """A SHAP record in miniature: one row per feature, naming the rows it came from."""
+    pd = _pandas()
+    return pd.DataFrame(
+        {
+            "feature": list(_EXPLAINED_FEATURES),
+            "mean_abs_shap": [0.31, 0.12],
+            "computed_on": [computed_on] * len(_EXPLAINED_FEATURES),
+        }
+    )
+
+
+def _l11_explained_on_the_test_split() -> None:
+    """`benchmark_model_selection.py:1375,1383,1394` -- shap_values(X_test), pdp on X_test."""
+    assert_explanation_is_not_held_out(
+        _explanation("test"), held_out=("val", "test"), where="the SHAP record"
+    )
+
+
+def _l11_explained_on_the_training_rows() -> None:
+    assert_explanation_is_not_held_out(
+        _explanation("train"), held_out=("val", "test"), where="the SHAP record"
+    )
+
+
+def _l11_explanation_names_nothing() -> None:
+    """The archival state proper: a plot, and no record of which rows produced it.
+
+    Not the same failure as naming ``test``, and worth its own reproduction: a record with no
+    ``computed_on`` column passes any check that only looks at values, and it is what the
+    archival script actually left behind.
+    """
+    record = _explanation("train").drop(columns=["computed_on"])
+    assert_explanation_is_not_held_out(
+        record, held_out=("val", "test"), where="the SHAP record"
+    )
+
+
+@lru_cache(maxsize=1)
+def _explainability_record() -> tuple[Any, Any]:
+    """The real SHAP and partial-dependence tables of the deployed fit, under the reduced budget.
+
+    The rows are `model.record.fitted` -- the rows this fit actually grew on, read off the
+    fit's own record rather than re-derived from the split, because screening drops some of the
+    training rows and an explanation averaged over rows the model never saw is a different
+    object from the one REPORT section 6.1 claims to be.
+
+    Cached beside `_final_fit_record`, whose fit it shares.
+    """
+    from hydms.surrogate.evaluate import EXPLAINABILITY, pdp_table, shap_table
+
+    frame, _ = _model_matrix()
+    model = _deployed_fit()
+    rows = frame.loc[list(model.record.fitted)]
+    return (
+        shap_table(model, rows, computed_on=EXPLAINABILITY),
+        pdp_table(model, rows, computed_on=EXPLAINABILITY),
+    )
+
+
+def _l11_live() -> None:
+    """The real explainability tables name the training rows, and cover every fitted feature.
+
+    The premise before the conclusion, as `_l1_live` and `_l4_live` do.
+    `assert_explanation_is_not_held_out` reads one column, and would pass just as happily on a
+    record that explained *nothing* -- an empty table, or one covering three of fourteen
+    features -- while `computed_on` said `train`. A partial explanation published as the
+    model's explanation is a smaller version of the same misreading L11 is about, so this first
+    asks whether the record covers the model's own feature set, and only then whether the rows
+    it came from were held out.
+    """
+    from hydms.surrogate.validation import HELD_OUT_SPLITS
+
+    shap, pdp = _explainability_record()
+    model = _deployed_fit()
+    expected = set(model.feature_names)
+    for name, record in (("SHAP", shap), ("partial dependence", pdp)):
+        covered = set(record["feature"])
+        if covered != expected:
+            raise ValueError(
+                f"the {name} record covers {len(covered)} of the model's "
+                f"{len(expected)} fitted feature(s), differing on "
+                f"{len(covered ^ expected)}. This hook checks a record of the whole model, "
+                f"and it cannot check one that explains part of it."
+            )
+        assert_explanation_is_not_held_out(
+            record, held_out=HELD_OUT_SPLITS, where=f"the {name} record"
+        )
+
 
 # --------------------------------------------------------------------------------------
 # The registry
@@ -1302,6 +1410,25 @@ SENTINELS: tuple[Sentinel, ...] = (
         live=_l10_live,
     ),
     Sentinel(
+        leak="L11",
+        title="the explainability record names the rows it ran on, and they are not held out",
+        detector="hydms.qa.detectors.assert_explanation_is_not_held_out",
+        subject="hydms.surrogate.evaluate",
+        reproductions=(
+            Reproduction(
+                "SHAP and PDP computed on the test split",
+                _l11_explained_on_the_test_split,
+                _l11_explained_on_the_training_rows,
+            ),
+            Reproduction(
+                "an explanation with no record of what it ran on",
+                _l11_explanation_names_nothing,
+                _l11_explained_on_the_training_rows,
+            ),
+        ),
+        live=_l11_live,
+    ),
+    Sentinel(
         leak="L12",
         title="sample weights are blind to the target",
         detector="hydms.qa.detectors.assert_weights_ignore_target",
@@ -1337,14 +1464,17 @@ SENTINELS: tuple[Sentinel, ...] = (
 )
 
 
-DEFERRED: tuple[Deferral, ...] = (
-    Deferral(
-        leak="L11",
-        owed_by=29,
-        reason="the sentinel asserts that the explainability record names no held-out split, "
-        "and there is no such record until #29 defines what SHAP and PDP are computed on",
-    ),
-)
+#: Empty, and that is the point: every leak in the inventory now has a sentinel.
+#:
+#: L11 was the last entry here. It was deferred rather than omitted because a sentinel needs a
+#: record to assert against, and no explainability record existed until card #29 decided what
+#: SHAP and partial dependence are computed on. That decision is
+#: :data:`hydms.surrogate.evaluate.EXPLAINABILITY`, and the sentinel above reads it.
+#:
+#: The shape stays. A gap nobody wrote down is indistinguishable from coverage, and the next
+#: leak this project finds should be recorded here on the day it is found rather than on the
+#: day somebody has time to guard it.
+DEFERRED: tuple[Deferral, ...] = ()
 
 
 def for_leak(leak_id: str) -> Sentinel | None:

@@ -43,6 +43,16 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     :func:`~hydms.surrogate.model.capacity_contender` is this model as a contender for the
     protocol above; ``python -m hydms.surrogate.train`` is the runnable entry point.
 
+``evaluate.py``
+    What the model is worth, with an interval on every number and a name on every claim.
+    **Imported from directly, not re-exported below** -- see the note under this docstring.
+    Bootstraps over **canonical compositions** rather than rows, reports both scales, and
+    labels each row with which of the two readings it is -- the out-of-fold one, a claim about
+    the *procedure*, or the artifact one, a claim about *a model*. It also owns SHAP and
+    partial dependence, which run on the deployed fit's training rows and never on a held-out
+    split (leak L11). It fits nothing: ``python -m hydms.surrogate.evaluate`` reads the tables
+    the training run left behind.
+
 ``predict.py``
     The layer's public face, and the only thing outside it a caller should need:
     :func:`~hydms.surrogate.predict.predict` takes formulas and temperatures and returns a
@@ -51,6 +61,15 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     constant -- is hidden behind it, and the version that answered is pinned and gate-checked.
 """
 
+# `evaluate` is deliberately NOT imported below, and it is the only library module here that
+# is not. It is also a runnable entry point -- `python -m hydms.surrogate.evaluate`, which is
+# card #29's runnable check -- and `-m` on a module the package `__init__` has already imported
+# executes it twice, once under its own name and once as `__main__`. Python warns about it:
+# "found in sys.modules after import of package 'hydms.surrogate' ... this may result in
+# unpredictable behaviour". `train`, `calibrate` and `select` avoid it by being commands only;
+# `evaluate` is both, so the import is what gives way. Reach for it as
+# `from hydms.surrogate.evaluate import ...`.
+#
 # `SENTINEL_BUDGET` and `sentinel_settings` are deliberately NOT re-exported below. Two
 # modules own one each -- `selection` reduces Boruta's iterations, `model` reduces the search
 # space -- and a package-level name would have to pick one of them silently. Import them from
@@ -144,16 +163,16 @@ from .validation import (
 )
 
 __all__ = [
-    "CONFORMAL_PAYLOAD",
+"CONFORMAL_PAYLOAD",
     "FIXED",
     "HELD_OUT_SPLITS",
-    "INTERVAL_WIDTH",
+"INTERVAL_WIDTH",
     "LOWER_BOUND",
     "MODEL_PAYLOAD",
     "OUTER_FOLDS",
     "PARITY_TOLERANCE",
     "QUANTILE_RANGE",
-    "SCALER_PAYLOAD",
+"SCALER_PAYLOAD",
     "SEARCH_SPACE",
     "STAGE_NAMES",
     "SYMMETRIC",
@@ -163,7 +182,7 @@ __all__ = [
     "ConformalError",
     "Contender",
     "Evaluation",
-    "FitLog",
+"FitLog",
     "FitRecord",
     "FittedConformal",
     "FittedScaler",
@@ -172,7 +191,7 @@ __all__ = [
     "FoldSet",
     "FoldSpace",
     "Hyperparameter",
-    "ModelError",
+"ModelError",
     "ModelSettings",
     "Placeholder",
     "PredictionError",
@@ -203,8 +222,9 @@ __all__ = [
     "leave_one_class_out",
     "load_surrogate",
     "loss_function",
-    "model_from",
+"model_from",
     "nested_scores",
+"per_fold_intervals",
     "placeholder_exposure",
     "predict",
     "quantile_metrics",
@@ -215,5 +235,5 @@ __all__ = [
     "select_across_folds",
     "select_features",
     "selected_names",
-    "stopping_slice",
+"stopping_slice",
 ]
