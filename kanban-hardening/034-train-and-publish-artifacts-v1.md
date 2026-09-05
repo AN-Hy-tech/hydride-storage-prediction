@@ -82,6 +82,22 @@ that reason.
       manifest beside the git SHA and the seeds — `artifacts/store.py` records `load_config().seed`
       today and nothing else about the file. A guard in the project's grain is a test asserting that
       `fit_quantile_model` reaches `hydms.config.load` zero times
+- [ ] **Nothing records which commit a fit ran from, and this card owns the manifest that
+      should (from #29, 2026-09-05).** `train.py`'s `_run()` writes trials, folds, seed and
+      feature set into `model-run.csv` — but not the SHA. The only SHA anywhere is the one
+      `evaluate --emit` stamps, which is `HEAD` **when the document was generated**, not when the
+      fit ran. #29 found this while fixing the clean-tree stamp and deliberately did not patch it
+      mid-run: adding a column would have changed the shape of a table the running fit was already
+      going to write in the old shape, and `read_run` would have been reading one shape from a run
+      that wrote another.
+
+      **It has already bitten once, harmlessly, and the record exists so nobody re-derives it:**
+      the 2026-09-05 run fitted from `a101205` and its document stamps `5f696d9`, because the
+      stamp defect was fixed while the fit was running. `git diff a101205 5f696d9` over
+      `hydms/surrogate/{train,model,validation,selection,scaler}.py`, `hydms/data/`,
+      `hydms/descriptors/` and `hydms/config/` is **empty** — no fitting code moved. This card's
+      manifest must record the run's own SHA rather than promotion-time `HEAD`, or the next
+      occurrence will not be harmless.
 - [ ] `current` points at `v1`
 
 ## Runnable check

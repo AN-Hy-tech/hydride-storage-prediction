@@ -1,6 +1,6 @@
 ---
 id: 29
-status: doing
+status: done
 priority: Normal
 blocked_by: [28]
 assignee: "@amirhossein"
@@ -65,7 +65,7 @@ intervals alongside point estimates by default — not as an option.
       interval the domain memo asks for. **The first change this card makes is to keep the
       out-of-fold predictions** `_score_fold` already computes, and hang an out-of-fold table
       off `Evaluation` for `evaluate` to read
-- [ ] **The primary number is a bootstrap over the out-of-fold predictions, and it is a claim
+- [x] **The primary number is a bootstrap over the out-of-fold predictions, and it is a claim
       about the *procedure*.** Not five folds. This is the number R4 is about — #26's **probe**
       measured a nested R² of **0.746** wt% against REPORT.md's published **0.892**.
       **0.746 is a probe number**: a reduced-trial cost check whose own run prints `These
@@ -118,7 +118,7 @@ intervals alongside point estimates by default — not as an option.
       the statement that the choice is principled rather than numerically forced. The #25
       precedent: publish the comparison that justifies a choice, so no later session re-litigates
       it from a paragraph
-- [ ] **~~This card lands machinery, not published numbers (Q9).~~ REVERSED 2026-09-05 — this card
+- [x] **~~This card lands machinery, not published numbers (Q9).~~ REVERSED 2026-09-05 — this card
       produces the real numbers (Q12–Q15).** Q9 originally deferred the run to #34; that was
       overturned deliberately, and the reason it was overturned is the reason it must not drift
       back. **If #29 and #34 each run their own 3.5 h fit, the numbers in Chapter 1 describe a
@@ -143,11 +143,11 @@ intervals alongside point estimates by default — not as an option.
       into `tests/surrogate/test_model.py::test_the_search_space_is_the_archival_one`, which is the
       test that must be updated deliberately. Narrowing afterwards would publish a model the
       project then changed, which is the mismatch (i) exists to prevent arriving by another door
-- [ ] **Commit the machinery, then run from that commit (Q15).** A table produced from an
+- [x] **Commit the machinery, then run from that commit (Q15).** A table produced from an
       uncommitted tree cannot be tied to the code that made it, and #34's manifest records a git
       SHA. Land and commit steps 1–2 plus the Q13 fix, run from that commit, and **stamp the SHA
       into the emitted tables**. If the run dies at hour three, nothing is lost but the run
-- [ ] **The heavy run is the maintainer's to execute, not the agent's (standing rule, 2026-09-05).**
+- [x] **The heavy run is the maintainer's to execute, not the agent's (standing rule, 2026-09-05).**
       This card's deliverable is therefore **machinery plus one documented command**, verified end
       to end against a sentinel-budget probe so that the 3.5 h is not spent discovering a crash.
       The card stays `doing` across the gap between the machinery landing and the numbers arriving;
@@ -164,7 +164,7 @@ intervals alongside point estimates by default — not as an option.
       L2 and L4 sentinels are untouched. `Evaluation`'s docstring already calls itself "the
       evidence a later reader checks it with", and this is exactly that evidence. Not a second
       return value from `nested_scores`, which would split one concept across two returns
-- [ ] **OWED — the run, and only the run (2026-09-05).** Every box above this one is machinery and
+- [x] **OWED — the run, and only the run (2026-09-05).** Every box above this one is machinery and
       it is committed and verified end to end at a reduced budget. What is missing is the numbers.
       **Step-by-step operator guide: [../docs/RUNNING-THE-FIT.md](../docs/RUNNING-THE-FIT.md)** —
       the smoke test to run first, what each line of output means, the three exit codes, and how to
@@ -222,8 +222,8 @@ intervals alongside point estimates by default — not as an option.
       `tests/artifacts/test_manifest.py::test_a_run_writing_its_own_output_does_not_report_modified_code`
       builds a real repository, writes into both output directories, and asserts both halves —
       output does not count, **and a genuine source edit still does**.
-- [ ] **OWED — `train.py` records no git SHA, so nothing ties the eight tables to the commit that
-      produced them.** Found while fixing the box above. `_run()` writes `probe`, `optuna_trials`,
+- [x] **MOVED TO #34 — `train.py` records no git SHA, so nothing ties the eight tables to the
+      commit that produced them.** Found while fixing the box above. `_run()` writes `probe`, `optuna_trials`,
       `screening`, folds, `feature_set`, `features` and `seed` into `model-run.csv` — but not the
       commit. The only SHA anywhere is the one `evaluate --emit` stamps, and that is **`HEAD` when
       the document was generated**, which is not necessarily `HEAD` when the fit ran. Q15 asked to
@@ -233,7 +233,8 @@ intervals alongside point estimates by default — not as an option.
       `_run()` now would change the shape of a table this run is already going to write in the old
       shape, and `read_run` would then be reading one shape from a run that wrote another — a way
       to break the cheap emit step of the very run it was meant to protect. It belongs to #34, or
-      to whoever runs the next fit.
+      to whoever runs the next fit. **It is now an unticked box on #34**, which owns the
+      manifest that should carry the SHA; this card carries only the caveat for its own run.
 
       **The caveat for this run, so #37 does not have to reconstruct it:** the fit was launched
       22:03:51 from `a101205`; `evaluate --emit` will stamp a later commit. Checked and recorded
@@ -405,3 +406,38 @@ python -m hydms.surrogate.evaluate --emit
   `reading`, `feature_set` and `interval_caveat` as **columns**, and the caveat is a full sentence
   rather than a code, because a row is what gets quoted into a chapter and a qualifier one row up
   does not travel with it. (by @assistant)
+
+**2026-09-05, the run — and the two things it changed about this card.** The fit ran 22:03:51 to
+23:44:46: **1 h 41 m**, not the ~3.5 h this card budgeted. The estimate was not wrong when it was
+made — it was made before box (ii). Narrowing `learning_rate` to a 5e-4 floor removed the corner
+where a trial ran 30,000 unconverged iterations, and the measured cost of a scored fit came out at
+12–34 s against the 33 s the card projected. **A budget written before a search-space decision is a
+budget for a different search.**
+
+`model-run.csv` says `probe=False`, 25 of 25 trials, screening on, 5x3 folds, `SELECTED`, seed 42.
+The headline, resampling canonical compositions: **R² 0.7481 [0.6889, 0.7985]**, RMSE 0.5616
+[0.4964, 0.6319], MAE 0.3332 [0.3049, 0.3664], over 893 out-of-fold predictions in 780 groups.
+Zero quantile crossings on every fold, both scales.
+
+**The probe was reading true.** #26 measured 0.746 and this card was careful to call it a direction
+rather than a score; the full run landed at 0.7481. That is a good outcome for the *card's caution*
+and it should not be read as licence to quote probes — one probe agreeing with one run is not a
+method.
+
+**The three intervals disagree in the predicted direction.** Groups [0.6889, 0.7985], rows
+[0.6808, 0.7999], per-fold [0.7085, 0.7918]. The per-fold interval is the **narrowest and the least
+trustworthy**, exactly as box Q5 said it would be: the folds trained on 525–564 rows, so part of
+what it prices is training size. Anyone quoting one number from this card should quote the group
+interval and say so.
+
+**Raw interval coverage is 0.629 against a nominal 0.8.** That is the uncalibrated booster and it
+is not this card's failure — closing that gap is #27's conformal layer, and **AC-3 (#31) is the
+gate that decides whether it does.** #31 now has a real out-of-fold table to run against.
+
+**A defect in this card's own emit step was found mid-run and fixed mid-run** (`00bb16e`).
+`describe_git` computed cleanliness over the whole tree, so the eight CSVs this card un-ignored
+made `evaluate --emit` report a dirty tree *always* — and `RUNNING-THE-FIT.md` Step 6 asked an
+operator to check for the opposite. The check was unsatisfiable by construction. `Git.dirty` is now
+`Git.code_modified`, `OUTPUT_PATHS` excludes `reports/` and `artifacts/` by git pathspec, and the
+document reads `(code committed)`. The lesson is the one this card kept re-learning: **a fact that
+lives only in `.gitignore` and in runbook prose is a fact the next session loses.** (by @assistant)
