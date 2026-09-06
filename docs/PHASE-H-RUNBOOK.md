@@ -296,16 +296,27 @@ the same module as L3 (card #71).
       selector on the rows that selector owns; the per-split counts #15 and #37 read come from a
       separate pipeline-level `screen` over the whole frame. **#15 must re-measure `rows_out` and
       `removed` against that call.**
-- [~] **#15** Data-layer golden tests. **Written and green; the card stays `backlog`, and
-      `check_board.py` is what insisted.** `tests/data/test_golden.py` pins 34 facts as one record
+- [x] **#15** Data-layer golden tests. **Written green, held in `backlog` by `check_board.py`
+      until #14 landed, and closed once the re-measure below was taken.** `tests/data/test_golden.py` pins 34 facts as one record
       and reports a deviation as a table of fact/expected/actual rather than as a bare assertion.
       It separates *facts that must not move* (1279 rows, 1149 strings, 1115 compositions, the ten
       classes) from *facts that moved on purpose* — the split is pinned at 893/131/255 **with** the
       published 896/136/247 beside it under `split_rows.published_*`, so restoring the old number
       is a visible failure rather than a silent return to the leaky split. The card cannot leave
       backlog while #14 is unfinished, and that is right on the substance: when #24 lands,
-      CleanLab starts flagging rows and `screened.rows_out` / `screened.removed` move. Re-measure
-      those two then; nothing else should move, and if it does, that is the finding.
+      CleanLab starts flagging rows and `screened.rows_out` / `screened.removed` move.
+      **The re-measure was taken, and the answer was better than "those two moved".** They did
+      *not* move — `measure()` calls `screen()` without `label_issues=`, so GOLDEN's 1277 / 2 are
+      the structural findings alone and stay structural. What CleanLab's verdict does is recorded
+      as a **second record**, `DEPLOYED_SCREENING`, measured on the 893 training rows the deployed
+      fit is actually offered: **kept 873, removed 20, flagged 18**, with
+      `removed_before_cleanlab: 2` beside it so the whole-frame 2 and this 2 are shown to be the
+      same two rows rather than assumed to be. It is reconciled against
+      `reports/model/conformal-rows.csv`, which records the same 893 and 20 for that run, and
+      `screened.label_quality_findings: 0` asserts the separation instead of commenting on it —
+      if anyone starts passing a verdict into `measure()`, it goes red. The two are answers to
+      different questions: what the *stage* removes with no judgement, and what the *pipeline*
+      removes with one.
 
 **Exit check:** `conda run -n Project python -m pytest tests/data -q` · the L3, **L8, L9** and L10
 sentinels go green — L10 because its subject is #14's module. **As of 2026-09-04 five are
@@ -490,12 +501,16 @@ could mean anything. See below.
 
 **Goal:** an honestly-validated, calibrated model with artifacts on disk.
 **Closes:** L1, L2, L4, L5, L6, L7, L11, L12.
+**State (2026-09-07):** closed as far as a stage can close — **twelve of thirteen boxes ticked and
+no measurement left to take**. The one open box is **#34**, and it is not waiting on anything S4
+owns: promotion needs HG-2, HG-3 and HG-4, which #76-#79 (S6) and #86 (S8) build, and they are
+Phase H's own criteria so they must not be waived. Nothing downstream is blocked on it.
 
 ```
 #23 scaler fit-once → #24 selection inside folds (L6) → #25 old-22 vs new-N
 → #88 group-aware nested CV (L4, L7) → #26 CatBoost, honest early stopping (L1, L5)
 → #27 MAPIE conformal → #28 predict() → #29 metrics + bootstrap CI → #30 LOACO CV
-→ #31 AC-3 · #32 AC-1 · #33 AC-4 → #34 artifacts/v1
+→ #31 AC-3 · #32 AC-1 · #33 AC-4 → #34 promote the artifact (v2)
 ```
 
 - [x] **#23** Scaler: fit once on train, persist, never refit. **Landed 2026-09-04.**
@@ -690,8 +705,8 @@ could mean anything. See below.
       strictly stronger than the promotion pointer, since `promote()` already refuses incomplete
       gates. **(f) `MODEL_PAYLOAD` and `model_from` were owed** and now sit beside `QuantileModel`,
       completing the `scaler_from` / `conformal_from` trio.
-- [~] **#29** Evaluation metrics with bootstrap CIs. **Machinery landed 2026-09-05; the numbers are
-      owed by the one run.** `hydms/surrogate/evaluate.py` bootstraps over **canonical compositions**
+- [x] **#29** Evaluation metrics with bootstrap CIs. **Machinery landed 2026-09-05; the run that
+      owed the numbers happened, and `reports/model/` is committed.** `hydms/surrogate/evaluate.py` bootstraps over **canonical compositions**
       rather than rows (a row resample would be a fourth meaning of "the same material"), reports R²,
       RMSE and MAE on **both** scales, breaks out per outer fold and per temperature band from a
       single split-level resample, and carries the too-narrow caveat as a **column** on every row
@@ -740,8 +755,8 @@ could mean anything. See below.
       guarding in name only. **The out-of-fold numbers are untouched** — `nested_scores` scores five
       outer-fold models and no deployed fit takes any part in it — which is why this cost two
       minutes and not a second 1 h 41 m run.
-- [ ] **#30 (AC-6)** Leave-one-alloy-class-out CV. Unblocked only because #87 restored `Alloy_class`.
-      **Built and handed over 2026-09-06; the run itself is owed.** `python -m hydms.surrogate.loco`
+- [x] **#30 (AC-6)** Leave-one-alloy-class-out CV. Unblocked only because #87 restored `Alloy_class`.
+      **Built, run and closed 2026-09-06/07 — AC-6 is green.** `python -m hydms.surrogate.loco`
       is `train`'s protocol with `outer=leave_one_class_out` — one keyword argument, no second
       scoring path. What the module adds is the reporting layer, because AC-6 asks that the
       extrapolation number be published *alongside* the interpolation one and the ways a table can
@@ -753,10 +768,23 @@ could mean anything. See below.
       committed tables rather than refitting** — a gate cannot pay the run, and one that fitted a
       cheaper version would certify a number nobody publishes — so the lane moved `SLOW` → `FAST`
       and `reports/loco/` is un-ignored, without which the gate would read an empty directory in
-      CI. It reports `SKIPPED` today, naming the command. **The run is 4.7 h**, measured by
-      `--budget`: 10 class folds x 3 inner x 25 trials at 22.6 s a fit, about 2.0x the
-      random-split run. Sentinel-budget probe, not a result: macro R2 **0.2240** against the
-      random-split **0.7459**, worst HEA -0.3026, best A2B 0.6703, all ten classes estimable.
+      CI. **The run happened once, on 2026-09-06, 18:16:09 to 22:23:13 — 4 h 07 m**, inside the
+      4.7 h `--budget` ceiling (10 class folds x 3 inner x 25 trials, about 2.0x the random-split
+      run) and roughly 7 % over the estimate scaled from it, so `--budget` was the better bound.
+      **The result: macro transfer R2 0.2734 over ten estimable classes of ten, against the
+      random-split 0.7459 — a gap of 0.4725.** Support-weighted **0.2153**, *below* the macro
+      average; worst **Mg -0.3381**, best **SS 0.7626**. AC-6 went green on the committed tables
+      with no code change, and the suite's one skip went with it. **Two findings the number
+      carries, both boxed rather than fixed:** interval coverage degrades out of family and
+      *unpredictably* so — Mg 0.1146 against the random-split 0.6293, while HEA reaches 0.8824 —
+      which is the argument for #48 in one table, since conformal's guarantee is marginal and
+      assumes an exchangeability that holding out a whole family breaks by construction; and the
+      per-class scores carry **no interval**, deliberately, so a 19-row LEA fold weighs exactly as
+      much in the macro mean as a 260-row AB2 one. Say so wherever the number is published.
+      *(The card's own sentinel-budget probe, kept only because it falsified a sentence the module
+      had already written: macro 0.2240, weighted 0.1664 — the weighted average sits* below *the
+      macro one, not above it, so the document now computes the direction instead of predicting
+      it.)*
 - [x] **#31 AC-3** conformal coverage · **#32 AC-1** seed reproducibility · **#33 AC-4** known alloys
       round-trip. **All three landed 2026-09-06 and all three pass against `artifacts/v1`**, and the
       numbers below are now reproducible from the repository — the paragraph that recorded them as
@@ -903,7 +931,9 @@ single prediction path and HG-3 covers the UI too.
 - [ ] **#85** ADR — the delivery seam and why the API owns no ML logic.
 - [ ] **#86 (HG-4)** Extend the CI fast lane with the delivery suite, the freeze check, and
       ruff / mypy / coverage.
-- [ ] **#35** `CONTEXT.md` glossary · **#36** five ADRs · **#37** Chapter 1 revision.
+- [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
+      in it because conflating them has already cost this project something.
+- [ ] **#36** five ADRs · **#37** Chapter 1 revision. #37 is unblocked on everything but #34.
 - [ ] Lift the freeze: set `freeze: lifted` in [FREEZE.md](FREEZE.md), record the closing date, and the
       PA/PB board resumes.
 
