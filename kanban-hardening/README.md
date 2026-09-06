@@ -136,7 +136,24 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **Nothing is half-finished and there is no open decision on the
+**Next session, in one paragraph.** **The 4.7-hour run is done and AC-6 is green; every gate not
+sitting behind unbuilt delivery work now passes.** The LOCO run happened once on 2026-09-06,
+18:16:09 to 22:23:13 -- **4 h 07 m** -- and published macro transfer R2 **0.2734** against the
+random-split **0.7459**. Measured after it: suite **1117 passed, 0 skipped** (29 min), gates
+**6 passed / 0 failed / 6 skipped**, leaks 13 of 13, board and freeze OK. **The six remaining
+skips are exactly two groups and neither is a gap in the surrogate:** AC-5, AC-7 and AC-8 are
+frozen with Phases T and A and are the three `promote --waive` accepts; HG-2, HG-3 and HG-4 are
+Phase H's own and are blocked behind the delivery cards that build them (#77 waits on #76, #79 on
+#78, #86 on #6 and #79). **So the whole remaining distance to lifting the freeze is S6 onward
+plus #34's promotion, #80's API doc and #37's Chapter 1 revision** -- there is no measurement
+left to take. **#75 and #49 are unblocked right now** and neither is blocked by #34. **One open
+decision, and it is the maintainer's:** #30 is still `doing` with every done-criterion met -- its
+remaining boxes are recorded findings rather than work -- and moving it to `done` is what
+unblocks #48. Full detail in the handoff dated 2026-09-06 (evening) below.
+
+**The review session's paragraph, superseded only where the run above changed it:**
+
+**Nothing is half-finished and there is no open decision on the
 board.** A review session on 2026-09-06 measured the phase end to end -- suite **1115 passed, 1
 skipped** (21 min 21 s), gates **5 passed / 0 failed / 7 skipped**, leaks **13 of 13**, board and
 freeze OK -- fixed the one code defect it found, and closed **#35**. **The whole remaining distance
@@ -147,7 +164,7 @@ skip. The layer is S6 -- **#75 and #49 are unblocked right now** and neither is 
 Start the run first, because nothing else can run beside it. Full detail in the handoff dated
 2026-09-06 (review) below.
 
-**The previous session's paragraph, still accurate on everything it covers:** **#34's wall is down and #15's silent defect is closed; what
+**And the session before that:** **#34's wall is down and #15's silent defect is closed; what
 remains on the promotion path is work, not a decision.** #34's OPEN decision is **settled, and by
 none of the three shapes it offered** — not a phase-scoped subset, not a fourth gate status, not
 `require_gates=False` in the delivery path. A promotion may now name **waivers**:
@@ -221,10 +238,79 @@ superseded. Here is every one of them, so nobody has to discover it by quoting i
 | R² **0.746** (probe), **64.4 %** raw coverage (probe) | 0.7481 out-of-fold; 0.6744 raw | Probe numbers at reduced budget — never results |
 | "L11 is deferred / 12 of 13 leaks" | **13 of 13** | #29 closed L11; `bf0b841` re-aimed it at the deployed fit |
 | "`artifacts/` holds only `gate-results.json`" | `artifacts/v1` exists, uncertified | Written 2026-09-06 by `calibrate --save` |
+| Probe macro R2 **0.2240**, worst **HEA** -0.3026, best **A2B** 0.6703 | macro **0.2734**, worst **Mg** -0.3381, best **SS** 0.7626 | Sentinel-budget probe. The real run sized the gap the same and named different families at *both* ends |
+| Suite **1115 passed, 1 skipped**; gates **5 / 0 / 7** | **1117 passed, 0 skipped**; gates **6 / 0 / 6** | The LOCO run closed the skip and turned AC-6 green; the review session's promote test added the extra pass |
+| "AC-6 is SKIPPED / the run is owed" | **AC-6 PASSED** | The run happened 2026-09-06, 18:16:09 to 22:23:13 |
 
 Anything else in an older handoff that contradicts a *card* — the card wins. Anything that
 contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The handoffs are narrative,
 and their authority is over intent, not over facts.
+
+---
+
+### Handoff -- 2026-09-06 (evening) - the LOCO run, and what it said
+
+**The run is spent. There is no measurement left in this phase.** `loco --target capacity` ran
+once, 18:16:09 to 22:23:13 -- **4 h 07 m**, inside the `--budget` ceiling of 4.7 h and past the
+3 h 21 m - 3 h 50 m this session projected by scaling the random-split run's measured wall time,
+so `--budget` was the better bound and the scaling was optimistic by about 7 %. `loco-run.csv`
+records `probe=False`, 25 of 25 trials, screening on, 10 folds, seed 42.
+
+**The headline, and it is a wide gap: macro transfer R2 0.2734 against the random-split 0.7459.**
+Support-weighted 0.2153, *below* the macro average -- the same direction the probe found, which
+is why the document computes the direction rather than asserting it. All ten classes estimable.
+AC-6 passed on the committed tables with no code change, which was the whole design of that gate.
+
+**The probe sized the gap and named the wrong families at both ends.** It said worst **HEA**
+-0.3026 and best **A2B** 0.6703. The run says worst **Mg** -0.3381 and best **SS** 0.7626. A
+sentinel-budget run can tell you how big the gap is; it cannot tell you where the gap lives, and
+where it lives is the part #48 needs. Anyone tempted to skip a heavy run because a cheap one
+"already showed the answer" should read those two lines together.
+
+**Mg is the finding.** R2 -0.3381 over 96 rows with MAE **1.577**, against 0.24 to 0.49 for every
+other class. Mg-based hydrides are this dataset's high-capacity corner, so a fold that holds them
+out removes the model's only evidence of what high capacity looks like -- and it then predicts
+that family as though it were the families it kept. Negative R2 means worse than predicting the
+mean, in the exact direction an optimiser pushes. That sentence belongs in Chapter 1 (#37) and in
+the model card (#83).
+
+**The finding nobody asked for, and it is boxed on #48 because it changes what that card is
+for.** `loco-per-class.csv` carries `interval_coverage`. Against the random-split out-of-fold
+reading of **0.6293**: Mg **0.1146**, SS 0.1644, MIC 0.4713, AB 0.4746, MEA 0.5000 -- while HEA
+reads 0.8824 and A2B 0.7586. Coverage out of family is not merely lower, it is *unpredictably*
+lower, and its worst case sits on the worst R2. **Said precisely, because it is easy to
+overclaim:** these are the raw quantile-head bands, not the conformalised ones. The deployed path
+adds a correction calibrated in-distribution (AC-3: 0.7795 against a nominal 0.8 on 254 test
+rows), and **nothing here measures the conformal band out of family**. But conformal coverage is
+marginal and assumes exchangeability, which holding out a whole family breaks by construction, so
+there is no reason to expect it to survive the move and now some evidence the underlying band
+does not. The consequence for #48 is concrete: `HIGH_UNCERTAINTY` cannot stand in for
+`OUT_OF_DOMAIN`, because a candidate can be out of family *and* carry a narrow band. Its second
+consequence is that a single scalar ElMD ceiling fitted to the average would admit candidates
+near Mg and reject candidates near SS on the same evidence.
+
+**Two risks this session wrote down did not fire, and their boxes stay.** The run has no resume
+and prints nothing per fold; it survived four hours unattended anyway. A risk that did not
+materialise is not a risk that was wrong, and both boxes are records for the *next* protocol that
+costs hours. What the silence did cost is real though: the only live signal available was
+cumulative process CPU, and `docs/RUNNING-THE-FIT.md` step 10 now tells the next operator to run
+under `python -u` teed to a log and to watch that CPU, because this session had to work it out
+while a four-hour run was already going.
+
+**Measured here, after the run.** Suite **1117 passed, 0 skipped** in 29 min 08 s -- the count
+rose by two from the review session's 1115 + 1 skip: the skip now runs, and the review's own
+`test_the_two_counts_one_run_prints_are_the_same_count` is the other. That 29 min overlapped
+`gates --all` for its first three, so the clean 21 min still stands as the idle reading. Gates
+`--all`: **6 passed, 0 failed, 6 skipped** in 188.51 s. Board OK over 89 cards, freeze OK over
+265 paths, ruff and mypy clean over 64 files.
+
+**Left open deliberately: #30 is still `doing`.** Every done-criterion on it is met and its three
+remaining boxes are recorded findings rather than work -- but moving it to `done` unblocks #48,
+and a session that closes somebody else's card at midnight to tidy a board has made a decision
+that was not its own. The maintainer flips it.
+
+**Next.** S6: #75 and #49, neither blocked by #34. Nothing on the board now waits on a
+measurement.
 
 ---
 

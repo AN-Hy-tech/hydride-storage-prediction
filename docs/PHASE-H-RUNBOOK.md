@@ -967,19 +967,21 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. 1115 passed, 1 skipped as of 2026-09-06 (21 min); anything red is a real failure. Do NOT
-# pass -q: pyproject already sets it, and a second one hides the `N passed` line every handoff
-# quotes. THE ONE SKIP IS NAMED, because a skip nobody names reads as nothing waiting: it is
-# test_the_committed_document_is_what_the_code_produces, which asserts the committed
-# reports/loco/loco.md is what `loco --emit` builds, and it is waiting on the 4.7-hour run AC-6
-# needs. Gate AC-6 reports the same absence, so the gap is visible from two directions.
+# Suite. 1117 passed, 0 skipped as of 2026-09-06 evening (29 min, measured while `gates --all`
+# held the machine for its first three, so treat that as an upper bound; the clean reading before
+# the LOCO run was 21 min). Anything red is a real failure. Do NOT pass -q: pyproject already sets
+# it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
+# is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
+# run, which happened on 2026-09-06, so it now asserts the committed reports/loco/loco.md against
+# what `loco --emit` builds. A skip reappearing there means the tables have gone missing, not that
+# a test is quarantined.
 conda run -n Project python -m pytest
 conda run -n Project python -m pytest tests/leaks               # HG-1
 # Lint and types run OUTSIDE the environment, deliberately: neither imports the project's
 # dependencies, and card #68 fixed that the fast lane installs nothing (docs/QA-PROTOCOL.md §6).
 ruff check hydms/ tests/ scripts/ && mypy
 # `run` with no selection exits 2 -- a selection is a decision, so name one.
-conda run -n Project python -m hydms.gates run --all           # 5 passed, 0 failed, 7 skipped (2.6 min)
+conda run -n Project python -m hydms.gates run --all           # 6 passed, 0 failed, 6 skipped (3.1 min)
 
 # Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical metrics
 conda run -n Project python -m hydms.pipeline run --config hydms/config/pipeline.yaml
