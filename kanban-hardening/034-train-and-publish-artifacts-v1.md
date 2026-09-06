@@ -279,14 +279,40 @@ that reason.
       one, which is how the drift was caught. Fix the expression and assert the sentence: the
       project's own rule is that no number appears in prose that a test does not check
 
-- [ ] **Re-save the deployed fit from a clean tree before promoting.** `artifacts/v1`'s manifest
-      records `git.code_modified: true` — honestly, because a concurrent session had uncommitted
-      gate work in this shared checkout when `calibrate --save` ran. Nothing blocks a promotion on
-      it and `promote` records "*from a modified tree*" in the pointer note rather than refusing,
-      which is the right behaviour. But the note is permanent and the fix costs **0.7 min**, and
-      AC-1 has already established that this fit reproduces across two runs, so the new version is
-      the same model with a clean provenance line. Do it before the promotion, not after — a
-      version is written once
+- [x] **DONE 2026-09-07 — `artifacts/v2` is the deployed fit with a clean provenance line.**
+      `artifacts/v1`'s manifest records `git.code_modified: true` — honestly, because a concurrent
+      session had uncommitted gate work in this shared checkout when `calibrate --save` ran.
+      Nothing blocked a promotion on it and `promote` records "*from a modified tree*" in the
+      pointer note rather than refusing, which is the right behaviour. But the note is permanent,
+      so the fit was re-saved from the clean tree at `4a06011`:
+      `calibrate --target capacity --save`, 0.7 min. **v2 records `code_modified: false`** and is
+      the same model: correction **+0.037355**, identical to AC-1's, from the same
+      `model-chosen.csv:outer-0` configuration, 172 calibration rows carved from 873 screened,
+      701 grown on. **Promote v2, not v1.** v1 stays on disk — a version is written once and
+      never edited, so the dirty one is not deleted, it is superseded
+
+- [x] **The re-save doubled as a stronger reproducibility check than AC-1 runs.** AC-1 compares
+      two fits on their *metrics table*; this run's five regenerated CSVs — `conformal.csv`,
+      `conformal-coverage.csv`, `conformal-rows.csv`, `model-shap.csv`, `model-pdp.csv` — were
+      diffed against the committed #29 tables and are **byte-identical**, SHAP and
+      partial-dependence included. So the committed evidence behind Chapter 1 is reproducible at
+      the file level from a clean checkout, not merely at the metric level
+
+- [ ] **`--report` is both the output directory and where the deployed configuration is read
+      from, and that is a trap** (found 2026-09-07, in review). Pointing `--report` at a scratch
+      directory to avoid overwriting the committed tables makes `deploy.py:163` look for
+      `model-chosen.csv` *there*, not find it, and fall back to **CatBoost's own defaults** — a
+      smoke-test fit that `--save` then persists with the note `deployed fit`. It happened here:
+      the first re-save produced a correction of **+0.030990** instead of +0.037355 and was
+      discarded. The command *says* so on stdout ("so this fit uses CatBoost's own defaults …
+      That is a smoke test of the calibration path, not the deployed band"), which is how it was
+      caught within a minute, and the manifest's `notes` field is the wrong place to catch it
+      because it only distinguishes `--no-screening`. Two candidate fixes, neither taken here
+      because both belong to the seam rather than to this card: give the chosen-configuration
+      read its own flag so an output redirect cannot move it, or refuse `--save` outright when
+      the configuration fell back to defaults, on the same reasoning that makes a probe's
+      artifact carry a note — **an artifact that does not say it came from a default is an
+      artifact somebody will promote**
 
 ## Runnable check
 

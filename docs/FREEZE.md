@@ -81,8 +81,12 @@ Fixed now, before results are seen, so it cannot be softened later. All four mus
 
 - [ ] **Every gate green.** HG-1 … HG-4 and the inherited AC-1, AC-2, AC-3, AC-4, AC-6.
       (AC-5 is thermodynamic and AC-7/AC-8 are inverse-design; they stay frozen.)
-- [ ] **`artifacts/v1` promoted** — card #34. A trained model, scaler, feature contract and conformal
-      calibration on disk, reachable by manifest pointer.
+- [ ] **An artifact version promoted** — card #34. A trained model, scaler, feature contract and
+      conformal calibration on disk, reachable by manifest pointer. *Written as `artifacts/v1`
+      when this condition was fixed; the version to promote is now **`v2`**, re-saved 2026-09-07
+      from a clean tree because v1's manifest records `code_modified: true` and a manifest is
+      sealed when written. The requirement is unchanged — a promoted version — and is named by
+      role here rather than by number so a re-save cannot look like a softening.*
 - [ ] **`docs/API.md` published** — card #80.
 - [ ] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
 

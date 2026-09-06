@@ -1,6 +1,6 @@
 ---
 id: 30
-status: doing
+status: done
 priority: High
 blocked_by: [12, 28]
 assignee: "@amirhossein"
@@ -261,3 +261,10 @@ it. That is the honest state and it is what keeps `promote` refusing.
   count predicted 3 h 21 m, and correcting for LOCO's larger training folds predicted about
   3 h 50 m. Actual 4 h 07 m — the scaling was optimistic by roughly 7 %, and `--budget`'s 4.7 h
   was the better bound. (by @assistant)
+
+- 2026-09-07: **Closed.** Every done-criterion is met and the transfer number is published and
+  gated; the three boxes that remain unticked are *findings*, not work — the missing resume, the
+  silent run and the absent interval on the per-class scores are recorded so the next protocol
+  that costs hours is built knowing them, and none of them is a condition this card owed. Closing
+  it unblocks **#48**, which is the card that has to decide what a macro R2 of 0.2734 means for
+  the applicability-domain ceiling. (by @assistant)

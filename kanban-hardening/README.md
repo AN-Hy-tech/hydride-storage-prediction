@@ -136,7 +136,27 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **The 4.7-hour run is done and AC-6 is green; every gate not
+**Next session, in one paragraph.** **S4 is closed and the artifact to promote is now `v2`,
+not `v1`.** #30 moved to `done` on 2026-09-07 -- its three unticked boxes are recorded findings,
+not work -- and the deployed fit was re-saved from the clean tree at `4a06011`, so
+**`artifacts/v2` records `code_modified: false`** where v1 records `true`. It is the same model:
+correction **+0.037355**, identical to AC-1's, from the same `model-chosen.csv:outer-0`
+configuration; v1 is superseded, not deleted, because a version is written once. **#34 itself
+still cannot close, and that is by design** -- promotion needs HG-2, HG-3 and HG-4, built by
+**#76-#79 (S6)** and **#86 (S8)**, and they are Phase H's own criteria so they **must not be
+waived** (only AC-5, AC-7 and AC-8 are, and `tests/artifacts/test_waiver_scope.py` derives that
+set from the board so it cannot quietly grow). **Five cards are unblocked right now: #48, #49,
+#73, #74 and #75** -- #48 is the newly opened one and it is the one with a decision in it, because
+it has to say what a macro transfer R2 of **0.2734** against a random-split **0.7459** means for
+the domain ceiling, and #30's evidence says that ceiling cannot be a single scalar distance.
+**There is still no measurement left to take.** One trap found while doing the re-save and boxed
+on #34: `calibrate --report` is both where the tables are written *and* where
+`model-chosen.csv` is read from, so redirecting it silently falls back to CatBoost defaults --
+the command says so on stdout, and the fit it saves is not the deployed one.
+
+**The paragraph written when the run finished, superseded where the S4 close changed it:**
+
+**The 4.7-hour run is done and AC-6 is green; every gate not
 sitting behind unbuilt delivery work now passes.** The LOCO run happened once on 2026-09-06,
 18:16:09 to 22:23:13 -- **4 h 07 m** -- and published macro transfer R2 **0.2734** against the
 random-split **0.7459**. Measured after it: suite **1117 passed, 0 skipped** (29 min), gates
@@ -146,12 +166,13 @@ frozen with Phases T and A and are the three `promote --waive` accepts; HG-2, HG
 Phase H's own and are blocked behind the delivery cards that build them (#77 waits on #76, #79 on
 #78, #86 on #6 and #79). **So the whole remaining distance to lifting the freeze is S6 onward
 plus #34's promotion, #80's API doc and #37's Chapter 1 revision** -- there is no measurement
-left to take. **#75 and #49 are unblocked right now** and neither is blocked by #34. **One open
-decision, and it is the maintainer's:** #30 is still `doing` with every done-criterion met -- its
-remaining boxes are recorded findings rather than work -- and moving it to `done` is what
-unblocks #48. Full detail in the handoff dated 2026-09-06 (evening) below.
+left to take. **#75 and #49 are unblocked right now** and neither is blocked by #34. ~~**One open
+decision, and it is the maintainer's:** #30 is still `doing` ... and moving it to `done` is what
+unblocks #48.~~ *(taken 2026-09-07: #30 is `done`, #48 is open.)* Full detail in the handoff dated
+2026-09-06 (evening) below.
 
-**Finishing S4, in one paragraph.** **Eleven of S4's thirteen cards are done and the two that are
+**Finishing S4, in one paragraph — written before it was finished, and kept for the reasoning
+rather than the state.** **Eleven of S4's thirteen cards are done and the two that are
 left are not the same kind of left.** **#30 is one status flip** -- every done-criterion is met,
 its three open boxes are recorded findings rather than work (the absent resume, the silent run,
 the per-class scores carrying no interval), and moving it to `done` is what unblocks **#48**; it
