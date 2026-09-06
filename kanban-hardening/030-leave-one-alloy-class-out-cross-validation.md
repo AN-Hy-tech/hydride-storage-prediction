@@ -100,6 +100,28 @@ stray from known chemistry.
       Practical mitigations that cost nothing: disable sleep before starting; run it detached
       rather than inside an editor session; `--budget` first so the estimate is on the record.
 
+- [ ] **And the run is silent, which is what makes the missing resume expensive** (raised
+      2026-09-06, when the maintainer asked how to track it). `nested_scores` takes no output
+      stream and prints nothing per fold; CatBoost is at `verbose: 0` and Optuna is pinned to
+      `WARNING`, both deliberately, so the terminal shows the class census and then **nothing for
+      4.7 hours**. `FitLog` is in-memory — the same reason nothing can be resumed is the reason
+      nothing can be watched. An operator cannot tell a working run from a hung one, so the
+      no-resume failure mode is not just unrecoverable, it is **undetectable until the end**.
+
+      Not fixed here, and the reason is the seam rather than the effort: the fold loop is
+      `hydms.surrogate.validation.nested_scores`, shared with `train`, whose run is already
+      published — adding a print there changes the path behind a committed result to buy
+      progress reporting. If it is done, it belongs on the *next* long protocol together with
+      the checkpointing, as one change to that shared loop with both tests.
+
+      What an operator does instead, none of it requiring code: run under `python -u` piped
+      through `Tee-Object` to a gitignored log under `reports/` (excluded from the provenance
+      stamp, so it cannot dirty the run's own record); watch cumulative `CPU` on the python
+      process from a second window, which is the only live liveness signal there is; and expect
+      **17–29 min per class fold** — 76 fits each, the 22.6 s rate being an upper bound because
+      it is measured over the six *scored* fits and Optuna pruned 2 to 19 of 25 trials per fold
+      on the random-split run.
+
 - [ ] **The per-class scores carry no interval, deliberately, and the model card must not imply
       otherwise.** `summary()` reports macro and support-weighted means with no bootstrap CI, and
       its docstring gives the reason: `random_split_r2` is `train`'s mean over *its* outer folds,

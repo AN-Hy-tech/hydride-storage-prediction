@@ -509,10 +509,32 @@ something that probably will not happen — but it changes how you should start 
   closed or reloaded.
 - **Cost it first** (above), so the estimate is on the record before the commitment.
 
+**There is no progress output, so decide now how you will watch it.** `nested_scores` prints
+nothing per fold, CatBoost runs at `verbose: 0` and Optuna is pinned to `WARNING` — the run prints
+the class census and then says nothing at all until the end. You cannot tell a working run from a
+hung one from the terminal. Two things fix that, and neither needs a code change.
+
+The command below therefore runs under `python -u` and tees to a log, so a second window can
+read it. `-u` is not optional there: piping makes Python block-buffer, so without it even the
+census line would not appear. The log sits under `reports/`, which is gitignored and excluded
+from the provenance stamp, so it cannot dirty the run's own record.
+
+And watch cumulative CPU from another window — it is the only live liveness signal there is:
+
+```powershell
+while ($true) { Get-Process python | Select-Object Id, CPU; Start-Sleep 300 }
+```
+
+While `CPU` climbs, folds are being fit. **Expect 17 to 29 minutes per class fold, ten of them.**
+Each is 3 inner x 25 trials + 1 refit = 76 fits, and the 22.6 s rate is an upper bound: it is the
+mean of the six *scored* fits, the most expensive in the job, and Optuna pruned 2 to 19 of the 25
+trials in each fold on the random-split run. If you are at hour two and the process is busy, that
+is on track.
+
 Then, in a terminal you can leave open, the same way as Step 4:
 
 ```powershell
-conda run --no-capture-output -n Project python -m hydms.surrogate.loco --target capacity
+conda run --no-capture-output -n Project python -u -m hydms.surrogate.loco --target capacity | Tee-Object -FilePath .\reports\_loco-run.log
 conda run --no-capture-output -n Project python -m hydms.surrogate.loco --emit
 ```
 
