@@ -798,7 +798,13 @@ could mean anything. See below.
       `FAILED` gate is never waivable, `hydms/gates/` and `Manifest` are untouched, and the
       promoted version's embedded report still records all three as `SKIPPED`. Promotion is now
       blocked by **work rather than by a decision**: AC-6, HG-2, HG-3 and HG-4 are this phase's own
-      (#30, #77, #79, #86) and must not be waived.
+      (#30, #77, #79, #86) and must not be waived. **AC-6 came green on 2026-09-06** with the LOCO
+      run, so what remains is HG-2, HG-3 and HG-4 — built by #76-#79 and #86, which is why #34
+      cannot close inside S4 and is not waiting on anything S4 owns. **The version to promote is
+      `v2`, not `v1`** (re-saved 2026-09-07 from a clean tree; v1's manifest records
+      `code_modified: true` and a manifest is sealed when written). Same model: correction
+      +0.037355, the same `model-chosen.csv:outer-0` configuration, and the five regenerated
+      report CSVs byte-identical to the committed ones.
 
 **Exit check:** `conda run -n Project python -m hydms.gates run --fast` · all HG-1 sentinels green.
 
