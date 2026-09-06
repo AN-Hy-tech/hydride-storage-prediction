@@ -28,6 +28,16 @@ research/PHASE-H-PERSONAL-REPORT.md
 # `These numbers are a cost check, not a result` for exactly this reason; a probe's CSV is the
 # same shape as a result's. Stage the files by name — never `git add -A` in this directory.
 !/reports/model/
+# And `reports/loco/` on the same reasoning again, decided by card #30. AC-6's gate reads the
+# committed leave-one-alloy-class-out tables rather than re-running a 4.7-hour protocol, so
+# ignoring this directory would leave the gate looking at nothing in CI — a criterion that can
+# only ever be established on somebody's laptop. The same trap was found and closed the same
+# day on `artifacts/current.json`, which is ignored and therefore cannot carry a CI-enforced
+# rule at all (card #34).
+#
+# The probe caution above applies here twice over: `loco-run.csv` records `probe`, AC-6 refuses
+# a probe's tables by reading it, and the run costs about twice what `train` does.
+!/reports/loco/
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

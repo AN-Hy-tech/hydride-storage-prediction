@@ -136,34 +136,59 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **S4's three gates are written and green, and #34 has hit a wall
-that is not a bug.** AC-1, AC-3 and AC-4 all pass against `artifacts/v1` and are reproducible from
-this commit — AC-3 coverage **0.7795** against nominal 0.8 on 254 held-out test rows (raw **0.6575**
-on the same heads, widths 0.8630 vs 0.6485 wt%), 0.82 of a binomial standard error inside a 0.05
-bar, so it passes and not by much; AC-4 **0.0000e+00** over 30 predictions across all ten alloy
-classes; AC-1 identical metrics across two fits at 1 thread and 20, 120 s. **#32's decision
-dissolved when the premise was measured**: the deployed fit is thread-invariant — 1, 4 and 20
-threads give a bit-identical head matrix over all 1,279 rows, same 2,584 trees, same correction — so
-`thread_count` stays out of `model.FIXED`, **no re-save is owed**, and AC-1 varies the thread count
-because the stronger claim was free. **#33's knot dissolved the same way**: `load_surrogate` is two
-things, and only *locating a version* has an opinion about gates, so `surrogate_from(bundle)` is now
-the assembly half and `hydms/gates/_artifact.py` runs it after loading with `require_gates=False` —
-the guarantee lost nothing and a test asserts both sides of that in one place. **The wall is on
-#34**, which now has the mechanism it owed (`python -m hydms.surrogate.promote` gates a candidate,
-writes a new version carrying the report because a manifest is sealed when written, and moves the
-pointer) and cannot use it: `hydms.artifacts.promote` requires **every** registered criterion to have
-passed, `SKIPPED` counts, and 7 of 12 are unwritten — of which **AC-5, AC-7 and AC-8 belong to frozen
-phases and no Phase H work will ever turn them green.** So on the rule as written this phase ends
-with a correct model that can never be promoted, and since `load_surrogate` refuses an unpromoted
-version, `predict()` refuses everything and **S6/S7 are unreachable**. That is written up as an OPEN
-decision on #34 with three candidate shapes; read `hydms/artifacts/manifest.py`'s docstring before
-taking it, because it argues the current rule at length and is the best case against changing it.
-**Do not take it from inside the gate harness** — the cheapest fix from there is probably the wrong
-one. Next: **#30** (AC-6, leave-one-alloy-class-out) is independent, unblocked, and is one of the
-four skips Phase H *can* close; then S6. **Verified here:** suite **1005 green in 15 min 01 s**
-before this session's changes, `tests/gates/` **86 passed** and `tests/surrogate/test_promote.py`
-**12 passed** after them, `gates run AC-1 AC-3 AC-4` all green against `v1`. **Stage by name** —
-this tree is shared and `artifacts/` is gitignored.
+**Next session, in one paragraph.** **#34's wall is down and #15's silent defect is closed; what
+remains on the promotion path is work, not a decision.** #34's OPEN decision is **settled, and by
+none of the three shapes it offered** — not a phase-scoped subset, not a fourth gate status, not
+`require_gates=False` in the delivery path. A promotion may now name **waivers**:
+`python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8`. The insight is that
+the fix belongs to the *act* rather than to the criterion or to the rule — a promotion is already
+a dated one-line decision in `current.json`, and all it lacked was the ability to say what it was
+proceeding without. A **`FAILED` criterion is never waivable**; a passed one and an unknown name
+are refused too; the reason recorded is the **gate's own** skip message, not prose typed at the
+prompt; and the waiver dies when the pointer moves, because `load()` honours it only for the
+version the pointer names. **`hydms/gates/` and `Manifest` are untouched** — that was the target,
+not a side-effect: the promoted version's embedded report still says AC-5 was `SKIPPED`, so the
+artifact's account of what was *measured* is as truthful as before. The guard against "out of
+scope" drifting into "not done yet" is `tests/artifacts/test_waiver_scope.py`, which **derives**
+the waivable set from the board (each gate's card, each card's board directory) and pins it at
+`{AC-5, AC-7, AC-8}` — it is not in `scripts/check_board.py`, where it was written first, because
+`artifacts/` is gitignored and a rule about a *committed* `current.json` would never once fire.
+**#34 is still open and now blocked by work:** AC-6, HG-2, HG-3 and HG-4 are Phase H's own (#30,
+S6's #76–#79, S8's #86) and **must not be waived**. **#15 is done.** Its owed box predicted
+`screened.rows_out`/`screened.removed` would *move* once #24 landed; they cannot — `measure()`
+calls `screen(raw, split)` with no `label_issues=`, so no CleanLab verdict has ever reached that
+call and `screened.removed: 2` is permanently the structural answer, while the deployed path drops
+**20 of 893** (18 CleanLab + 2 structural, reconciling with `reports/model/conformal-rows.csv`).
+`tests/data/test_golden.py` now carries a second record, `DEPLOYED_SCREENING`, measured through
+`hydms.surrogate.model.screened_rows` — the entry point `deploy` calls — plus
+`screened.label_quality_findings: 0` so `GOLDEN` *states* that no judgement reached it. That test
+is `slow` (~17.5 s of CleanLab cross-fitting) and CI runs it anyway: nothing else pins what the
+pipeline drops. **#29's Q8 came to #15 and closed by arithmetic** — 1,115 vs 1,114 is one row,
+`Eu1Ni5`, refused by the 21-feature contract and the sole row of its canonical composition, sitting
+in `test`; Q8's own "temperature duplicates" hypothesis was wrong, since both numbers count
+compositions. **#30 is built and handed over, and its 4.7-hour run is the one
+thing this session did not do.** `python -m hydms.surrogate.loco` is `train`'s protocol with
+`outer=leave_one_class_out` — one keyword argument, no second scoring path — and everything the
+module adds is the *reporting* layer, because AC-6 asks that the extrapolation number be
+published **alongside** the interpolation one and the ways a table fails that are all about
+presentation. **AC-6's gate is written**, reads the committed tables rather than refitting (a
+gate cannot pay 4.7 h, and one fitting a cheaper version would certify a number nobody
+publishes), and its lane moved `SLOW` → `FAST`. `reports/loco/` had to be **un-ignored** —
+under `/reports/*` the gate would read an empty directory in CI, the same trap `current.json`
+sprang while settling #34, so *check whether a file reaches CI before writing a check that reads
+it* is now a two-instance pattern here. **Owed:**
+`python -m hydms.surrogate.loco --target capacity` then `--emit`, ~4.7 h (10 class folds x 3
+inner x 25 trials at 22.6 s, about 2.0x the random-split run), then commit `reports/loco/` **by
+name** — AC-6 goes green with no further code change. Sentinel-budget probe numbers, **not a
+result**: macro R2 0.2240 against the random-split 0.7459, worst HEA -0.3026, best A2B 0.6703,
+all ten classes estimable. That probe also **falsified a sentence the module had already
+written** — the weighted average does not "flatter", it came out *lower* than the macro one — so
+the document computes the direction instead of predicting it. Next: **S6** (#75–#80); note it is
+**not blocked by #34**, since its tests can build their own versions with a stub gate report.
+**Verified here:** `tests/data/test_golden.py` 8 passed in 20 s, `tests/artifacts/` +
+`test_promote.py` 101 passed, `test_loco.py` + `test_ac6_loco.py` 30 passed, ruff and mypy clean,
+`check_board.py` OK with the freeze in force, full suite green. **Stage by name** — this tree is
+shared and `artifacts/` is gitignored.
 
 ---
 

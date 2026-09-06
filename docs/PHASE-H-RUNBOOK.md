@@ -89,7 +89,14 @@ where its blockers allow. #4 is the one S4 waits on, and it landed 2026-09-04, b
   `SKIPPED` gate counts. That is stricter than the harness's own `ok` flag on purpose — see §4.
   `require_gates=False` is the deliberate, visible escape for a card that has just written a
   version and wants it back; the delivery path never passes it.
-- **Promotion is `current.json`.** Rollback is a pointer write, not a retrain (#7).
+- **Promotion is `current.json`, and it is the only place a criterion may be set aside.** Rollback
+  is a pointer write, not a retrain (#7). A promotion may also record **waivers** — criteria it
+  knowingly proceeds without, named one at a time and never by pattern. A `FAILED` criterion is
+  never waivable; the manifest never learns about a waiver, so an artifact's account of what was
+  *measured* is unaffected; and a waiver dies when the pointer moves. It exists because AC-5, AC-7
+  and AC-8 belong to frozen phases and no Phase H work makes them green (#34). Which criteria a
+  frozen phase owns is derived from the board by `tests/artifacts/test_waiver_scope.py`, not
+  remembered.
 
 ---
 
@@ -734,6 +741,22 @@ could mean anything. See below.
       outer-fold models and no deployed fit takes any part in it — which is why this cost two
       minutes and not a second 1 h 41 m run.
 - [ ] **#30 (AC-6)** Leave-one-alloy-class-out CV. Unblocked only because #87 restored `Alloy_class`.
+      **Built and handed over 2026-09-06; the run itself is owed.** `python -m hydms.surrogate.loco`
+      is `train`'s protocol with `outer=leave_one_class_out` — one keyword argument, no second
+      scoring path. What the module adds is the reporting layer, because AC-6 asks that the
+      extrapolation number be published *alongside* the interpolation one and the ways a table can
+      fail that are all about presentation: every class appears with `rows_scored` and
+      `compositions_scored` beside its score, a class whose R2 is *undefined* (fewer than two
+      held-out rows, or a constant held-out target) is marked `estimable=False` with the reason in
+      words rather than dropped, and both the macro and the support-weighted averages are
+      published because they answer different questions. **AC-6's gate is written and reads the
+      committed tables rather than refitting** — a gate cannot pay the run, and one that fitted a
+      cheaper version would certify a number nobody publishes — so the lane moved `SLOW` → `FAST`
+      and `reports/loco/` is un-ignored, without which the gate would read an empty directory in
+      CI. It reports `SKIPPED` today, naming the command. **The run is 4.7 h**, measured by
+      `--budget`: 10 class folds x 3 inner x 25 trials at 22.6 s a fit, about 2.0x the
+      random-split run. Sentinel-budget probe, not a result: macro R2 **0.2240** against the
+      random-split **0.7459**, worst HEA -0.3026, best A2B 0.6703, all ten classes estimable.
 - [x] **#31 AC-3** conformal coverage · **#32 AC-1** seed reproducibility · **#33 AC-4** known alloys
       round-trip. **All three landed 2026-09-06 and all three pass against `artifacts/v1`**, and the
       numbers below are now reproducible from the repository — the paragraph that recorded them as
@@ -768,9 +791,14 @@ could mean anything. See below.
       blocked, and not by missing work:** `promote` requires every registered criterion to have
       passed and 7 of 12 are unwritten, three of them (AC-5, AC-7, AC-8) frozen out of this phase
       entirely. On the rule as written, Phase H ends with a model that can never be promoted and a
-      `predict()` that therefore refuses everything — which makes S6 and S7 unreachable. **That is
-      an OPEN decision recorded on #34 with three candidate shapes**; it touches the store's central
-      guarantee and is not the gate harness's to take.
+      `predict()` that therefore refuses everything — which makes S6 and S7 unreachable.
+      **Settled 2026-09-06, and by none of the three shapes #34 proposed.** A promotion may now
+      name a waiver: `promote --waive AC-5 --waive AC-7 --waive AC-8`. The waiver is an *act*
+      recorded in `current.json`, not a property of a criterion and not a change to the rule — a
+      `FAILED` gate is never waivable, `hydms/gates/` and `Manifest` are untouched, and the
+      promoted version's embedded report still records all three as `SKIPPED`. Promotion is now
+      blocked by **work rather than by a decision**: AC-6, HG-2, HG-3 and HG-4 are this phase's own
+      (#30, #77, #79, #86) and must not be waived.
 
 **Exit check:** `conda run -n Project python -m hydms.gates run --fast` · all HG-1 sentinels green.
 
@@ -909,7 +937,8 @@ A run writes its results as JSON under the configured artifacts directory, behin
 `schema` key, beside the version directories. `hydms.artifacts.save(..., gates=report)` embeds
 that same object under a version's manifest, and a version whose recorded gates did not all pass
 will neither load nor promote — a skip counts, which is stricter than the harness's own `ok` flag
-and deliberately so (card #4).
+and deliberately so (card #4). The one exception is a **waiver** named at promotion time, which
+lives in `current.json` and never in the report; see §3's artifact-store bullets and card #34.
 
 | Gate | Card | Fails when |
 |---|---|---|

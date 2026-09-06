@@ -458,11 +458,71 @@ sidesteps it entirely — along with `%`, `"` and `$`, which need no escaping in
 
    **Expect it to refuse, and expect that to be correct.** `promote` requires every registered
    criterion to have passed and counts `SKIPPED` as not-passed. As of 2026-09-06 that is **5 passed,
-   7 skipped**, and three of the seven (AC-5, AC-7, AC-8) belong to phases the freeze has stopped.
-   The refusal names each one and the card that owes it. Whether Phase H should be able to certify a
-   *phase-scoped* subset is an open decision on card #34 — do not work around it here.
+   7 skipped**. The refusal names each one and the card that owes it.
+
+   **Three of the seven are out of this phase's reach, and there is one supported way past them.**
+   AC-5, AC-7 and AC-8 belong to phases the freeze has stopped, so no Phase H work makes them
+   green. Card #34 settled how to proceed: name them, one at a time, to `--waive`.
+
+   ```bash
+   python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
+   ```
+
+   The waiver is written into `artifacts/current.json`, never into the manifest — the promoted
+   version's embedded report still records all three as `SKIPPED`, and `hydms.artifacts.waived()`
+   is what reads the decision back. A **failed** criterion can never be waived, and neither can one
+   that passed.
+
+   **Do not waive AC-6, HG-2, HG-3 or HG-4.** They are skipped today and every one of them is work
+   this phase owes (#30, #77, #79, #86), so waiving one would be waiving the work rather than the
+   scope. `tests/artifacts/test_waiver_scope.py` derives which criteria a frozen phase owns and
+   pins the answer; the command prints each waiver's owning card so you can see which board it is
+   on. Until those four land, the command still refuses — by design, and now for a reason the
+   phase can actually act on.
 
    Runs AC-1, which fits twice: about **two minutes**, most of the command's wall time.
+
+---
+
+## Step 10 — Leave-one-alloy-class-out, when you have another half day
+
+**This is a second heavy run, not a variation on the first.** Ten class folds where Step 4 has
+five, so the same nested search costs about **twice** what Step 4 did. Cost it before you start
+it:
+
+```powershell
+conda run --no-capture-output -n Project python -m hydms.surrogate.loco --budget
+```
+
+It fits nothing and reads the fit times Step 4 already measured. On this machine it reports
+**4.7 h** — 10 class folds x 3 inner x 25 trials = 750 tuning fits at 22.6 s each.
+
+Then, in a terminal you can leave open, the same way as Step 4:
+
+```powershell
+conda run --no-capture-output -n Project python -m hydms.surrogate.loco --target capacity
+conda run --no-capture-output -n Project python -m hydms.surrogate.loco --emit
+```
+
+The first writes four tables into `reports/loco/`; the second rebuilds `loco.md` from them. As
+in Step 7, **read the document before committing it**: no probe banner at the top, ten classes
+in the per-class table, and a `Random split` row that is populated rather than blank.
+
+**What this number is for, and what it is not.** It is the extrapolation figure — how the model
+does on a family it has never seen — and it is **expected to be much worse** than the
+random-split R² Step 4 produced. That gap is a finding about hydride chemistry and about what
+the inverse design may safely propose (card #48); it is not a fit to go back and improve. AC-6
+asks only that the two numbers be published side by side, which is why the summary table carries
+both in one row and the gate fails if either is missing.
+
+Then commit `reports/loco/` **by name** and re-run the gate:
+
+```powershell
+conda run --no-capture-output -n Project python -m hydms.gates run AC-6
+```
+
+Until the run has happened it reports `SKIPPED` and names this command; afterwards it passes on
+the committed tables, and Step 9's promotion has one fewer criterion outstanding.
 
 ---
 
@@ -492,6 +552,15 @@ Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model
 | `model-pdp.csv` | Partial-dependence curves, same |
 
 **Step 6 — the document:** `evaluation-metrics.csv`, `evaluation-subgroups.csv` and `evaluation.md`.
+
+**Step 10 — leave-one-alloy-class-out**, into `reports/loco/`:
+
+| File | What it holds |
+|---|---|
+| `loco-per-class.csv` | One row per alloy class: R², MAE, **`rows_scored` and `compositions_scored` beside them**, and `estimable` with the reason when R² is undefined rather than bad |
+| `loco-summary.csv` | The row AC-6 is about: the macro average, the support-weighted one, the worst and best class, and the **random-split number beside them**. Neither figure can be published here without the other |
+| `loco-chosen.csv` | The hyperparameters each class fold's search settled on |
+| `loco-run.csv` | Full run or probe. AC-6 reads it and **fails** on a probe's tables, which are the same shape as a real run's |
 
 ---
 

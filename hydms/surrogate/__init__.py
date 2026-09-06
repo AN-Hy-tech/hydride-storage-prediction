@@ -53,6 +53,17 @@ lower confidence bound, which is what stops the optimiser exploiting extrapolati
     split (leak L11). It fits nothing: ``python -m hydms.surrogate.evaluate`` reads the tables
     the training run left behind.
 
+``loco.py``
+    Leave-one-alloy-class-out, which is ``validation.py``'s protocol with
+    :func:`~hydms.surrogate.validation.leave_one_class_out` passed as the outer cut and
+    nothing else changed -- so the extrapolation number and the random-split one come from one
+    scoring path rather than two that agree until they do not. What the module adds is the
+    reporting layer AC-6 is really about: every class published with the support its score
+    rests on, a class whose R2 is *undefined* named as such rather than dropped, and the
+    random-split figure carried into the same row so neither can be published alone. A command
+    only: ``python -m hydms.surrogate.loco``, about 4.7 h, with ``--budget`` to cost it first
+    and ``--emit`` to rebuild the write-up from the tables.
+
 ``predict.py``
     The layer's public face, and the only thing outside it a caller should need:
     :func:`~hydms.surrogate.predict.predict` takes formulas and temperatures and returns a
