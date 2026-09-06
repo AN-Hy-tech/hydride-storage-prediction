@@ -158,3 +158,42 @@ domain:
   # and this is only the outer bound.
   temperature_min_k: 195.0
   temperature_max_k: 773.0
+
+  # --- the applicability-domain ceiling (card #48) ------------------------------------
+  #
+  # Every one of these is measured. The derivation is `hydms/screens/domain.py`'s module
+  # docstring; the short version is that the ceiling the card asked for is NOT a chemical
+  # distance. Per-class transfer R² does not correlate with how isolated a family is, in
+  # element-fraction space (Spearman -0.27) or in the model's own 14-feature space (-0.28),
+  # so there is no curve for a distance threshold to be calibrated against.
+
+  # The lower bound on H/M when computing a composition's physical capacity ceiling,
+  # wt%_max = H/M * 1.008 / mean atomic mass * 100. It is a FLOOR, not the value: the
+  # element-wise maximum of `hydms.screens.domain.HM_MAX` wins where it is larger, because
+  # the rare earths form trihydrides and Th4H15 reaches 3.75.
+  #
+  # 2.5 is Sahlberg et al. 2016 (doi:10.1038/srep36770) — lattice strain in a BCC solid
+  # solution opens both tetrahedral and octahedral sites. Measured over the 1,278 curated
+  # rows, the card's prescribed flat 2.0 puts 31 REAL MATERIALS above their own ceiling and
+  # a flat 2.5 puts 9 there; max(2.5, element-wise) leaves 4, of which 3 are Ce-Ni AB5 rows
+  # implying H/M 3.3-3.8 (data defects, boxed on #14) and one is over by 0.006 wt%.
+  capacity_ceiling_hm_floor: 2.5
+
+  # A calibrated interval wider than this is reported HIGH_UNCERTAINTY. 1.12 wt% is the
+  # standard deviation of the training target itself: a band wider than the marginal spread
+  # has told the caller nothing they did not know before asking. The deployed fit's mean
+  # calibrated width is 0.8951 wt% (reports/model/conformal-coverage.csv), so a typical
+  # prediction passes with margin.
+  #
+  # It is a REPORT about the band and never a stand-in for the domain verdict. #30 measured
+  # the two coming apart in both directions: Mg is the worst family and has the worst
+  # coverage, but SS is the BEST family by R² (0.7626) with the second-worst coverage
+  # (0.1644), and HEA is second worst by R² with the best coverage (0.8824).
+  max_interval_width_wt_pct: 1.12
+
+  # An alloy class whose measured leave-one-class-out R² is below this is UNTRUSTED_FAMILY —
+  # the second, independent domain signal, reading the label and nothing else. Zero is not a
+  # taste: R² below zero means the model does worse on that family than predicting the mean,
+  # which is the point past which "prediction" is the wrong word. Measured (reports/loco/):
+  # Mg -0.3381 and HEA -0.0723 fall below it; the other eight classes do not.
+  min_transfer_r2: 0.0

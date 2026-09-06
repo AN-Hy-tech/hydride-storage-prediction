@@ -201,11 +201,21 @@ class Domain:
 
     The temperature span is what the dataset actually covers, measured. Coverage inside it
     is not uniform — only 39 test rows sit above 500 K — which is why the applicability
-    domain (card #48) is a separate, learned check rather than just this interval.
+    domain (card #48) is a separate check rather than just this interval.
+
+    The three thresholds below are that check's, and card #48 measured every one of them.
+    They are here rather than in `hydms.screens.domain` because the card requires the ceiling
+    to be a config value: an R1 iteration tightens the domain and re-runs without a code
+    change. The *derivation* of each stays in that module's docstring, because a number in a
+    config file with no argument beside it is how a threshold comes to mean something nobody
+    intended.
     """
 
     temperature_min_k: float
     temperature_max_k: float
+    capacity_ceiling_hm_floor: float
+    max_interval_width_wt_pct: float
+    min_transfer_r2: float
 
 
 @dataclass(frozen=True)

@@ -116,7 +116,15 @@ exclude = ["Machine_Model*", "tests*", "scripts*"]
 [tool.setuptools.package-data]
 # Element-property tables ship inside the package: the descriptor layer must not depend on
 # the repository layout to find the data it reimplements.
-hydms = ["descriptors/data/*.csv", "config/*.yaml"]
+#
+# `screens/domain-reference.json` ships for the same reason and one more. It holds the
+# measured facts the applicability-domain ceiling judges against — the trained capacity range,
+# the 5.19 wt% cross-family level, the fourteen feature spans and the ten per-class transfer
+# figures (card #48) — and the refusal path must work in a container that has neither the
+# curated CSVs nor `reports/loco/`. Regenerate it with
+# `python -m hydms.screens.domain --emit`; a test asserts the committed bytes are what that
+# command produces.
+hydms = ["descriptors/data/*.csv", "config/*.yaml", "screens/*.json"]
 
 # ---------------------------------------------------------------------------------------
 # Test discovery

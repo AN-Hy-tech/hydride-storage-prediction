@@ -33,6 +33,26 @@ recorded here so the choice is not revisited by mistake.
       returning them beside `passed`/`code`/`reason` — a parallel API would put the number and the
       verdict on two paths that can disagree. Declare the rejection code in `reasons`.
 
+- [ ] **This screen's threshold cannot be derived from the leave-one-class-out curve, and #48
+      measured why** (added 2026-09-07). Per-class transfer R2 does not correlate with how
+      isolated a family is: Spearman **-0.2727** in element-fraction space (p 0.446), **-0.0182**
+      for the mean rather than the median, and **-0.2848** in the model's own 14-feature space
+      (p 0.425), n = 10. The ordering is inverted at the ends — `A2B` and `LEA` are the two least
+      isolated families and score 0.7264 and 0.4995, while the most isolated, `AB`, scores 0.4214.
+      The feature-space row is the one that settles it for ElMD too: **the model reads fourteen
+      numbers**, and if distance in the space it actually reads does not order its transfer
+      failures, no metric over a space it never reads can be the mechanism behind them.
+
+      **So this screen is novelty evidence, not the applicability domain.** #48's ceiling is a
+      *capacity* level (5.19 wt%) and it already shipped without a distance. AC-7 asks that every
+      published candidate carry an ElMD distance and an interval width, which is a reporting
+      obligation and is what this card owes. Its rejection code — the card's fourth box requires
+      one — has to be justified on its own terms (a distance beyond which "novel" stops meaning
+      "a variation on something known" and starts meaning "a different problem"), and it must not
+      be presented as a domain verdict. Note that the corpus is chemically homogeneous: only
+      **3 of 385** held-out rows fall outside any training feature span, so a distance threshold
+      fitted to look busy on this data will be fitted to noise
+
 ## Runnable check
 
 ```bash

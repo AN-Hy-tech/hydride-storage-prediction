@@ -132,7 +132,16 @@ _Avoid_: "accuracy", "confidence"
 Three separate things that all mean "be careful". **Uncertainty** is interval width — how unsure the
 model is. **Novelty** is distance to the nearest known alloy — how unlike anything seen this
 candidate is. **Applicability domain** is a verdict — whether the candidate is in scope at all.
-_Avoid_: using any of the three to stand for the others
+
+**The applicability domain is not the novelty distance, and that is measured rather than
+stipulated** (card #48, 2026-09-07). Per-class transfer R² does not correlate with how isolated a
+family is — Spearman −0.27 in element-fraction space and −0.28 in the model's own 14-feature space,
+n = 10, and inverted at the ends. What the domain verdict is actually built on is a **capacity
+level**: 5.19 wt%, the highest a candidate can be predicted at while more than one alloy class
+still supports the claim. Three documents in this repository said "distance-based AD" before
+anybody measured it, which is why this paragraph is here.
+_Avoid_: using any of the three to stand for the others; calling the applicability domain a
+distance
 
 ---
 

@@ -37,8 +37,11 @@ own folds each selected between 16 and 20.
 **What it is not fitted on: a scaler.** CatBoost splits on thresholds and
 :class:`~hydms.surrogate.scaler.FittedScaler` is affine, so the tree ensemble is invariant to
 it up to floating point -- measured, see the card's narrative. The scaler belongs to the
-distance-based work downstream (the applicability domain, card #48) and to the artifact
-bundle; refitting it per fold inside a tuning loop would add a leak surface for no effect.
+artifact bundle, and refitting it per fold inside a tuning loop would add a leak surface for
+no effect. **It no longer has a named inference-time consumer**: this sentence used to name
+the applicability domain (card #48) as distance-based work that needed it, and #48 landed
+2026-09-07 as a *capacity* ceiling that reads no scaled matrix. Whether anything downstream
+still needs the persisted scaler is boxed on #23.
 A model from here therefore consumes **raw** features, and says so in
 :attr:`QuantileModel.feature_names`.
 

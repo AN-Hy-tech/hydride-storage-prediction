@@ -87,6 +87,17 @@ DOE system target, and the published figures inherited as though nothing had cha
       high prediction) and with coverage being **0.7795 against a nominal 0.80** — under, not over,
       by about 0.8 of a binomial standard error
 
+- [ ] **Measure and publish the per-row calibrated interval width distribution** (added
+      2026-09-07 by #48). `reports/model/conformal-coverage.csv` carries only the **mean** width
+      (0.8951 wt%); no committed table holds the widths themselves. Two things need it. The model
+      card has to state what a band typically looks like, not just what it covers on average — the
+      width is not constant, because the conformal correction is a constant in `log1p` space and
+      `expm1` stretches it more at a high prediction than at a low one. And `domain.
+      max_interval_width_wt_pct` is currently **1.12 wt%**, derived as the training target's own
+      standard deviation (a band wider than the marginal spread has told the caller nothing), which
+      is a defensible derivation but **not a calibration**: nobody can yet say what fraction of
+      real predictions that threshold refuses
+
 ## Runnable check
 
 ```bash

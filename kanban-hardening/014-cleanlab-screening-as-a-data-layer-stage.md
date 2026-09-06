@@ -119,6 +119,26 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       raw form; there is now no object in this module a caller could reach one through, which
       is stronger than a rule saying not to use it
 
+- [ ] **Three curated rows are physically impossible, and #48 named them by arithmetic rather
+      than by a label model** (added 2026-09-07). A composition's hydrogen capacity is bounded by
+      `H/M_max * 1.008 / mean atomic mass`, and under the most generous defensible H/M these three
+      exceed their own bound:
+
+      | formula | class | split | reported wt% | implied H/M |
+      |---|---|---|---|---|
+      | `Ce1Ni3Cr2` | AB5 | train | 5.19 | **3.606** |
+      | `Ce1Ni4Zr1` | AB5 | train | 4.94 | **3.807** |
+      | `Ce1Ni4Cr1` | AB5 | val | 4.73 | **3.339** |
+
+      `LaNi5H6` is H/M **1.0**. No AB5 intermetallic holds three and a half hydrogens per metal
+      atom, so these are transcription or unit defects rather than unusual materials. They are not
+      removed here by this card's author: whether CleanLab already flags them, and whether a
+      physical-plausibility filter belongs in the data layer at all or stays a screen at L4, is
+      this card's decision. What is settled is that `hydms.screens.domain.capacity_ceiling` can
+      name them for free, and that `tests/screens/test_applicability.py` asserts the set of four
+      over-ceiling rows exactly — so removing or fixing one of them will fail that test, which is
+      the intended way for this to surface
+
 ## Runnable check
 
 ```bash

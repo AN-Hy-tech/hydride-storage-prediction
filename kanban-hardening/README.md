@@ -136,7 +136,7 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** S4 is closed and no measurement is left: start at **#48** (the only card with a decision in it -- #30's per-class spread says the domain ceiling cannot be one scalar distance), then #49, #73, #74, #75; promote **`v2`**, never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+**Next session, in one line.** #48 is closed and its decision dissolved -- the applicability domain is **not** a distance, it is a **capacity ceiling of 5.19 wt%** -- so start at **#49** (novelty evidence for AC-7, not a domain verdict; read the box #48 left on it before choosing a threshold), then #73, #74, #75; promote **`v2`**, never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
 
 **Next session, in one paragraph.** **S4 is closed and the artifact to promote is now `v2`,
 not `v1`.** #30 moved to `done` on 2026-09-07 -- its three unticked boxes are recorded findings,
@@ -147,10 +147,21 @@ configuration; v1 is superseded, not deleted, because a version is written once.
 still cannot close, and that is by design** -- promotion needs HG-2, HG-3 and HG-4, built by
 **#76-#79 (S6)** and **#86 (S8)**, and they are Phase H's own criteria so they **must not be
 waived** (only AC-5, AC-7 and AC-8 are, and `tests/artifacts/test_waiver_scope.py` derives that
-set from the board so it cannot quietly grow). **Five cards are unblocked right now: #48, #49,
-#73, #74 and #75** -- #48 is the newly opened one and it is the one with a decision in it, because
-it has to say what a macro transfer R2 of **0.2734** against a random-split **0.7459** means for
-the domain ceiling, and #30's evidence says that ceiling cannot be a single scalar distance.
+set from the board so it cannot quietly grow). **Four cards are unblocked right now: #49,
+#73, #74 and #75.** ~~Five, including #48, which is the one with a decision in it: it has to say
+what a macro transfer R2 of 0.2734 against a random-split 0.7459 means for the domain ceiling,
+and #30's evidence says that ceiling cannot be a single scalar distance.~~ *(taken 2026-09-07.
+The decision **dissolved** rather than resolving: both options -- per-family, or one distance
+calibrated against the per-class curve -- assume the degradation is mediated by a composition
+distance, and measurement says it is not. Per-class transfer R2 against per-class isolation is
+Spearman **-0.2727** in element-fraction space and **-0.2848** in the model's own 14-feature
+space, n=10, and inverted at the ends. The feature-space figure is what settles it for ElMD too:
+the model reads fourteen numbers, so no metric over a space it never reads can be the mechanism
+behind its failures. **The ceiling is a capacity: 5.19 wt%**, the highest level more than one
+alloy class reaches in training -- above it the corpus holds 21 rows and every one is `Mg`, the
+family #30 measured at R2 -0.3381. #48 is `done`; the box it left on **#49** says that card's
+threshold cannot come from the LOCO curve either, and that it is novelty evidence rather than a
+domain verdict.)*
 **There is still no measurement left to take.** One trap found while doing the re-save and boxed
 on #34: `calibrate --report` is both where the tables are written *and* where
 `model-chosen.csv` is read from, so redirecting it silently falls back to CatBoost defaults --

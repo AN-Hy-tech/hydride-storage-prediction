@@ -31,10 +31,15 @@ Four things this module does **not** do, each because it belongs somewhere else.
 **It does not scale.** ``FittedScaler`` is affine and CatBoost splits on thresholds, so the
 ensemble is invariant to it; card #26 therefore fits on raw features and records that in
 :attr:`QuantileModel.feature_names`. Applying the persisted scaler on the way in would feed the
-model a matrix it was never fitted on and return plausible, wrong numbers. The scaler stays in
-the bundle because the applicability domain (card #48) is distance-based and needs it — the
-card's box is right about *persisting* it and wrong about where it is applied, and
+model a matrix it was never fitted on and return plausible, wrong numbers.
 ``test_the_stored_scaler_is_never_applied`` measures that rather than asserting it in prose.
+
+Why the scaler stays in the bundle is now an **open question rather than a stated reason**.
+This paragraph used to answer it — "because the applicability domain (card #48) is
+distance-based and needs it" — and #48 landed 2026-09-07 as a capacity ceiling that reads no
+scaled matrix at all. Nothing in this package reads the persisted scaler back at inference
+time. The payload is kept because an artifact version is written once and ``v2`` already
+carries it, not because a consumer has been named; #23 owns the question.
 
 **It does not clip.** A negative lower bound is the signal cards #48 and #77 act on. Squashing
 it here would hide the one thing that says the model has left what it can defend.

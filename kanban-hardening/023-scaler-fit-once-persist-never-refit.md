@@ -39,6 +39,26 @@ Guard structurally: the loaded scaler should expose `transform` and not `fit`.
       forms of the same property: another batch in between changes nothing, a candidate scales the
       same alone as in a crowd, and the statistics are unmoved by transforming
 
+- [ ] **The persisted scaler has lost its named consumer** (added 2026-09-07 by #48). Two module
+      docstrings justified keeping `FittedScaler` in the artifact bundle by naming exactly one
+      downstream reader: "the distance-based work downstream (the applicability domain, card #48)"
+      (`hydms/surrogate/model.py`) and "the scaler stays in the bundle because the applicability
+      domain (card #48) is distance-based and needs it" (`hydms/surrogate/predict.py`). **#48
+      landed as a capacity ceiling that reads no scaled matrix**, because per-class transfer R2
+      turned out not to correlate with chemical distance in any space measured — including the
+      model's own feature space. Both docstrings are corrected to say so rather than reworded to
+      hide it.
+
+      Grepped: `scaler_from` and `SCALER_PAYLOAD` are written by `deploy.py` and read back by
+      nothing at inference time. `selection.py` uses a scaler during VIF, but that is a fitted-in-
+      the-moment one, not the persisted payload. **So the question this card owes is whether the
+      bundle should still carry it.** Three things bear on the answer and none of them is obvious:
+      #49's ElMD works on compositions rather than on the feature matrix, so it is not the missing
+      reader; a payload that nothing reads is a payload nothing can catch being wrong; and
+      `artifacts/v2` is already sealed with it, so this is a decision about the *next* version's
+      contract, never a rewrite of that one. Do not resolve it by deleting the payload quietly —
+      the manifest and `tests/artifacts/` both name it
+
 ## Runnable check
 
 ```bash

@@ -16,12 +16,26 @@ derived column, not a filter applied inside the evaluator.
     :func:`~hydms.screens.window.temperature_window` builds the trained-temperature bound
     from config.
 
+``domain.py``
+    The applicability-domain ceiling -- and the finding that it is not a chemical distance.
+    Per-class transfer does not correlate with how isolated a family is, so the ceiling is a
+    **capacity** level: the highest weight percent more than one alloy class reaches in
+    training. Four signals, five rejection codes, and the physical ceiling of a composition
+    as arithmetic rather than as a fit.
+
 The filtering is never done here. :meth:`~hydms.screens.protocol.Verdicts.select` is how a
 caller asks for the shortlist, afterwards and explicitly, and #48's ceiling and #49's
 distance join the table as further screens rather than as further filters.
 
 Card #44.
 """
+
+# `domain` is deliberately NOT imported below. It is a runnable entry point --
+# `python -m hydms.screens.domain --emit` re-measures the committed reference -- and `-m` on a
+# module the package `__init__` has already imported executes it twice, once under its own
+# name and once as `__main__`, which Python warns about. `hydms/surrogate/__init__.py` makes
+# the same exclusion for `evaluate` for the same reason. Reach for it as
+# `from hydms.screens.domain import applicability_domain`.
 
 from .protocol import (
     ADMITTED,

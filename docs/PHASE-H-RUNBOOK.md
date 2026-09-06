@@ -700,7 +700,7 @@ Phase H's own criteria so they must not be waived. Nothing downstream is blocked
       `log1p` space and `expm1` is convex, so three candidates at 250/400/600 K return three
       distinct widths. **(d) The scaler is never applied, and that is measured**: a second version
       stores a scaler that raises on `transform`, the test arms the trap and then demands identical
-      numbers. Its consumer is #48's distance-based AD, not this path. **(e) The gate check is
+      numbers. Its consumer is #48's applicability domain, not this path — which #48 has since established is **not** distance-based. **(e) The gate check is
       never relaxed** — `require_gates=False` is not forwarded and has no equivalent, which is
       strictly stronger than the promotion pointer, since `promote()` already refuses incomplete
       gates. **(f) `MODEL_PAYLOAD` and `model_from` were owed** and now sit beside `QuantileModel`,
@@ -855,11 +855,30 @@ phase because a predictor with no domain check *is* the false-prediction machine
       that cannot judge answers `INDETERMINATE`, which is a **rejection** — fail-closed.
       `window.py` ships the worked screen; `temperature_window()` reads the 195–773 K bound from
       config and is the **outer** bound, never an applicability domain (#48 is that).
-- [ ] **#48** Applicability-domain ceiling, derived from #30's LOACO result.
+- [x] **#48** Applicability-domain ceiling, derived from #30's LOACO result. **Landed 2026-09-07,
+      and the decision it carried dissolved.** The card offered a per-family ceiling or one
+      distance calibrated against the per-class curve; both assume the degradation is mediated by a
+      composition distance, and it is not. Per-class transfer R2 against per-class isolation, n=10
+      Spearman: **-0.2727** in element-fraction space, **-0.2848** in the model's own 14-feature
+      space — and inverted at the ends, since the two *least* isolated families score among the
+      best. The feature-space figure is what closes it for ElMD as well: the model reads fourteen
+      numbers, so no metric over a space it never reads can be the mechanism behind its failures.
+      **The ceiling is therefore a capacity, and it is computed rather than chosen**: 5.19 wt%, the
+      highest level more than one alloy class reaches in training. Above it the corpus holds 21
+      rows and every one is `Mg`, the family #30 measured at R2 -0.3381 with interval coverage
+      0.1146. `hydms/screens/domain.py` declares five rejection codes — `OUT_OF_DOMAIN`,
+      `ABOVE_PHYSICAL_CEILING`, `OUTSIDE_FEATURE_RANGE`, `UNTRUSTED_FAMILY`, `HIGH_UNCERTAINTY` —
+      plus the shared `INDETERMINATE`, and every threshold is a `domain.*` config key.
+      **The card's own prescribed physics constant was wrong and measuring it first is what caught
+      it**: `H/M_max` = 2 puts **31 curated rows above their own physical ceiling**, because the
+      rare earths form trihydrides and `Th4H15` reaches 3.75. The rule is `max(2.5, element-wise
+      max)`, which leaves four, three of which are Ce-Ni data defects now boxed on #14.
 - [ ] **#49** ElMD novelty screen. Needs the `novelty` extra; its API is unverified in
       [LIBRARY-APIS.md](LIBRARY-APIS.md) — settle it in this card.
 
 **Exit check:** `conda run -n Project python -m pytest tests/screens -q`
+
+The applicability domain's measured reference is regenerated with `conda run -n Project python -m hydms.screens.domain --emit`, and a test asserts the committed `hydms/screens/domain-reference.json` is what that command produces — the shape #30 used for `loco.md`. Run it if the curated data or `reports/loco/` ever moves.
 
 ---
 
