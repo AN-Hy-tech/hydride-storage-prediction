@@ -88,6 +88,28 @@ stray from known chemistry.
       survives is only that the two differ and answer different questions. Probe numbers, not a
       result: macro R2 0.2240 against a random-split 0.7459, worst HEA -0.3026, best A2B 0.6703
 
+- [ ] **The run has no resume, and it is 4.7 hours on one machine** (raised 2026-09-06, in review).
+      `loco.py` writes its tables once, at the end: there is no `--resume`, no per-class
+      checkpoint, and no incremental write. A crash, a sleeping laptop or a lost session at hour
+      four costs the whole run. **Accepted as-is for this run** — building resumability first
+      delays the long pole by about an hour to save an outcome that probably will not happen, and
+      the expected-time arithmetic favours running it now. It is boxed because the *next* protocol
+      that costs hours should be built with it, and because an operator about to start a 4.7-hour
+      command deserves to know the failure mode before they start rather than after.
+
+      Practical mitigations that cost nothing: disable sleep before starting; run it detached
+      rather than inside an editor session; `--budget` first so the estimate is on the record.
+
+- [ ] **The per-class scores carry no interval, deliberately, and the model card must not imply
+      otherwise.** `summary()` reports macro and support-weighted means with no bootstrap CI, and
+      its docstring gives the reason: `random_split_r2` is `train`'s mean over *its* outer folds,
+      so putting card #29's bootstrap point estimate opposite it would make the gap partly an
+      artefact of how the two were averaged. That is the right call for a like-for-like comparison
+      — but it means **the headline transfer number is a point estimate over ten class folds with
+      no stated uncertainty**, and a class with nineteen rows contributes to the macro mean exactly
+      as much as one with two hundred. Say so wherever the number is published; the per-class table
+      carries `rows_scored` beside every row precisely so it can be said
+
 ## Runnable check
 
 ```bash

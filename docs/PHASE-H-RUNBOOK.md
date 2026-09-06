@@ -967,15 +967,19 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. 724 green as of 2026-09-04, after #4 and #44. Anything red is a real failure: the eight that were red
-# earlier that day were the L13 sentinel reading `unwired` between #20 creating its subject and
-# #12 wiring it, and both have landed.
-conda run -n Project python -m pytest -q
-conda run -n Project python -m pytest tests/leaks -q          # HG-1
+# Suite. 1115 passed, 1 skipped as of 2026-09-06 (21 min); anything red is a real failure. Do NOT
+# pass -q: pyproject already sets it, and a second one hides the `N passed` line every handoff
+# quotes. THE ONE SKIP IS NAMED, because a skip nobody names reads as nothing waiting: it is
+# test_the_committed_document_is_what_the_code_produces, which asserts the committed
+# reports/loco/loco.md is what `loco --emit` builds, and it is waiting on the 4.7-hour run AC-6
+# needs. Gate AC-6 reports the same absence, so the gap is visible from two directions.
+conda run -n Project python -m pytest
+conda run -n Project python -m pytest tests/leaks               # HG-1
 # Lint and types run OUTSIDE the environment, deliberately: neither imports the project's
 # dependencies, and card #68 fixed that the fast lane installs nothing (docs/QA-PROTOCOL.md §6).
 ruff check hydms/ tests/ scripts/ && mypy
-conda run -n Project python -m hydms.gates run --fast
+# `run` with no selection exits 2 -- a selection is a decision, so name one.
+conda run -n Project python -m hydms.gates run --all           # 5 passed, 0 failed, 7 skipped (2.6 min)
 
 # Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical metrics
 conda run -n Project python -m hydms.pipeline run --config hydms/config/pipeline.yaml
@@ -1030,3 +1034,25 @@ conda run -n Project streamlit run app/main.py
 - **Out of scope:** `ML-HYDPARK_v0.0.5.csv`'s ΔH/ΔS columns and `database/combined_dataset.csv` stay
   unused — they belong to the frozen thermodynamics work (#38–#43). `Machine_Model/**`, `REPORT.md`
   and the inverse-design PRD are read, never rewritten.
+
+**Three gaps this phase will close only if somebody decides to** (added 2026-09-06, from a review;
+each is boxed on a card, and none is a defect in what was built):
+
+- **`artifacts/` is gitignored, so nothing this phase ships has ever been seen by CI.** The model,
+  its manifest and `current.json` exist on one machine. This is not only a reproducibility risk
+  (card #7 owns that half) — it is also why two checks had to move after being written: the
+  waiver-scope rule left `check_board.py` because a rule about a *committed* `current.json` could
+  never fire, and `reports/loco/` had to be un-ignored so AC-6 would not read an empty directory in
+  CI. **Check whether a file reaches CI before writing a check that reads it** is now a two-instance
+  pattern, and it is the stated reason HG-1's mechanical subject check is deferred on #71.
+- **A gate can be green over a sentinel whose subject moved.** Measured: five hours twenty-one
+  minutes in which L11 guarded `model.final_fit` while the shipped object was
+  `deploy.deployed_fit`, with HG-1 reporting 13/13 throughout. `docs/QA-PROTOCOL.md` §5 now carries
+  the rule; the mechanical check is deferred with its reason, because every available proxy is
+  weaker than the structural fix that landed (one module both callers call).
+- **Two measured results are published nowhere.** The deployed model's own held-out score, computed
+  by AC-1 as a side effect, and the near-ambient temperature bin's near-zero R² in
+  `evaluation-subgroups.csv`. Both are boxed on #83. The pattern is worth naming because this phase
+  exists because of it: **a number that only a gate message or an uncommitted file has ever held is
+  not published**, and the distance between "measured" and "published" is where REPORT.md went
+  wrong in the first place.

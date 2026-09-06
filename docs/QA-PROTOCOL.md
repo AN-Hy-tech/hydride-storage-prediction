@@ -110,6 +110,25 @@ not by convention (#75), and gated by HG-2.
 **A test may not be weakened to make a build pass.** Lowering the coverage floor, deleting an
 assertion, or adding an `xfail` is a review conversation, and the reason goes in the card's narrative.
 
+**A sentinel's subject is checked when the subject moves, not only when it disappears.** A sentinel
+asserts a relationship *about a named object*. Section 1 already covers the case where that object
+does not exist yet — HG-1 goes red the moment a named module appears with nothing wired to it. It
+does not cover the case that actually happened: the object is present, wired, working, and has
+**quietly stopped being the thing that ships**.
+
+> **Measured, 2026-09-05 20:24 to 2026-09-06 01:45 — five hours and twenty-one minutes, ten
+> commits.** The L11 sentinel pointed at `model.final_fit` and its assertion was *true*. Meanwhile
+> the object that shipped had become `deploy.deployed_fit`, grown on 701 rows against `final_fit`'s
+> 873. HG-1 read **13/13 PASSED** throughout. No test caught it; a person did, and only because
+> they ran a command that had never been run.
+
+So: **whenever a fit, a split or an artifact acquires a second definition, re-aim every sentinel
+that names the old one in the same commit** — and say in the card's narrative which sentinels were
+re-aimed and why. The structural defence is stronger than the procedural one and is what was
+actually done here: put the definition in **one module that both callers call**, so a sentinel
+aimed at it cannot drift onto a different object without somebody deleting that module. Prefer
+that. This rule is for the window before it exists.
+
 ---
 
 ## 6. Running the checks

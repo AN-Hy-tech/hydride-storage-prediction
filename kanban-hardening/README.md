@@ -136,7 +136,18 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one paragraph.** **#34's wall is down and #15's silent defect is closed; what
+**Next session, in one paragraph.** **Nothing is half-finished and there is no open decision on the
+board.** A review session on 2026-09-06 measured the phase end to end -- suite **1115 passed, 1
+skipped** (21 min 21 s), gates **5 passed / 0 failed / 7 skipped**, leaks **13 of 13**, board and
+freeze OK -- fixed the one code defect it found, and closed **#35**. **The whole remaining distance
+to lifting the freeze is one command and one layer.** The command is
+`python -m hydms.surrogate.loco --target capacity` (4.7 h, then `--emit`, then commit
+`reports/loco/` **by name**), which turns AC-6 green with no code change and closes the suite's one
+skip. The layer is S6 -- **#75 and #49 are unblocked right now** and neither is blocked by #34.
+Start the run first, because nothing else can run beside it. Full detail in the handoff dated
+2026-09-06 (review) below.
+
+**The previous session's paragraph, still accurate on everything it covers:** **#34's wall is down and #15's silent defect is closed; what
 remains on the promotion path is work, not a decision.** #34's OPEN decision is **settled, and by
 none of the three shapes it offered** — not a phase-scoped subset, not a fourth gate status, not
 `require_gates=False` in the delivery path. A promotion may now name **waivers**:
@@ -190,6 +201,119 @@ the document computes the direction instead of predicting it. Next: **S6** (#75�
 mypy clean, `check_board.py` OK with the freeze in force, **full suite 1115 passed 1 skipped in
 21 min 06 s** — the one skip is `test_the_committed_document_is_what_the_code_produces`, which
 waits for the LOCO run and is guarded by AC-6 reporting the same absence as SKIPPED. **Stage by name** — this tree is
+shared and `artifacts/` is gitignored.
+
+---
+
+## Reading the handoffs below
+
+They are an **archive, newest first**, and they are deliberately **not corrected in place**: a
+handoff is the record of what a session believed when it wrote it, and editing that after the fact
+destroys the only evidence of what was known when. The cost is that some numbers below are
+superseded. Here is every one of them, so nobody has to discover it by quoting it.
+
+| Superseded | Correct value | Why it moved |
+|---|---|---|
+| Raw coverage **0.6628** | **0.6744** | The 2026-09-05 calibration ran nine hours before `model-chosen.csv` existed, so it silently used CatBoost's defaults |
+| Correction **+0.030990** | **+0.037355** | Same cause |
+| Width **0.7317 → 0.9155** (+25 %) | **0.6741 → 0.8951** (+33 %) | Same cause |
+| Full run **~3.5 h** | **1 h 41 m** | The estimate predates #29's search-space narrowing |
+| R² **0.746** (probe), **64.4 %** raw coverage (probe) | 0.7481 out-of-fold; 0.6744 raw | Probe numbers at reduced budget — never results |
+| "L11 is deferred / 12 of 13 leaks" | **13 of 13** | #29 closed L11; `bf0b841` re-aimed it at the deployed fit |
+| "`artifacts/` holds only `gate-results.json`" | `artifacts/v1` exists, uncertified | Written 2026-09-06 by `calibrate --save` |
+
+Anything else in an older handoff that contradicts a *card* — the card wins. Anything that
+contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The handoffs are narrative,
+and their authority is over intent, not over facts.
+
+---
+
+### Handoff -- 2026-09-06 - review session - written for whoever starts the LOCO run
+
+**Nothing here was a card until it had to be.** This was a review of the code, the pipeline, the
+guard rails, the tests and the QA, run with three questions: does the pipeline do what the documents
+say, is anything measured but unpublished, and is any check unable to fire. Seven findings; one was
+a code defect and it is fixed; the rest are boxed on the cards that own them.
+
+**Measured here, on a clean tree at `8477737`.** Suite **1115 passed, 1 skipped** in 21 min 21 s --
+matching the committed count exactly. Gates `--all`: **5 passed, 0 failed, 7 skipped** in 157.89 s
+(AC-1, AC-2, AC-3, AC-4, HG-1). Leak audit **13 of 13 green**. `check_board.py` OK over 89 cards,
+`check_freeze.py` OK over 257 changed paths. ruff and mypy clean over 64 files.
+
+**The one code defect, and it is small but instructive.** `promote --dry-run --waive AC-5 --waive
+AC-7 --waive AC-8` printed "*v1 therefore has **9** of 12 criteria left to establish*" and then, six
+lines later on stderr, "*4 of 12 criteria are unestablished*". One run, one concept, two answers.
+The waiver summary computed `len(results) - len(waived)` and so ignored every criterion that had
+**passed**. The count is now derived **once** and read twice, and
+`test_the_two_counts_one_run_prints_are_the_same_count` asserts both numbers against a fixture where
+the naive expression would say three and the right one says one. **It was seen red on the
+reintroduced defect before being trusted.** The rule it violated is this project's own: no number in
+prose that a test does not check -- which applies to prose the *code* prints, not only prose a human
+writes.
+
+**Two numbers exist, are honest, and are published nowhere. Both are now boxed on #83.** First, the
+**deployed model's own held-out score**: gate AC-1 computes R2 **0.7071**, RMSE 0.5420, MAE 0.3117
+on 254 `test` rows as a side effect of proving reproducibility, and it lives only in a gate message
+and in gitignored `artifacts/gate-results.json`. `reports/model/evaluation.md` promises exactly that
+reading in its own words and names #34 as where it arrives -- so it has arrived and nothing
+publishes it. Second, `reports/model/evaluation-subgroups.csv` records the **near-ambient
+temperature bin, (195, 293] K, at R2 0.187 with a 95 % CI of [-0.012, 0.423]** -- the interval
+includes zero, in the regime a practical storage material has to work in, against 0.66-0.77 for the
+four warmer bins. Neither is a defect. Both are results sitting in committed tables that no prose
+mentions.
+
+**A gap in HG-1 that a green gate cannot see, now a rule.** From `da8de59` (2026-09-05 20:24) to
+`bf0b841` (2026-09-06 01:45) -- **five hours twenty-one minutes, ten commits** -- the L11 sentinel
+guarded `model.final_fit` while the object that shipped had become `deploy.deployed_fit`. HG-1 read
+**13/13 PASSED** throughout, and the sentinel's assertion was *true* the entire time: it was true
+about the wrong model. Section 1 of `docs/QA-PROTOCOL.md` already covers a subject that is
+**missing**; nothing covered a subject that is present, wired, working and no longer what ships.
+There is now a sixth rule in section 5, and `CONTEXT.md` carries **`Sentinel subject`** as a term.
+The mechanical check is **deferred with its reason on #71**: every proxy in reach is weaker than the
+structural fix that already landed, and the only strong one -- *the deployed fit is whatever
+`artifacts/current` was built from* -- is unavailable in CI because `artifacts/` is gitignored.
+
+**#35 is done and was opened out of order on purpose.** `CONTEXT.md` exists: 26 terms in nine
+groups, glossary only, every term carrying the words it is confused with. The trigger was the
+maintainer asking in review **why three R2 values exist and whether two should be deleted** -- which
+is the question the file exists to prevent, arriving from the person who owns the domain. They are
+not three attempts at one number. **`Procedure score`** (0.7481 out-of-fold) is a claim about a
+*method*; **`Artifact score`** (0.7071 on test) about *one model*; **`Transfer score`** (AC-6,
+unmeasured) about *extrapolation to an unseen family*. The gaps are the findings -- a small
+procedure-to-artifact gap is evidence the procedure is stable, and a large procedure-to-transfer gap
+is the argument for every guard rail in the project -- and choosing between the three after seeing
+all three is leak **L2**'s shape at the reporting layer. The card's runnable check was changed from
+counting `### ` to counting `**`, and the reason is recorded on the card rather than applied
+silently.
+
+**Before you start the 4.7-hour run, two things about it are boxed on #30.** `loco.py` has **no
+resume and no incremental write** -- a crash at hour four costs the whole run. Accepted as-is,
+because building resumability first delays the long pole by about an hour to prevent an outcome that
+probably will not happen; disable sleep, run it detached, and `--budget` it first. And the per-class
+scores carry **no bootstrap interval, deliberately** -- `summary()` documents why (like-for-like
+against `train`'s fold mean) -- which means the headline transfer number is a point estimate over
+ten class folds where a 19-row class weighs as much as a 200-row one in the macro mean. Say so
+wherever it is published; `rows_scored` sits beside every row so it can be said.
+
+**#36 gains three ADRs and keeps its name.** Its list of five predates this week entirely. Added:
+*a waiver is an act, not a property*; *one definition of the deployed fit*; *`load_surrogate` splits
+into locating and assembling*. Each meets all three bars the card sets, and each has written-down
+alternatives that were genuinely considered.
+
+**Documentation, deduplicated rather than added to.** The board's `ml-model-training` note was a
+strict subset of `CLAUDE.md`'s, which covers all three installed skills and carries the audit
+result -- it is a pointer now, because two copies of a caveat is one copy and one thing that goes
+stale. `CLAUDE.md` no longer refers to `docs/REPORT-RECONCILIATION.md` in the present tense; the
+file does not exist and #89 owes it. The runbook's section 5 said "724 green as of 2026-09-04" and
+now says 1115 with the one skip **named**, plus the `-q` trap and the fact that `gates run` with no
+selection exits 2. And the archive above these handoffs now carries a **corrections index**: every
+superseded number in the handoffs below, with its correct value and why it moved, so nobody
+discovers one by quoting it.
+
+**Next.** Start the run. Then **#75** and **#49** in parallel -- both unblocked, both feeding #76,
+neither blocked by #34. **#34 closes last**, because it waits on AC-6 *and* HG-2/3/4; when you get
+there, re-save the deployed fit from a clean tree first (0.7 min), because `artifacts/v1`'s manifest
+records `code_modified: true` and the promotion note is permanent. **Stage by name** -- this tree is
 shared and `artifacts/` is gitignored.
 
 ---
@@ -2171,10 +2295,9 @@ any relative Markdown link that does not resolve.
 
 ---
 
-## A note on the `ml-model-training` skill
+## A note on the ML skills
 
-Installed for this phase and useful for model-fitting mechanics. It is **silent** on group-aware
-splitting, nested cross-validation, and early stopping on the scoring set, and its worked example is a
-plain `train_test_split` with no `random_state` and no grouping — which in this project would
-reintroduce leaks L4, L7 and L8. This project's authority order puts skills below the
-[../research/](../research/) memos; on any validation question the memos and the runbook win.
+Covered once, in [../CLAUDE.md](../CLAUDE.md) — the caveat there spans all three installed skills
+(`ml-model-training`, `ml-fundamentals`, `ml-model-trainer`), records the 2026-09-05 audit against
+the live pipeline, and sits beside the authority order it depends on. This section used to restate
+a third of it for one skill; two copies of a caveat is one copy and one thing that goes stale.

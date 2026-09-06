@@ -44,6 +44,38 @@ real trade-off:
       table and carry the per-fold spread beside it as a second, cruder interval. Decide whether
       this displaces one of the five above or becomes a sixth
 
+- [ ] **Three more decisions, and this card's list of five predates all of them** (added 2026-09-06,
+      in review). Each meets every bar this card sets — hard to reverse, surprising without context,
+      a real trade-off with alternatives that were genuinely considered and are written down. The
+      card is not renamed: "five" was the count when it was cut, and the ADRs are numbered, not
+      counted.
+
+      6. **A waiver is an act, not a property.** Promotion demanded every registered criterion pass,
+         `SKIPPED` counted, and three criteria belong to frozen phases — so the phase would have
+         ended with a correct model that could never be promoted and a `predict()` that refused
+         everything. Rejected: a phase-scoped subset computed at promotion time; a fourth gate
+         status; loading with the gate check disabled in the delivery path. All three assume the fix
+         belongs to the criterion or to the rule. It belongs to the **act**: a promotion is already
+         a dated one-line decision, and all it lacked was the ability to say what it proceeded
+         without. The consequence worth recording is the asymmetry — *the artifact says what was
+         measured, the pointer says what was decided*, and neither is allowed to say the other's
+         thing.
+
+      7. **One definition of the deployed fit.** Two commands each built "the deployed fit" and the
+         two were different models — 873 rows against 701 — so the committed explainability tables
+         described a model with no band while the correction belonged to a model with no
+         explanation. Rejected: making the two agree by convention, and documenting the difference.
+         The decision was to put the sequence in one module both callers call, so it cannot be
+         assembled three-quarters of the way. Hard to reverse because the L1 and L11 sentinels, the
+         artifact payloads and the explainability tables are all now aimed at it.
+
+      8. **`load_surrogate` splits into locating and assembling.** A gate needs a certified version;
+         certification needs the gate. Three options were written on #33 and all three traded
+         something away, because all three treated loading as one decision. It is two — *locating* a
+         version has an opinion about gates, *assembling* a `Surrogate` from a bundle does not — so
+         `surrogate_from(bundle)` is the second half and the gate uses it. **`load_surrogate` grew
+         no parameter**, which is the whole point: the guarantee is intact for every other caller
+
 ## Runnable check
 
 ```bash

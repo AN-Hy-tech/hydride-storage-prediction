@@ -497,6 +497,18 @@ conda run --no-capture-output -n Project python -m hydms.surrogate.loco --budget
 It fits nothing and reads the fit times Step 4 already measured. On this machine it reports
 **4.7 h** — 10 class folds x 3 inner x 25 trials = 750 tuning fits at 22.6 s each.
 
+**Before you start it, know the failure mode.** `loco.py` writes its tables **once, at the end**.
+There is no `--resume`, no per-class checkpoint and no incremental write, so a crash, a closed
+session or a sleeping laptop at hour four costs the entire run. This is boxed on card #30 and was
+accepted deliberately — building resumability first would delay the run by about an hour to prevent
+something that probably will not happen — but it changes how you should start it:
+
+- **Disable sleep and hibernation first.** Four and a half hours is longer than any default idle
+  timer on this machine.
+- **Run it detached**, in a terminal that does not belong to an editor session that might be
+  closed or reloaded.
+- **Cost it first** (above), so the estimate is on the record before the commitment.
+
 Then, in a terminal you can leave open, the same way as Step 4:
 
 ```powershell
@@ -514,6 +526,14 @@ random-split R² Step 4 produced. That gap is a finding about hydride chemistry 
 the inverse design may safely propose (card #48); it is not a fit to go back and improve. AC-6
 asks only that the two numbers be published side by side, which is why the summary table carries
 both in one row and the gate fails if either is missing.
+
+**And one thing the table does not carry, so do not read it in.** The per-class scores have **no
+bootstrap interval**, deliberately: the random-split figure it is set against is `train`'s mean over
+*its* outer folds, and putting card #29's bootstrap estimate opposite a fold mean would make the gap
+partly an artefact of how the two were averaged. The consequence is that the headline transfer
+number is a **point estimate over ten class folds**, in which a nineteen-row class weighs exactly as
+much as a two-hundred-row one. `rows_scored` sits beside every row precisely so that can be said
+out loud wherever the number is published.
 
 Then commit `reports/loco/` **by name** and re-run the gate:
 

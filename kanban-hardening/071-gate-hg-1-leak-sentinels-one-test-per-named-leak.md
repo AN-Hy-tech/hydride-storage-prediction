@@ -49,6 +49,34 @@ defect turns it red, and prove that by doing so once during development.
       naming the card that owes it (#29, #26, #87), each of those cards carries an unticked box, and
       HG-1 cannot report green until they exist
 
+- [x] **RECORDED, not fixed — HG-1 cannot see a sentinel whose subject moved** (this box is ticked
+      because the gap is written down and the rule is in force; the mechanical check is deferred and
+      the deferral is stated at the end)
+      (found 2026-09-06, in review). HG-1 already goes red when a named module appears *unwired* —
+      section 1 of `docs/QA-PROTOCOL.md` says so and card #71's narrative records L13 reading red for
+      a day on exactly that. What no check covers is the subject that is present, wired, working and
+      **no longer the thing that ships**. It happened: from `da8de59` (2026-09-05 20:24) to
+      `bf0b841` (2026-09-06 01:45) — five hours twenty-one minutes, ten commits — the L11 sentinel
+      guarded `model.final_fit` while the deployed object had become `deploy.deployed_fit`, and HG-1
+      reported 13/13 PASSED throughout. The sentinel's assertion was true the whole time; it was
+      true about the wrong model.
+
+      A sixth rule is now in `docs/QA-PROTOCOL.md` section 5, and the structural fix already landed
+      (`deploy.py` is a single definition both callers call, so the subject cannot drift without
+      somebody deleting the module). **What is still open is whether HG-1 should check it
+      mechanically** rather than by rule — the honest difficulty is that "is this the object that
+      ships?" is a question about intent, and the only mechanical proxy in reach is *the deployed
+      fit is whatever `artifacts/current` was built from*, which is unavailable in CI because
+      `artifacts/` is gitignored — the same trap that moved the waiver-scope rule out of
+      `check_board.py` and forced `reports/loco/` to be un-ignored.
+
+      **Deferred deliberately, and here is the reason rather than a shrug.** Every mechanical proxy
+      available today is weaker than the structural fix that already landed, and a weak check on a
+      gate this load-bearing would report a safety it does not have — which is the exact thing
+      section 5 forbids. Re-open it when `artifacts/` reaches CI, which is card #7's business; until
+      then the rule in `docs/QA-PROTOCOL.md` section 5 is the guard, and `deploy.py` being a single
+      definition is what makes the rule rarely needed
+
 ## Runnable check
 
 ```bash
@@ -122,3 +150,7 @@ conda run -n Project python -m hydms.gates run HG-1    # exits 1 until stage S4 
   its one seeded shuffle — which is better anyway, since a reproduction must reproduce exactly
   regardless of NumPy version. `pandas` needed adding to the mypy override list; it was the first
   pandas import under `hydms/`. Both are now commented in `pyproject.toml`. (by @assistant)
+- 2026-09-06: A review found the gate's blind spot and it is boxed above. The short version, worth
+  keeping even if the box closes: **a sentinel is only as good as its subject**, and this gate
+  checks that a subject *exists*, never that it is still the right one. `CONTEXT.md` now carries
+  `Sentinel subject` as a term for the same reason. (by @assistant)

@@ -201,6 +201,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         # and a reason typed at the prompt is not.
         requested[name] = result.message or f"skipped; card #{_card(name)}"
 
+    # Computed before the waiver summary prints, because that summary quotes it. Both
+    # messages answer "how much is left?" and they must answer it with the same number:
+    # this expression was once inlined into each of them differently -- `len(results) -
+    # len(waived)` above, `len(outstanding)` below -- so one run reported 9 and 4 six lines
+    # apart. A count is a fact about the run, so it is derived once and read twice.
+    outstanding = tuple(r for r in report.results if not r.passed and r.name not in requested)
+
     if requested:
         listed = "\n".join(
             f"  {name} (card #{_card(name)}) -- {reason}" for name, reason in requested.items()
@@ -212,14 +219,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             f"\nWAIVED, and recorded in current.json as the promotion's own asterisk if this "
             f"promotion goes through:\n"
             f"{listed}\n"
-            f"{candidate} therefore has {len(report.results) - len(requested)} of "
+            f"{candidate} therefore has {len(outstanding)} of "
             f"{len(report.results)} criteria left to establish. The manifest still records "
             f"every waived one as SKIPPED: the decision to proceed lives in the pointer, not "
             f"in the artifact's account of what was measured.",
             file=stream,
         )
 
-    outstanding = tuple(r for r in report.results if not r.passed and r.name not in requested)
     if outstanding:
         print(
             f"{candidate} is NOT promotable: {len(outstanding)} of {len(report.results)} "

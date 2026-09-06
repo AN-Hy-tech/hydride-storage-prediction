@@ -61,6 +61,7 @@ current performance.
 | [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | The current phase end to end: why it exists, the thirteen leaks with their exact sites, the nine stages, the verification | Before touching the pipeline, the surrogate, or the app |
 | [docs/FREEZE.md](docs/FREEZE.md) | What is frozen, the denied paths, the unfreeze condition | Before planning work, or when CI rejects a change |
 | [docs/RUNNING-THE-FIT.md](docs/RUNNING-THE-FIT.md) | How to actually execute the training run and the evaluation: the commands, in order, with what each prints, the exit codes, and how to commit the result | Before running `hydms.surrogate.train` or `hydms.surrogate.evaluate` — it is written for an operator, not a reader |
+| [CONTEXT.md](CONTEXT.md) | The project's **vocabulary**, glossary only. A term is in it because conflating it has already cost this project something: the three score readings, `Deployed fit`, `Sentinel subject`, `Probe`, the capacity levels | Before writing a number or a noun into prose somebody outside the room will read |
 | [kanban/README.md](kanban/README.md) | The **frozen** board's logic: why tickets are cut by layer not phase, the 8 layers, the 5 phases, the gate→ticket map, the critical path | Understanding the inverse-design programme that resumes later |
 | [research/inverse-design-methods.md](research/inverse-design-methods.md) | Method landscape (what the hydride literature actually does), why not generative models, UQ and novelty tooling, library survey with pinned versions, Architectures A/B/C | Choosing or defending a method, or picking a library |
 | [research/hydride-domain-grounding.md](research/hydride-domain-grounding.md) | DOE targets and the system-vs-material distinction, hydride families, PCT and van 't Hoff, kinetics, ML validation pitfalls, databases, DFT limits | Any physics or chemistry claim that will appear in the thesis |
@@ -84,7 +85,7 @@ current performance.
 | The prediction API or the app | the card's *Owns* line | `backend-development`, `codebase-design`, `dataviz` |
 | "How does the existing code work?" | ask the graph (below) before opening files | `graphify` |
 | Shaping a module's interface or seam | the card's *Owns* line | `software-design-philosophy`, then `codebase-design` |
-| Naming, glossary, or an ADR (the `l7` cards) | PRD §8 (documentation) | `domain-modeling` |
+| Naming, glossary, or an ADR (the `l7` cards) | [CONTEXT.md](CONTEXT.md) first, then PRD §8 | `domain-modeling` |
 | Hydride physics / thermodynamics / capacity | [research/hydride-domain-grounding.md](research/hydride-domain-grounding.md) | `materials-science-specialist` |
 | Inverse-design method or library choice | [research/inverse-design-methods.md](research/inverse-design-methods.md) | `materials-science-specialist` |
 | A fact we do not have yet | — | `research` (writes a cited memo into `research/`) |
@@ -195,7 +196,9 @@ bash $S/list_all_cards.sh kanban-hardening/   # id | status | blocked_by | title
 
 - Quoting REPORT.md's scores as current performance. Thirteen leaks, and CSVs committed in this
   repository already contradict the headline numbers; they are expected to move down and that is a
-  reported result, not a failure (risk R4). The evidence table is `docs/REPORT-RECONCILIATION.md`.
+  reported result, not a failure (risk R4). The evidence table **will be**
+  `docs/REPORT-RECONCILIATION.md`; card #89 owes it and it does not exist yet, so cite the
+  committed CSVs under `reports/` until it does.
 - Working a card on the frozen board, or editing the PRD, `research/`, `REPORT.md` or
   `Machine_Model/` while the freeze holds. CI rejects it; [docs/FREEZE.md](docs/FREEZE.md) says why.
 - Writing a plan into this file. Write a card.

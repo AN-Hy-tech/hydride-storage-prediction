@@ -306,6 +306,37 @@ def test_waiving_one_skip_does_not_carry_another(store, registered, capsys) -> N
     assert artifacts.current(store=store) is None
 
 
+def test_the_two_counts_one_run_prints_are_the_same_count(store, registered, capsys) -> None:
+    """Both messages answer "how much is left?" and they have to agree.
+
+    They did not. The waiver summary computed ``len(results) - len(waived)`` while the refusal
+    computed ``len(outstanding)``, so a run over five passes, three waivers and four genuine
+    skips announced **9** and then **4**, six lines apart, about the same twelve criteria. The
+    summary was ignoring every criterion that had *passed*.
+
+    Nothing caught it because nothing asserted the sentence -- which is the project's own rule
+    (``docs/QA-PROTOCOL.md`` section 3: no number in prose that a test does not check) applied
+    to prose the code itself prints. The count is derived once now; this test is what keeps it
+    that way, and it is written against the numbers rather than the wording so it survives an
+    edit to the message.
+    """
+    registered(
+        _Stub("AC-1", "PASSED"),
+        _Stub("AC-2", "PASSED"),
+        _Stub("AC-6", "SKIPPED", card=30),
+        _Stub("AC-7", "SKIPPED", card=57),
+        _Stub("AC-8", "SKIPPED", card=56),
+    )
+    code, out, err = _run(store, "--waive", "AC-7", "--waive", "AC-8", capsys=capsys)
+
+    assert code == command.EXIT_UNESTABLISHED
+    # Five criteria, two waived, two passed -- so exactly one is left to establish, and the
+    # naive "total minus waived" would have said three.
+    assert "has 1 of 5 criteria left to establish" in out
+    assert "1 of 5 criteria are unestablished" in err
+    assert "3 of 5" not in out
+
+
 def test_waiving_a_name_nothing_answers_to_lists_what_is_registered(
     store, registered, capsys
 ) -> None:
