@@ -1,0 +1,2 @@
+model,classes,classes_scored,classes_not_estimable,macro_r2,macro_mae,weighted_r2,worst_class,worst_class_r2,best_class,best_class_r2,rows_scored,random_split_r2
+catboost-multiquantile,10,10,0,0.27336241737884215,0.49196602207140927,0.21530717812018121,Mg,-0.33812876964419103,SS,0.7625638386478973,893,0.7458807790248206

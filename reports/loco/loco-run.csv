@@ -1,0 +1,2 @@
+,probe,protocol,outer_folds,optuna_trials,configured_optuna_trials,screening,inner_cv_folds,feature_set,features,seed
+0,False,leave-one-alloy-class-out,10,25,25,True,3,hydms.descriptors.contract.SELECTED,14,42
