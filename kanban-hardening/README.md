@@ -186,8 +186,10 @@ written** — the weighted average does not "flatter", it came out *lower* than 
 the document computes the direction instead of predicting it. Next: **S6** (#75–#80); note it is
 **not blocked by #34**, since its tests can build their own versions with a stub gate report.
 **Verified here:** `tests/data/test_golden.py` 8 passed in 20 s, `tests/artifacts/` +
-`test_promote.py` 101 passed, `test_loco.py` + `test_ac6_loco.py` 30 passed, ruff and mypy clean,
-`check_board.py` OK with the freeze in force, full suite green. **Stage by name** — this tree is
+`test_promote.py` 102 passed, `test_loco.py` + `test_ac6_loco.py` 31 passed 1 skipped, ruff and
+mypy clean, `check_board.py` OK with the freeze in force, **full suite 1115 passed 1 skipped in
+21 min 06 s** — the one skip is `test_the_committed_document_is_what_the_code_produces`, which
+waits for the LOCO run and is guarded by AC-6 reporting the same absence as SKIPPED. **Stage by name** — this tree is
 shared and `artifacts/` is gitignored.
 
 ---
