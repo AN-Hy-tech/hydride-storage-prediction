@@ -151,6 +151,24 @@ decision, and it is the maintainer's:** #30 is still `doing` with every done-cri
 remaining boxes are recorded findings rather than work -- and moving it to `done` is what
 unblocks #48. Full detail in the handoff dated 2026-09-06 (evening) below.
 
+**Finishing S4, in one paragraph.** **Eleven of S4's thirteen cards are done and the two that are
+left are not the same kind of left.** **#30 is one status flip** -- every done-criterion is met,
+its three open boxes are recorded findings rather than work (the absent resume, the silent run,
+the per-class scores carrying no interval), and moving it to `done` is what unblocks **#48**; it
+was left `doing` only because closing another person's card is the maintainer's call. **#34
+cannot be finished inside S4 at all, and that is by design rather than an oversight**: promotion
+now needs HG-2, HG-3 and HG-4, which are built by **#76-#79 (S6)** and **#86 (S8)**, and they are
+Phase H's own criteria so they **must not be waived** -- only AC-5, AC-7 and AC-8 are waivable,
+and `tests/artifacts/test_waiver_scope.py` derives that set from the board so it cannot quietly
+grow. So S4 closes as far as a stage can close while one of its cards waits on two later ones.
+**There is one piece of #34 that can be done now and should be, because it is cheap and its cost
+is otherwise permanent:** `artifacts/v1`'s manifest records `git.code_modified: true` against sha
+`5fd9be5`, honestly, because a concurrent session had uncommitted work when it was saved -- the
+tree is clean now, `python -m hydms.surrogate.calibrate --save` costs **0.7 min**, and it writes a
+version whose provenance stamp says what it should. Do that before promoting, not after, since
+the note travels with the artifact. **Then S4 is spent and S6 opens at #75 and #49**, neither of
+them blocked by #34.
+
 **The review session's paragraph, superseded only where the run above changed it:**
 
 **Nothing is half-finished and there is no open decision on the
