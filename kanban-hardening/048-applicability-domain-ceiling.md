@@ -36,6 +36,28 @@ the primary structural mitigation for risk R1.
       not be computed for a candidate must not admit it. Return the distance and the ceiling as
       extra columns — the runner prefixes and carries them as `<screen>.<column>`.
 
+- [ ] **The numbers this card waits on now exist, and one of them changes what the ceiling is
+      for** (measured 2026-09-06 by #30's real run; see `reports/loco/`). Macro transfer R2
+      **0.2734** against the random-split **0.7459**, per class from **Mg -0.3381** to
+      **SS 0.7626**. Two things follow for the derivation this card owes:
+
+      **The ceiling cannot be a single distance if the families disagree this much.** The spread
+      is not noise around a mean — it runs from worse-than-predicting-the-mean to better than
+      several in-distribution subgroups, over supports of 19 to 260 rows. A scalar ElMD threshold
+      fitted to the average would admit candidates near Mg and reject candidates near SS on the
+      same evidence. Whether the ceiling is per-family, or a distance calibrated against the
+      per-class curve, is this card's decision and the data to make it is now on disk.
+
+      **The interval does not do this card's job, which is the argument for the card.**
+      `loco-per-class.csv` carries `interval_coverage`: against the random-split out-of-fold
+      **0.6293**, class folds give Mg **0.1146**, SS 0.1644, MIC 0.4713, AB 0.4746, MEA 0.5000.
+      Coverage out of family is not just lower, it is unpredictably lower, and it is worst exactly
+      where R2 is worst. Precisely: those are raw quantile-head bands, not the conformalised ones,
+      and nothing has yet measured the conformal band out of family — but conformal coverage is
+      marginal and assumes exchangeability, which a class holdout breaks by construction. So
+      `HIGH_UNCERTAINTY` cannot stand in for `OUT_OF_DOMAIN`: a candidate can be out of family and
+      carry a *narrow* band, which is the failure this screen exists to catch
+
 ## Runnable check
 
 ```bash

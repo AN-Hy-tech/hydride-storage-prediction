@@ -42,9 +42,9 @@ stray from known chemistry.
       below two held-out rows or when the held-out target does not vary. Nothing is dropped for
       being *small* — a 19-row LEA fold is a real result provided its support is printed beside
       it, and filtering it here would make the reader's judgement silently on their behalf
-- [ ] Result feeds the applicability-domain ceiling (48) and the Chapter 1 revision (37) —
-      **owed to the real run.** The command and the tables exist; #48 and #37 need the numbers,
-      and the numbers cost 4.7 h (below)
+- [x] Result feeds the applicability-domain ceiling (48) and the Chapter 1 revision (37) — the
+      numbers now exist and are committed, which is what this card owed them. Consuming them is
+      those cards' work, and #48 carries a box measuring what the run said about *its* problem
 - [x] The folds come from `hydms.surrogate.validation.leave_one_class_out`, passed to
       `nested_scores` as its `outer=` cut — that is literally the whole of the run: one keyword
       argument. Nothing in `loco.py` re-implements scoring, tuning, screening or the nesting
@@ -67,17 +67,20 @@ stray from known chemistry.
       AC-6 reading an empty directory in CI — a criterion that can only ever pass on somebody's
       laptop. The identical trap was found the same day on `artifacts/current.json` (#34), which
       is why the waiver guard there had to move out of `scripts/check_board.py`
-- [ ] **OWED: the run itself, and it is the maintainer's to start.** `--budget` measures it at
-      **4.7 h** — 10 class folds x 3 inner x 25 trials = 750 tuning fits at 22.6 s each, about
-      **2.0x** the random-split run. Everything else on this card is done and verified at sentinel
-      budget; what is missing is the four-hour result. One command:
+- [x] **DONE: the run happened, once, on 2026-09-06.** 18:16:09 to 22:23:13 — **4 h 07 m**,
+      inside the `--budget` ceiling of 4.7 h. `loco-run.csv` records `probe=False`, 25 of 25
+      trials, screening on, 10 folds, seed 42. **Macro R2 0.2734** over ten estimable classes of
+      ten, against the random-split **0.7459** — a gap of 0.4725. Support-weighted **0.2153**,
+      *below* the macro average, the direction the probe found and the reason the document
+      computes it. Worst **Mg -0.3381**, best **SS 0.7626**. AC-6 PASSES on the committed tables
+      and the suite's one skip is gone. The original command, kept for the record:
 
       ```bash
       conda run --no-capture-output -n Project python -m hydms.surrogate.loco --target capacity
       conda run --no-capture-output -n Project python -m hydms.surrogate.loco --emit
       ```
 
-      Then commit `reports/loco/` **by name**, and AC-6 goes green with no further code change
+      Committed by name in `7149c4a`; AC-6 went green with no code change, exactly as designed
 
 - [x] **A sentinel-budget probe falsified a sentence this card's module had already written.**
       The docstring claimed the support-weighted average "flatters" the result by sitting closer
@@ -216,3 +219,45 @@ it. That is the honest state and it is what keeps `promote` refusing.
   macro R2 0.2240 against the random-split 0.7459, worst HEA -0.3026, best A2B 0.6703, all ten
   classes estimable. The gap is large and is expected to stay large; that is the finding the
   thesis reports, not a fit to fix. (by @assistant)
+
+- 2026-09-06 (evening): **The run happened and the number is real.** 18:16:09 to 22:23:13,
+  **4 h 07 m**, one run, never repeated. Macro R2 **0.2734** against the random-split **0.7459**.
+  AC-6 passed on the committed tables with no code change, which was the design: the gate reads
+  what was published rather than refitting a cheaper version of it.
+
+  **The probe was right about the magnitude and wrong about the ends, which is exactly what a
+  probe is worth.** It had said macro 0.2240 (real: 0.2734), worst **HEA** -0.3026 (real: **Mg**
+  -0.3381), best **A2B** 0.6703 (real: **SS** 0.7626). So a sentinel-budget run can size the gap
+  but cannot tell you which families sit at its ends — and the ends are the part #48 needs. Anyone
+  tempted to skip a real run because a probe "already showed the answer" should read those two
+  lines side by side.
+
+  **Mg is the worst family and it is the one that matters most.** R2 -0.3381 on 96 rows, with
+  MAE **1.577** against 0.24-0.49 for every other class. Mg-based hydrides are the high-capacity
+  corner of this dataset, so holding them out removes the model's only evidence of what high
+  capacity looks like — and it then predicts the family it has never seen as though it were the
+  families it has. A negative R2 means it does worse than predicting the mean. This is the
+  clearest statement the project has that extrapolation toward high capacity is exactly where the
+  model is least trustworthy, which is precisely the direction an optimiser would push.
+
+  **The finding nobody asked for: the intervals collapse out of family, and hardest where the
+  error is worst.** `loco-per-class.csv` carries `interval_coverage`, and against the
+  random-split out-of-fold reading of **0.6293** the class folds give Mg **0.1146**, SS 0.1644,
+  MIC 0.4713, AB 0.4746, MEA 0.5000 — while HEA (0.8824) and A2B (0.7586) sit above it. Coverage
+  is not merely lower out of family, it is *unpredictably* lower, and its worst case coincides
+  with the worst R2. **Stated precisely, because it is easy to overclaim:** these are the raw
+  quantile-head bands, not the conformalised ones — the deployed path adds a correction
+  calibrated in-distribution (raw 0.6744 to 0.8081). Nothing here measures the conformal band out
+  of family. But conformal's guarantee is *marginal and assumes exchangeability*, which holding
+  out a whole family breaks by construction, so there is no reason to expect it to survive the
+  move and now some evidence that the underlying band does not. **This is the argument for #48
+  in one table: an interval alone does not protect a caller out of domain**, and it is boxed
+  there.
+
+  **The no-resume and no-progress risks did not materialise, and the boxes stay anyway.** The run
+  survived four hours unattended. Both boxes are records for the *next* protocol that costs
+  hours, not predictions about this one; a risk that did not fire is not a risk that was wrong.
+  For the record, the estimate: scaling the random-split run's measured 1 h 41 m by nominal fit
+  count predicted 3 h 21 m, and correcting for LOCO's larger training folds predicted about
+  3 h 50 m. Actual 4 h 07 m — the scaling was optimistic by roughly 7 %, and `--budget`'s 4.7 h
+  was the better bound. (by @assistant)
