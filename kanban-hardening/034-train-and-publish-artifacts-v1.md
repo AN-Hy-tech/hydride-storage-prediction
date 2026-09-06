@@ -262,6 +262,32 @@ that reason.
       why, and the command prints each waiver's owning card so the board it belongs to is
       visible at the prompt
 
+- [ ] **The waiver summary counts wrong, and no test asserts the string** (found 2026-09-06 by
+      running `promote --dry-run --waive AC-5 --waive AC-7 --waive AC-8` against `artifacts/v1`).
+      `hydms/surrogate/promote.py` prints
+
+      ```python
+      f"{candidate} therefore has {len(report.results) - len(requested)} of "
+      f"{len(report.results)} criteria left to establish. …"
+      ```
+
+      which is `12 - 3 = 9`. It subtracts the waivers from the **total** number of criteria rather
+      than from the unestablished ones, so it ignores the five that have *passed*. The correct
+      figure is `len(outstanding)` = **4** — AC-6, HG-2, HG-3, HG-4 — which the very next block
+      prints correctly to stderr as "4 of 12 criteria are unestablished". One command, one run, six
+      lines apart, two answers to the same question. This card's own narrative records the correct
+      one, which is how the drift was caught. Fix the expression and assert the sentence: the
+      project's own rule is that no number appears in prose that a test does not check
+
+- [ ] **Re-save the deployed fit from a clean tree before promoting.** `artifacts/v1`'s manifest
+      records `git.code_modified: true` — honestly, because a concurrent session had uncommitted
+      gate work in this shared checkout when `calibrate --save` ran. Nothing blocks a promotion on
+      it and `promote` records "*from a modified tree*" in the pointer note rather than refusing,
+      which is the right behaviour. But the note is permanent and the fix costs **0.7 min**, and
+      AC-1 has already established that this fit reproduces across two runs, so the new version is
+      the same model with a clean provenance line. Do it before the promotion, not after — a
+      version is written once
+
 ## Runnable check
 
 ```bash

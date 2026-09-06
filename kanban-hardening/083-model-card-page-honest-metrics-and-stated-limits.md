@@ -56,6 +56,37 @@ DOE system target, and the published figures inherited as though nothing had cha
       five, so "the model uses these 14 features" is a statement about a consensus, not a discovery
       about hydrogen storage. `reports/feature_selection/old_vs_new.md` is the source for both
 
+- [ ] **Three R² values, and a sentence that says which is which** (raised 2026-09-06). The card
+      already asks for random-split and leave-one-class-out side by side; a third reading now
+      exists and is easy to conflate with the first. **The procedure** scores R² 0.7481
+      [0.6889, 0.7985] wt% out-of-fold over five models (`reports/model/evaluation.md`). **The
+      deployed model** — one model, scored once on 254 held-out `test` rows — scores R² **0.7071**,
+      RMSE 0.5420, MAE 0.3117. That second figure is computed by gate AC-1 as a side effect of
+      proving reproducibility and **is currently published nowhere**: it lives in the gate's message
+      and in the gitignored `artifacts/gate-results.json`. `evaluation.md` promises it in its own
+      words ("the artifact reading … is a claim about *a model*, and it arrives with card #34"), so
+      this card is where the promise is kept. Report it beside 0.7481 with the reason they differ:
+      the deployed model grows on **701** rows where each CV fold was cut from 893
+
+- [ ] **The near-ambient temperature bin is the weakest and the table already says so** (raised
+      2026-09-06 from the committed `reports/model/evaluation-subgroups.csv`, out-of-fold, wt%):
+      **(195, 293] K → R² 0.187, 95 % CI [−0.012, 0.423]** — the interval includes zero — against
+      0.657, 0.717, 0.757 and 0.772 for the four warmer bins. That is the regime a practical storage
+      material has to operate in, and it is where the model is worst. It is not a defect, it is a
+      result, and it is sitting in a committed CSV that no prose mentions. State it in the limits
+      with its confidence interval, not as a rounded point estimate
+
+- [ ] **The band is wide relative to the physics, and that is the honest reading.** The calibrated
+      interval averages **0.8630 wt%** at ~80 % coverage — about ±0.43 wt%. Intermetallics generally
+      deliver under 2 wt% usable capacity under practical pressure and temperature swings, so the
+      band is a large fraction of the signal for the family this dataset is densest in. Read
+      correctly it says the model discriminates **between families rather than between fine
+      composition tweaks within one**, which for a screening tool feeding an optimiser is
+      acceptable; read carelessly it says the model is precise. Pair it with the existing
+      not-a-constant caveat (`expm1` is convex, so `+0.037355` in `log1p` space is a wider band at a
+      high prediction) and with coverage being **0.7795 against a nominal 0.80** — under, not over,
+      by about 0.8 of a binomial standard error
+
 ## Runnable check
 
 ```bash
