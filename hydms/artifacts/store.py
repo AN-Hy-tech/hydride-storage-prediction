@@ -30,10 +30,63 @@ and so does :func:`promote`. A skip counts as incomplete -- see
 flag is not consulted. ``require_gates=False`` exists for the card that has just written a
 version and wants it back, and for inspection; the delivery path never passes it.
 
-**Promotion is a pointer.** ``current.json`` names a version, so rollback is one small write
-rather than a retrain (card #7).
+**Promotion is a pointer, and it is the only place a criterion may be set aside.**
+``current.json`` names a version, so rollback is one small write rather than a retrain (card
+#7). It may also name **waivers**: criteria that this promotion is knowingly proceeding without.
+The reason that mechanism is here, and not in the manifest or in the gate harness, is card #34's
+wall and is worth stating in full, because the shape of the answer is the argument for it.
 
-Card #4.
+Phase H fits a forward surrogate. Three registered criteria -- AC-5, AC-7 and AC-8 -- belong to
+phases ``docs/FREEZE.md`` has frozen: there is no entropy model, no candidate list and no search
+in this phase, and no amount of Phase H work makes them green. On the rule as first written, the
+phase therefore ends with a correct model that can never be promoted, and because :func:`load`
+refuses an unpromoted version, ``predict()`` cannot answer at all. Three shapes were considered
+and two rejected:
+
+  - **A phase-scoped subset computed at promotion time** -- rejected. It makes "in scope" a
+    thing a session derives, and a derived scope is one that widens quietly.
+  - **A fourth gate status, ``NOT APPLICABLE``** -- rejected, and this is the one the gate
+    harness makes cheapest, which is why it was looked at hardest. It would put the judgement
+    inside the criterion, where it is invisible at the moment of promotion and one edit away
+    from being applied to a criterion that *is* applicable. It also corrupts the manifest: the
+    embedded report would stop being a record of what was measured.
+
+What is implemented instead is narrower than either. **A waiver is an act, not a property.** It
+is named at promotion, one criterion at a time, never by pattern; it is written into
+``current.json`` where a reviewer reads it in a diff; it carries the *gate's own* statement of
+why it did not run rather than prose invented at the prompt; and it dies with the promotion --
+:func:`load` honours a waiver only for the version ``current.json`` actually points at, so a
+waiver cannot be smuggled onto a version by naming it.
+
+Three properties hold it shut:
+
+  - **A failure is never waivable.** :func:`promote` refuses a waiver naming a criterion whose
+    recorded status is anything but ``SKIPPED``. A waiver may say "this was not checked, and
+    here is the check's own account of why it could not be"; it can never say "this was checked
+    and did not hold".
+  - **A stale waiver is refused too.** Naming a criterion that passed, or one the report does
+    not record at all, is an error rather than a no-op -- otherwise the list rots into
+    decoration and stops being read.
+  - **The manifest never learns about waivers.** ``Manifest.unestablished()`` is unchanged and
+    still counts ``SKIPPED`` as unestablished; the embedded report still says AC-5 was skipped.
+    The artifact's record of what was *measured* stays exactly as truthful as it was, and the
+    decision to ship anyway is recorded somewhere else, under someone's name, in a file that is
+    one line long.
+
+Whether a waiver is *legitimate* -- whether the criterion really does belong to a frozen phase
+rather than to work somebody skipped -- is a question about the board, and this module has no
+business knowing what a board is. It is not answered here and it is not answered by inspecting
+``current.json`` either: ``artifacts/`` is gitignored, so a pointer file never reaches CI and a
+rule written against one would be a guarantee nothing ever checks.
+
+It is answered instead by ``tests/artifacts/test_waiver_scope.py``, which derives the waivable
+set from the repository rather than from anyone's memory: it reads each registered gate's card
+number, asks which board directory holds that card, and pins the answer. Today exactly three
+criteria have their card on the frozen board, and those three are the only ones a Phase H
+promotion may waive. A card that crosses between boards, or a newly registered criterion owned
+by a frozen phase, turns that test red and forces the question to be asked again out loud.
+
+Card #4; the waiver is card #34.
 """
 
 from __future__ import annotations
@@ -42,7 +95,7 @@ import json
 import re
 import shutil
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +117,7 @@ __all__ = [
     "GatesIncomplete",
     "PayloadCorrupt",
     "VersionNotFound",
+    "WaiverRefused",
     "current",
     "load",
     "promote",
@@ -71,6 +125,7 @@ __all__ = [
     "save",
     "version_dir",
     "versions",
+    "waived",
 ]
 
 MANIFEST_NAME = "manifest.json"
@@ -96,6 +151,14 @@ class GatesIncomplete(ArtifactError):
 
     Raised by :func:`load` and :func:`promote`. It names the gates and their statuses, because
     "gates incomplete" without the list costs the reader the run again.
+    """
+
+
+class WaiverRefused(ArtifactError, ValueError):
+    """A promotion asked to waive a criterion a waiver is not allowed to cover.
+
+    Separate from :class:`GatesIncomplete` because it is a different mistake with a different
+    fix: the version is not necessarily unpromotable, the *waiver list* is wrong.
     """
 
 
@@ -195,27 +258,67 @@ def current(*, store: Path | None = None) -> str | None:
     return version
 
 
-def promote(version: str, *, store: Path | None = None) -> str:
+def waived(*, store: Path | None = None) -> Mapping[str, str]:
+    """The criteria the standing promotion set aside, by name, with the reason recorded.
+
+    Empty for a promotion that waived nothing, which is every promotion the rule as originally
+    written could make. Read it before quoting what an artifact has established: a version whose
+    ``current.json`` waives AC-7 has not established AC-7, and says so.
+    """
+    pointer = _store(store) / CURRENT_POINTER
+    if not pointer.is_file():
+        return {}
+    try:
+        payload = json.loads(pointer.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ArtifactError(f"{pointer} could not be read: {exc}") from exc
+    recorded = payload.get("waived") if isinstance(payload, Mapping) else None
+    if not isinstance(recorded, Mapping):
+        return {}
+    return {str(name): str(reason) for name, reason in recorded.items()}
+
+
+def promote(
+    version: str,
+    *,
+    store: Path | None = None,
+    waive: Mapping[str, str] | None = None,
+) -> str:
     """Point ``current`` at ``version``, refusing anything its gates did not establish.
 
     This is the promotion half of card #7: a full run produces ``v{N+1}``, the gates run against
     it, and only a complete pass moves the pointer. Rolling back is the same call with the older
     version -- one small write, no retrain.
 
+    Args:
+        version: The version to promote.
+        store: The artifacts directory.
+        waive: Criteria this promotion proceeds without, as ``{name: reason}``. Every name must
+            be recorded ``SKIPPED`` in the version's own gate report -- a failed criterion is
+            never waivable, and a criterion that passed or that the report does not mention is a
+            stale entry and is refused rather than ignored. The mapping is written into
+            ``current.json`` and is what :func:`load` and :func:`waived` read back. This
+            module's docstring argues why the mechanism lives here and nowhere else; whether a
+            given waiver is legitimate is ``scripts/check_board.py``'s question, not this one's.
+
     Raises:
         VersionNotFound: no such version.
-        GatesIncomplete: its manifest records no gate run, or a gate that did not pass.
+        GatesIncomplete: its manifest records no gate run, or a gate that did not pass and was
+            not waived.
+        WaiverRefused: a waiver names a criterion that failed, passed, or was never recorded.
     """
     root = _store(store)
     directory = version_dir(version, store=root)
     manifest = read_manifest(directory)
-    _require_established(manifest, directory)
+    requested = dict(waive or {})
+    _check_waivers(manifest, directory, requested)
+    _require_established(manifest, directory, waived=frozenset(requested))
 
     pointer = root / CURRENT_POINTER
-    pointer.write_text(
-        json.dumps({"version": version, "promoted_at": now()}, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    record: dict[str, Any] = {"version": version, "promoted_at": now()}
+    if requested:
+        record["waived"] = requested
+    pointer.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return version
 
 
@@ -241,21 +344,93 @@ def read_manifest(directory: Path) -> Manifest:
     return Manifest.from_dict(payload)
 
 
-def _require_established(manifest: Manifest, directory: Path) -> None:
+def _standing_waivers(root: Path, version: str) -> Mapping[str, str]:
+    """The waivers that apply to ``version``, which is none unless it is the promoted one.
+
+    A waiver belongs to the **promotion**, not to the store and not to the version: naming an
+    older version explicitly gets the unwaived rule, which is what stops a waiver from being
+    inherited by an artifact nobody promoted under it.
+
+    A pointer that cannot be read yields no waivers rather than raising. That leniency is safe
+    in one direction only, and that is why it is allowed: with no waivers :func:`load` applies
+    the *full* rule, so a broken pointer can make this function refuse more and never less. The
+    loud reading of a bad pointer stays where it belongs -- :func:`current`, which is what a
+    caller asking "what is promoted?" goes through, and what ``load(version=None)`` calls.
+    """
+    try:
+        if current(store=root) != version:
+            return {}
+        return waived(store=root)
+    except ArtifactError:
+        return {}
+
+
+def _check_waivers(manifest: Manifest, directory: Path, requested: Mapping[str, str]) -> None:
+    """Refuse a waiver that is not what a waiver is allowed to be.
+
+    Three refusals, and each closes a different way the list could stop meaning anything: a
+    failure waived away, a criterion waived that in fact passed, and a name that matches nothing
+    in the report at all -- a typo, or a criterion that has since been renamed, either of which
+    would otherwise present as a silently narrower promotion.
+    """
+    if not requested:
+        return
+    recorded = {
+        str(entry.get("name", "?")): str(entry.get("status", "?"))
+        for entry in (manifest.gates or {}).get("gates", ())
+    }
+    for name, reason in requested.items():
+        status = recorded.get(name)
+        if status is None:
+            known = ", ".join(sorted(recorded)) or "none"
+            raise WaiverRefused(
+                f"{directory.name}'s gate report records no criterion named {name!r}, so "
+                f"waiving it would narrow the promotion by a name nothing answers to. "
+                f"Recorded: {known}."
+            )
+        if status == "PASSED":
+            raise WaiverRefused(
+                f"{name} PASSED against {directory.name}; waiving it claims less than the "
+                f"artifact has established. Remove it from the waiver list."
+            )
+        if status != "SKIPPED":
+            raise WaiverRefused(
+                f"{name} is {status} against {directory.name} and a waiver cannot cover it. A "
+                f"waiver says a criterion was not checked and why; it can never say a criterion "
+                f"was checked and did not hold."
+            )
+        if not reason.strip():
+            raise WaiverRefused(
+                f"{name} is waived with no reason. The reason is the gate's own account of why "
+                f"it did not run, and a waiver nobody can read is one nobody will revisit."
+            )
+
+
+def _require_established(
+    manifest: Manifest, directory: Path, *, waived: frozenset[str] = frozenset()
+) -> None:
     if not manifest.gate_run_recorded:
         raise GatesIncomplete(
             f"{directory.name} records no gate run, so nothing about it has been established. "
             f"Run `python -m hydms.gates run --all` and save the version with its report, or "
             f"pass require_gates=False if you are inspecting an unpromoted artifact."
         )
-    outstanding = manifest.unestablished()
+    outstanding = tuple(
+        (name, status) for name, status in manifest.unestablished() if name not in waived
+    )
     if outstanding:
         recorded = len(manifest.gates["gates"]) if manifest.gates else 0
         listed = ", ".join(f"{name} {status}" for name, status in outstanding)
+        note = (
+            f" {len(waived)} other(s) are waived by the standing promotion: "
+            f"{', '.join(sorted(waived))}."
+            if waived
+            else ""
+        )
         raise GatesIncomplete(
             f"{directory.name} did not establish {len(outstanding)} of {recorded} recorded "
             f"gates: {listed}. A SKIPPED gate is a criterion nobody checked, which is why it "
-            f"counts here even though the harness tolerates it in a CI log."
+            f"counts here even though the harness tolerates it in a CI log.{note}"
         )
 
 
@@ -272,6 +447,11 @@ class Artifacts:
     directory: Path
     manifest: Manifest
     objects: Mapping[str, Any]
+    #: Criteria the standing promotion set aside, by name, with the reason. Empty unless this
+    #: version is the promoted one *and* its promotion waived something. A delivery path that
+    #: reports what a prediction rests on reads this, because the manifest deliberately does
+    #: not know about it -- see this module's docstring.
+    waived: Mapping[str, str] = field(default_factory=dict)
 
     def __getitem__(self, name: str) -> Any:
         try:
@@ -345,8 +525,9 @@ def load(
 
     directory = version_dir(version, store=root)
     manifest = read_manifest(directory)
+    standing = _standing_waivers(root, version)
     if require_gates:
-        _require_established(manifest, directory)
+        _require_established(manifest, directory, waived=frozenset(standing))
 
     import joblib
 
@@ -369,7 +550,11 @@ def load(
         objects[record.name] = joblib.load(path)
 
     return Artifacts(
-        version=version, directory=directory, manifest=manifest, objects=objects
+        version=version,
+        directory=directory,
+        manifest=manifest,
+        objects=objects,
+        waived=standing,
     )
 
 

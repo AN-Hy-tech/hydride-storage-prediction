@@ -204,12 +204,15 @@ def test_it_certifies_the_newest_version_by_default(store, registered, capsys) -
 def test_the_real_registry_cannot_certify_anything_in_this_phase() -> None:
     """Recorded as a test because it is the finding, not a limitation of the command.
 
-    ``promote`` requires every registered criterion to have passed, and four of them — AC-5,
-    AC-7, AC-8 and, until #78 lands, HG-3 — belong to phases ``docs/FREEZE.md`` has frozen.
-    So no artifact can be promoted before those phases resume, and ``predict()`` therefore
-    refuses every version this phase produces. That is the store's guarantee working exactly as
-    written; whether Phase H should be able to certify a *phase-scoped* subset is an open
-    decision recorded on card #34, and it is not this test's to take.
+    ``promote`` requires every registered criterion to have passed, and three of them — AC-5,
+    AC-7 and AC-8 — belong to phases ``docs/FREEZE.md`` has frozen, so no amount of Phase H
+    work makes them green. That is the store's guarantee working exactly as written.
+
+    **Card #34's open decision has since been taken**: those three, and only those three, may
+    be named to ``--waive``, which records them in ``current.json`` and never in the manifest.
+    This test still asserts they are unwritten, because the day one of them is implemented the
+    waiver stops being warranted and somebody has to notice. Which criteria are waivable is
+    derived from the board by ``tests/artifacts/test_waiver_scope.py``.
     """
     from hydms.gates import Pending, registry
 
@@ -231,3 +234,93 @@ def test_the_report_the_command_embeds_is_the_shape_the_store_validates(
     from hydms.artifacts.manifest import validate_gate_report
 
     validate_gate_report(raw["gates"])
+
+
+# --------------------------------------------------------------------------------------
+# --waive: the way out of the phase, and the four things it will not do — card #34
+# --------------------------------------------------------------------------------------
+
+
+def test_a_waived_skip_lets_the_promotion_through_and_says_so_loudly(
+    store, registered, capsys
+) -> None:
+    registered(_Stub("AC-2", "PASSED"), _Stub("AC-7", "SKIPPED", card=57))
+    code, out, _err = _run(store, "--waive", "AC-7", capsys=capsys)
+
+    assert code == command.EXIT_OK
+    assert "WAIVED" in out and "AC-7 (card #57)" in out
+    assert artifacts.current(store=store) == "v2"
+    assert artifacts.waived(store=store) == {"AC-7": "not implemented"}
+
+
+def test_the_reason_recorded_is_the_gates_own_not_the_operators(
+    store, registered, capsys
+) -> None:
+    """A `Pending` gate already states why it is pending, and that sentence is reviewed code.
+    Nothing on the command line contributes to what gets written down."""
+    registered(_Stub("AC-2", "PASSED"), _Stub("AC-7", "SKIPPED", card=57))
+    _run(store, "--waive", "AC-7", capsys=capsys)
+    assert artifacts.waived(store=store)["AC-7"] == "not implemented"
+
+
+def test_waiving_does_not_touch_what_the_manifest_records(store, registered, capsys) -> None:
+    """The promoted version's embedded report still says AC-7 was skipped. The artifact's
+    account of what was measured is exactly as truthful after a waiver as before it."""
+    registered(_Stub("AC-2", "PASSED"), _Stub("AC-7", "SKIPPED", card=57))
+    _run(store, "--waive", "AC-7", capsys=capsys)
+
+    raw = json.loads((store / "v2" / "manifest.json").read_text(encoding="utf-8"))
+    statuses = {entry["name"]: entry["status"] for entry in raw["gates"]["gates"]}
+    assert statuses == {"AC-2": "PASSED", "AC-7": "SKIPPED"}
+    assert "waived" not in json.dumps(raw["gates"])
+
+
+def test_a_failure_cannot_be_waived_at_the_command_line_either(store, registered, capsys) -> None:
+    registered(_Stub("AC-3", "FAILED", card=31))
+    code, _out, err = _run(store, "--waive", "AC-3", capsys=capsys)
+
+    assert code == command.EXIT_BAD_INVOCATION
+    assert "it is FAILED in this run" in err
+    assert artifacts.current(store=store) is None
+    assert artifacts.versions(store=store) == ("v1",), "nothing was written"
+
+
+def test_waiving_one_skip_does_not_carry_another(store, registered, capsys) -> None:
+    """Phase H's real shape: AC-7 is out of reach, AC-6 is work this phase owes. The refusal
+    has to name AC-6 and must not be satisfied by the waiver beside it.
+
+    And the accepted waiver is still reported: an operator who waives three criteria and is
+    refused for a fourth must be able to see the three were parsed, or the refusal reads as the
+    flag having done nothing.
+    """
+    registered(
+        _Stub("AC-2", "PASSED"),
+        _Stub("AC-6", "SKIPPED", card=30),
+        _Stub("AC-7", "SKIPPED", card=57),
+    )
+    code, out, err = _run(store, "--waive", "AC-7", capsys=capsys)
+
+    assert code == command.EXIT_UNESTABLISHED
+    assert "AC-6 SKIPPED (card #30)" in err
+    assert "WAIVED" in out and "AC-7 (card #57)" in out
+    assert artifacts.current(store=store) is None
+
+
+def test_waiving_a_name_nothing_answers_to_lists_what_is_registered(
+    store, registered, capsys
+) -> None:
+    registered(_Stub("AC-2", "PASSED"), _Stub("AC-7", "SKIPPED", card=57))
+    code, _out, err = _run(store, "--waive", "AC-70", capsys=capsys)
+
+    assert code == command.EXIT_BAD_INVOCATION
+    assert "no criterion by that name" in err and "AC-7" in err
+
+
+def test_a_dry_run_with_a_waiver_still_writes_nothing(store, registered, capsys) -> None:
+    registered(_Stub("AC-2", "PASSED"), _Stub("AC-7", "SKIPPED", card=57))
+    code, out, _err = _run(store, "--waive", "AC-7", "--dry-run", capsys=capsys)
+
+    assert code == command.EXIT_OK
+    assert "was waived (AC-7)" in out
+    assert artifacts.versions(store=store) == ("v1",)
+    assert artifacts.current(store=store) is None

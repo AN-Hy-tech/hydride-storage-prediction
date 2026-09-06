@@ -20,6 +20,7 @@ from hydms.artifacts import (
     Manifest,
     PayloadCorrupt,
     VersionNotFound,
+    WaiverRefused,
     current,
     load,
     promote,
@@ -27,6 +28,7 @@ from hydms.artifacts import (
     save,
     version_dir,
     versions,
+    waived,
 )
 from hydms.gates._core import GateReport, GateResult
 
@@ -414,3 +416,158 @@ def test_an_edited_feature_list_is_caught_by_the_contracts_own_digest(store: Pat
     bundle = load("v1", store=store)
     with pytest.raises(ContractError, match="digest"):
         bundle.contract()
+
+
+# --------------------------------------------------------------------------------------
+# Waivers — card #34
+#
+# The mechanism exists because three registered criteria belong to frozen phases and cannot
+# be made to pass inside Phase H. Everything below is about what a waiver may NOT do, because
+# that is the whole of what makes it different from `require_gates=False`.
+# --------------------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def skipped(store: Path, contract: dict[str, Any]) -> Manifest:
+    """A v1 that passed one criterion and skipped another — Phase H's shape in miniature."""
+    return save(
+        {"model": {"trees": 100}},
+        contract=contract,
+        seeds={"pipeline": 42},
+        gates=report(("AC-2", "PASSED"), ("AC-7", "SKIPPED")),
+        store=store,
+    )
+
+
+def test_a_skipped_criterion_can_be_waived_and_the_reason_is_recorded(
+    store: Path, skipped: Manifest
+) -> None:
+    promote("v1", store=store, waive={"AC-7": "frozen with Phase A"})
+    assert current(store=store) == "v1"
+    assert waived(store=store) == {"AC-7": "frozen with Phase A"}
+    written = json.loads((store / "current.json").read_text(encoding="utf-8"))
+    assert written["waived"] == {"AC-7": "frozen with Phase A"}
+
+
+def test_waiving_nothing_writes_no_waiver_key_at_all(store: Path, green: Manifest) -> None:
+    """The default promotion is byte-for-byte the one the store made before #34."""
+    promote("v1", store=store)
+    written = json.loads((store / "current.json").read_text(encoding="utf-8"))
+    assert "waived" not in written
+    assert waived(store=store) == {}
+
+
+def test_a_failed_criterion_is_never_waivable(store: Path, contract: dict[str, Any]) -> None:
+    """The line that separates a waiver from an override. A waiver says a criterion was not
+    checked; it can never say a criterion was checked and did not hold."""
+    save(
+        {"model": {"trees": 1}},
+        contract=contract,
+        seeds={"pipeline": 42},
+        gates=report(("AC-2", "PASSED"), ("AC-3", "FAILED")),
+        store=store,
+    )
+    with pytest.raises(WaiverRefused, match="cannot cover"):
+        promote("v1", store=store, waive={"AC-3": "inconvenient"})
+    assert current(store=store) is None
+
+
+def test_waiving_a_criterion_that_passed_is_refused_rather_than_ignored(
+    store: Path, green: Manifest
+) -> None:
+    """A no-op waiver would rot the list into decoration, and a decorative list stops being
+    read — which is the only thing keeping this mechanism honest."""
+    with pytest.raises(WaiverRefused, match="PASSED"):
+        promote("v1", store=store, waive={"AC-2": "why not"})
+
+
+def test_waiving_a_name_the_report_does_not_know_is_refused(
+    store: Path, skipped: Manifest
+) -> None:
+    """A typo, or a criterion since renamed. Either would otherwise present as a promotion
+    that is quietly narrower than the one somebody wrote down."""
+    with pytest.raises(WaiverRefused, match="no criterion named"):
+        promote("v1", store=store, waive={"AC-70": "frozen"})
+
+
+def test_a_waiver_with_no_reason_is_refused(store: Path, skipped: Manifest) -> None:
+    with pytest.raises(WaiverRefused, match="no reason"):
+        promote("v1", store=store, waive={"AC-7": "   "})
+
+
+def test_an_unwaived_skip_still_blocks_a_promotion_that_waived_something_else(
+    store: Path, contract: dict[str, Any]
+) -> None:
+    """The case Phase H is actually in: AC-7 is out of reach, AC-6 is work. Waiving the first
+    must not carry the second, and the refusal has to name what is still owed."""
+    save(
+        {"model": {"trees": 1}},
+        contract=contract,
+        seeds={"pipeline": 42},
+        gates=report(("AC-2", "PASSED"), ("AC-6", "SKIPPED"), ("AC-7", "SKIPPED")),
+        store=store,
+    )
+    with pytest.raises(GatesIncomplete) as raised:
+        promote("v1", store=store, waive={"AC-7": "frozen with Phase A"})
+    message = str(raised.value)
+    assert "AC-6 SKIPPED" in message
+    assert "AC-7" in message and "waived by the standing promotion" in message
+    assert current(store=store) is None
+
+
+def test_the_promoted_version_loads_under_its_waiver(store: Path, skipped: Manifest) -> None:
+    """`load()` with no version is the delivery path's call, and it is what the waiver is for."""
+    promote("v1", store=store, waive={"AC-7": "frozen with Phase A"})
+    bundle = load(store=store)
+    assert bundle.version == "v1"
+    assert bundle.waived == {"AC-7": "frozen with Phase A"}
+
+
+def test_a_waiver_does_not_travel_to_a_version_the_pointer_does_not_name(
+    store: Path, contract: dict[str, Any]
+) -> None:
+    """A waiver belongs to the promotion, not to the store. v2 being promoted under a waiver
+    must not make v1 — which nobody promoted — loadable under the same one."""
+    save(
+        {"model": {"trees": 1}},
+        contract=contract,
+        seeds={"pipeline": 42},
+        gates=report(("AC-2", "PASSED"), ("AC-7", "SKIPPED")),
+        store=store,
+    )
+    save(
+        {"model": {"trees": 2}},
+        contract=contract,
+        seeds={"pipeline": 42},
+        gates=report(("AC-2", "PASSED"), ("AC-7", "SKIPPED")),
+        store=store,
+    )
+    promote("v2", store=store, waive={"AC-7": "frozen with Phase A"})
+
+    assert load("v2", store=store).waived == {"AC-7": "frozen with Phase A"}
+    with pytest.raises(GatesIncomplete, match="AC-7"):
+        load("v1", store=store)
+
+
+def test_the_manifest_never_learns_about_the_waiver(store: Path, skipped: Manifest) -> None:
+    """The property the whole design turns on: the artifact's account of what was *measured*
+    is exactly as truthful after a waiver as before it. `unestablished()` still counts AC-7."""
+    promote("v1", store=store, waive={"AC-7": "frozen with Phase A"})
+    manifest = read_manifest(version_dir("v1", store=store))
+    assert manifest.unestablished() == (("AC-7", "SKIPPED"),)
+    assert "waived" not in json.dumps(manifest.to_dict())
+
+
+def test_a_broken_pointer_does_not_stop_an_explicitly_named_version_from_loading(
+    store: Path, green: Manifest
+) -> None:
+    """Reading the pointer to decide whether a waiver applies must not couple `load("v1")` to
+    the pointer's health. A pointer that cannot be read yields *no* waivers, which can only
+    make the gate check stricter — the loud reading stays in `current()`, where a caller asking
+    what is promoted goes through."""
+    (store / "current.json").write_text("{}", encoding="utf-8")
+
+    bundle = load("v1", store=store)
+    assert bundle.version == "v1" and bundle.waived == {}
+    with pytest.raises(ArtifactError, match="records no version"):
+        current(store=store)

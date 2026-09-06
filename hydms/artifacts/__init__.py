@@ -30,6 +30,7 @@ from .store import (
     GatesIncomplete,
     PayloadCorrupt,
     VersionNotFound,
+    WaiverRefused,
     current,
     load,
     promote,
@@ -37,6 +38,7 @@ from .store import (
     save,
     version_dir,
     versions,
+    waived,
 )
 
 __all__ = [
@@ -52,6 +54,7 @@ __all__ = [
     "PayloadCorrupt",
     "PayloadRecord",
     "VersionNotFound",
+    "WaiverRefused",
     "current",
     "load",
     "promote",
@@ -59,4 +62,5 @@ __all__ = [
     "save",
     "version_dir",
     "versions",
+    "waived",
 ]

@@ -179,11 +179,13 @@ that reason.
       list, and its stated cost — two directories for one model — is paid here, where it belongs,
       rather than in the gates.
 
-- [ ] **OPEN DECISION — `artifacts/v1` cannot be promoted during Phase H, and the reason is the
-      store's own guarantee working correctly (found 2026-09-06).** `hydms.artifacts.promote`
-      refuses a version whose manifest records any criterion that did not `PASS`, and
-      `Manifest.unestablished()` counts `SKIPPED` — deliberately, because a manifest saying "AC-6
-      was not checked" is exactly as much evidence as one saying "AC-6 failed". Measured by
+- [x] ~~**OPEN DECISION — `artifacts/v1` cannot be promoted during Phase H, and the reason is the
+      store's own guarantee working correctly (found 2026-09-06).**~~ **SETTLED 2026-09-06, and
+      none of the three shapes it offered was taken.** The framing is kept in full below because
+      the answer is only legible against it. `hydms.artifacts.promote` refuses a version whose
+      manifest records any criterion that did not `PASS`, and `Manifest.unestablished()` counts
+      `SKIPPED` — deliberately, because a manifest saying "AC-6 was not checked" is exactly as
+      much evidence as one saying "AC-6 failed". Measured by
       `python -m hydms.surrogate.promote --dry-run`: **5 passed, 7 skipped.**
 
       | Skipped | Card | Why it cannot be written in this phase |
@@ -196,34 +198,69 @@ that reason.
       | HG-3 | #79 | **landable** — needs #78, which is S6 |
       | HG-4 | #86 | **landable** — S8 |
 
-      Four are landable inside Phase H (#30, then S6 and S8). **Three are not**: AC-5, AC-7 and
-      AC-8 belong to phases [FREEZE.md](../docs/FREEZE.md) has frozen, and no amount of Phase H
-      work will turn them green. So on the rule as written, **Phase H ends with a correct,
-      certified-as-far-as-it-goes model that can never be promoted — and because
-      `load_surrogate` refuses an unpromoted version, `predict()` cannot answer at all.** That
-      makes cards #76–#84, the whole delivery layer, unreachable.
+      Three shapes were offered: **(i)** a phase-scoped subset computed at promotion time,
+      **(ii)** a fourth gate status `NOT APPLICABLE`, **(iii)** nothing changes and the delivery
+      layer loads with `require_gates=False`.
 
-      **This is a decision about the store's central guarantee and it is deliberately not being
-      taken here.** Three shapes it could take, none of them obviously right:
-      **(i)** promotion checks a *phase-scoped* subset — the gates whose cards are not frozen —
-      which means the manifest has to record what "in scope" meant on the day, or the scope
-      becomes a thing that can be quietly widened later;
-      **(ii)** the frozen gates stop being `Pending` and become explicitly `NOT APPLICABLE` in this
-      phase, a fourth status the harness does not have and whose whole risk is that it is one edit
-      away from being applied to a gate that *is* applicable;
-      **(iii)** nothing changes, and Phase H's delivery layer is exercised against a version loaded
-      with `require_gates=False` by name — honest, and it means the app ships against an
-      uncertified artifact, which is the thing gate HG-2 exists to prevent.
+      **What was implemented is narrower than any of them: a waiver is an act, not a property.**
+      `promote(version, waive={name: reason})` names criteria one at a time, never by pattern,
+      and writes them into `current.json` — the promotion pointer, which is where the decision
+      to ship anyway belongs. `load()` honours a waiver **only for the version the pointer
+      actually names**, so it cannot be inherited by an artifact nobody promoted under it, and
+      it dies the moment the pointer moves. Four refusals hold it shut: a criterion that
+      **FAILED** can never be waived (a waiver says "this was not checked and here is why"; it
+      can never say "this was checked and did not hold"); a criterion that **PASSED** cannot be
+      waived either, because a no-op entry rots the list into decoration; a **name the report
+      does not record** is an error rather than a silent narrowing; and an **empty reason** is
+      refused, because the reason is what makes it revisitable.
 
-      **Whoever takes it should read `hydms/artifacts/manifest.py`'s docstring first** — it argues
-      the current rule at length and is the strongest statement of the case against (i) and (ii).
-      Marked OPEN rather than settled because the session that found it is the least fit to take
-      it: it has spent a day inside the gate harness and will reach for the change that is cheapest
-      there.
+      **Why not (i).** It makes "in scope" something a session derives at promotion time, and a
+      derived scope widens quietly. **Why not (ii)** — the one the gate harness makes cheapest,
+      and therefore the one examined hardest. It moves the judgement inside the criterion, where
+      it is invisible at the moment of promotion and one edit from being applied to a criterion
+      that *is* applicable; worse, it corrupts the manifest, whose embedded report would stop
+      being a record of what was measured. **Why not (iii).** `require_gates=False` in the
+      delivery path erases the store's guarantee in one keyword that no artifact records. (The
+      framing above also said (iii) defeats "the thing gate HG-2 exists to prevent" — that is
+      **wrong** and is corrected here: HG-2 is the refusal path, that a result cannot be a bare
+      number without an interval and a domain verdict. What (iii) defeats is
+      `load(require_gates=True)`, which is `store.py`'s guarantee, not HG-2's.)
 
-- [ ] `current` points at `v1` — **blocked by the open decision above, not by any missing work.**
-      The command exists, the model exists, five criteria pass. `python -m hydms.surrogate.promote`
-      is one command away from finishing this card the moment the decision lands.
+      **The manifest never learns about waivers, and that is the property the design turns on.**
+      `Manifest.unestablished()` is unchanged, the promoted version's embedded report still
+      records AC-5/AC-7/AC-8 as `SKIPPED`, and `hydms/gates/` is untouched. The artifact's
+      account of what was *measured* is exactly as truthful after a waiver as before it.
+
+      **What stops "out of scope" becoming "not done yet".** Not `scripts/check_board.py`:
+      `artifacts/` is gitignored, so a rule written against a committed `current.json` would
+      never see one — a guarantee nothing checks. `tests/artifacts/test_waiver_scope.py` instead
+      **derives** the waivable set from the repository: every registered gate names its card,
+      every card lives in exactly one board directory, and a criterion is out of this phase's
+      reach if and only if its card is on the frozen board. Today that derivation yields exactly
+      `{AC-5, AC-7, AC-8}` and the test pins it, so a card crossing between boards goes red and
+      forces the question to be asked out loud.
+
+      **This does not finish this card, and the measurement says exactly how far it gets.**
+      `promote --dry-run --waive AC-5 --waive AC-7 --waive AC-8` against `artifacts/v1`, 210.9 s,
+      now refuses with **4 of 12 unestablished — AC-6 (#30), HG-2 (#77), HG-3 (#79), HG-4
+      (#86)** — down from 7, and every one of the four is Phase H's own work. What the decision
+      buys is that the remaining work is now *sufficient*: before it, no amount of Phase H work
+      could promote anything.
+
+- [ ] `current` points at a certified version — **no longer blocked by a decision; blocked by
+      work, which is the right kind of blocked.** The decision landed, so the command that
+      finishes this card now exists and is:
+
+      ```bash
+      python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
+      ```
+
+      It still refuses today, and correctly: AC-6, HG-2, HG-3 and HG-4 are skipped and every one
+      of them is Phase H's to land (#30, then S6's #76–#79, then S8's #86). Run it with
+      `--dry-run` after each of those closes to see the list shrink. Do **not** add any of those
+      four to the waiver list — `tests/artifacts/test_waiver_scope.py` is the check that says
+      why, and the command prints each waiver's owning card so the board it belongs to is
+      visible at the prompt
 
 ## Runnable check
 
@@ -248,3 +285,51 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
 
 - 2026-09-05: A `--trials 8` probe run died on trial 3 with `ConfigError: pipeline.yaml:model: unknown key(s) ['calibration_folds']`, and nothing was wrong with the code at any commit: the process had imported the pre-#27 `Model` dataclass and then re-read a post-#27 `pipeline.yaml` off the shared worktree. The interesting part is not the race but what it exposed — a run is not hermetic against its own configuration file. Measured while diagnosing it: one `load()` is 7.6 ms and a sentinel-budget nested run makes 210 of them, 21.6% of that run's wall time. At the configured budget that is ~2,300 re-reads spread over 3.5 hours. Recorded as a box above rather than fixed in place, because the fix changes what a published run records about itself and that is this card's subject. (by @assistant)
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- 2026-09-06: **The wall came down, and the answer was none of the three shapes the card
+  offered.** The framing set up a choice between a phase-scoped subset, a fourth gate status, and
+  doing nothing — and all three share a premise worth naming: that the fix belongs either to the
+  *criterion* (what it reports) or to the *rule* (what promotion demands). It belongs to neither.
+  It belongs to the **act**. A promotion is already a recorded, dated, one-line decision written
+  into `current.json`; the only thing missing was that it could not say what it was proceeding
+  without.
+
+  So `promote(version, waive={name: reason})` records that, and every constraint on it follows
+  from asking what a waiver is allowed to *mean*. It may say a criterion was not checked — so a
+  `FAILED` one is refused, and that single line is what separates this from
+  `require_gates=False`. It must be revisitable — so an empty reason is refused, and the reason
+  recorded is the gate's own skip message rather than prose typed at a prompt, because a
+  `Pending` gate's `reason=` field is reviewed code and a command-line string is not. It must not
+  rot — so waiving something that passed, or a name the report does not carry, is an error rather
+  than a no-op. And it must not outlive the decision — so `load()` honours it only for the
+  version the pointer actually names.
+
+  **`hydms/gates/` and `Manifest` are untouched, and that was the target rather than a
+  side-effect.** The handoff warned that a session fresh out of the gate harness would reach for
+  the change that is cheapest there, and it was right about which change that is: a fourth status
+  is about fifteen lines. It is also the one change that makes the manifest lie — the embedded
+  report would stop being a record of what was measured, which is the exact property
+  `manifest.py`'s docstring spends four paragraphs defending. The promoted version's report still
+  says AC-5 was skipped. Someone reading the artifact learns what was measured; someone reading
+  the pointer learns what was decided; neither file has to be read in light of the other.
+
+  **One thing in the card's own framing was wrong and is corrected there:** option (iii) was said
+  to defeat "the thing gate HG-2 exists to prevent". HG-2 is the refusal path — never a bare
+  number. What (iii) defeats is `load(require_gates=True)`, which is the store's guarantee.
+  Getting that wrong made (iii) look worse than it is; it is still rejected, but for the reason
+  that actually applies.
+
+  **Where the guard went, and why not where the first draft put it.** The obvious home for "is
+  this waiver legitimate?" is `scripts/check_board.py`, which already reads both boards — and it
+  was written there first, before `git ls-files artifacts/` returned nothing. `artifacts/` is
+  gitignored, so a rule about a *committed* `current.json` would never once fire in CI: an
+  unchecked guarantee dressed as a check. It moved to `tests/artifacts/test_waiver_scope.py`,
+  which derives the waivable set instead of listing it — each gate's `card`, each card's board
+  directory, and a pinned expectation of the result. Today that is exactly `{AC-5, AC-7, AC-8}`.
+  A card crossing between boards turns it red, which is the only moment anyone would think to ask
+  the question again.
+
+  **This card is still open, and is now blocked by work rather than by a decision.** Waiving the
+  three frozen criteria leaves AC-6, HG-2, HG-3 and HG-4 — #30, S6, S8 — every one of them Phase
+  H's own. That is the honest outcome: the decision made the remaining work *sufficient*, where
+  before it was not. (by @assistant)

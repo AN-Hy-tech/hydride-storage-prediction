@@ -31,11 +31,39 @@ as one saying "AC-6 failed". So a model cannot be promoted until the last gate i
 is the store's guarantee working, not this command failing, and the refusal names every
 outstanding criterion and the card that owes it.
 
+**``--waive`` is the exception, and it is narrow on purpose.** Three registered criteria --
+AC-5, AC-7 and AC-8 -- belong to phases ``docs/FREEZE.md`` has frozen, so Phase H cannot make
+them pass however much work it does; without a way through, the phase ends with a model that can
+never be promoted and a delivery layer that can never load one. ``--waive AC-5`` names one such
+criterion, and the reason recorded is **the gate's own skip message**, not prose typed at the
+prompt: a ``Pending`` gate already states why it is pending and names the card and the freeze
+document, and that sentence is reviewed code where a command-line string is not.
+
+What it does not buy:
+
+  - **A failed criterion is never waivable.** ``hydms.artifacts.promote`` refuses anything whose
+    status is not ``SKIPPED``, so this flag cannot be used to ship past a gate that ran and said
+    no.
+  - **It is not "skip the ones that are hard".** AC-6, HG-2, HG-3 and HG-4 are skipped today and
+    are *reachable* in this phase (cards #30, #77, #79, #86). Waiving one would be waiving work
+    rather than scope. Nothing stops you at the prompt -- this command prints the owning card
+    beside every waiver so the operator can see which board it is on -- but
+    ``tests/artifacts/test_waiver_scope.py`` pins which criteria a frozen phase owns, derived
+    from the board directories, so the set cannot drift without a red test.
+  - **It does not touch the manifest.** The promoted version's embedded report still records
+    AC-5 as ``SKIPPED``. The waiver lives in ``current.json``, dies when the pointer moves, and
+    is what ``hydms.artifacts.waived()`` reads back for anything that reports what a prediction
+    rests on.
+
+The full argument, including the two shapes that were rejected, is in
+:mod:`hydms.artifacts.store`'s docstring.
+
 Exit codes:
 
     0   the version was certified and ``current`` now points at it (or ``--dry-run`` was green)
-    1   a criterion is unestablished -- nothing was written and nothing was promoted
-    2   the invocation itself was wrong (unreadable config, unknown version, empty store)
+    1   a criterion is unestablished and not waived -- nothing was written, nothing promoted
+    2   the invocation itself was wrong (unreadable config, unknown version, empty store, or a
+        waiver naming a criterion a waiver may not cover)
 
 Card #34.
 """
@@ -77,6 +105,17 @@ def _parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="run the gates and report; write no version and move no pointer",
+    )
+    parser.add_argument(
+        "--waive",
+        action="append",
+        default=[],
+        metavar="GATE",
+        help=(
+            "proceed without this criterion, which must be SKIPPED in this run; repeatable, "
+            "one name at a time. The reason recorded is the gate's own skip message. For "
+            "criteria a frozen phase owns, never for work this phase can do."
+        ),
     )
     return parser
 
@@ -138,7 +177,49 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     report = run(gates, cfg, selection="--all", strict=True)
     print(render_report(report, gates), file=stream)
 
-    outstanding = tuple(r for r in report.results if not r.passed)
+    by_name = {r.name: r for r in report.results}
+    requested: dict[str, str] = {}
+    for name in dict.fromkeys(args.waive):
+        result = by_name.get(name)
+        if result is None:
+            print(
+                f"--waive {name}: this run recorded no criterion by that name. Registered: "
+                f"{', '.join(sorted(by_name))}.",
+                file=sys.stderr,
+            )
+            return EXIT_BAD_INVOCATION
+        if result.status.value != "SKIPPED":
+            print(
+                f"--waive {name}: it is {result.status.value} in this run, and a waiver covers "
+                f"only a criterion that did not run at all. A waiver says why something was "
+                f"not checked; it can never say a check was made and did not hold.",
+                file=sys.stderr,
+            )
+            return EXIT_BAD_INVOCATION
+        # The gate's own account, not the operator's. A `Pending` gate states why it is
+        # pending and names its card and `docs/FREEZE.md`; that sentence is reviewed code,
+        # and a reason typed at the prompt is not.
+        requested[name] = result.message or f"skipped; card #{_card(name)}"
+
+    if requested:
+        listed = "\n".join(
+            f"  {name} (card #{_card(name)}) -- {reason}" for name, reason in requested.items()
+        )
+        # Before the refusal below, not after it. An operator who waives three criteria and is
+        # still refused for a fourth has to be able to see that the three were accepted --
+        # otherwise the refusal reads as the flag having done nothing.
+        print(
+            f"\nWAIVED, and recorded in current.json as the promotion's own asterisk if this "
+            f"promotion goes through:\n"
+            f"{listed}\n"
+            f"{candidate} therefore has {len(report.results) - len(requested)} of "
+            f"{len(report.results)} criteria left to establish. The manifest still records "
+            f"every waived one as SKIPPED: the decision to proceed lives in the pointer, not "
+            f"in the artifact's account of what was measured.",
+            file=stream,
+        )
+
+    outstanding = tuple(r for r in report.results if not r.passed and r.name not in requested)
     if outstanding:
         print(
             f"{candidate} is NOT promotable: {len(outstanding)} of {len(report.results)} "
@@ -152,8 +233,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         return EXIT_UNESTABLISHED
 
     if args.dry_run:
+        established = (
+            "every criterion passed"
+            if not requested
+            else f"every criterion passed or was waived ({', '.join(requested)})"
+        )
         print(
-            f"--dry-run: every criterion passed against {candidate}. Re-run without --dry-run "
+            f"--dry-run: {established} against {candidate}. Re-run without --dry-run "
             f"to write the certified version and move the pointer.",
             file=stream,
         )
@@ -165,6 +251,13 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         f"{' from a modified tree' if source.git.code_modified else ''}. "
         f"Payloads are that version's objects; the gate report is this command's run against "
         f"it."
+        + (
+            f" Promoted with {len(requested)} criteri{'on' if len(requested) == 1 else 'a'} "
+            f"waived ({', '.join(requested)}); the report records each as SKIPPED and the "
+            f"waiver itself is in current.json."
+            if requested
+            else ""
+        )
     )
     manifest = artifacts.save(
         {name: bundle[name] for name in bundle.names},
@@ -174,7 +267,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         notes=notes,
         store=root,
     )
-    artifacts.promote(manifest.version, store=root)
+    artifacts.promote(manifest.version, store=root, waive=requested)
     print(
         f"wrote {manifest.version} carrying the gate report and promoted it. "
         f"`current` now points at {manifest.version}; {candidate} stays on disk as the record "
