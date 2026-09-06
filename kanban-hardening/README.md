@@ -136,6 +136,8 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
+**Next session, in one line.** S4 is closed and no measurement is left: start at **#48** (the only card with a decision in it -- #30's per-class spread says the domain ceiling cannot be one scalar distance), then #49, #73, #74, #75; promote **`v2`**, never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+
 **Next session, in one paragraph.** **S4 is closed and the artifact to promote is now `v2`,
 not `v1`.** #30 moved to `done` on 2026-09-07 -- its three unticked boxes are recorded findings,
 not work -- and the deployed fit was re-saved from the clean tree at `4a06011`, so
