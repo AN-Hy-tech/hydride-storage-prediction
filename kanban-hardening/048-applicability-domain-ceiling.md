@@ -58,6 +58,32 @@ the primary structural mitigation for risk R1.
       `HIGH_UNCERTAINTY` cannot stand in for `OUT_OF_DOMAIN`: a candidate can be out of family and
       carry a *narrow* band, which is the failure this screen exists to catch
 
+- [ ] **A second, independent reason to refuse, and ElMD distance does not capture it** (added
+      2026-09-06). A gradient-boosted tree predicts leaf averages of training targets, so it
+      **cannot return a value above the target range it was trained on**. Measured over the 893
+      training rows: Mg median **3.80 wt%** against **1.60** for every other class, Mg max
+      **7.19** against a non-Mg max of **5.19**, with **21 of 96 Mg rows above the entire non-Mg
+      range**. So a candidate can be *chemically close* to the training set by any composition
+      metric and still sit in a capacity regime the model is structurally unable to reach. **A
+      distance screen cannot see this, because it is a property of the target, not of the
+      composition.**
+
+      **The screen this implies is arithmetic, not learned, and it costs nothing to add.** The
+      physical ceiling is `wt%_max = H/M_max * 1.008 / mean atomic mass` with `H/M_max` = 2 for
+      ordinary interstitial dihydrides and 2.5 for BCC HEAs ([Sahlberg et al.
+      2016](https://doi.org/10.1038/srep36770), lattice strain opening both tetrahedral and
+      octahedral sites). Every term is computable from the formula alone, so it stays inside PRD
+      2.3's enabling fact. A prediction above that ceiling is unphysical and must be refused
+      rather than ranked; a prediction near the top of the *training* range while the composition
+      implies a much higher ceiling is the extrapolation case this card is for. Whether that is a
+      third `reasons` code or a qualifier on `OUT_OF_DOMAIN` is this card's decision -- but note
+      it cannot be `INDETERMINATE`, which is a rejection for *uncomputable*, and this quantity is
+      always computable.
+
+      The fuller future-work programme behind this -- Miedema descriptors re-tested under the
+      fixed merge, the H/M reparameterisation, structure proxies -- is boxed on #37, because it is
+      the chapter's limitations section rather than this screen's contract
+
 ## Runnable check
 
 ```bash
