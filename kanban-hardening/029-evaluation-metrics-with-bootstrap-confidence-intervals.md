@@ -242,11 +242,28 @@ intervals alongside point estimates by default — not as an option.
       selection,scaler}.py`, `hydms/data/`, `hydms/descriptors/` and `hydms/config/` is **empty**,
       so the later SHA differs only in `evaluate.py`, `manifest.py`, their tests and prose. The
       numbers are what `a101205` produced.
-- [ ] **Boxed, not chased (Q8): the canonical count is off by one against a stated invariant.**
-      CLAUDE.md says 1,149 formula strings collapse to **1,115** canonical compositions; the
-      modelling matrix measures **1,114** groups over 1,278 rows. The populations genuinely differ
-      — the matrix carries temperature duplicates the formula-string count does not — so this need
-      not be a defect. Nothing currently checks it, which is how a real off-by-one would hide
+- [x] **MOVED TO #15 and closed there (Q8): the canonical count is off by one against a stated
+      invariant.** CLAUDE.md says 1,149 formula strings collapse to **1,115** canonical
+      compositions; the modelling matrix measures **1,114** groups over 1,278 rows. Boxed here
+      because nothing checked it, which is how a real off-by-one would hide.
+
+      **Measured on #15, and it is not a defect — nor is it what this box guessed.** The
+      explanation offered above, that "the matrix carries temperature duplicates the
+      formula-string count does not", is wrong: temperature duplicates change neither count,
+      because both are counts of *compositions*. The whole difference is one row. The
+      21-feature contract (`dev_Gordy_electonegativity` excluded, the exclusion
+      `hydms.surrogate.select.COSTLY_FEATURE` names) refuses exactly one of the 1,279 curated
+      rows — `Eu1Ni5`, whose europium blocks all six JARVIS features — and that row is the
+      **only** row of its canonical composition `Eu0.1667Ni0.8333`. So the matrix loses one row
+      and exactly one group: 1,279 → 1,278 and 1,115 → 1,114. It sits in `test`, which is why
+      `split_rows.train` is 893 whichever population you count over.
+
+      Now checked rather than narrated: `tests/data/test_golden.py` records
+      `modelling_rows`, `modelling_compositions`, `unfeaturisable_rows`,
+      `unfeaturisable_compositions` and `unfeaturisable_rows_in_train` as measured facts, and
+      `test_the_off_by_one_against_the_modelling_matrix_is_the_one_unfeaturisable_row` asserts
+      the equation that ties them. A second unfeaturisable row, or a refused row that is not
+      alone in its composition, goes red
 
 ## Runnable check
 
