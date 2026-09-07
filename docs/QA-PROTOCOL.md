@@ -86,6 +86,13 @@ Read the test first, then the code. Ask:
    person an hour.
 7. **Has anything crossed a layer boundary?** ML logic in a route handler, a path literal in the
    surrogate, a screen that reaches into the model.
+8. **Does any function narrow a cause it knows to a boolean?** If it does, the sentence explaining
+   the failure has to be reconstructed further out, by code that no longer knows what happened — and
+   a reconstructed sentence can be confidently wrong while every test stays green. Card #49 paid for
+   this one: `_vector` knew *which* symbol ElMD could not read and returned `False`, so every
+   refusal was explained with a sentence written for a different defect. The reason must travel with
+   the refusal, from wherever the decision was actually made. See #90 for the catalogue that makes
+   such a sentence visible in a diff; nothing makes it go red.
 
 ---
 

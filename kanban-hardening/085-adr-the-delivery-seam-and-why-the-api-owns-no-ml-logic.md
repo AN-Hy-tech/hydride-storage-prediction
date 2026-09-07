@@ -30,6 +30,14 @@ see the HTTP hop as pointless overhead and remove it.
 - [ ] It names what would justify reversing it
 - [ ] It is written from the `## Narrative` notes on #76, #78 and #82, not from memory
 - [ ] It is listed alongside the five ADRs in #36
+- [ ] **It argues the seam from both sides, not one** (added 2026-09-07 by #91). The title says the
+      API owns no ML logic; the same seam also means **the library owns no I/O**. #91 writes a
+      prediction record on every served answer and the writing is the service's job, because a
+      `predict_capacity()` that writes to disk on every call is untestable, breaks the batch path,
+      and would make #76's memoised bundle do I/O from a function with no reason to. That is a real
+      trade-off with a real alternative — the library could own its own record and guarantee one
+      exists however it is called — so it belongs in this ADR rather than in a second one. Two ADRs
+      about one seam is how a seam ends up with two stories
 
 ## Runnable check
 

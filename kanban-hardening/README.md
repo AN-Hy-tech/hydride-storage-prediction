@@ -73,6 +73,14 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | **S7** Delivery: interface | 81, 82, 83, 84 | 3.5 |
 | **S8** Evidence & close | 89, 85, 86, 35, 36, 37 | 5 |
 
+**#90 and #91 are in neither column and that is deliberate.** They came out of a grilling session on
+2026-09-07 about catching bugs during the working cycle, and neither is an unfreeze condition —
+`../docs/FREEZE.md` fixed those four "before results are seen, so it cannot be softened later", and
+widening that list is the one thing it exists to resist. **#90** (the refusal catalogue) has no
+unfinished blocker and slots in wherever there is room; **#91** (the prediction record and replay)
+belongs beside S6 but may sit open across the lift. The gate they will eventually register, HG-5, is
+boxed on #91 and is explicitly post-freeze.
+
 Cards **4, 6, 7, 73, 74** are foundation and CI work that slots in where its blockers allow rather
 than sitting in one stage. **#5** (the gate harness) was the same kind of card and has landed inside
 S1, where it belonged: every gate card on the board was blocked behind it.
