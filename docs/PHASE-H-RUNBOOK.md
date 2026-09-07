@@ -76,7 +76,12 @@ S2 and S3 are the only parallelism worth taking. Everything else is a chain.
 
 **Five cards sit outside that list** — #4, #6, #7, #73, #74 — foundation and CI work that slots in
 where its blockers allow. #4 is the one S4 waits on, and it landed 2026-09-04, before S4 opened:
-#23's "persist the scaler, never refit" has nowhere to persist to without it.
+#23's "persist the scaler, never refit" has nowhere to persist to without it. **#73 and #74 landed
+2026-09-07**, after S4 closed rather than during S1, which is what "slots in where its blockers
+allow" means in practice: both need `predict()` (#28), so neither could have been written earlier.
+#73 is the end-to-end smoke run — `python -m hydms.pipeline.smoke`, 12.1 s over a committed
+235-row fixture — and it runs the **live** stage order, not the archival one its card's arrows
+describe; #74 is the metamorphic suite. Both are in the fast lane and neither is marked `slow`.
 
 - **`artifacts/v{N}/`** holds one `manifest.json` and one `<name>.joblib` per saved object.
   `hydms.artifacts.save()` and `.load()` are the only doors. A version is staged under a dotted
@@ -897,7 +902,13 @@ verdict **with a reason**, the ElMD distance to the nearest known alloy, the mod
 scaling, quantile assembly, conformal widening, the AD check — is hidden. An immutable
 `ArtifactBundle` loads once at startup, version-stamped.
 
-- [ ] **#75** `hydms/delivery/contract.py` — request / result / refusal schemas.
+- [x] **#75** `hydms/delivery/contract.py` — request / result / refusal schemas. **Landed
+      2026-09-07.** The bare number is unspellable: `interval` and `domain` have no defaults and
+      `None` is refused, and `refused` is a *property* on both answer types rather than a field.
+      The reason codes are **derived** — `reason_codes()` over `delivery_screens()`, which is
+      `temperature_window()` and `applicability_domain()` today and widens on its own when #49
+      lands. An unparseable formula and an unknown element have no screen code and carry
+      `INDETERMINATE`, which costs #76 an ordering choice and is boxed there and on #77.
 - [ ] **#76** `hydms/delivery/predict.py`. Use `codebase-design` / `software-design-philosophy`: this
       is the phase's one genuinely deep module, and the place a shallow pass-through would leak the
       whole pipeline into the API and the app.
@@ -1022,9 +1033,8 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. 1117 passed, 0 skipped as of 2026-09-06 evening (29 min, measured while `gates --all`
-# held the machine for its first three, so treat that as an upper bound; the clean reading before
-# the LOCO run was 21 min). Anything red is a real failure. Do NOT pass -q: pyproject already sets
+# Suite. **1229 passed, 0 skipped as of 2026-09-07 (24 min 58 s)**, on a quiet machine — up from
+# 1117 on 2026-09-06 by cards #73, #74 and #75. Anything red is a real failure. Do NOT pass -q: pyproject already sets
 # it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
 # is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
 # run, which happened on 2026-09-06, so it now asserts the committed reports/loco/loco.md against
@@ -1038,8 +1048,13 @@ ruff check hydms/ tests/ scripts/ && mypy
 # `run` with no selection exits 2 -- a selection is a decision, so name one.
 conda run -n Project python -m hydms.gates run --all           # 6 passed, 0 failed, 6 skipped (3.1 min)
 
-# Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical metrics
-conda run -n Project python -m hydms.pipeline run --config hydms/config/pipeline.yaml
+# Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical output.
+# This is the SMOKE run (card #73), not a retrain: every stage over a committed 235-row fixture
+# in about 12 s, answering "does the chain connect" and nothing about accuracy. `--digest` prints
+# only what a second run with the same seed must reproduce. The real run is `hydms.surrogate.train`
+# and `hydms.surrogate.calibrate` (docs/RUNNING-THE-FIT.md), which is hours.
+conda run -n Project python -m hydms.pipeline.smoke
+conda run -n Project python -m hydms.pipeline.smoke --digest
 
 # API
 conda run -n Project uvicorn hydms.delivery.api:app --port 8000
@@ -1064,8 +1079,9 @@ conda run -n Project streamlit run app/main.py
 
 - A known training alloy returns the model's prediction for that row (AC-4 at the UI boundary).
 - `Mg12Ce1` and `Ce1Mg12` return the **same** answer — L8 fixed, visibly. They already share one
-  canonical key (`Ce0.07692Mg0.9231`, #87); what is left to check here is that the *prediction path*
-  keys them rather than featurising the strings.
+  canonical key (`Ce0.07692Mg0.9231`, #87), and since #74 the *prediction path* is asserted on all
+  six known collision pairs as well (`tests/test_metamorphic.py`), so what is left here is the UI
+  boundary rather than the library.
 - A plausible-but-far composition visibly widens the interval and flags the domain.
 - Nonsense is refused with a reason, not answered.
 

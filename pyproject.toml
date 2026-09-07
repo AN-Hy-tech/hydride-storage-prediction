@@ -124,7 +124,18 @@ exclude = ["Machine_Model*", "tests*", "scripts*"]
 # curated CSVs nor `reports/loco/`. Regenerate it with
 # `python -m hydms.screens.domain --emit`; a test asserts the committed bytes are what that
 # command produces.
-hydms = ["descriptors/data/*.csv", "config/*.yaml", "screens/*.json"]
+# `pipeline/smoke-fixture.csv` ships for the third variation on the same reason. It is the
+# sampled fixture the end-to-end smoke run reads (card #73), and the run exists to answer "does
+# the chain connect" on a machine that may have no `Machine_Model/` in it at all — a container,
+# a CI runner, an installed wheel. It is generated rather than curated:
+# `python -m hydms.pipeline.smoke --emit` rewrites it from the curated data, and a test asserts
+# the committed bytes are what that command produces.
+hydms = [
+  "descriptors/data/*.csv",
+  "config/*.yaml",
+  "screens/*.json",
+  "pipeline/*.csv",
+]
 
 # ---------------------------------------------------------------------------------------
 # Test discovery

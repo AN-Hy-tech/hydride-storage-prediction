@@ -45,7 +45,7 @@ deliberate — it is the only reliable way a guard written six weeks early becom
 
 | Layer | A card here is not done until it has shown |
 |---|---|
-| **L0 Foundation** | Config resolves with no absolute path. Seeds reproduce. The artifact manifest round-trips. Every gate registered here can **fail**, demonstrated. |
+| **L0 Foundation** | Config resolves with no absolute path. Seeds reproduce. The artifact manifest round-trips. Every gate registered here can **fail**, demonstrated. The whole chain runs end to end on a committed fixture, inside the fast lane, and twice with one seed gives one answer (#73). |
 | **L1 Data** | Row counts at every stage, asserted not assumed. The merge is keyed: reordering an input never changes the answer *silently*, and a row it cannot key makes it fail. No canonical composition spans two splits. Held-out targets **and feature values** are byte-identical before and after any screening stage. |
 | **L2 Descriptors** | Parity with CBFV to 1e-9 across all 1,279 formulae (AC-2). Permutation and scale invariance. Both element tables are exercised — a single-table result cannot pass. |
 | **L3 Surrogate** | The scaler is fitted exactly once and never refitted downstream. No fold is both tuned on and scored on. The test split is never passed to `fit`. Quantile column order asserted by position. Conformal coverage within a few points of nominal (AC-3). |

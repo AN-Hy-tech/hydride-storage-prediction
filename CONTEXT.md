@@ -195,6 +195,16 @@ at a real, wired, working object that has quietly stopped being the thing that s
 name only, and reports green while doing it.
 _Avoid_: assuming a green sentinel means the right thing was guarded
 
+**Smoke run** (two different things, and they are not interchangeable):
+`python -m hydms.pipeline.smoke` is the **chain check** — every pipeline stage over a committed
+235-row fixture in about twelve seconds, answering *does the chain still connect?* and nothing
+else (card #73). `python -m hydms.surrogate.train --trials 2` is the **cost check** — the whole
+cross-validation path at a tiny budget, about ten minutes, answering *will the real run get to the
+end?* (`docs/RUNNING-THE-FIT.md` Step 3). Neither produces a quotable number, and they fail for
+different reasons: the first goes red when a stage stops connecting to the next, the second when a
+fit or a table-writing step is broken.
+_Avoid_: "the smoke test" unqualified — say which, or say "the chain check" / "the cost check"
+
 **Leak**:
 A named, sited way held-out data influenced something before it was scored. Thirteen are inventoried
 with their exact locations in the archival pipeline.

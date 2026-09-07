@@ -150,6 +150,14 @@ find out in ten minutes instead of at minute 110 of the real run.
 **Skip it if you are skipping Step 4.** It smoke-tests the cross-validation, which is the only
 expensive thing here. Step 5 is its own two-minute smoke test.
 
+> **This is not the same smoke run as `python -m hydms.pipeline.smoke`.** That one is the **chain
+> check** (card #73): every stage from the raw file to a prediction, over a committed 235-row
+> fixture, in about **twelve seconds**. It answers *does the chain still connect?* — nothing about
+> cost and nothing about accuracy. This step is the **cost check**: the real cross-validation path,
+> on the real matrix, at two trials instead of twenty-five. If you have a spare twelve seconds,
+> run the chain check first; if it is red, this step will be red too and will take ten minutes to
+> say so. `CONTEXT.md` keeps the two names apart.
+
 ```powershell
 conda run --no-capture-output -n Project python -m hydms.surrogate.train --target capacity --trials 2 --report .\reports\_smoke
 ```

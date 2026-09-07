@@ -136,7 +136,56 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** Take **#73**, **#74** and **#75** -- all three unblocked, none of them needing a dependency install -- and **#75 opens S6**; leave **#49** until somebody decides whether `ElMD` goes into the `Project` env, promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+**Next session, in one line.** Take **#76** -- S6's deep module, and the only card the three that just landed unblock -- reading #75's contract and the two boxes it left you on `INDETERMINATE` and on the predict-then-screen assembly; **#49 is still the one card that needs a decision you cannot make alone** (`ElMD` is declared and not installed), promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+
+**Handoff, 2026-09-07 (later) — #73, #74 and #75 are `done`; S6 is open at #76.** All three
+landed together and **two of them found that a box was asking for the wrong thing**, so read the
+narratives before you trust the card text.
+
+**#75 is the one that matters to you.** `hydms/delivery/contract.py` exists: `PredictionRequest`,
+`Interval`, `ScreenVerdict`, `DomainVerdict`, `Novelty`, `PredictionResult`, `Refusal`, and
+`answer_from()` — the one door back from JSON, which #79's transport-parity gate needs on both
+sides of its comparison. The bare number is **unspellable**: `interval` and `domain` have no
+defaults, so omitting one is a `TypeError` and passing `None` is a `ContractError`. `refused` is a
+**property** on both answer types, never a field. The code set is derived by `reason_codes()` from
+`delivery_screens()` — `temperature_window()` and `applicability_domain()`, #49 absent — and the
+test asserts the set *equals* what the screens declare rather than naming the codes. Two boxes were
+left for you, both on the cards that own them: **#76** and **#77** now carry the finding that an
+unparseable formula and an unknown element have **no screen code**, that `INDETERMINATE` is the
+answer (it is a rejection, and #48's screen already emits it for exactly this case), and that this
+costs you an ordering choice — screen before featurising, or catch `FeaturisationError` and map it.
+Pick one and say so in the ADR (#85). `novelty` is a required field that may be `None`, meaning
+"not measured"; the day #49 lands, the vocabulary widens on its own.
+
+**#73 runs the *live* stage order, not the card's.** `python -m hydms.pipeline.smoke` is
+`load -> canonicalise -> split -> featurise -> merge -> screen -> select -> fit -> predict` in
+**12.1 s** over a 235-row committed fixture at `hydms/pipeline/smoke-fixture.csv` (package data, so
+it works in a container with no `Machine_Model/`). The card's arrows are the archival script's;
+canonicalisation precedes the split because the split groups on the canonical key (L8), and the
+merge follows featurisation because the merge this pipeline has is `with_features` (L9, L13). Three
+things worth carrying forward: **`merge_features` still has no production caller** — #10's keyed
+merge is exercised only by the L9 sentinel; **two budgets had to be invented**, `SMOKE_SPLIT`
+(3x3 strata: 173 compositions cannot fill 25, and the second cut then hands
+`StratifiedShuffleSplit` a class of one) and `SMOKE_FOREST_TREES` (screening was 18.5 s of a 21 s
+run, because `label_issues` defaults to a 100-tree forest and CleanLab cross-fits it five times);
+and **the fixture must be filtered by `computability(...).complete`**, because `Eu` is four empty
+cells in the `jarvis` table and an Eu row kills the run at featurisation on a table defect rather
+than a broken link.
+
+**#74 contradicted two of its own boxes, and both contradictions are the finding.** A **case
+change raises** rather than being absorbed — `Co` is cobalt and `CO` is carbon and oxygen, so a
+case-folding parser would silently swap one material for another — and pairing case with whitespace
+in one box is what made them look like one property. **Scale invariance is bit-exact only for
+integer rescalings**: `La0.2Ni1` differs from `La1Ni5` by 2.776e-17, because `0.2 / 1.2` and `1 / 6`
+are different binary numbers, so the featuriser gets a 1e-12 tolerance and the *booster* gets the
+exact assertion. **Temperature is not monotone** (5 of 39 steps fall on a fixture whose target rises
+by construction; `monotone_constraints` exists and this project does not set it). And the most
+useful test in the file catches nothing: the response is **flat outside the fitted range**, which is
+risk R1 measured rather than argued.
+
+Nothing here needed a heavy run and nothing here promotes anything. Full suite **1229 passed,
+0 skipped, 24 min 58 s** (up from 1153); `gates run --fast` 5 passed / 0 failed / 4 skipped with
+HG-1 still 13/13; `check_board.py`, `check_freeze.py`, ruff and mypy all green.
 
 **Handoff, 2026-09-07 — #73, #74, #75 and the start of S6.** Four cards are unblocked and three
 of them are the ones to take, because **#49 is the only one that needs a decision you cannot make

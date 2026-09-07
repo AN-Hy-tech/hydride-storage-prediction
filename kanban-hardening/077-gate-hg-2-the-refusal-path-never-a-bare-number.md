@@ -36,6 +36,14 @@ no training alloy" tells them what to do next.
 - [ ] **No path through `predict_capacity()` can return a point estimate without an interval and a
       domain verdict** — asserted exhaustively, not sampled
 - [ ] Registered in the gate harness as HG-2
+- [ ] **The unparseable-formula and unknown-element refusals carry `INDETERMINATE` (from #75).**
+      Neither is a threshold any screen declares a code for, and the delivery vocabulary is derived
+      from the screens rather than written down — so there is no `unparseable-formula` code to reach
+      for, and inventing one here is precisely the second source of truth #75 exists to prevent.
+      `INDETERMINATE` is the declared code for "this rule could not be evaluated on this candidate",
+      it is a **rejection**, and #48's screen already emits it for a formula it cannot give a
+      physical ceiling to. The distinguishing detail goes in the human-readable `explanation`. This
+      gate must assert both refusals are reachable and that neither returns a number
 
 ## Runnable check
 

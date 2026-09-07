@@ -55,6 +55,15 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       the next call. Decide whether this layer inherits that cache or holds the bundle itself, and
       say which in the ADR (#85) — two caches for one artifact version is the failure
 - [ ] Feature column order is asserted against the contract, not assumed
+- [ ] **An unparseable formula has no screen code, and `INDETERMINATE` is the answer (from #75).**
+      The delivery vocabulary is `ADMITTED` + the union of the configured screens' `reasons` +
+      `INDETERMINATE`, so "this string does not parse" and "the `oliynyk` table has no mass for this
+      element" have no code of their own — and `featurize` raises before any screen has seen the
+      candidate. Two orderings work and this card picks one: **screen before featurising**, or catch
+      `FeaturisationError` and map it to a `Refusal` carrying `INDETERMINATE` with the parse error's
+      own sentence as the explanation. #48's applicability screen already emits `INDETERMINATE` for
+      exactly this case, so the second keeps one vocabulary; the first keeps one code path. Whichever
+      is chosen, say so in the ADR (#85)
 - [ ] The domain verdict (#48) and the ElMD distance (#49) are computed on every call
 - [ ] Predictions are returned in wt%, back-transformed, with the interval transformed consistently
 - [ ] No absolute path, no network call, no global mutable state
