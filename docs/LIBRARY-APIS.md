@@ -264,7 +264,11 @@ scipy 1.15.2), so pip installed exactly one package. `requirements-lock.txt` gai
   The only reliable guard is a **second, independent parse**: `hydms.screens.novelty` reads
   every string with `hydms.data.load.parse_formula` as well and requires both parsers to name
   the same elements, treating any disagreement as `INDETERMINATE`, which is a rejection. The
-  two agree on all 1,149 distinct curated formulas, so the cross-check costs nothing real.
+  two agree on all 1,149 distinct curated formulas — and on all 118 element symbols this
+  project accepts, every one of which ElMD places on the 103-slot scale — so the cross-check
+  costs nothing real. **Report the rejection in `parse_formula`'s own words**, not in a
+  sentence about ElMD returning an empty composition: that is true of `Xx2` and false of
+  `LaNi5Xx2`, and our grammar has already named the offending symbol.
   One string they agree on and *should* be known about: `"NaN"` is sodium-plus-nitrogen to
   both, so a missing value written as that text is a valid formula no guard can catch.
 - **`ratio_vector` is 103 long and `petti_vector` is 121.** The distance uses the former. They

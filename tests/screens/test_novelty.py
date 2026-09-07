@@ -12,8 +12,10 @@ decisions cannot be quietly undone:
   - the committed reference is what ``--emit`` measures from the curated data;
   - the ceiling is the corpus's widest *internal* gap, computed rather than typed, so new
     data moves it;
-  - an unparseable formula is refused rather than measured, which is the one silent failure
-    ElMD hands its caller: it returns an empty composition instead of raising.
+  - an unparseable formula is refused rather than measured, and refused **for the reason it
+    actually failed**. ElMD hands its caller two silent failures, not one: it reads nothing
+    at all and returns an empty composition, or -- the dangerous one -- it drops only the
+    symbol it cannot read and measures the rest as though the typo were an alloy.
 """
 
 from __future__ import annotations
@@ -43,6 +45,7 @@ from hydms.screens.novelty import (  # noqa: E402
     REFERENCE_FILE,
     ElementMoversDistance,
     NoveltyReference,
+    _vector,
     distances,
     emit,
     main,
@@ -91,7 +94,7 @@ def _candidates(formulas: list[str]) -> pd.DataFrame:
 def test_the_batched_distance_is_elmds_own_answer() -> None:
     """The card's whole batching argument rests on this identity holding exactly."""
     matrix, unreadable = vectors(CORPUS)
-    assert unreadable == []
+    assert unreadable == {}
     measured, nearest = distances(matrix, matrix[:1])
 
     for position, formula in enumerate(CORPUS):
@@ -278,7 +281,7 @@ def test_an_unreadable_formula_is_refused_rather_than_measured(formula: str) -> 
     assert table["code"].iloc[0] == INDETERMINATE
     assert np.isnan(table[DISTANCE_COLUMN].iloc[0]), "no number is reported for a non-composition"
     assert table[NEAREST_COLUMN].iloc[0] == ""
-    assert "could not read" in table["reason"].iloc[0]
+    assert repr(formula) in table["reason"].iloc[0], "the refusal names the string it refused"
 
 
 def test_one_unreadable_candidate_does_not_disturb_the_others() -> None:
@@ -331,6 +334,74 @@ def test_a_partly_read_formula_is_refused_not_answered_as_the_alloy_it_truncates
     assert row["code"] == INDETERMINATE
     assert np.isnan(row[DISTANCE_COLUMN])
     assert row[NEAREST_COLUMN] == ""
+
+
+@pytest.mark.parametrize(
+    ("formula", "symbol"),
+    [("LaNi5Xx2", "'Xx'"), ("La1Ni5Zz1", "'Zz'"), ("TiFeQ", "'Q'")],
+)
+def test_a_partial_read_is_refused_for_the_reason_it_actually_failed(
+    formula: str, symbol: str
+) -> None:
+    """The reason a reader acts on must not describe the refusal with the old story.
+
+    Before this, every rejection said the string "parses to an empty formula" -- true of
+    ``Xx2`` and flatly false of ``LaNi5Xx2``, which parses to ``LaNi5``. A reason that
+    misnames the mechanism is exactly as unactionable as no reason: whoever typed the formula
+    is told to look for a missing composition rather than at the symbol nobody could read.
+    """
+    screen = ElementMoversDistance(_reference(), column=FORMULA)
+    reason = screen.verdict(_candidates([formula])).iloc[0]["reason"]
+    assert symbol in reason, "the refusal names the symbol that is not an element"
+    assert "empty formula" not in reason, "it did not parse to an empty formula"
+
+
+class _Reads:
+    """An ElMD stand-in that reads exactly the composition it is given.
+
+    The two branches below are unreachable through the public path -- ``parse_formula`` rejects
+    first, and it and ElMD agree on every formula this project holds -- so they are exercised
+    here directly. They are the guard for an ElMD whose element coverage drifts from ours,
+    which is a version away rather than impossible, and a guard whose message nobody has read
+    is half a guard.
+    """
+
+    def __init__(self, composition: dict[str, float]) -> None:
+        self.composition = composition
+        self.petti_lookup = {"La": 20, "Ni": 68, "Fe": 65, "Ti": 51}
+
+    def __call__(self, formula: str, metric: str) -> _Reads:
+        return self
+
+
+def test_a_formula_elmd_reads_as_nothing_is_refused_in_those_words() -> None:
+    row, cause = _vector(_Reads({}), "LaNi5")
+    assert not row.any()
+    assert "reads no composition at all" in cause and "'LaNi5'" in cause
+
+
+def test_two_parsers_that_name_different_elements_refuse_and_say_so() -> None:
+    """Neither reading can be trusted, so the reason names both rather than picking one."""
+    row, cause = _vector(_Reads({"Ti": 1.0, "Fe": 1.0}), "LaNi5")
+    assert not row.any()
+    assert "disagree" in cause
+    assert "'La'" in cause and "'Ni'" in cause, "what this project's grammar read"
+    assert "'Ti'" in cause and "'Fe'" in cause, "what ElMD read"
+
+
+def test_each_refusal_carries_its_own_reason_not_a_shared_template() -> None:
+    """Two rows refused in the same batch must not come back with one interchangeable line.
+
+    ``Xx2`` is nothing at all and ``LaNi5Xx2`` is ``LaNi5`` plus a typo; a batch that reports
+    both with the same sentence has told the reader nothing about either.
+    """
+    screen = ElementMoversDistance(_reference(), column=FORMULA)
+    table = screen.verdict(_candidates(["Xx2", "LaNi5Xx2", "TiFeQ"]))
+    reasons = list(table["reason"])
+    assert list(table["code"]) == [INDETERMINATE] * 3
+    assert len(set(reasons)) == 3, "each row is refused in its own words"
+    for formula, reason in zip(["Xx2", "LaNi5Xx2", "TiFeQ"], reasons, strict=True):
+        assert repr(formula) in reason
 
 
 def test_the_two_parsers_agree_on_every_formula_the_reference_holds() -> None:
@@ -495,7 +566,7 @@ def test_the_packaged_reference_is_the_training_corpus_and_elmd_still_reads_it()
     reference = NoveltyReference.packaged()
     assert len(reference.formulas) > 1
     rebuilt, unreadable = vectors(list(reference.formulas))
-    assert unreadable == []
+    assert unreadable == {}
     np.testing.assert_allclose(rebuilt, reference.petti, atol=1e-12)
 
 

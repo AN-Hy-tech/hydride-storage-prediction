@@ -935,6 +935,13 @@ phase because a predictor with no domain check *is* the false-prediction machine
       are now `ScreenError`, as is a non-numeric ceiling, and every reference row is checked
       to be a distribution. `tests/screens/test_novelty.py` went 37 → 49 assertions.
 
+      A follow-up pass the same day found the fix's own **reason** still telling the old
+      story: every refusal, partial loss included, read "it parses to an empty formula",
+      which is false of `LaNi5Xx2` and points whoever typed it at the wrong thing. L4 owes a
+      verdict *with a reason*, so `_vector()` now returns the cause instead of a boolean and
+      the verdict quotes `parse_formula`'s own words — `'LaNi5Xx2' names 'Xx', which is not a
+      chemical element`. Suite 49 → 55.
+
       One case no guard can catch, recorded so it is not rediscovered: **`"NaN"` is a valid
       formula** — sodium and nitrogen — to both parsers. A missing value written out as that
       text is indistinguishable from chemistry; keeping missing values out of the formula

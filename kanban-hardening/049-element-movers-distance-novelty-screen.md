@@ -176,3 +176,33 @@ python -m pytest tests/screens/test_novelty.py -q
   latter only because `str(nan)` happens to parse empty). Keeping missing values out of the
   formula column stays the caller's job, which is a line #76 and #84 should read before they
   wire this to anything user-typed. (by @assistant)
+
+- 2026-09-07: **The QA fix was right and its own refusal message was not.** Probing the fixed
+  screen on the exact strings QA reported showed every one of them correctly refused --
+  `LaNi5Xx2`, `La1Ni5Zz1`, `TiFeQ` and `<NA>` all `indeterminate`, distance `NaN`, no nearest
+  named. But the *reason* on every one of those rows still read "it parses to an empty formula
+  rather than raising". That sentence was written for the total-loss defect and is flatly false
+  of the partial-loss one: `LaNi5Xx2` parses to `LaNi5`. The screen had been taught the
+  distinction and its explanation had not, so a verdict refusing a typo described the refusal
+  using the very mistake the cross-check exists to catch, and pointed whoever typed it at a
+  missing composition rather than at the symbol nobody could read.
+
+  This is an L4 obligation, not a wording preference: `docs/QA-PROTOCOL.md` requires *a verdict
+  with a reason*, and a reason that misnames the mechanism is as unactionable as no reason.
+  `_vector()` now returns the **cause** rather than a boolean, `vectors()` carries it back as
+  `dict[int, str]` keyed by position, and the verdict quotes it. The message costs nothing to
+  produce because `parse_formula` had already written it: `'LaNi5Xx2' names 'Xx', which is not a
+  chemical element`. `NoveltyReference.measured()` names the first cause too, since a reference
+  that cannot be built must say which formula broke it.
+
+  **Two branches that could not be reached are now tested rather than assumed.** ElMD reading
+  nothing while our grammar accepts, and the two parsers naming *different* elements, are both
+  unreachable today -- `parse_formula` rejects first, and over all 118 element symbols this
+  project accepts there is not one ElMD fails to place on the 103-slot scale, so the coverage of
+  the two parsers is identical. That is a fact about the installed version, not a law, so both
+  branches are exercised directly through `_vector` with a stand-in reader and their messages
+  pinned. A guard whose message nobody has read is half a guard.
+
+  Verified unchanged by all of it: `--emit` reproduces `novelty-reference.json` byte-for-byte
+  (SHA-256 identical), `tests/screens` is green at 153, and the suite for this card went 49 →
+  55. (by @assistant)

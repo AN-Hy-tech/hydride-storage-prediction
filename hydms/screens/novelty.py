@@ -109,6 +109,13 @@ anything real: the two parsers agree on all 1,149 distinct curated formulas and 
 reference compositions. Arbitrary candidates, and hand-entered ones, are the reason they are
 there.
 
+**And the refusal says which of the two happened.** The reason on the verdict row is the one
+:func:`_vector` produced, not a sentence written at the call site: ``parse_formula`` names the
+offending symbol -- ``'LaNi5Xx2' names 'Xx', which is not a chemical element`` -- and that is
+what a reader who typed the formula can act on. A single shared line saying the candidate
+"parses to an empty formula" would describe ``LaNi5Xx2``, which parses to ``LaNi5``, with the
+very mistake the cross-check exists to catch.
+
 Card #49.
 """
 
@@ -214,7 +221,7 @@ def _elmd_class() -> Any:
     return ElMD
 
 
-def vectors(formulas: Sequence[str]) -> tuple[NDArray[np.float64], list[int]]:
+def vectors(formulas: Sequence[str]) -> tuple[NDArray[np.float64], dict[int, str]]:
     """Parse formulas onto the modified-Pettifor scale, one row each.
 
     Each **distinct** string is parsed once and its row reused, because parsing is 48.6 us and
@@ -241,31 +248,34 @@ def vectors(formulas: Sequence[str]) -> tuple[NDArray[np.float64], list[int]]:
         formulas: The formula strings, in the order the rows should come back.
 
     Returns:
-        ``(matrix, unreadable)`` -- an ``(n, 103)`` array of atomic fractions, and the
-        positions ElMD could not read. An unreadable row is left as **zeros**, which is what
-        ElMD itself returns; it is the caller's job to refuse it rather than measure it.
+        ``(matrix, unreadable)`` -- an ``(n, 103)`` array of atomic fractions, and a mapping
+        from each position that is not a composition to the sentence saying why. An unreadable
+        row is left as **zeros**, which is what ElMD itself returns; it is the caller's job to
+        refuse it rather than measure it. The cause is carried rather than recomputed because
+        the three ways a string can fail are different facts, and a verdict that gives the
+        wrong one is a reason nobody can act on.
 
     Raises:
         ScreenError: if ElMD is absent, or if it places an element outside the 103 slots this
             module is written against.
     """
     elmd = _elmd_class()
-    cache: dict[str, tuple[NDArray[np.float64], bool]] = {}
+    cache: dict[str, tuple[NDArray[np.float64], str]] = {}
     matrix = np.zeros((len(formulas), PETTI_SLOTS), dtype=np.float64)
-    unreadable: list[int] = []
+    unreadable: dict[int, str] = {}
     for position, formula in enumerate(formulas):
         text = "" if formula is None else str(formula)
         if text not in cache:
             cache[text] = _vector(elmd, text)
-        row, readable = cache[text]
+        row, cause = cache[text]
         matrix[position] = row
-        if not readable:
-            unreadable.append(position)
+        if cause:
+            unreadable[position] = cause
     return matrix, unreadable
 
 
-def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], bool]:
-    """One formula's Pettifor vector, normalised deterministically, and whether it is one.
+def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], str]:
+    """One formula's Pettifor vector, normalised deterministically, and why it is not one.
 
     ElMD does not raise on an unparseable formula -- ``ElMD("Xx2")`` parses to an empty
     composition whose distance to everything is finite and meaningless -- so "is this a
@@ -290,12 +300,31 @@ def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], bool]:
     One string both parsers read the same way is worth knowing about: ``"NaN"`` is sodium and
     nitrogen to each of them, so a missing value written out as text is a *valid* formula and
     no guard here can catch it. Missing values are the caller's to keep out of the column.
+
+    **The cause travels with the refusal**, because the three ways a string fails here are not
+    the same fact and a reader acting on the verdict needs to know which one happened.
+    ``parse_formula`` already names the offending symbol -- ``'LaNi5Xx2' names 'Xx', which is
+    not a chemical element`` -- and that sentence is worth far more to whoever typed it than
+    the shape of ElMD's internal failure.
+
+    Args:
+        elmd: The ``ElMD`` class, passed in so the import is resolved once per batch.
+        formula: The candidate string, exactly as it arrived.
+
+    Returns:
+        ``(row, cause)`` -- the atomic-fraction row, and the empty string when it is one.
+        A non-empty ``cause`` is a sentence naming why the string is not a composition; the
+        row is then all zeros and must not be measured.
     """
     row = np.zeros(PETTI_SLOTS, dtype=np.float64)
     try:
         ours = parse_formula(formula)
-    except FormulaError:
-        return row, False
+    except FormulaError as error:
+        return row, (
+            f"{error}. ElMD does not raise on it -- it drops the symbols it cannot read and "
+            f"measures whatever is left, if anything -- so it is refused here rather than "
+            f"answered as some other alloy."
+        )
     parsed = elmd(formula, metric=MOD_PETTI)
     # `composition` is the parsed, *un*-normalised element counts. Its keys are always in
     # ElMD's lookup: `_dictify` silently drops a symbol it does not recognise, which is the
@@ -304,9 +333,17 @@ def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], bool]:
     symbols = sorted(counts)
     total = sum(float(counts[symbol]) for symbol in symbols)
     if not symbols or not np.isfinite(total) or total <= 0.0:
-        return row, False
+        return row, (
+            f"ElMD reads no composition at all in {formula!r}: it returns an empty formula "
+            f"rather than raising, and a zero vector has a finite, meaningless distance to "
+            f"every known alloy."
+        )
     if symbols != sorted(ours):
-        return row, False
+        return row, (
+            f"the two parsers disagree about {formula!r}: this project's grammar names "
+            f"{_named(sorted(ours))} and ElMD names {_named(symbols)}. Two readings that do "
+            f"not agree on which elements are present cannot both be a composition."
+        )
     for symbol in symbols:
         slot = parsed.petti_lookup[symbol]
         if not isinstance(slot, int) or not 0 <= slot < PETTI_SLOTS:
@@ -316,7 +353,12 @@ def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], bool]:
                 f"depends on that shape. Check the installed ElMD against docs/LIBRARY-APIS.md."
             )
         row[slot] = float(counts[symbol]) / total
-    return row, bool(abs(row.sum() - 1.0) <= _TOLERANCE)
+    if abs(row.sum() - 1.0) > _TOLERANCE:
+        return np.zeros(PETTI_SLOTS, dtype=np.float64), (
+            f"the parsed fractions of {formula!r} sum to {row.sum():.6g} rather than one, so "
+            f"whatever ElMD read is not a composition."
+        )
+    return row, ""
 
 
 def distances(
@@ -540,11 +582,12 @@ class NoveltyReference:
             )
         matrix, unreadable = vectors(ordered)
         if unreadable:
+            first = next(iter(unreadable.values()))
             raise ScreenError(
                 f"ElMD could not read {len(unreadable)} of the known formulas: "
-                f"{_named(ordered[position] for position in unreadable)}. The reference is "
-                f"what everything else is measured against; it may not contain a composition "
-                f"that is not one."
+                f"{_named(ordered[position] for position in unreadable)}. The first of them: "
+                f"{first} The reference is what everything else is measured against; it may "
+                f"not contain a composition that is not one."
             )
         separation, nearest = _self_distances(matrix)
         worst = int(separation.argmax())
@@ -638,7 +681,7 @@ class ElementMoversDistance:
         distance, nearest = distances(matrix, self.reference.petti)
 
         readable = np.ones(len(index), dtype=bool)
-        readable[unreadable] = False
+        readable[list(unreadable)] = False
         # A distance measured from a composition ElMD could not read is finite and
         # meaningless; it must not reach the table as though it were a measurement.
         distance = np.where(readable, distance, np.nan)
@@ -664,11 +707,14 @@ class ElementMoversDistance:
                 f"({self.reference.loneliest}) from its own nearest neighbour. This is a "
                 f"statement about chemistry, not about the applicability domain."
             )
-        for position in unreadable:
+        # The cause comes from `vectors`, not from a sentence written here, because the
+        # three ways a string fails are different facts. Saying "it parses to an empty
+        # formula" about `LaNi5Xx2` -- which parses to `LaNi5` -- would describe the refusal
+        # with the very mistake the cross-check exists to catch.
+        for position, cause in unreadable.items():
             reason[position] = (
-                f"ElMD could not read {formulas[position]!r} as a composition -- it parses "
-                f"to an empty formula rather than raising -- so there is no distance to "
-                f"report. A screen that cannot judge does not admit."
+                f"{cause} There is no distance to report, and a screen that cannot judge "
+                f"does not admit."
             )
 
         table = verdict_table(passed, code, reason, index=index)
