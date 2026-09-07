@@ -982,6 +982,14 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
       `temperature_window()` and `applicability_domain()` today and widens on its own when #49
       lands. An unparseable formula and an unknown element have no screen code and carry
       `INDETERMINATE`, which costs #76 an ordering choice and is boxed there and on #77.
+- [x] **#90** `docs/REFUSALS.md` — the refusal catalogue. **Landed 2026-09-07.** No stage of its
+      own; it slots in here because its blockers (#44, #48, #49, #75) were the last thing it needed.
+      Twelve chosen probes run through the real screens and the real #75 contract, and the page is
+      **generated** from that run — `python -m hydms.delivery.refusals --emit`, byte-identity
+      asserted in the fast lane. It exists for the defect #49 found: a verdict that is right and a
+      sentence that is false, which no assertion fits. Two halves *are* automatic — the emitted code
+      set must equal `reason_codes()` exactly, and every probe declares the path it was chosen for.
+      **Not a gate**: registration as HG-5 is boxed on #91, after the freeze lifts.
 - [ ] **#76** `hydms/delivery/predict.py`. Use `codebase-design` / `software-design-philosophy`: this
       is the phase's one genuinely deep module, and the place a shallow pass-through would leak the
       whole pipeline into the API and the app.

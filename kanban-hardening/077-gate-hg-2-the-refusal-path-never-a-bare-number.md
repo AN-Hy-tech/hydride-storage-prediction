@@ -45,6 +45,17 @@ no training alloy" tells them what to do next.
       physical ceiling to. The distinguishing detail goes in the human-readable `explanation`. This
       gate must assert both refusals are reachable and that neither returns a number
 
+- [ ] **A non-finite temperature raises instead of refusing, and that leaves one declared sentence
+      unreachable** (added 2026-09-07 by #90). `PredictionRequest.__post_init__` runs `temperature_k`
+      through `_finite()`, so `float('nan')` is a `ContractError` and can never become a `Refusal`.
+      `hydms.screens.window.Window` nonetheless declares `INDETERMINATE` for "there was no number to
+      compare" and writes a sentence for it — a sentence no caller can reach and no diff can show
+      (`docs/REFUSALS.md`, § "One sentence this page cannot show"). Decide it rather than inherit it:
+      either a malformed request is a caller error and raising is right, in which case say so where
+      the window declares the code; or a caller who omitted a temperature deserves a refusal like any
+      other, in which case this gate owns making it one. An unreachable branch that writes prose is
+      exactly where a stale sentence hides
+
 ## Runnable check
 
 ```bash

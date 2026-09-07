@@ -127,6 +127,17 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       screen's ceiling is *chemistry*, not the applicability domain: a candidate rejected by it
       must not be reported as out-of-domain (#48 measured why they are different)
 
+- [ ] **The rule that turns several screen verdicts into one code and one sentence already exists
+      — call it, do not re-derive it** (added 2026-09-07 by #90). `hydms.delivery.refusals.resolve()`
+      takes the verdicts in run order and returns `(code, reason)`: the code is the **first
+      rejecting** screen's, because run order is the only precedence declared *across* screens (the
+      precedence *within* the domain screen is its own `_PRECEDENCE`), and the reason carries every
+      rejecting screen's sentence joined by `"; "` — a candidate rejected by two rules and explained
+      by one is the partial truth #44 exists to remove. `docs/REFUSALS.md` is generated through it,
+      so a second composition rule here is how the catalogue and the API come to explain the same
+      refusal differently, which is the defect #90 exists to make visible. If it belongs in
+      `contract.py` rather than beside the catalogue, **move** it; do not copy it
+
 ## Runnable check
 
 ```bash
