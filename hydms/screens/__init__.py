@@ -23,6 +23,13 @@ derived column, not a filter applied inside the evaluator.
     training. Four signals, five rejection codes, and the physical ceiling of a composition
     as arithmetic rather than as a fit.
 
+``novelty.py``
+    Element Mover's Distance to the nearest known alloy, and the alloy it is a distance to.
+    AC-7's reporting obligation: the number rides on every verdict, admitted or not. Its
+    ceiling is the corpus's own widest internal gap, computed rather than chosen, and it is
+    **novelty evidence and never the applicability domain** -- #48 measured that a composition
+    distance does not explain where the model fails to transfer.
+
 The filtering is never done here. :meth:`~hydms.screens.protocol.Verdicts.select` is how a
 caller asks for the shortlist, afterwards and explicitly, and #48's ceiling and #49's
 distance join the table as further screens rather than as further filters.
@@ -30,12 +37,15 @@ distance join the table as further screens rather than as further filters.
 Card #44.
 """
 
-# `domain` is deliberately NOT imported below. It is a runnable entry point --
-# `python -m hydms.screens.domain --emit` re-measures the committed reference -- and `-m` on a
-# module the package `__init__` has already imported executes it twice, once under its own
-# name and once as `__main__`, which Python warns about. `hydms/surrogate/__init__.py` makes
-# the same exclusion for `evaluate` for the same reason. Reach for it as
-# `from hydms.screens.domain import applicability_domain`.
+# `domain` and `novelty` are deliberately NOT imported below. Both are runnable entry points
+# -- `python -m hydms.screens.domain --emit` and `python -m hydms.screens.novelty --emit`
+# re-measure their committed references -- and `-m` on a module the package `__init__` has
+# already imported executes it twice, once under its own name and once as `__main__`, which
+# Python warns about. `hydms/surrogate/__init__.py` makes the same exclusion for `evaluate`
+# for the same reason. `novelty` has a second reason: it reaches ElMD, which is the optional
+# `novelty` extra, so importing `hydms.screens` must not require it. Reach for them as
+# `from hydms.screens.domain import applicability_domain` and
+# `from hydms.screens.novelty import novelty_screen`.
 
 from .protocol import (
     ADMITTED,

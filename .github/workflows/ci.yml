@@ -116,8 +116,18 @@ jobs:
       # checks of a number whose wrongness is otherwise invisible — it under- or over-covers
       # by a few points, which is precisely and only what gate AC-3 measures — so letting them
       # `importorskip` away in CI would leave the guarantee unchecked on every push.
+      #
+      # `novelty` IS installed, and for a stronger reason than `uq`. MAPIE is a fit-time
+      # dependency that nothing on the prediction path can reach; ElMD is *on* the prediction
+      # path — a candidate formula has to be parsed onto the Pettifor scale before any distance
+      # exists, and AC-7 says no candidate is published without one. It is also GPL-3.0, which
+      # is the licence this project already carries, so it costs nothing that `parity` costs.
+      # And the tests that need it are the only check of two facts that are invisible when
+      # skipped: that the batched `cdist` path is ElMD's own metric to 1e-12 rather than an
+      # approximation of it, and that `hydms.screens.novelty` normalises a composition the same
+      # way in every process where ElMD does not (card #49).
       - name: Install hydms and its test dependencies
-        run: python -m pip install --disable-pip-version-check -e ".[dev,uq]"
+        run: python -m pip install --disable-pip-version-check -e ".[dev,uq,novelty]"
 
       - name: pytest
         run: python -m pytest

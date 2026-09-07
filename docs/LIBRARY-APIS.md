@@ -217,17 +217,79 @@ script's parameter block turned out to contain three things nobody had checked.
 
 ---
 
+## ElMD — Element Mover's Distance (card #49 / AC-7)
+
+### Settled by card #49, against ElMD 0.5.15's source
+
+**Installed 0.5.15 into `Project`, and it moved nothing.** Its requirements — `numba`, `numpy`,
+`scipy`, `setuptools`, `flit` — were all already satisfied there (numba 0.60.0, numpy 1.26.4,
+scipy 1.15.2), so pip installed exactly one package. `requirements-lock.txt` gained one line.
+
+- **The pin `ElMD>=0.5` is correct and resolves to 0.5.15. `ElMD==0.5.0` is unsatisfiable.**
+  That sdist's metadata declares itself version `0.4.25`, so pip discards it: *"has inconsistent
+  version: expected '0.5.0', but metadata has '0.4.25'"*. The floor is fine; a hard pin on that
+  release is not.
+- **The licence is GPL-3.0.** `LICENSE.txt` in the sdist is the GPL v3 text and `setup.py` says
+  `license='GPL3'`, but the trove classifier says *LGPLv3*. The licence file governs, and GPL-3.0
+  is compatible with this project's own `GPL-3.0-or-later`.
+- **The API is three names**: `ElMD(formula, metric="mod_petti")`, the instance method
+  `.elmd(other)`, and a module-level `elmd(a, b, metric=...)`. Both distance calls accept a
+  string or an `ElMD` object. There is no batch or matrix entry point — `ElM2D` is a separate
+  package and is not needed, see the closed form below.
+- **On `mod_petti` the metric is a closed form, and that is the whole batching story.**
+  `elmd()` dispatches to `simple_emd(a.feature_vector, b.feature_vector)`, which is literally
+  `np.sum(np.abs(np.cumsum(dist1 - dist2)))` over the 103-slot vector of atomic fractions
+  (`feature_vector is ratio_vector` for integer-valued tables such as this one). So a whole
+  batch is one `cdist(cumsum(C), cumsum(T), "cityblock")`. Verified equal to ElMD's own answer
+  to **3.6e-15** over the curated corpus. Every *other* metric routes through the network
+  simplex over a full cost matrix and does **not** reduce this way.
+- **Measured cost.** `cdist` on cumulative vectors runs at ~37 M pairs/s, flat from 1e3 to 1e5
+  candidates; a warm `ElMD.elmd()` loop is **46x** slower, and `ElMD(formula)` construction is
+  **48.6 us**, which is the cost that actually dominates and is why formulas are parsed once
+  per distinct string rather than once per comparison. The broadcast form
+  `abs(C[:,None,:] - T[None,:,:]).sum(2)` agrees to 2.8e-13 and is **23x slower** than `cdist`
+  while allocating `n x m x 103` floats.
+  **Warm the JIT before timing anything**: a cold `ElMD.elmd()` measures ~3.5 ms/pair, which is
+  numba compiling `simple_emd`, not the metric. That is a 2,500x error in the ratio.
+- **It does not raise on an unparseable formula.** `ElMD("")`, `ElMD("NotAnElement")` and
+  `ElMD("Xx2")` all return an object whose `ratio_vector` sums to **zero** — `_dictify` silently
+  drops any symbol absent from the lookup — and a zero vector has a finite, meaningless distance
+  to everything. Any caller must check the normalisation itself; `hydms.screens.novelty` treats
+  a failure as `INDETERMINATE`, which is a rejection.
+- **`ratio_vector` is 103 long and `petti_vector` is 121.** The distance uses the former. They
+  are not interchangeable.
+
+### The defect that cost card #49 a bug fix
+
+**`ratio_vector` is not reproducible across processes for a formula of three or more elements.**
+`_fuse` builds its composition dict from `{... for atom in set(mol1) | set(mol2)}`, so element
+*insertion order* follows the per-process randomised hashes of the element symbols;
+`_normalise_composition` then divides by `sum(composition.values())` summed in that order, and
+the total differs by an ulp between runs. Measured on the training split: **76 of 780
+compositions moved by 2.2e-16 between two processes, and every one had three elements or more.**
+Within a single process ElMD is perfectly stable, which is why this hides from casual testing.
+
+The consequence was not the 1e-16 — it was that `python -m hydms.screens.novelty --emit` did not
+produce byte-identical output twice, so the committed reference could not be asserted to be what
+the code generates. `hydms.screens.novelty` therefore sums the parsed counts itself, in **sorted
+symbol order**, and a test pins the result against `ratio_vector` to 1e-12 so the deterministic
+path stays ElMD's metric rather than becoming a private one. ElMD's own `_gen_ratio_vector`
+already sorts when it *places* the fractions; only the total was order-dependent.
+
+---
+
 ## Corrections made to committed work
 
 | File | Was | Now | Why |
 |---|---|---|---|
 | `pyproject.toml` | `mapie>=0.8` | `mapie>=1.0` | 0.8 predates the `fit`/`conformalize`/`predict_interval` API documented above. The old floor would have silently allowed a version whose interface does not match any code written against these notes. Card #27 installed **1.5.0** into `Project` and pinned it in `requirements-lock.txt`; pip resolved it without moving any existing pin. |
 
-`pymoo>=0.6`, `streamlit>=1.30` and `ElMD>=0.5` are unchanged — nothing found contradicts them,
-though only pymoo was checked against upstream docs in this pass.
+`pymoo>=0.6` and `streamlit>=1.30` are unchanged — nothing found contradicts them, though only
+pymoo was checked against upstream docs in this pass. `ElMD>=0.5` is unchanged and is now
+**verified** against 0.5.15; card #49 confirmed the floor is right and that a hard `==0.5.0`
+would not resolve.
 
 ## Not covered yet
 
-- **ElMD** (card #49) — not queried; the novelty metric's API is still unverified.
 - **OPTIMADE** (cards #65, and #49's prior-art cross-check) — not queried.
 - **Streamlit** (cards #58, #66) — not queried; low risk, stable surface.

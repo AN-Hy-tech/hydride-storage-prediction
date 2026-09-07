@@ -30,6 +30,16 @@ real trade-off:
 - [ ] Each states context, the alternatives genuinely considered, the decision and its consequences
 - [ ] Each links to the PRD section and the research memo section that informed it
 - [ ] ADR 2 records the CBFV licence finding explicitly, since a future reader will otherwise re-suggest depending on it
+- [ ] **ADR 2 also records the ElMD licence, which is the same finding with the opposite sign**
+      (added 2026-09-07 by #49). ElMD is **GPL-3.0** — `LICENSE.txt` in the sdist, and
+      `setup.py` says `license='GPL3'`, though its own trove classifier says LGPLv3 and the
+      licence file governs. That is compatible with this project's `GPL-3.0-or-later` and is
+      *why* the project carries that licence; #49's card says in as many words that it is
+      recorded "so the choice is not revisited by mistake". The pair is the point: CBFV is
+      unlicensed and may never be a runtime dependency, ElMD is copyleft and may be, and a
+      reader who sees only one of the two learns the wrong rule. `pyproject.toml`'s `novelty`
+      extra carries both facts and the version evidence (0.5.15; `==0.5.0` is unsatisfiable
+      because that sdist's metadata declares itself 0.4.25)
 
 - [ ] **A sixth candidate arrived from #29 (2026-09-05): how the reported interval is
       constructed.** It meets all three tests. *Hard to reverse:* Chapter 1 quotes the number, and

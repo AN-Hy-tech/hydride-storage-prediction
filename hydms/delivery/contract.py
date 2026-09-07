@@ -42,9 +42,11 @@ cannot disagree.
 
 :func:`delivery_screens` is what "the screens the delivery path runs" means today: the
 temperature window (#44) and the applicability-domain ceiling (#48). The ElMD novelty screen
-(#49) is **not** in it -- that card is unstarted and its dependency is not in the ``Project``
-environment -- and the consequence is visible rather than hidden: the day #49 lands and joins
-that tuple, the vocabulary widens on its own and nothing in this module changes.
+(#49) has **landed** -- :func:`hydms.screens.novelty.novelty_screen` -- and is still not in
+that tuple, which is now a decision rather than an absence: adding it makes ElMD, an optional
+extra, a hard requirement of every prediction. #76 owns that call, because #76 owns what the
+bundle and the service require. When it joins, the vocabulary widens on its own and nothing in
+this module changes.
 
 **A cause no screen can judge is** :data:`~hydms.screens.protocol.INDETERMINATE`. #77 refuses
 an unparseable formula and an unknown element, and neither is a threshold any screen declares
@@ -176,8 +178,9 @@ def delivery_screens() -> tuple[Screen, ...]:
     """The screens the delivery path runs, in the order their verdicts are reported.
 
     The temperature window (#44) and the applicability-domain ceiling (#48). #49's ElMD
-    novelty screen is absent because that card is unstarted; when it lands and joins this
-    tuple, :func:`reason_codes` widens on its own.
+    novelty screen has landed and is deliberately still absent: it would make the optional
+    ``novelty`` extra a hard requirement of every prediction, which is #76's decision to make
+    rather than this function's. When it joins, :func:`reason_codes` widens on its own.
 
     Built fresh on each call rather than held as a module constant: both screens read
     ``hydms/config/pipeline.yaml`` for their thresholds, and a constant would freeze whatever

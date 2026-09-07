@@ -76,6 +76,23 @@ uq = ["mapie>=1.0"]
 search = ["pymoo>=0.6"]
 
 # Element Mover's Distance — turns "novel" into a measured number.
+#
+# ElMD is **GPL-3.0** (`LICENSE.txt` in the sdist; note that its own trove classifier says
+# LGPLv3 and its `setup.py` says GPL3 — the licence file is the one that governs). That is
+# compatible with this project's GPL-3.0-or-later and is a decided, recorded choice, not a
+# thing to be revisited by mistake: card #49 and ADR 2 both carry it.
+#
+# Installed into `Project` by card #49, which first needed it: **0.5.15**, and pip resolved it
+# without moving a single existing pin — its requirements (numba, numpy, scipy, setuptools,
+# flit) were all already satisfied there, so `requirements-lock.txt` gained one line and
+# nothing else. Pinned in that file.
+#
+# Unlike `uq`, this extra is **not** a fit-time-only dependency, and CI installs it. A
+# candidate formula must be parsed onto the modified-Pettifor scale before any distance
+# exists, so ElMD is on the prediction path that AC-7 obliges to report a distance.
+#
+# The `>=0.5` floor resolves to 0.5.15. Do not pin `==0.5.0`: that sdist's metadata declares
+# itself version 0.4.25, so pip discards it as inconsistent and the pin is unsatisfiable.
 novelty = ["ElMD>=0.5"]
 
 # Streamlit screening and Pareto-front pages.

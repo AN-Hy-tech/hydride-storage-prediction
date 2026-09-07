@@ -878,12 +878,50 @@ phase because a predictor with no domain check *is* the false-prediction machine
       it**: `H/M_max` = 2 puts **31 curated rows above their own physical ceiling**, because the
       rare earths form trihydrides and `Th4H15` reaches 3.75. The rule is `max(2.5, element-wise
       max)`, which leaves four, three of which are Ce-Ni data defects now boxed on #14.
-- [ ] **#49** ElMD novelty screen. Needs the `novelty` extra; its API is unverified in
-      [LIBRARY-APIS.md](LIBRARY-APIS.md) — settle it in this card.
+- [x] **#49** ElMD novelty screen. **Landed 2026-09-07.** The `novelty` extra is installed —
+      ElMD **0.5.15** into `Project`, and it moved nothing: numba, numpy and scipy were already
+      there, so pip installed exactly one package and `requirements-lock.txt` gained one line.
+      The API is settled in [LIBRARY-APIS.md](LIBRARY-APIS.md), and the entry that matters is
+      that on ElMD's default `mod_petti` metric the distance is a **closed form** —
+      `sum(abs(cumsum(a - b)))` over a 103-slot Pettifor vector — so the whole batch is one
+      `cdist` on cumulative vectors. Verified equal to ElMD's own answer to **3.6e-15** over
+      the curated corpus, at ~37 M pairs/s, **46x** the warm pairwise loop.
+      `hydms/screens/novelty.py` declares one rejection code, `BEYOND_KNOWN_CHEMISTRY`, plus
+      the shared `INDETERMINATE`, and every candidate carries `novelty.distance` and
+      `novelty.nearest` on its verdict row whether it passed or not — AC-7 is a reporting
+      obligation, so the number rides on the verdict frame rather than on a second return path.
+
+      **The threshold is computed, and it is not the applicability domain.** #48 established
+      there is no transfer curve to calibrate against, so the ceiling is calibrated against the
+      corpus's own internal spread: **11.7320**, the largest distance from a training
+      composition to its nearest *other* training composition, set by `Li0.94Pd1` against
+      `Ce1Ni1` and named in the reference so a reader can see what holds it up. It rejects
+      **0 of 385 held-out rows**, which is the intended behaviour and is stated rather than
+      hidden — the corpus is chemically homogeneous (the most novel held-out row,
+      `Ca1Al1.8B0.2`, sits at 6.53 against a metric whose span is 102.0) and the card warned
+      that a threshold fitted to look busy on this data would be fitted to noise.
+
+      **Two ElMD defects were found and are load-bearing.** It does not raise on an
+      unparseable formula — `ElMD("Xx2")` returns an empty composition whose distance to
+      everything is finite and meaningless — so the screen checks normalisation itself and
+      answers `INDETERMINATE`, fail-closed. And `ratio_vector` is **not reproducible across
+      processes** for a formula of three or more elements: `_fuse` iterates
+      `set(mol1) | set(mol2)`, so element insertion order follows the per-process randomised
+      symbol hashes and the normalising sum differs by an ulp. Measured: **76 of 780 training
+      compositions moved by 2.2e-16 between two processes**, every one of them multi-element.
+      That is what made `--emit` irreproducible, so `vectors()` sums the parsed counts in
+      sorted symbol order and a test pins the result against `ratio_vector` to 1e-12.
 
 **Exit check:** `conda run -n Project python -m pytest tests/screens -q`
 
-The applicability domain's measured reference is regenerated with `conda run -n Project python -m hydms.screens.domain --emit`, and a test asserts the committed `hydms/screens/domain-reference.json` is what that command produces — the shape #30 used for `loco.md`. Run it if the curated data or `reports/loco/` ever moves.
+Both of this stage's measured references are regenerated the same way, and in each case a test
+asserts the committed file is what the command produces — the shape #30 used for `loco.md`. Run them
+if the curated data or `reports/loco/` ever moves.
+
+```bash
+conda run -n Project python -m hydms.screens.domain  --emit   # domain-reference.json
+conda run -n Project python -m hydms.screens.novelty --emit   # novelty-reference.json
+```
 
 ---
 

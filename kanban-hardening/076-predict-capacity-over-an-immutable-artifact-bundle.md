@@ -92,6 +92,29 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       the median head, not the lower confidence bound (the LCB is the ranking key and is
       deliberately conservative — bounding it would let a wide-banded unphysical claim through)
 
+- [ ] **Decide whether `delivery_screens()` gains the novelty screen, and accept what it costs**
+      (added 2026-09-07 by #49). #49 has landed: `hydms.screens.novelty.novelty_screen()` returns a
+      screen whose verdict frame carries `novelty.distance` and `novelty.nearest`, spelled exactly
+      as `hydms.delivery.contract.Novelty` needs them. It is deliberately **not** in
+      `delivery_screens()` yet, because adding it is this card's call, not #75's.
+
+      **The cost is a hard dependency.** ElMD is the optional `novelty` extra, and unlike MAPIE it
+      is on the prediction path — a candidate formula has to be parsed onto the modified-Pettifor
+      scale before any distance exists. Putting the screen in `delivery_screens()` means an
+      installation without `[novelty]` can no longer predict *at all*, rather than predicting
+      without a distance. CI now installs it, so the suite will not notice the difference; a
+      deployment might. The alternatives are to require the extra outright (simplest, and AC-7
+      arguably demands it: "no candidate is published without an ElMD distance"), or to let
+      `PredictionResult.novelty` stay `None` when the extra is absent — which is the field's
+      documented meaning, and is also how a promise quietly becomes optional. Say which in the
+      ADR (#85).
+
+      Two smaller notes it inherits. The reference set is `hydms/screens/novelty-reference.json`,
+      780 training compositions and a computed ceiling, and it is **the same pin-or-digest question
+      the box above asks about the domain reference** — answer both the same way. And the novelty
+      screen's ceiling is *chemistry*, not the applicability domain: a candidate rejected by it
+      must not be reported as out-of-domain (#48 measured why they are different)
+
 ## Runnable check
 
 ```bash
