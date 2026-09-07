@@ -27,6 +27,14 @@ was built to prevent, one export away.
 
 - [ ] Upload a CSV of compositions and temperatures; a documented row limit; a schema error names
       the offending row
+- [ ] **An empty formula cell is refused before it is parsed, and `NaN` in that column is the
+      trap** (added 2026-09-07 by #49's QA pass). A CSV is exactly where a blank cell becomes a
+      string: pandas gives `np.nan` or `pd.NA` depending on dtype, `str(pd.NA)` is `<NA>` — which
+      ElMD read as nitrogen until #49 cross-checked it — and **`"NaN"` written literally is a
+      valid formula to every parser here**, sodium and nitrogen. Such a row would be answered
+      with a capacity, an interval and a novelty distance and would look like a result. Refuse
+      null and blank cells on read, name the row, and count them in the refusal summary. #76
+      carries the same box for the single-prediction path
 - [ ] Every output row carries the estimate, the interval, the domain verdict and the ElMD distance
 - [ ] Refused rows are present in the output, marked as refused with their reason — never dropped and
       never blank

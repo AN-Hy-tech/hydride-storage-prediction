@@ -64,6 +64,18 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       own sentence as the explanation. #48's applicability screen already emits `INDETERMINATE` for
       exactly this case, so the second keeps one vocabulary; the first keeps one code path. Whichever
       is chosen, say so in the ADR (#85)
+
+- [ ] **A missing value in the formula column is not always unparseable, and one spelling of it is
+      real chemistry** (added 2026-09-07 by #49's QA pass). `None` and `np.nan` are refused on this
+      path — the latter only because `str(nan)` happens to parse to nothing — but `str(pd.NA)` is
+      `<NA>`, which ElMD read as **nitrogen** until #49 cross-checked it against
+      `hydms.data.load.parse_formula`, and **`"NaN"` is a valid formula to both parsers**: sodium
+      and nitrogen. So a missing value stringified into the formula column can arrive as a
+      well-formed composition that no guard downstream can distinguish from chemistry, and it
+      would be answered with a confident capacity, an interval and a novelty distance. This card
+      owns "everything between a formula string and a trustworthy answer", so **the null check
+      belongs here, before the string reaches any parser** — a null is a `Refusal`, not a formula.
+      #84 inherits the same obligation for CSV upload, where the value arrives from a user's file
 - [ ] The domain verdict (#48) and the ElMD distance (#49) are computed on every call
 - [ ] Predictions are returned in wt%, back-transformed, with the interval transformed consistently
 - [ ] No absolute path, no network call, no global mutable state
