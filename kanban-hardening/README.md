@@ -415,6 +415,17 @@ and their authority is over intent, not over facts.
 
 ---
 
+### Handoff -- 2026-09-07 (late) - #49's reason, and two cards for the bug that goes red on nothing
+
+#49 is closed for real -- `01eabda` makes each refusal carry the cause `_vector` actually found
+instead of a template written for a different defect (55 on the card, 1282 full suite, `--emit`
+byte-identical, gates 5/0/4 with HG-1 13/13) -- and `a04ec6f` adds **#90** (the refusal catalogue,
+no unfinished blocker, workable now) and **#91** (the prediction record and replay, blocked by #76,
+#78), both explicitly **not** unfreeze conditions with HG-5 deferred until the freeze lifts: start
+at #90, or ask the board.
+
+---
+
 ### Handoff -- 2026-09-06 (evening) - the LOCO run, and what it said
 
 **The run is spent. There is no measurement left in this phase.** `loco --target capacity` ran
