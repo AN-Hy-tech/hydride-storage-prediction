@@ -87,15 +87,27 @@ the batch.
 What ElMD does when it cannot read a formula
 --------------------------------------------
 
-It does not raise. ``ElMD("NotAnElement")``, ``ElMD("Xx2")`` and ``ElMD("")`` all return an
-object whose ratio vector sums to **zero**, and a zero vector has a perfectly finite distance
-to every training alloy -- so an unparseable candidate would otherwise receive a confident
-number computed from nothing. That is precisely the silent failure
-:mod:`hydms.screens.protocol` exists to prevent, so :func:`vectors` checks the normalisation
-of every parsed composition and an unreadable formula is
-:data:`~hydms.screens.protocol.INDETERMINATE` -- a **rejection**, fail-closed, like every other
-guard rail in this layer. None of the 1,148 distinct curated formulas trips it; arbitrary
-candidates are the reason it is there.
+It does not raise, and it fails in **two** ways rather than one.
+
+*Total loss.* ``ElMD("NotAnElement")``, ``ElMD("Xx2")`` and ``ElMD("")`` all return an object
+whose ratio vector sums to **zero**, and a zero vector has a perfectly finite distance to every
+training alloy -- so an unparseable candidate would otherwise receive a confident number
+computed from nothing. :func:`vectors` checks the normalisation of every parsed composition, so
+this one is caught by arithmetic.
+
+*Partial loss, which is the dangerous one.* ``_dictify`` drops an unrecognised symbol and keeps
+the rest, so ``LaNi5Xx2`` parses to ``{La: 1, Ni: 5}`` and renormalises to a **valid**
+distribution that no sum check can distinguish from a real one: the candidate is admitted at
+distance zero from ``LaNi5``, naming it as the nearest alloy. A typo is answered as a known
+material. :func:`_vector` therefore reads every string a second time with
+:func:`~hydms.data.load.parse_formula` -- this project's own grammar, which refuses an unknown
+symbol by name -- and requires the two parsers to name the same elements.
+
+Either way an unreadable formula is :data:`~hydms.screens.protocol.INDETERMINATE` -- a
+**rejection**, fail-closed, like every other guard rail in this layer. Neither guard trips on
+anything real: the two parsers agree on all 1,149 distinct curated formulas and on all 780
+reference compositions. Arbitrary candidates, and hand-entered ones, are the reason they are
+there.
 
 Card #49.
 """
@@ -115,6 +127,7 @@ import pandas as pd
 
 from hydms.config import Config
 from hydms.config import load as load_config
+from hydms.data.load import FormulaError, parse_formula
 from hydms.screens.protocol import (
     ADMITTED,
     INDETERMINATE,
@@ -257,7 +270,32 @@ def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], bool]:
     ElMD does not raise on an unparseable formula -- ``ElMD("Xx2")`` parses to an empty
     composition whose distance to everything is finite and meaningless -- so "is this a
     composition at all" is answered here and returned rather than assumed.
+
+    **A formula ElMD reads only *partly* is the sharper half of the same defect, and the
+    sum-to-one check below cannot see it.** ``_dictify`` drops a symbol it does not recognise
+    instead of raising, so ``LaNi5Xx2`` parses to ``{La: 1, Ni: 5}`` and renormalises to a
+    perfectly valid distribution: the candidate would be admitted at distance **zero from
+    LaNi5**, a typo answered as a known alloy, with a named nearest neighbour to make it look
+    measured. Total loss is loud and partial loss is silent, which is the wrong way round.
+
+    So the string is read a second time by :func:`~hydms.data.load.parse_formula` -- this
+    project's own grammar, which refuses an unknown symbol by name -- and the two parsers must
+    agree on *which elements are present*. They are independent readings of the same string,
+    so a disagreement means there is no composition both can vouch for, and the formula is
+    unreadable. Measured across every formula this project holds -- the 780 reference
+    compositions and all 1,149 distinct curated strings -- the two agree everywhere, so the
+    cross-check refuses nothing real. It is checked first because it is the cheap half:
+    rejecting here skips the 48.6 us ``ElMD(formula)`` construction entirely.
+
+    One string both parsers read the same way is worth knowing about: ``"NaN"`` is sodium and
+    nitrogen to each of them, so a missing value written out as text is a *valid* formula and
+    no guard here can catch it. Missing values are the caller's to keep out of the column.
     """
+    row = np.zeros(PETTI_SLOTS, dtype=np.float64)
+    try:
+        ours = parse_formula(formula)
+    except FormulaError:
+        return row, False
     parsed = elmd(formula, metric=MOD_PETTI)
     # `composition` is the parsed, *un*-normalised element counts. Its keys are always in
     # ElMD's lookup: `_dictify` silently drops a symbol it does not recognise, which is the
@@ -265,8 +303,9 @@ def _vector(elmd: Any, formula: str) -> tuple[NDArray[np.float64], bool]:
     counts = dict(parsed.composition)
     symbols = sorted(counts)
     total = sum(float(counts[symbol]) for symbol in symbols)
-    row = np.zeros(PETTI_SLOTS, dtype=np.float64)
     if not symbols or not np.isfinite(total) or total <= 0.0:
+        return row, False
+    if symbols != sorted(ours):
         return row, False
     for symbol in symbols:
         slot = parsed.petti_lookup[symbol]
@@ -370,6 +409,16 @@ class NoveltyReference:
                 f"the novelty ceiling is {self.ceiling}; it is the widest gap the corpus "
                 f"holds internally and must be a positive number."
             )
+        # Every row is one composition's atomic fractions. A row that is not a distribution
+        # still yields a finite distance to everything, so a corrupted reference would move
+        # every number this module reports without any of them looking wrong.
+        sums = self.petti.sum(axis=1)
+        off = int(np.abs(sums - 1.0).argmax())
+        if abs(sums[off] - 1.0) > _TOLERANCE:
+            raise ScreenError(
+                f"the reference row for {self.formulas[off]!r} sums to {sums[off]:.6g}; every "
+                f"row holds one composition's atomic fractions and sums to one."
+            )
 
     def to_json(self) -> str:
         """The reference as the committed file, sparse and deterministic.
@@ -421,13 +470,45 @@ class NoveltyReference:
         matrix = np.zeros((len(entries), PETTI_SLOTS), dtype=np.float64)
         formulas = []
         for position, entry in enumerate(entries):
-            formulas.append(str(entry["formula"]))
+            formula = str(entry["formula"])
+            formulas.append(formula)
+            # Read rather than trusted. A slot outside the scale is an `IndexError` and a
+            # *negative* one is worse -- numpy wraps it onto the far end of the Pettifor
+            # ordering, so a hand-edited or older-format file would quietly relabel an
+            # element instead of failing. Both are the file's fault and both are ScreenError,
+            # because this is the boundary where an unreadable reference must become a
+            # refusal rather than a traceback from inside numpy.
             for slot, fraction in entry["petti"].items():
-                matrix[position, int(slot)] = float(fraction)
+                try:
+                    column, value = int(slot), float(fraction)
+                except (TypeError, ValueError) as error:
+                    raise ScreenError(
+                        f"the novelty reference gives {formula!r} the slot/fraction pair "
+                        f"({slot!r}: {fraction!r}), which is not a number."
+                    ) from error
+                if not 0 <= column < PETTI_SLOTS:
+                    raise ScreenError(
+                        f"the novelty reference places part of {formula!r} at "
+                        f"modified-Pettifor slot {column}; the scale has {PETTI_SLOTS} slots "
+                        f"and a distance measured off it is not a distance."
+                    )
+                if not np.isfinite(value) or value <= 0.0:
+                    raise ScreenError(
+                        f"the novelty reference gives {formula!r} an atomic fraction of "
+                        f"{value} at slot {column}; fractions are positive and finite."
+                    )
+                matrix[position, column] = value
+        try:
+            ceiling = float(payload["ceiling"])
+        except (TypeError, ValueError) as error:
+            raise ScreenError(
+                f"the novelty ceiling in the reference is {payload['ceiling']!r}, "
+                f"which is not a number."
+            ) from error
         return cls(
             formulas=tuple(formulas),
             petti=matrix,
-            ceiling=float(payload["ceiling"]),
+            ceiling=ceiling,
             loneliest=str(payload["loneliest"]),
             loneliest_nearest=str(payload.get("loneliest_nearest", "")),
         )

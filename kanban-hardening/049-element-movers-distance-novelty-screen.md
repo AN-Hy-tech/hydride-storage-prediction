@@ -128,3 +128,51 @@ python -m pytest tests/screens/test_novelty.py -q
   `novelty` extra a hard requirement of every prediction. Boxed there with the trade-off stated,
   alongside the pin-or-digest question `novelty-reference.json` inherits from #48's reference.
   (by @assistant)
+
+- 2026-09-07: **QA pass after the card closed. It found a third ElMD defect, and it was worse
+  than the two above.** The narrative entry above says ElMD's silent failure is that an
+  unparseable formula returns an *empty* composition, and that the normalisation check catches
+  it. Both true, and both beside the point: `_dictify` drops the symbols it does not recognise
+  and **keeps the rest**. So `ElMD("LaNi5Xx2")` is `LaNi5` — `ratio_vector` sums to exactly
+  1.0, no arithmetic guard can see anything wrong, and `elmd()` to a real `LaNi5` is `0.0`.
+  The screen returned `admitted`, `distance` 0.0, `nearest` `LaNi5`. A typo was answered as a
+  material we already have, with a named neighbour to make it look measured. `TiFeQ` came back
+  as `TiFe`; `str(pd.NA)` is `<NA>`, which ElMD reads as **nitrogen** and scored at 16.33.
+
+  Total loss was loud, partial loss was silent, and the card's own fourth box — "an unparseable
+  formula is refused rather than measured" — was therefore only half met. The docstring even
+  named the mechanism (`_dictify` "silently drops a symbol it does not recognise") without
+  drawing the consequence. A guard written from arithmetic could not have closed this; it needed
+  a *second reading of the string*.
+
+  **The fix was already in the repository.** `hydms.data.load.parse_formula` is this project's
+  own grammar and refuses `LaNi5Xx2`, `La1Ni5Zz1`, `TiFeQ` and `<NA>` by name. `_vector()` now
+  reads every formula with both parsers and requires them to name the same elements; a
+  disagreement is `INDETERMINATE`. Measured before writing it, because a guard that rejects real
+  data would move the committed reference: over the **1,149** distinct curated formulas and the
+  **780** reference compositions the two parsers agree **everywhere** — 0 rejections, 0
+  element-set disagreements — and `--emit` still reproduces `novelty-reference.json`
+  byte-for-byte. It is checked first, since rejecting there skips the 48.6 us `ElMD(formula)`
+  construction, so the guard is free on the hot path and negative on the reject path.
+
+  **`from_json` had two more holes, at the one boundary whose job is refusal.** A slot outside
+  the 103-scale escaped as `IndexError`, and a **negative** slot was accepted — numpy wraps it
+  onto slot 102, so a hand-edited or older-format reference would quietly relabel an element and
+  move every distance in the project without anything looking wrong. A non-numeric ceiling
+  escaped as `ValueError`. All three are `ScreenError` now, and the row-sum invariant — every
+  reference row is one composition's atomic fractions and sums to one — moved into
+  `__post_init__`, where `measured()` gets it too. Suite 37 → 49.
+
+  **What was probed and found sound**, so the next reader does not re-run it: chunking is exact
+  at 1/2/7/199/4096 with zero index mismatches; the shipped reference has 780 rows, no
+  duplicates, every row a distribution to 1e-15, and its ceiling **recomputes exactly** from the
+  shipped vectors (11.731958762886595, `Li0.94Pd1` → `Ce1Ni1`) — and dropping that row does fall
+  to 5.1333, as the entry above claims; the `code` column is `object` dtype, so no `np.where`
+  truncation; duplicate and non-default indices survive; a categorical formula column works.
+
+  **One case that cannot be guarded, recorded so it is not rediscovered: `"NaN"` is a valid
+  formula.** Sodium and nitrogen, to *both* parsers — so a missing value written out as text is
+  real chemistry and no cross-check can separate them. `None` and `np.nan` are refused (the
+  latter only because `str(nan)` happens to parse empty). Keeping missing values out of the
+  formula column stays the caller's job, which is a line #76 and #84 should read before they
+  wire this to anything user-typed. (by @assistant)

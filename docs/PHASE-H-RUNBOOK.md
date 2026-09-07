@@ -912,6 +912,34 @@ phase because a predictor with no domain check *is* the false-prediction machine
       That is what made `--emit` irreproducible, so `vectors()` sums the parsed counts in
       sorted symbol order and a test pins the result against `ratio_vector` to 1e-12.
 
+      **A QA pass on 2026-09-07 found a third defect, and it was the dangerous one.** The
+      normalisation guard above catches ElMD dropping *every* symbol; it cannot catch ElMD
+      dropping *some*. `_dictify` keeps what it recognises, so `ElMD("LaNi5Xx2")` **is**
+      `LaNi5` — `ratio_vector` sums to exactly 1.0 and the distance to a real `LaNi5` is
+      **0.0**. The screen admitted it, at distance zero, naming `LaNi5` as the nearest alloy:
+      a typo answered as a material we already have, which is the precise silent failure #44
+      exists to prevent. `TiFeQ` behaved the same way, and `str(pd.NA)` — `<NA>` — read as
+      **nitrogen** and drew a confident 16.33. Total loss was loud and partial loss was
+      silent, which is the wrong way round.
+
+      The fix is a **second, independent parse**: `hydms.data.load.parse_formula`, this
+      project's own grammar, already refuses every one of those strings by name, so
+      `_vector()` now requires both parsers to agree on which elements are present and treats
+      any disagreement as `INDETERMINATE`. Checked first, because rejecting there skips the
+      48.6 us `ElMD(formula)` construction. It refuses nothing real — the two parsers agree
+      on all **1,149** distinct curated formulas and all **780** reference compositions, and
+      `--emit` still reproduces the committed reference byte-for-byte. The same pass closed
+      two holes in `NoveltyReference.from_json`, which is the boundary where a bad reference
+      must become a refusal: a slot outside the scale raised `IndexError` and a **negative**
+      slot was silently wrapped by numpy onto Pettifor slot 102, relabelling an element; both
+      are now `ScreenError`, as is a non-numeric ceiling, and every reference row is checked
+      to be a distribution. `tests/screens/test_novelty.py` went 37 → 49 assertions.
+
+      One case no guard can catch, recorded so it is not rediscovered: **`"NaN"` is a valid
+      formula** — sodium and nitrogen — to both parsers. A missing value written out as that
+      text is indistinguishable from chemistry; keeping missing values out of the formula
+      column stays the caller's job.
+
 **Exit check:** `conda run -n Project python -m pytest tests/screens -q`
 
 Both of this stage's measured references are regenerated the same way, and in each case a test

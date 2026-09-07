@@ -251,11 +251,22 @@ scipy 1.15.2), so pip installed exactly one package. `requirements-lock.txt` gai
   while allocating `n x m x 103` floats.
   **Warm the JIT before timing anything**: a cold `ElMD.elmd()` measures ~3.5 ms/pair, which is
   numba compiling `simple_emd`, not the metric. That is a 2,500x error in the ratio.
-- **It does not raise on an unparseable formula.** `ElMD("")`, `ElMD("NotAnElement")` and
-  `ElMD("Xx2")` all return an object whose `ratio_vector` sums to **zero** — `_dictify` silently
-  drops any symbol absent from the lookup — and a zero vector has a finite, meaningless distance
-  to everything. Any caller must check the normalisation itself; `hydms.screens.novelty` treats
-  a failure as `INDETERMINATE`, which is a rejection.
+- **It does not raise on an unparseable formula, and it fails two ways, not one.** `_dictify`
+  silently drops any symbol absent from the lookup, which has a loud half and a quiet half.
+  *Total loss:* `ElMD("")`, `ElMD("NotAnElement")` and `ElMD("Xx2")` return an object whose
+  `ratio_vector` sums to **zero**, and a zero vector has a finite, meaningless distance to
+  everything — a normalisation check catches this one.
+  *Partial loss, which no normalisation check can catch:* `ElMD("LaNi5Xx2")` drops `Xx` and
+  keeps the rest, so it **is** `LaNi5` — `composition == {La: 1.0, Ni: 5.0}`, `ratio_vector`
+  sums to exactly 1.0, and `elmd()` to a real `LaNi5` returns **0.0**. Likewise `TiFeQ` is
+  `TiFe`, and `<NA>` — what `str(pd.NA)` produces — is **nitrogen**. A typo or a missing value
+  therefore arrives as a confident zero distance from a known alloy unless the caller checks.
+  The only reliable guard is a **second, independent parse**: `hydms.screens.novelty` reads
+  every string with `hydms.data.load.parse_formula` as well and requires both parsers to name
+  the same elements, treating any disagreement as `INDETERMINATE`, which is a rejection. The
+  two agree on all 1,149 distinct curated formulas, so the cross-check costs nothing real.
+  One string they agree on and *should* be known about: `"NaN"` is sodium-plus-nitrogen to
+  both, so a missing value written as that text is a valid formula no guard can catch.
 - **`ratio_vector` is 103 long and `petti_vector` is 121.** The distance uses the former. They
   are not interchangeable.
 

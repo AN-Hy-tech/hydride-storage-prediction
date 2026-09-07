@@ -295,6 +295,66 @@ def test_a_reference_cannot_be_built_from_a_formula_that_is_not_a_composition() 
 
 
 # --------------------------------------------------------------------------------------
+# ElMD's *other* silent failure: the formula it reads only partly
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("formula", "truncated_to"),
+    [("LaNi5Xx2", "LaNi5"), ("La1Ni5Zz1", "LaNi5"), ("TiFeQ", "TiFe")],
+)
+def test_elmd_silently_drops_an_unknown_element_rather_than_raising(
+    formula: str, truncated_to: str
+) -> None:
+    """The premise of the guard below, and the reason a sum-to-one check cannot be it.
+
+    ``_dictify`` keeps the symbols it recognises, so the survivors renormalise to a wholly
+    valid distribution that is indistinguishable, by arithmetic alone, from a real formula.
+    """
+    parsed = ElMD(formula, metric=MOD_PETTI)
+    assert parsed.ratio_vector.sum() == pytest.approx(1.0), "a valid-looking distribution"
+    assert parsed.elmd(ElMD(truncated_to, metric=MOD_PETTI)) == pytest.approx(0.0, abs=1e-12)
+
+
+@pytest.mark.parametrize("formula", ["LaNi5Xx2", "La1Ni5Zz1", "TiFeQ"])
+def test_a_partly_read_formula_is_refused_not_answered_as_the_alloy_it_truncates_to(
+    formula: str,
+) -> None:
+    """The bug this guard closes: a typo admitted at distance zero from a known alloy.
+
+    Before the cross-check, ``LaNi5Xx2`` came back ``admitted``, ``distance`` 0.0, ``nearest``
+    ``LaNi5`` -- a candidate that is not a composition, reported as one we already have.
+    """
+    screen = ElementMoversDistance(_reference(), column=FORMULA)
+    row = screen.verdict(_candidates([formula])).iloc[0]
+    assert not bool(row["passed"])
+    assert row["code"] == INDETERMINATE
+    assert np.isnan(row[DISTANCE_COLUMN])
+    assert row[NEAREST_COLUMN] == ""
+
+
+def test_the_two_parsers_agree_on_every_formula_the_reference_holds() -> None:
+    """The cross-check must refuse nothing real, or ``--emit`` would move the committed file."""
+    from hydms.data.load import parse_formula
+
+    for formula in NoveltyReference.packaged().formulas:
+        assert sorted(parse_formula(formula)) == sorted(
+            ElMD(formula, metric=MOD_PETTI).composition
+        ), formula
+
+
+def test_a_missing_value_in_the_formula_column_is_refused() -> None:
+    """``None`` and ``NaN`` are not compositions; ``pd.NA`` stringifies to ``<NA>``, which
+    ElMD reads as **nitrogen** and would otherwise measure."""
+    screen = ElementMoversDistance(_reference(), column=FORMULA)
+    frame = pd.DataFrame({FORMULA: pd.Series([None, np.nan, pd.NA], dtype=object)})
+    table = screen.verdict(frame)
+    assert list(table["code"]) == [INDETERMINATE] * 3
+    assert not table["passed"].any()
+    assert table[DISTANCE_COLUMN].isna().all()
+
+
+# --------------------------------------------------------------------------------------
 # The batch contract
 # --------------------------------------------------------------------------------------
 
@@ -397,6 +457,36 @@ def test_a_reference_measured_on_another_scale_is_refused() -> None:
     payload = json.loads(_reference().to_json())
     payload["slots"] = 121
     with pytest.raises(ScreenError, match="not a distance from the other"):
+        NoveltyReference.from_json(json.dumps(payload))
+
+
+def _corrupt(**petti: object) -> str:
+    payload = json.loads(_reference().to_json())
+    payload["compositions"][0]["petti"] = dict(petti)
+    return json.dumps(payload)
+
+
+def test_a_slot_outside_the_pettifor_scale_is_a_refusal_not_an_indexerror() -> None:
+    with pytest.raises(ScreenError, match="modified-Pettifor slot 999"):
+        NoveltyReference.from_json(_corrupt(**{"999": 1.0}))
+
+
+def test_a_negative_slot_is_refused_rather_than_wrapped_onto_the_far_end() -> None:
+    """numpy would put ``-1`` at slot 102 and relabel the element without a word."""
+    with pytest.raises(ScreenError, match="modified-Pettifor slot -1"):
+        NoveltyReference.from_json(_corrupt(**{"-1": 1.0}))
+
+
+def test_a_reference_row_that_is_not_a_distribution_is_refused() -> None:
+    """A row summing to anything but one still yields finite distances to everything."""
+    with pytest.raises(ScreenError, match="sums to"):
+        NoveltyReference.from_json(_corrupt(**{"10": 0.25}))
+
+
+def test_a_ceiling_that_is_not_a_number_is_a_refusal_not_a_valueerror() -> None:
+    payload = json.loads(_reference().to_json())
+    payload["ceiling"] = "not a number"
+    with pytest.raises(ScreenError, match="not a number"):
         NoveltyReference.from_json(json.dumps(payload))
 
 
