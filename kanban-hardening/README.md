@@ -136,7 +136,33 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** Take **#76** -- S6's deep module, and the only card the three that just landed unblock -- reading #75's contract and the two boxes it left you on `INDETERMINATE` and on the predict-then-screen assembly; **#49 is still the one card that needs a decision you cannot make alone** (`ElMD` is declared and not installed), promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+**Next session, in one line.** Take **#76** -- S6's deep module, now unblocked on every side since **#49 landed and S5 is closed** -- reading #75's contract and the three boxes waiting on #76: `INDETERMINATE`, the predict-then-screen assembly, and whether `delivery_screens()` takes the novelty screen and with it a hard dependency on the `novelty` extra; promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+
+**Handoff, 2026-09-07 (latest) — #49 is `done` and S5 is closed.** `hydms/screens/novelty.py`
+ships `novelty_screen()`, whose verdict frame carries `novelty.distance` and `novelty.nearest`
+spelled exactly as `contract.Novelty` needs them. Three things to know before you touch it.
+
+**The threshold rejects nothing on this corpus, and that is correct.** #48 had already removed the
+calibration target this card was written to expect, so the ceiling is the corpus's own widest
+internal gap — **11.7320**, from `Li0.94Pd1` to `Ce1Ni1`, computed by `--emit` rather than typed.
+Against the held-out rows it fires **0 times in 385**. Do not "fix" that by lowering it: the card's
+own last box warned that a threshold fitted to look busy on a chemically homogeneous corpus is
+fitted to noise, and the distance rides on every verdict regardless, which is what AC-7 asks for.
+It is **novelty evidence, never the applicability domain** — #48 measured why they are different.
+
+**ElMD is installed (0.5.15) and it moved no pin, but it has two defects you inherit.** It returns
+an *empty composition* instead of raising on an unparseable formula, so anything calling it must
+check normalisation itself; and its `ratio_vector` is **not reproducible across processes** for
+three or more elements, which is why `hydms.screens.novelty.vectors()` does the normalising sum
+itself in sorted symbol order. Both are written up in `docs/LIBRARY-APIS.md` with the measurements.
+CI now installs the `novelty` extra — the asymmetry with `parity` is deliberate and the reason is
+in `ci.yml`.
+
+**The decision left for you is on #76**, boxed there in full: putting the screen into
+`delivery_screens()` makes an optional extra a hard requirement of every prediction. AC-7 arguably
+demands it; the alternative is letting `PredictionResult.novelty` stay `None`, which is that
+field's documented meaning and is also how a promise quietly becomes optional. `novelty-reference.json`
+also inherits #48's pin-or-digest question — answer both the same way.
 
 **Handoff, 2026-09-07 (later) — #73, #74 and #75 are `done`; S6 is open at #76.** All three
 landed together and **two of them found that a box was asking for the wrong thing**, so read the
