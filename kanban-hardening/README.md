@@ -136,7 +136,39 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** #48 is closed and its decision dissolved -- the applicability domain is **not** a distance, it is a **capacity ceiling of 5.19 wt%** -- so start at **#49** (novelty evidence for AC-7, not a domain verdict; read the box #48 left on it before choosing a threshold), then #73, #74, #75; promote **`v2`**, never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+**Next session, in one line.** Take **#73**, **#74** and **#75** -- all three unblocked, none of them needing a dependency install -- and **#75 opens S6**; leave **#49** until somebody decides whether `ElMD` goes into the `Project` env, promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+
+**Handoff, 2026-09-07 — #73, #74, #75 and the start of S6.** Four cards are unblocked and three
+of them are the ones to take, because **#49 is the only one that needs a decision you cannot make
+alone**: `ElMD>=0.5` is declared as the `novelty` extra but is **not installed** in the `Project`
+env, so that card starts with a GPL-3.0 dependency going into the maintainer's environment and an
+API nobody here has run ([LIBRARY-APIS.md](../docs/LIBRARY-APIS.md) says so) — and #48's box on it
+already establishes that its threshold cannot come from the LOCO curve and that it is novelty
+evidence for AC-7 rather than a domain verdict, so nothing downstream is waiting on it. Take
+**#75 first**, because it is S6's opening card and the only one of the three that unblocks
+anything: it defines `hydms/delivery/contract.py`, the package is still an empty docstring and
+`tests/delivery/` is an empty directory, and its last box is the one that matters — **the refusal
+codes are enumerated from the screens, never hand-written**, which as of #48 means `ADMITTED` plus
+`temperature_window`'s two codes plus `ApplicabilityDomain`'s six (`OUT_OF_DOMAIN`,
+`ABOVE_PHYSICAL_CEILING`, `OUTSIDE_FEATURE_RANGE`, `UNTRUSTED_FAMILY`, `HIGH_UNCERTAINTY`,
+`INDETERMINATE`), derived from each screen's `reasons` at construction time so the set cannot drift;
+note that the card's result field list still says "ElMD distance to the nearest known alloy" and
+#49 does not exist, so decide deliberately whether that field is optional or whether the contract
+waits — it is the one place #75 and #49 actually touch. Then **#73**, the end-to-end smoke run,
+whose real work is the committed fixture rather than the runner: it has to hold multiple alloy
+classes, a repeated canonical composition and a near-duplicate formula string, and it must clear
+the whole chain in 60 s, so sample it against `hydms.data.canonical.collapse` rather than by eye —
+and check the two traps this repo has already paid for, that a fixture under a gitignored path
+never reaches CI, and that `--report`-style flags are input paths as well as output ones. **#74**
+is the cheapest of the three and can go at any point: its permutation and scale cases
+(`Ce1Mg12`/`Mg12Ce1`, `Mg1Al1`/`Mg0.5Al0.5`) are real cross-split collisions and are already
+asserted at the featuriser, so the new ground is `predict()` and the temperature-monotonicity box,
+which the card correctly frames as *record the actual behaviour rather than assert a wish* — measure
+it before writing the assertion. One caution carried from #48: `Surrogate.predict()` returns
+`q0.1/q0.5/q0.9/lcb/interval_width` and **no formula column**, while `ApplicabilityDomain` requires
+one, so the predict-then-screen assembly is #76's and neither #73 nor #75 should invent a second
+version of it. Both heavy runs are done and nothing here needs one; the full suite is **1153 green
+in 20 min**, so budget for that rather than being surprised by it.
 
 **Next session, in one paragraph.** **S4 is closed and the artifact to promote is now `v2`,
 not `v1`.** #30 moved to `done` on 2026-09-07 -- its three unticked boxes are recorded findings,
