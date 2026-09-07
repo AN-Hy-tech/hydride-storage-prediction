@@ -415,6 +415,36 @@ and their authority is over intent, not over facts.
 
 ---
 
+### Handoff -- 2026-09-08 - #90 is closed, and #76 is the card it was written for
+
+**#90 landed** (`8bd8737`): `docs/REFUSALS.md` is generated from twelve chosen probes run through
+the real screens and the real #75 contract -- input, code and reason on one line each, so a false
+sentence lands in a diff. 28 tests in 1.1 s, suite **1308 passed / 4 deselected** (1312 collected),
+gates 5/0/4 with HG-1 13/13, ruff and mypy clean. It is **not** a gate and must not become one;
+HG-5 stays boxed on #91.
+
+**Next is #76** -- every blocker (#28, #48, #49, #75) is `done`, it is the S6 critical path, and it
+now carries two boxes this card put there:
+
+- **Call `hydms.delivery.refusals.resolve()`; do not re-derive it.** It is the one rule that turns
+  several screen verdicts into one code and one sentence, and `docs/REFUSALS.md` is generated
+  through it. A second copy is how the catalogue and the API come to explain the same refusal
+  differently -- the defect #90 exists to make visible. Moving it into `contract.py` is fine;
+  copying it is not.
+- **On #77:** `PredictionRequest` refuses a non-finite `temperature_k`, so the temperature window's
+  declared `INDETERMINATE` -- and the sentence it writes for it -- is unreachable from a real
+  request. Decide it rather than inherit it; the page states the gap under "One sentence this page
+  cannot show".
+
+When #76 admits #49's ElMD novelty screen into `delivery_screens()`, the vocabulary widens on its
+own, `--emit` refuses `beyond-known-chemistry` as dead vocabulary until a probe reaches it, and the
+byte-identity test stays red until the page is regenerated. That sequence is the design.
+
+Also unblocked and untouched: **#7** (CI slow lane; #4 and #6 are `done`). **#34** is still `doing`
+-- it is the heavy fit and the maintainer runs it.
+
+---
+
 ### Handoff -- 2026-09-07 (late) - #49's reason, and two cards for the bug that goes red on nothing
 
 #49 is closed for real -- `01eabda` makes each refusal carry the cause `_vector` actually found
