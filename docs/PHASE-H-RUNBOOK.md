@@ -1114,8 +1114,13 @@ python scripts/check_freeze.py --base origin/main
 # from repo.anaconda.com/pkgs/main -- boxed on card #1.
 python scripts/verify_environment.py
 
-# Suite. **1229 passed, 0 skipped as of 2026-09-07 (24 min 58 s)**, on a quiet machine — up from
-# 1117 on 2026-09-06 by cards #73, #74 and #75. Anything red is a real failure. Do NOT pass -q: pyproject already sets
+# Suite. TWO numbers live here and they are different commands; do not compare them. The FULL run
+# below was last measured at **1229 passed, 0 skipped on 2026-09-07 (24 min 58 s)** on a quiet
+# machine — up from 1117 on 2026-09-06 by cards #73, #74 and #75 — and it PREDATES #48, #49 and
+# #90, so read it as a floor rather than as today's count. The FAST LANE (`-m "not slow"`, which
+# deselects the four `@pytest.mark.slow` tests) reported **1308 passed / 4 deselected of 1312
+# collected** after #90 on 2026-09-07; that is the figure the recent handoffs quote. A handoff that
+# states one of these must say which. Anything red is a real failure. Do NOT pass -q: pyproject already sets
 # it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
 # is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
 # run, which happened on 2026-09-06, so it now asserts the committed reports/loco/loco.md against

@@ -68,6 +68,7 @@ current performance.
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Which interpreter, why 3.13 is excluded, the two-stage rebuild, and the export defects that bite on re-export | Before touching any environment file, or when a rebuild fails |
 | [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Featurisation throughput: the batch-size curve with its machine, the parse-versus-arithmetic split, what it does and does not license about R6, and the 13x hot spot card #22 found | Before quoting a candidates-per-second number, or arguing about enumeration versus evolution |
 | [docs/LIBRARY-APIS.md](docs/LIBRARY-APIS.md) | How the committed-to libraries are actually called — MAPIE, pymoo, CatBoost quantiles — with the version floors they imply | Before implementing against a library nobody here has run yet |
+| [docs/REFUSALS.md](docs/REFUSALS.md) | Every sentence the delivery path can produce when it declines to answer — one row per probe, input → code → reason — plus the codes it declares but no request can reach | Before changing a screen's wording or adding a reason code. It is **generated** (`hydms.delivery.refusals --emit`), so regenerate it; never edit it |
 | [REPORT.md](REPORT.md) | Full published methodology and results of the forward model | Writing Chapter 1, or comparing old-vs-new numbers |
 | [Machine_Model/src/](Machine_Model/src/) | The 9-script pipeline that produced REPORT.md | Reading what the old pipeline did — **not** for new code |
 | [graphify-out/GRAPH_REPORT.md](graphify-out/GRAPH_REPORT.md) | God nodes, communities, and surprising cross-document links | Orienting in an unfamiliar corner before reading files |
@@ -209,3 +210,9 @@ bash $S/list_all_cards.sh kanban-hardening/   # id | status | blocked_by | title
   move on.
 - Comparing model output to DOE targets without stating the material-vs-system distinction. It is a
   two-step overstatement (PRD §4.4).
+- Hand-editing a generated file. `docs/REFUSALS.md`, the LOCO write-up, the two screen reference
+  JSONs and the smoke fixture are each rebuilt by an `--emit` flag, and a test asserts the committed
+  bytes are what the code produces. Change the code and regenerate; an edit there fails the suite
+  and, worse, is the exact drift those files exist to prevent.
+- Quoting a suite count without saying which command produced it. The full run and the fast lane
+  (`-m "not slow"`) differ by the four slow tests; the runbook §5 keeps both, labelled.

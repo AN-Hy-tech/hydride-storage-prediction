@@ -34,7 +34,7 @@ Three cards were pulled out of the frozen PA phase — **#44** (screen interface
 what lets the interface **refuse** to answer instead of guessing. #44 landed 2026-09-04 and owns
 the contract the other two implement; both of those wait on #30.
 
-**The next free id is #90.** Scan both directories for `max(id) + 1`.
+**The next free id is #92.** Scan both directories for `max(id) + 1`.
 
 ---
 
