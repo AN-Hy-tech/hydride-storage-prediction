@@ -44,27 +44,50 @@ Nothing is trained: no model, scaler or split is on disk. The screens read a pre
 
 ### One sentence this page cannot show
 
-The temperature window declares `indeterminate` for *there was no number to compare*, and no probe reaches it: `PredictionRequest` refuses a non-finite `temperature_k` with a `ContractError`, so a caller cannot express the question that would produce it. The vocabulary above is still complete -- the applicability screen reaches `indeterminate` two other ways, and both are below -- but the window's own sentence for it is never rendered here, so a stale one would not land on a diff. Whether a malformed request should come back as a `Refusal` rather than raise is card #77's call.
+The temperature window declares `indeterminate` for *there was no number to compare*, and no probe reaches it: `PredictionRequest` refuses a non-finite `temperature_k` with a `ContractError`, so a caller cannot express the question, and a probe here builds a request like any caller. Card #77 settled that a malformed request **raises rather than refusing**, and the type had already settled it -- a `Refusal` carries the request it declines, so an input that cannot build one cannot be carried by the refusal describing it. The sentence is not dead vocabulary: the frame door reaches it, with a missing value in the temperature column, which is what a curated frame and card #84's uploaded CSV can hold and this page's probes cannot. It is simply never rendered here, so a stale one would not land on a diff.
+
+## Which door reaches which row
+
+**There are two doors into the screens and they can state different things.** The *request* door is `predict_capacity(formula, temperature_k)`: a caller types a composition and a temperature, and the delivery path computes the prediction, the band, the features and -- deliberately -- no family label at all. The *frame* door is `apply_screens` over a curated frame: the training data, card #84's uploaded CSV, and the probes on this page, all of which can **state** a prediction, a band width, a class label and a feature value directly.
+
+Every row below names its door, and the label is derived from what the probe varies rather than declared beside it. A row is `frame` exactly when it changes something a caller cannot ask for. Two consequences are worth reading rather than inferring:
+
+- **`untrusted-family` is documented here and no caller can reach it.** The rule judges a family label against that family's measured leave-one-class-out transfer; a user types a formula and has no label, and supplying a guessed one is worse than omitting it -- the screen would answer `indeterminate` for a class it has no transfer estimate for, so every *novel* candidate, which is the entire point of the programme, would be refused for the wrong reason. Gate HG-2 goes red if it ever becomes reachable by typing.
+- **A row can be reachable by typing and still arrive with a different sentence.** The delivery path is null-check, featurise, predict, screen -- so a formula that will not parse is refused by the featuriser before any screen sees it. Same code, different words. The section after the catalogue shows those words.
 
 ## The catalogue
 
-One row per probe: what was asked, the code the caller receives, and the sentence it arrives with. Where two screens rejected, the code is the first one's and the reason carries both -- a candidate rejected by two rules and explained by one is the partial truth this layer exists to remove.
+One row per probe: which door can state it, what was asked, the code the caller receives, and the sentence it arrives with. Where two screens rejected, the code is the first one's and the reason carries both -- a candidate rejected by two rules and explained by one is the partial truth this layer exists to remove.
 
-| Probe | Input | Code | Reason |
-|---|---|---|---|
-| `baseline` | *the baseline, unchanged* | `admitted` | inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
-| `window-lower-edge` | `temperature(K)` = 195 | `admitted` | inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
-| `window-upper-edge` | `temperature(K)` = 773 | `admitted` | inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
-| `too-cold` | `temperature(K)` = 100 | `outside-window` | temperature(K) = 100 K is below the trained temperature range 195-773 K; temperature(K) = 100 is outside the trained span 195 to 773 |
-| `too-hot` | `temperature(K)` = 1000 | `outside-window` | temperature(K) = 1000 K is above the trained temperature range 195-773 K; temperature(K) = 1000 is outside the trained span 195 to 773 |
-| `unreadable-formula` | `Composition` = LaNi5Xx2 | `indeterminate` | 'LaNi5Xx2' could not be given a physical capacity ceiling -- it does not parse, or it names an element the 'oliynyk' table has no mass for; 'LaNi5Xx2' names 'Xx', which is not a chemical element. ElMD does not raise on it -- it drops the symbols it cannot read and measures whatever is left, if anything -- so it is refused here rather than answered as some other alloy. There is no distance to report, and a screen that cannot judge does not admit. |
-| `unmeasured-class` | `Alloy_class` = Perovskite | `indeterminate` | Alloy_class = 'Perovskite' is not one of the 10 classes leave-one-class-out measured, so no transfer estimate exists for it |
-| `above-physical-ceiling` | `q0.5` = 4.5 | `above-physical-ceiling` | q0.5 = 4.5 wt% is above the 4.19638 wt% this composition can hold at H/M 3 |
-| `out-of-domain` | `Composition` = TiAl; `q0.5` = 6; `Alloy_class` = AB | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.338129 |
-| `untrusted-family` | `Composition` = Mg2Ni; `Alloy_class` = Mg | `untrusted-family` | class Mg transfers at R2 -0.338129, below the 0 this project will predict across |
-| `outside-feature-range` | `range_Mendeleev_Number` = 95 | `outside-feature-range` | range_Mendeleev_Number = 95 is outside the trained span 1 to 79 |
-| `high-uncertainty` | `interval_width` = 1.6 | `high-uncertainty` | the calibrated band is 1.6 wt% wide, above the 1.12 wt% this project will report |
-| `beyond-known-chemistry` | `Composition` = K1Rb1 | `beyond-known-chemistry` | 28.75 from the nearest known alloy (Pr2Dy1Ni1) on the ElMD modified-Pettifor scale, past the 11.73 that separates the corpus's loneliest member (Li0.94Pd1) from its own nearest neighbour. This is a statement about chemistry, not about the applicability domain. |
+| Probe | Door | Input | Code | Reason |
+|---|---|---|---|---|
+| `baseline` | `request` | *the baseline, unchanged* | `admitted` | inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
+| `window-lower-edge` | `request` | `temperature(K)` = 195 | `admitted` | inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
+| `window-upper-edge` | `request` | `temperature(K)` = 773 | `admitted` | inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
+| `too-cold` | `request` | `temperature(K)` = 100 | `outside-window` | temperature(K) = 100 K is below the trained temperature range 195-773 K; temperature(K) = 100 is outside the trained span 195 to 773 |
+| `too-hot` | `request` | `temperature(K)` = 1000 | `outside-window` | temperature(K) = 1000 K is above the trained temperature range 195-773 K; temperature(K) = 1000 is outside the trained span 195 to 773 |
+| `unreadable-formula` | `request` | `Composition` = LaNi5Xx2 | `indeterminate` | 'LaNi5Xx2' could not be given a physical capacity ceiling -- it does not parse, or it names an element the 'oliynyk' table has no mass for; 'LaNi5Xx2' names 'Xx', which is not a chemical element. ElMD does not raise on it -- it drops the symbols it cannot read and measures whatever is left, if anything -- so it is refused here rather than answered as some other alloy. There is no distance to report, and a screen that cannot judge does not admit. |
+| `unmeasured-class` | `frame` | `Alloy_class` = Perovskite | `indeterminate` | Alloy_class = 'Perovskite' is not one of the 10 classes leave-one-class-out measured, so no transfer estimate exists for it |
+| `above-physical-ceiling` | `frame` | `q0.5` = 4.5 | `above-physical-ceiling` | q0.5 = 4.5 wt% is above the 4.19638 wt% this composition can hold at H/M 3 |
+| `out-of-domain` | `frame` | `Composition` = TiAl; `q0.5` = 6; `Alloy_class` = AB | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.338129 |
+| `untrusted-family` | `frame` | `Composition` = Mg2Ni; `Alloy_class` = Mg | `untrusted-family` | class Mg transfers at R2 -0.338129, below the 0 this project will predict across |
+| `outside-feature-range` | `frame` | `range_Mendeleev_Number` = 95 | `outside-feature-range` | range_Mendeleev_Number = 95 is outside the trained span 1 to 79 |
+| `high-uncertainty` | `frame` | `interval_width` = 1.6 | `high-uncertainty` | the calibrated band is 1.6 wt% wide, above the 1.12 wt% this project will report |
+| `beyond-known-chemistry` | `request` | `Composition` = K1Rb1 | `beyond-known-chemistry` | 28.75 from the nearest known alloy (Pr2Dy1Ni1) on the ElMD modified-Pettifor scale, past the 11.73 that separates the corpus's loneliest member (Li0.94Pd1) from its own nearest neighbour. This is a statement about chemistry, not about the applicability domain. |
+
+### What a caller typing this receives instead
+
+Every `request`-door row above, with the answer `predict_capacity()` gives it. The screens' sentences in the catalogue are computed from **stated** inputs; a caller's are computed from the model's own prediction and band. Where the two can differ without a model to ask, they are shown here.
+
+| Probe | What `predict_capacity()` does with it |
+|---|---|
+| `baseline` | reaches the screens, which judge the model's own prediction and band rather than the stated ones above -- so the code is the fit's to decide and this page cannot show it. Gate HG-2 measures it against the served artifact. |
+| `window-lower-edge` | reaches the screens, which judge the model's own prediction and band rather than the stated ones above -- so the code is the fit's to decide and this page cannot show it. Gate HG-2 measures it against the served artifact. |
+| `window-upper-edge` | reaches the screens, which judge the model's own prediction and band rather than the stated ones above -- so the code is the fit's to decide and this page cannot show it. Gate HG-2 measures it against the served artifact. |
+| `too-cold` | **the same code and the same sentence, whatever the fit.** The first screen in run order rejected it, and that screen reads the temperature the caller stated rather than anything the model produced, so no version can answer this differently: `outside-window`. |
+| `too-hot` | **the same code and the same sentence, whatever the fit.** The first screen in run order rejected it, and that screen reads the temperature the caller stated rather than anything the model produced, so no version can answer this differently: `outside-window`. |
+| `unreadable-formula` | **refused before any screen runs**, with the featuriser's own sentence and zero verdicts: 1 of 1 formula(e) could not be parsed: ['candidate'] 'LaNi5Xx2' names 'Xx', which is not a chemical element. Nothing was featurised -- a batch that silently returns fewer rows than it was given is how a feature matrix comes to be attached to the wrong compositions. |
+| `beyond-known-chemistry` | reaches the screens, which judge the model's own prediction and band rather than the stated ones above -- so the code is the fit's to decide and this page cannot show it. Gate HG-2 measures it against the served artifact. |
 
 ### Why each input was chosen
 
@@ -134,7 +157,7 @@ A diff here is one of four things, and only the first needs a human.
 
 1. **A reason changed and its code did not.** The wording of an explanation moved. Read the new sentence against the input beside it and ask whether it is *true of that input* -- not whether it is well written, and not whether the code is right. This is the check no test performs and the reason this page is Markdown.
 2. **A code changed.** It cannot get here quietly: `--emit` refuses a probe that no longer reaches the path it was chosen for. Something moved a threshold, and the question is whether that was intended.
-3. **A row appeared or vanished.** The probe set moved. A vanished row is a path that is no longer covered.
+3. **A row appeared or vanished, or changed door.** The probe set moved. A vanished row is a path that is no longer covered; a row that changed door means a probe started or stopped varying something a caller cannot ask for, and the door label is derived from exactly that.
 4. **The vocabulary table grew.** A screen joined the delivery path -- card #76 owns whether #49's ElMD novelty screen does -- or an existing one declared a new code. Every new code needs a probe, or `--emit` refuses it as dead vocabulary.
 
 Card #90. Registration of this check as a gate (HG-5) is boxed on #91, deliberately after the freeze lifts: `docs/FREEZE.md` fixes HG-1 through HG-4 as the unfreeze condition, and that list is the one thing that document exists to resist widening.

@@ -490,6 +490,52 @@ def test_every_spelling_of_a_missing_value_is_refused_except_the_one_that_is_che
 # --------------------------------------------------------------------------------------
 
 
+def test_bundle_from_assembles_the_same_bundle_without_the_version_lookup(
+    store: Path,
+) -> None:
+    """Card #77's seam: gate HG-2 has to reach a version whose gate run it is producing.
+
+    The same split card #33 made on ``load_surrogate``, one layer up. What it must *not* be is
+    a second assembly -- the duplication AC-4 exists to catch, arriving in the checker -- so
+    the two doors are compared field by field on everything a caller can see.
+    """
+    from hydms.delivery.predict import bundle_from
+    from hydms.surrogate.predict import load_surrogate
+
+    deployed = load_bundle(store=store)
+    assembled = bundle_from(load_surrogate("v1", store=store))
+
+    assert assembled.version == deployed.version
+    assert assembled.screens == deployed.screens
+    assert assembled.feature_names == deployed.feature_names
+    assert assembled.confidence_level == deployed.confidence_level
+    assert assembled.reference_digests == deployed.reference_digests
+    assert assembled.median_head == deployed.median_head
+
+
+def test_a_bundle_assembled_from_a_surrogate_is_not_put_in_the_deployments_cache(
+    store: Path,
+) -> None:
+    """It was given no store, so it has no key it could honestly use."""
+    from hydms.delivery.predict import bundle_from
+    from hydms.surrogate.predict import load_surrogate
+
+    assembled = bundle_from(load_surrogate("v1", store=store))
+
+    assert load_bundle(store=store) is not assembled
+
+
+def test_a_formula_that_is_not_a_string_names_the_type_rather_than_calling_it_empty(
+    bundle: ArtifactBundle,
+) -> None:
+    """#76's QA finding, at the entry point a transport actually hands it to."""
+    with pytest.raises(ContractError) as raised:
+        predict_capacity(5, WARM, bundle=bundle)  # type: ignore[arg-type]
+
+    assert "int" in str(raised.value)
+    assert "empty" not in str(raised.value)
+
+
 def test_the_bundle_is_assembled_once_and_reused(store: Path) -> None:
     first = load_bundle(store=store)
     second = load_bundle(store=store)

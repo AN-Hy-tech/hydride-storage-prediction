@@ -135,6 +135,7 @@ from hydms.delivery.contract import (
     resolve,
 )
 from hydms.delivery.predict import novelty_from, screen_verdicts
+from hydms.descriptors.featurize import FeaturisationError, featurize
 from hydms.screens.protocol import Screen, apply_screens
 
 __all__ = [
@@ -146,8 +147,10 @@ __all__ = [
     "BASELINE_WIDTH",
     "DOCUMENT",
     "FEATURE",
+    "FRAME",
     "PROBES",
     "PROBE_VERSION",
+    "REQUEST",
     "CatalogueError",
     "Probe",
     "answers",
@@ -155,6 +158,7 @@ __all__ = [
     "candidates",
     "check_vocabulary",
     "columns",
+    "delivery_refusal",
     "document",
     "emit",
     "reached",
@@ -200,6 +204,23 @@ BASELINE_CLASS = "AB5"
 
 #: A stated value for :data:`FEATURE`, inside its trained span.
 BASELINE_FEATURE = 40.0
+
+#: The two doors into the screens, named on every row of the generated page. Card #77 owns
+#: the distinction and gate HG-2 measures both sides of it.
+#:
+#: :data:`REQUEST` is :func:`~hydms.delivery.predict.predict_capacity`: a caller types a
+#: formula and a temperature and the delivery path computes everything else.
+#: :data:`FRAME` is :func:`~hydms.screens.protocol.apply_screens` over a curated frame -- the
+#: training data, card #84's uploaded CSV, and the probes on this page -- which can *state* a
+#: prediction, a band width, a family label and a feature value directly.
+REQUEST = "request"
+FRAME = "frame"
+
+#: The probe fields the delivery path computes for itself, so a probe that varies one of them
+#: is describing an input only a curated frame can supply. Derived rather than listed per
+#: probe: a row's door is a consequence of what it varies, and a hand-maintained label would
+#: be the thing that goes stale.
+_COMPUTED = ("prediction", "interval_width", "alloy_class", "feature")
 
 _MAX_NAMED = 8
 
@@ -290,6 +311,21 @@ class Probe:
     def request(self) -> PredictionRequest:
         """What a caller would have asked -- the #75 request, built from this probe."""
         return PredictionRequest(formula=self.formula, temperature_k=self.temperature_k)
+
+    @property
+    def door(self) -> str:
+        """Which door can state this probe's input: :data:`REQUEST` or :data:`FRAME`.
+
+        Derived from :meth:`varied`, not declared. A probe that changes a prediction, a band
+        width, a class label or a feature value is describing something
+        :func:`~hydms.delivery.predict.predict_capacity` computes for itself, so no caller can
+        ask for it; a probe that changes only the formula or the temperature is asking a
+        question a caller can type. Card #76's QA pass found the page claiming to hold "every
+        sentence the delivery path can produce" while eleven of thirteen rows were true and
+        two were reachable only here, and a derived label is the half of that fix which cannot
+        go stale.
+        """
+        return FRAME if set(self.varied()) & set(_COMPUTED) else REQUEST
 
     def varied(self) -> dict[str, float | str]:
         """The fields this probe changes from :func:`baseline`, by role name.
@@ -602,6 +638,47 @@ def _answer(
     )
 
 
+def delivery_refusal(probe: Probe) -> str | None:
+    """The sentence :func:`~hydms.delivery.predict.predict_capacity` gives for this probe, if
+    it refuses before any screen runs.
+
+    Args:
+        probe: A probe. Only a :data:`REQUEST`-door one can have an answer here; a
+            :data:`FRAME`-door probe states an input no caller can give, so ``None``.
+
+    Returns:
+        The featuriser's own sentence, where featurising this probe's formula raises, and
+        ``None`` where it does not.
+
+    **This is the second of card #76's two "wrong words" findings, and the reason it can be
+    answered without a model.** The page's ``unreadable-formula`` row carries the *screens'*
+    sentence, because the probes hand the screens a frame whose feature columns are already
+    filled. A caller who types the same string never reaches a screen at all: the ordering
+    #76 settled is null-check, featurise, predict, screen, and
+    :func:`~hydms.descriptors.featurize.featurize` raises first, so the delivery path answers
+    the same code with the featuriser's sentence and zero verdicts. Two true sentences, and
+    the page showed the one an API will not send.
+
+    A parse failure is refused **before any feature is reached**, so its sentence does not
+    depend on which artifact version answers or on how many features that version was fitted
+    on -- which is what lets this page print it with no artifact on disk, in a lane that has
+    none. ``tests/delivery/test_refusals.py`` pins that independence rather than assuming it.
+    The label is :data:`~hydms.delivery.predict.CANDIDATE`, because the sentence names the row
+    and a page showing a different label would be showing a different sentence.
+    """
+    from hydms.delivery.predict import CANDIDATE
+
+    if probe.door != REQUEST:
+        return None
+    formulas = pd.Series([probe.formula], index=pd.Index([CANDIDATE]))
+    temperatures = pd.Series([probe.temperature_k], index=pd.Index([CANDIDATE]))
+    try:
+        featurize(formulas, temperatures)
+    except FeaturisationError as error:
+        return str(error)
+    return None
+
+
 def reached(built: Sequence[tuple[Probe, Answer]]) -> dict[str, tuple[str, ...]]:
     """Each code that was reached, mapped to the probes that reached it, in page order."""
     found: dict[str, list[str]] = {}
@@ -652,6 +729,30 @@ def check_vocabulary(
 def _cell(text: str) -> str:
     """One table cell: pipes escaped, so a reason containing ``|`` cannot break the row."""
     return text.replace("|", "\\|")
+
+
+def _forced(
+    probe: Probe, answer: Answer, running: Sequence[Screen], role: dict[str, str]
+) -> bool:
+    """Whether a caller typing this probe gets the same code whatever the fit says.
+
+    True when the **first** screen in run order rejected -- which is the precedence
+    :func:`~hydms.delivery.contract.resolve` applies, so its code is the one reported -- *and*
+    that screen reads a column the request itself states rather than one the model produced.
+    Today that is the temperature window and nothing else: every later screen judges a
+    prediction, a band or a distance, and a different version could move any of them.
+
+    It exists because the alternative rendering was a wrong-words finding of exactly the class
+    this page was built to catch, on this page: saying "the code is the fit's to decide" about
+    `too-hot` is false, and card #77's gate asserts the opposite -- that those two codes are
+    forced, and a version that answered otherwise is red.
+    """
+    if probe.door != REQUEST or not isinstance(answer, Refusal) or not running:
+        return False
+    rejecting = [verdict for verdict in answer.screens if not verdict.passed]
+    if not rejecting or rejecting[0].screen != str(running[0].name):
+        return False
+    return getattr(running[0], "column", None) == role["temperature_k"]
 
 
 def _input_cell(probe: Probe, role: dict[str, str]) -> str:
@@ -774,22 +875,50 @@ def document(
         "",
         "The temperature window declares `indeterminate` for *there was no number to compare*, "
         "and no probe reaches it: `PredictionRequest` refuses a non-finite `temperature_k` "
-        "with a `ContractError`, so a caller cannot express the question that would produce "
-        "it. The vocabulary above is still complete -- the applicability screen reaches "
-        "`indeterminate` two other ways, and both are below -- but the window's own sentence "
-        "for it is never rendered here, so a stale one would not land on a diff. Whether a "
-        "malformed request should come back as a `Refusal` rather than raise is card #77's "
-        "call.",
+        "with a `ContractError`, so a caller cannot express the question, and a probe here "
+        "builds a request like any caller. Card #77 settled that a malformed request **raises "
+        "rather than refusing**, and the type had already settled it -- a `Refusal` carries "
+        "the request it declines, so an input that cannot build one cannot be carried by the "
+        "refusal describing it. The sentence is not dead vocabulary: the frame door reaches "
+        "it, with a missing value in the temperature column, which is what a curated frame "
+        "and card #84's uploaded CSV can hold and this page's probes cannot. It is simply "
+        "never rendered here, so a stale one would not land on a diff.",
+        "",
+        "## Which door reaches which row",
+        "",
+        "**There are two doors into the screens and they can state different things.** The "
+        "*request* door is `predict_capacity(formula, temperature_k)`: a caller types a "
+        "composition and a temperature, and the delivery path computes the prediction, the "
+        "band, the features and -- deliberately -- no family label at all. The *frame* door is "
+        "`apply_screens` over a curated frame: the training data, card #84's uploaded CSV, and "
+        "the probes on this page, all of which can **state** a prediction, a band width, a "
+        "class label and a feature value directly.",
+        "",
+        "Every row below names its door, and the label is derived from what the probe varies "
+        "rather than declared beside it. A row is `frame` exactly when it changes something a "
+        "caller cannot ask for. Two consequences are worth reading rather than inferring:",
+        "",
+        "- **`untrusted-family` is documented here and no caller can reach it.** The rule "
+        "judges a family label against that family's measured leave-one-class-out transfer; a "
+        "user types a formula and has no label, and supplying a guessed one is worse than "
+        "omitting it -- the screen would answer `indeterminate` for a class it has no transfer "
+        "estimate for, so every *novel* candidate, which is the entire point of the "
+        "programme, would be refused for the wrong reason. Gate HG-2 goes red if it ever "
+        "becomes reachable by typing.",
+        "- **A row can be reachable by typing and still arrive with a different sentence.** "
+        "The delivery path is null-check, featurise, predict, screen -- so a formula that will "
+        "not parse is refused by the featuriser before any screen sees it. Same code, "
+        "different words. The section after the catalogue shows those words.",
         "",
         "## The catalogue",
         "",
-        "One row per probe: what was asked, the code the caller receives, and the sentence it "
-        "arrives with. Where two screens rejected, the code is the first one's and the reason "
-        "carries both -- a candidate rejected by two rules and explained by one is the partial "
-        "truth this layer exists to remove.",
+        "One row per probe: which door can state it, what was asked, the code the caller "
+        "receives, and the sentence it arrives with. Where two screens rejected, the code is "
+        "the first one's and the reason carries both -- a candidate rejected by two rules and "
+        "explained by one is the partial truth this layer exists to remove.",
         "",
-        "| Probe | Input | Code | Reason |",
-        "|---|---|---|---|",
+        "| Probe | Door | Input | Code | Reason |",
+        "|---|---|---|---|---|",
     ]
     for probe, answer in built:
         code = answer.code if isinstance(answer, Refusal) else ADMITTED
@@ -799,9 +928,44 @@ def document(
             else answer.domain.reason
         )
         lines.append(
-            f"| `{probe.name}` | {_cell(_input_cell(probe, role))} | `{code}` | "
-            f"{_cell(reason)} |"
+            f"| `{probe.name}` | `{probe.door}` | {_cell(_input_cell(probe, role))} | "
+            f"`{code}` | {_cell(reason)} |"
         )
+    lines += [
+        "",
+        "### What a caller typing this receives instead",
+        "",
+        "Every `request`-door row above, with the answer `predict_capacity()` gives it. The "
+        "screens' sentences in the catalogue are computed from **stated** inputs; a caller's "
+        "are computed from the model's own prediction and band. Where the two can differ "
+        "without a model to ask, they are shown here.",
+        "",
+        "| Probe | What `predict_capacity()` does with it |",
+        "|---|---|",
+    ]
+    for probe, answer in built:
+        if probe.door != REQUEST:
+            continue
+        sentence = delivery_refusal(probe)
+        if sentence is not None:
+            rendered = (
+                f"**refused before any screen runs**, with the featuriser's own sentence "
+                f"and zero verdicts: {_cell(sentence)}"
+            )
+        elif _forced(probe, answer, running, role):
+            rendered = (
+                f"**the same code and the same sentence, whatever the fit.** The first "
+                f"screen in run order rejected it, and that screen reads the temperature the "
+                f"caller stated rather than anything the model produced, so no version can "
+                f"answer this differently: `{answer.code}`."  # type: ignore[union-attr]
+            )
+        else:
+            rendered = (
+                "reaches the screens, which judge the model's own prediction and band rather "
+                "than the stated ones above -- so the code is the fit's to decide and this "
+                "page cannot show it. Gate HG-2 measures it against the served artifact."
+            )
+        lines.append(f"| `{probe.name}` | {rendered} |")
     lines += [
         "",
         "### Why each input was chosen",
@@ -843,8 +1007,10 @@ def document(
         "2. **A code changed.** It cannot get here quietly: `--emit` refuses a probe that no "
         "longer reaches the path it was chosen for. Something moved a threshold, and the "
         "question is whether that was intended.",
-        "3. **A row appeared or vanished.** The probe set moved. A vanished row is a path that "
-        "is no longer covered.",
+        "3. **A row appeared or vanished, or changed door.** The probe set moved. A vanished "
+        "row is a path that is no longer covered; a row that changed door means a probe "
+        "started or stopped varying something a caller cannot ask for, and the door label is "
+        "derived from exactly that.",
         "4. **The vocabulary table grew.** A screen joined the delivery path -- card #76 owns "
         "whether #49's ElMD novelty screen does -- or an existing one declared a new code. "
         "Every new code needs a probe, or `--emit` refuses it as dead vocabulary.",

@@ -17,6 +17,18 @@ model was trained on. A half-open window would refuse a real training temperatur
 evaluate a candidate must not admit it -- the failure mode of the other choice is a
 candidate reaching the shortlist *because* the rule meant to stop it broke.
 
+*Which door reaches that sentence, decided on card #77.*
+:class:`~hydms.delivery.contract.PredictionRequest` runs ``temperature_k`` through a finite
+check and raises, so **no single prediction can produce this code**: a caller cannot express
+the question. That is deliberate and it is structural rather than preferred -- a
+:class:`~hydms.delivery.contract.Refusal` carries the request it declines, so an input that
+cannot build a request cannot be carried by the refusal describing it, and the transport
+answers 422 instead (#78). The sentence is still reachable, through the other door: a curated
+frame with a missing value in this column -- the training data, #84's uploaded CSV -- gets it
+verbatim. So it is not dead vocabulary, and ``docs/REFUSALS.md`` names the door per row rather
+than leaving a reader to assume the one they came in by. Gate HG-2 measures both doors and
+requires their union to be the declared vocabulary exactly.
+
 **A missing column raises instead.** That is not a fact about one candidate, it is the wrong
 frame: refusing every row with an identical reason would report a caller's mistake as a
 property of the candidates.

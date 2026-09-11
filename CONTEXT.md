@@ -106,19 +106,20 @@ here — it is a model output that has not yet been made into one.
 _Avoid_: "the estimate", "the output", "the number"
 
 > *State of the term, not part of the definition:* **both halves are enforced today, at the
-> delivery layer** (cards #48, #49, #75, #76, all `done` 2026-09-11). The interval half is the
-> surrogate's: it returns `lcb` and `interval_width` as columns, so a caller cannot get a point
-> estimate without them. The domain-verdict half is `hydms.delivery.predict.predict_capacity()`,
-> which answers with a `PredictionResult` whose `interval` and `domain` fields have **no defaults
-> and cannot be `None`** — the structural half of HG-2, a type rather than a check. `novelty` has
-> no default either, so a caller must *say* what it knows; `None` means "not measured", and the
-> delivery path itself never returns it, because the novelty screen is in `delivery_screens()`.
+> delivery layer, and gate HG-2 now measures it** (cards #48, #49, #75, #76, #77, all `done`
+> 2026-09-11). The interval half is the surrogate's: it returns `lcb` and `interval_width` as
+> columns, so a caller cannot get a point estimate without them. The domain-verdict half is
+> `hydms.delivery.predict.predict_capacity()`, which answers with a `PredictionResult` whose
+> `interval` and `domain` fields have **no defaults and cannot be `None`** — a type rather than a
+> check. `novelty` has no default either, so a caller must *say* what it knows; `None` means "not
+> measured", and the delivery path itself never returns it, because the novelty screen is in
+> `delivery_screens()`. HG-2 adds the behavioural half: every `return` in `predict_capacity` is
+> read from its source and required to be one of the two contract types — **exhaustively, not by
+> sampling** — and eleven probes run against the served artifact.
 >
 > **The layer is the qualifier.** The surrogate alone still does not refuse an out-of-domain
 > candidate, and its docstring still says so outright — so "prediction" in this glossary's sense
-> is what the *delivery* layer produces, not what `hydms.surrogate.predict` returns. What remains
-> is #77 (gate HG-2): asserting **exhaustively, not by sampling**, that no path can return a bare
-> number, and saying which refusal codes are reachable through which entry point.
+> is what the *delivery* layer produces, not what `hydms.surrogate.predict` returns.
 
 **Lower confidence bound**:
 The bottom of the calibrated interval, and **the ranking signal**. Ranking on the mean is what lets

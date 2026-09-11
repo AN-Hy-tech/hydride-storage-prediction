@@ -168,6 +168,7 @@ __all__ = [
     "CANDIDATE",
     "ArtifactBundle",
     "DeliveryError",
+    "bundle_from",
     "clear_cache",
     "load_bundle",
     "novelty_from",
@@ -368,6 +369,51 @@ def load_bundle(
         if cached is not None:
             return cached
 
+    bundle = bundle_from(surrogate, screens=screens, cfg=config)
+    if default:
+        _BUNDLES[(str(root), surrogate.version)] = bundle
+    return bundle
+
+
+def bundle_from(
+    surrogate: Any,
+    *,
+    screens: Sequence[Screen] | None = None,
+    cfg: Config | None = None,
+) -> ArtifactBundle:
+    """Everything in :func:`load_bundle` below the version lookup, over a surrogate you hold.
+
+    Args:
+        surrogate: A :class:`~hydms.surrogate.predict.Surrogate`, however it was loaded.
+        screens: The rules to run. Defaults to
+            :func:`~hydms.delivery.contract.delivery_screens`; the same deployment decision
+            :func:`load_bundle` documents.
+        cfg: Loaded configuration. Defaults to one read here and shared by every screen.
+
+    Returns:
+        An :class:`ArtifactBundle`. **Never memoised** -- the cache is keyed by
+        ``(store, version)`` and this function was given no store, so it has no key it could
+        honestly use. :func:`load_bundle` is the door that caches.
+
+    Raises:
+        DeliveryError: a screen would look for a column this path does not write, or the
+            screen list is empty. See :func:`_check_columns`.
+
+    **It exists because gate HG-2 has to exercise this path on a version that has no gate run
+    yet**, and it is the same split, one layer up, that card #33 made on
+    :func:`~hydms.surrogate.predict.load_surrogate`. That function refuses a version whose
+    gates are unestablished and takes no way round it; the first thing ever recorded against a
+    freshly-saved version is a gate run; so a gate that loaded its candidate through
+    :func:`load_bundle` could never reach the artifact it exists to certify. The resolution
+    there was to split rather than to weaken -- :func:`~hydms.surrogate.predict.surrogate_from`
+    is everything below the version lookup -- and :mod:`hydms.gates._artifact` already holds
+    the one place that walks through it. This is that door for the delivery layer: HG-2 loads
+    the candidate the way AC-3 and AC-4 do and assembles the *same* bundle
+    :func:`load_bundle` would, so the only line of the delivery path the gate skips is the
+    gate check whose input the gate is producing. :func:`load_bundle` grew no parameter and
+    lost no guarantee.
+    """
+    config = cfg if cfg is not None else load_config()
     running = tuple(delivery_screens(config) if screens is None else screens)
     if not running:
         raise DeliveryError(
@@ -385,7 +431,7 @@ def load_bundle(
     )
     _check_columns(surrogate, heads, running, config)
 
-    bundle = ArtifactBundle(
+    return ArtifactBundle(
         version=surrogate.version,
         screens=tuple(str(screen.name) for screen in running),
         feature_names=surrogate.feature_names,
@@ -403,9 +449,6 @@ def load_bundle(
             digest for digest in map(_digest, running) if digest is not None
         ),
     )
-    if default:
-        _BUNDLES[(str(root), surrogate.version)] = bundle
-    return bundle
 
 
 #: Each optional input a screen may declare that :func:`_candidate` writes a column for, as

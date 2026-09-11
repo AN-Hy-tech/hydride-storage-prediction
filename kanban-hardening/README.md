@@ -144,7 +144,7 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **#76 is `done`, tested and QA'd, and #77 is the unblocked card** -- read #76's narrative before anything else, because its three decisions changed what the cards below it say and the QA pass added a fourth note about the guard it shipped. #77 inherits **three** boxed *wrong words* findings, all the same entry-point question: which sentence a code arrives with depends on which door the candidate came through. The module has still **never run against a real artifact** -- `v2` records no gate run, so `load_surrogate` refuses it; promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4. `CONTEXT.md` was brought current in the same breath (its **Prediction** state-block still called this card unbuilt, and **nothing reads that file** -- no test, no gate, no `--emit`), so grep the glossary for your card's number before you close it.
+**Next session, in one line.** **#77 is `done` and HG-2 is green against the real `v2`, so the delivery path has now run against a fitted artifact -- #78 (the FastAPI service) is the unblocked card -- but **fix the board's blockers and stages first** (the maintainer asked for it; the `blocked_by` graph and the stage map have drifted from the runbook's prose), then QA #77.** Read #77's narrative before anything else: `bundle_from()` is the seam it added (the same split #33 made on `load_surrogate`, one layer up -- `load_bundle` still refuses an ungated version and a test pins that), reachability is now stated **per door** with `NOT_ALWAYS` separating "no fit can reach it" from "this fit does not", and **two of the card's four named causes were not rules this system has** -- there is no element-membership screen and the AD ceiling is a capacity, not a distance. #78 inherits one boxed finding and one standing obligation: a `ContractError` must become a **422** at the transport rather than a 500, and `/v1/model` should report `ArtifactBundle.reference_digests`. Expect **#34** to stay open until #79 and #86 build HG-3/HG-4; promote **`v2`** never `v1`. Grep `CONTEXT.md` for your card's number before you close it -- **nothing reads that file**, no test, no gate, no `--emit`.
 
 **Handoff, 2026-09-07 (latest) — #49 is `done` and S5 is closed.** `hydms/screens/novelty.py`
 ships `novelty_screen()`, whose verdict frame carries `novelty.distance` and `novelty.nearest`
@@ -455,6 +455,85 @@ artifact. `v2` records no gate run, so `load_surrogate` refuses it -- correctly 
 (`pytest -m "not slow"`) **1337 passed, 4 deselected, 643 s** — 1334 plus these three; `ruff` and
 `mypy` clean; `check_board.py` and `check_freeze.py` green; the gate harness reports 6 passed /
 6 skipped, with HG-2 still skipped because #77 has not built it.
+
+---
+
+### Handoff -- 2026-09-11 - #77 is closed; HG-2 is green against a real artifact; QA it, then #78
+
+**Do this first, before any card.** The maintainer has asked that the next session **fix the
+board's blockers and stages** before taking new work: the `blocked_by` graph and the stage
+assignments have drifted from the runbook's prose, and S4 already taught this board that the
+arrows and the graph disagree (#88 opened S4, not the #24 the prose pointed at). Ask the board,
+not the prose: `bash $S/show_blocked.sh .` and `bash $S/list_all_cards.sh .`, and reconcile
+against `docs/PHASE-H-RUNBOOK.md` §2. Then the QA pass below, then #78.
+
+**What you are being asked to do next.** Take a QA pass at **#77** before starting #78 -- the
+**L6** row in `docs/QA-PROTOCOL.md` §2 and the reviewer checklist in §4. HG-2 is the gate this
+whole phase is named for, and a gate that quietly establishes nothing is worse than no gate. Then
+#78, the FastAPI service.
+
+**Start with the runnable check.**
+
+```bash
+conda run -n Project python -m hydms.gates run HG-2          # 2.5 s, green against v2
+conda run -n Project python -m pytest tests/gates/test_hg2_refusal_path.py
+```
+
+**The thing that changed, and it is not small: `predict_capacity()` has answered from `v2`.**
+Every handoff since #76 has carried "the module has never run against a real artifact -- `v2`
+records no gate run, so `load_surrogate` refuses it". That is the *same knot* card #33 untied one
+layer down, and it takes the same resolution rather than a waiver. `bundle_from(surrogate, ...)`
+is everything in `load_bundle` below the version lookup; HG-2 loads its candidate through
+`gates/_artifact.candidate` (`require_gates=False`, the door the store documents) and assembles
+the bundle `load_bundle` would have. **`load_bundle` grew no parameter and lost no guarantee** --
+`test_the_version_it_scored_is_one_the_delivery_path_refuses` names `v1` explicitly and demands
+`GatesIncomplete`, so the escape cannot widen without something going red. Read that test first
+if you are checking anything here.
+
+**Three claims, and only one needs an artifact -- so HG-2 can go red in CI where it cannot go
+green.** The structural half (no default for `interval` or `domain`, no field a number fits in on
+`Refusal`) and the exhaustive half (every `return` in `predict_capacity` **read from its source**
+and required to be one of the two contract types) both run in an empty checkout. `.gitignore`
+excludes `/artifacts/`, so the behavioural half skips in CI and reports `SKIPPED` rather than a
+pass. That asymmetry is deliberate; do not "fix" it by fitting a model inside the gate.
+
+**Two of the card's four named causes were not rules this system has.** Worth knowing before you
+write API documentation that repeats them. There is **no element-membership screen**: `Tc2Ni` is
+*answered* (technetium is in no training alloy, sits 4.17 from the corpus against an 11.73
+ceiling), because #49 built novelty as a distance between *compositions* on purpose -- an
+element-membership rule would refuse every genuinely new candidate and admit every
+re-proportioning of an old one. And the applicability ceiling is a **capacity**, not a distance
+(#48); the distance belongs to `beyond-known-chemistry`. Both boxes are struck through on the card
+with the measurement beside them.
+
+**Reachability is now per door, and `NOT_ALWAYS` is the only declared thing in the gate.** `NEVER`
+means no fit can reach it and the gate is **red** if it appears -- `untrusted-family` is the whole
+of that class, and it is #76's finding turned into an assertion. `SOMETIMES` means the fit
+decides: reported, never required. One entry surprised us -- **`beyond-known-chemistry` is
+fit-dependent**, because the novelty screen runs third and `resolve` reports the *first* rejecting
+screen's code, so the applicability screen between it and the window can take the code first.
+Deployed `v2` answers `K1Rb1` with it; the cheap fixture fit answers with a domain code.
+
+**`docs/REFUSALS.md` is regenerated and no longer over-claims.** Every row carries a `Door`, the
+label **derived** from what the probe varies rather than declared beside it, and a new table shows
+what a caller typing each `request` row actually receives -- including the featuriser's own
+sentence for `LaNi5Xx2`, which is the sentence the API will send and which the page previously did
+not show. It is `--emit`-generated; do not hand-edit it.
+
+**Two things #78 inherits.** (a) A malformed request **raises** rather than refusing -- settled on
+#77, and the type had already settled it, since a `Refusal` carries the request it declines. The
+transport owes the **422**; a `ContractError` reaching a client as a 500 is the finding. (b)
+`GET /v1/model` should report `ArtifactBundle.reference_digests`, which is the half of the
+pin-or-digest question #76 could answer; the fit-time binding is boxed on **#91**.
+
+**What is still not done.** **#34** cannot close: promotion needs HG-3 and HG-4, built by #79 and
+#86. Promote **`v2`**, never `v1`.
+
+**Numbers, with the command that produced each.** `python -m hydms.gates run HG-2` — 1 passed,
+2.5 s. `python -m hydms.gates run --fast` — **6 passed / 3 skipped** (was 6/6; AC-5, HG-3, HG-4
+remain). `python -m pytest -m "not slow"` — **1370 passed, 4 deselected, 705 s** (was 1337).
+`python -m pytest tests/gates/test_hg2_refusal_path.py` — 19 passed, 9.0 s. ruff, mypy,
+`check_board.py` and `check_freeze.py` all clean.
 
 ---
 
@@ -2138,7 +2217,10 @@ CLI tests into tests of featuriser parity. They now take the **`unwritten` fixtu
 `tests/gates/conftest.py`, which asks the registry which gates are still `Pending` and asserts the
 answer is non-empty. **Use it when you land #26, #28, #30, #31, #32, #33, #77, #79 or #86** — do not
 substitute another gate name, or the next card repeats this. Four doc comments that used AC-2 as the
-standing example of an unimplemented gate were repointed at HG-2.
+standing example of an unimplemented gate were repointed at HG-2 -- and **card #77 landed HG-2, so
+the sentence went untrue again**. They now name **AC-5**, which is frozen with Phase T and
+therefore outlives this phase: the example stops chasing whichever card landed last. The reason is
+written beside it on `GateReport.ok`.
 
 #### The opening move
 

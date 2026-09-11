@@ -36,12 +36,15 @@ from hydms.delivery.contract import (  # noqa: E402 -- after the pandas guard
 )
 from hydms.delivery.refusals import (  # noqa: E402
     DOCUMENT,
+    FRAME,
     PROBES,
+    REQUEST,
     CatalogueError,
     Probe,
     answers,
     candidates,
     check_vocabulary,
+    delivery_refusal,
     document,
     emit,
     reached,
@@ -200,6 +203,99 @@ def test_a_probe_varies_one_field_and_the_page_shows_which() -> None:
     assert by_name["baseline"].varied() == {}
     assert set(by_name["high-uncertainty"].varied()) == {"interval_width"}
     assert set(by_name["out-of-domain"].varied()) == {"formula", "prediction", "alloy_class"}
+
+
+# --------------------------------------------------------------------------------------
+# Which door reaches which row -- card #77, from #76's QA pass
+# --------------------------------------------------------------------------------------
+
+
+def test_a_probes_door_is_derived_from_what_it_varies_not_declared_beside_it() -> None:
+    """A hand-maintained label is the thing that goes stale; this one cannot.
+
+    A probe that states a prediction, a band, a class label or a feature value is describing
+    something ``predict_capacity`` computes for itself, so no caller can ask for it.
+    """
+    by_name = {probe.name: probe for probe in PROBES}
+
+    assert by_name["baseline"].door == REQUEST
+    assert by_name["too-hot"].door == REQUEST
+    assert by_name["unreadable-formula"].door == REQUEST
+    assert by_name["untrusted-family"].door == FRAME
+    assert by_name["high-uncertainty"].door == FRAME
+    assert by_name["outside-feature-range"].door == FRAME
+
+
+def test_untrusted_family_is_a_frame_row_and_the_page_says_so(built) -> None:
+    """The page documented a code no caller can produce and did not say which door reaches it.
+
+    Gate HG-2 owns the assertion that it stays unreachable by typing; this owns the assertion
+    that the published page tells a reader so.
+    """
+    by_name = {probe.name: probe for probe in PROBES}
+    assert by_name["untrusted-family"].door == FRAME
+
+    page = document(built)
+    assert "| `untrusted-family` | `frame` |" in page
+    assert "no caller can reach it" in page
+
+
+def test_the_typed_formulas_own_sentence_is_on_the_page_too(built) -> None:
+    """The second of #76's two findings: same code, different words, and only one was shown.
+
+    The catalogue's `unreadable-formula` row carries the *screens'* sentence, because the
+    probes hand the screens a frame whose feature columns are already filled. A caller who
+    types the same string never reaches a screen -- ``featurize`` raises first -- so the page
+    now shows that sentence as well, on its own diff line.
+    """
+    by_name = {probe.name: probe for probe in PROBES}
+    sentence = delivery_refusal(by_name["unreadable-formula"])
+
+    assert sentence is not None
+    assert "could not be parsed" in sentence
+    assert "'Xx', which is not a chemical element" in sentence
+
+    page = document(built)
+    assert "refused before any screen runs" in page
+    assert "could not be parsed" in page
+    # And the screens' own sentence is still there: two true sentences, both shown.
+    assert "could not be given a physical capacity ceiling" in page
+
+
+def test_a_parse_failure_says_the_same_thing_whatever_the_version_was_fitted_on() -> None:
+    """Why the page can print a caller's sentence with no artifact on disk.
+
+    A formula is parsed before any feature is reached, so the refusal does not depend on which
+    contract the served version implies. Pinned rather than assumed: if it ever became
+    contract-dependent, the page would be printing one version's sentence as though it were
+    every version's.
+    """
+    import pandas as pd
+    from hydms.delivery.predict import CANDIDATE
+    from hydms.descriptors.contract import PASSTHROUGH, FeatureContract
+    from hydms.descriptors.featurize import FeaturisationError, featurize
+
+    formulas = pd.Series(["LaNi5Xx2"], index=pd.Index([CANDIDATE]))
+    temperatures = pd.Series([298.0], index=pd.Index([CANDIDATE]))
+    narrowed = FeatureContract.from_names(("avg_valence_d", PASSTHROUGH))
+
+    said = []
+    for contract in (None, narrowed):
+        with pytest.raises(FeaturisationError) as raised:
+            featurize(formulas, temperatures, contract=contract)
+        said.append(str(raised.value))
+
+    assert said[0] == said[1], "a parse failure named a feature set it never reached"
+    by_name = {probe.name: probe for probe in PROBES}
+    assert delivery_refusal(by_name["unreadable-formula"]) == said[0]
+
+
+def test_a_frame_only_probe_has_no_typed_sentence() -> None:
+    """`delivery_refusal` is about the request door; a frame row has no caller to ask."""
+    by_name = {probe.name: probe for probe in PROBES}
+
+    assert delivery_refusal(by_name["untrusted-family"]) is None
+    assert delivery_refusal(by_name["high-uncertainty"]) is None
 
 
 # --------------------------------------------------------------------------------------

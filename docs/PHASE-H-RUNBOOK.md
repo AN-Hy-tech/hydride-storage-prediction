@@ -1021,9 +1021,23 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
       Two more *wrong words* findings went to #77: a non-string formula is told "the formula is
       empty", and `docs/REFUSALS.md` catalogues the screens' `unreadable-formula` sentence, which
       this path cannot produce because `featurize` raises first. 28 tests, 4.9 s.
-- [ ] **#77 (HG-2)** The refusal path — unparseable formula, unknown element, T outside the trained
-      range (195–773 K), outside the AD ceiling → a **structured refusal with a reason**, never a bare
-      number.
+- [x] **#77 (HG-2)** The refusal path — a **structured refusal with a reason**, never a bare number.
+      **Done 2026-09-11, and the delivery module ran against a real artifact for the first time.**
+      `bundle_from()` is the same split #33 made on `load_surrogate`, one layer up, so the gate
+      reaches `v2` through `_artifact.candidate` while `load_bundle` still refuses it (pinned by a
+      test). Three claims: the contract forbids a bare number *structurally*; every `return` in
+      `predict_capacity` is read **from its source** and must be a `Refusal` or a
+      `PredictionResult` — which is the only form "exhaustively, not sampled" can take; and eleven
+      probes run against the served version. The first two need no artifact, so **HG-2 can go red
+      in CI where it cannot go green**. Two of the card's four named causes were not rules this
+      system has: "element absent from the training set" is not judged by anything (`Tc2Ni` is
+      *answered*, 4.17 against an 11.73 ceiling — #49 built novelty as a composition distance on
+      purpose), and the AD ceiling is a capacity rather than a distance (#48). Reachability is now
+      **per door** — request vs. curated frame — with `NOT_ALWAYS` separating "no fit can reach it"
+      (red if it appears) from "this fit does not" (reported); `docs/REFUSALS.md` labels every row
+      with its door and shows what a caller typing it receives instead. Staging the red case found
+      a defect in the gate: the "names the range" check was satisfied by a *neighbouring* screen's
+      sentence, #49's defect one layer up.
 - [ ] **#78** `hydms/delivery/api/` — FastAPI: `POST /v1/predict`, `POST /v1/predict/batch`,
       `GET /v1/health`, `GET /v1/model`. Use `backend-development`: validation at the boundary, **no ML
       in the route handler**, structured errors, a health check reporting the loaded artifact version,
@@ -1098,9 +1112,11 @@ Three properties are worth knowing before you write a gate:
 
 - **A skip is never a pass.** An unimplemented criterion reports `SKIPPED`, the table prints a
   `NOT CHECKED` banner naming every one of them, and `--strict` turns any skip into a failure.
-- **Naming a gate makes the run strict.** `run HG-2` exits non-zero while HG-2 is unimplemented —
-  which is why the `## Runnable check` on #31, #32, #33, #71, #77 and #79 is honest from the day it
-  is written. `run --all` tolerates skips, because CI that is red for the length of the phase is CI
+- **Naming a gate makes the run strict.** `run HG-3` exits non-zero while HG-3 is unimplemented —
+  which is why the `## Runnable check` on #31, #32, #33, #71 and #79 is honest from the day it
+  is written. **HG-2 is no longer one of them**: `run HG-2` exits 0 against a version on disk, and
+  `SKIPPED` (exit 1) in a checkout with none, which is the honest answer — the structural half
+  still runs there and can still fail. `run --all` tolerates skips, because CI that is red for the length of the phase is CI
   nobody reads. **AC-2 is the first gate for which this is no longer true**: `run AC-2` exits 0, in
   an environment that has CBFV. Without CBFV it reports `SKIPPED` and exits 1, which is the honest
   answer — CI's `suite` job installs no `parity` extra on purpose, so the criterion is established
@@ -1118,7 +1134,7 @@ lives in `current.json` and never in the report; see §3's artifact-store bullet
 | Gate | Card | Fails when |
 |---|---|---|
 | **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red: a detector stopped firing, a sentinel's subject module exists with nothing wired to it, or a leak has neither a sentinel nor a recorded deferral. Green only when all thirteen are checked against the real pipeline |
-| **HG-2** No bare numbers | #77 | Any prediction path returns a point estimate without an interval **and** a domain verdict |
+| **HG-2** No bare numbers | #77 | A contract type gains a default for `interval` or `domain`; any `return` in `predict_capacity` stops being a `Refusal` or a `PredictionResult`; a probe comes back without a code, a sentence, or the thing its refusal is about; a declared code stops being reachable through either door with nothing saying why; or a code with no input at the request door becomes reachable there. Skips, loudly, where no artifact is on disk or where every probe was refused |
 | **HG-3** Transport parity | #79 | The API's answer differs from `predict_capacity()`'s for the same input |
 | **HG-4** Hygiene | #86 | ruff, mypy, or the coverage floor fail on `hydms/` |
 | AC-1 | #32 | Same seed does not reproduce identical metrics |

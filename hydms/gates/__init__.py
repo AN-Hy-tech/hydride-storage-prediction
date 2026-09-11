@@ -25,8 +25,8 @@ From Python::
     from hydms.config import load
     from hydms.gates import registry, run, select
 
-    report = run(select(["HG-2"]), load(), strict=True)
-    report.ok          # False while HG-2 is unimplemented -- you asked and got no answer
+    report = run(select(["AC-5"]), load(), strict=True)
+    report.ok          # False while AC-5 is unimplemented -- you asked and got no answer
 
 **Writing a gate.** Replace the ``Pending`` in the criterion's module with an object
 carrying ``name``, ``title``, ``card``, ``speed`` and ``check(cfg) -> GateResult``. Return

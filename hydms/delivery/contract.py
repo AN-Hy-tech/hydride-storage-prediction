@@ -303,13 +303,40 @@ class PredictionRequest:
             :func:`~hydms.screens.window.temperature_window`'s verdict, and turning it into a
             construction error would make the refusal unobservable, which is the thing card
             #44 exists to prevent.
+
+    **A malformed request raises; it does not become a** :class:`Refusal`. Card #77 was left
+    the choice and the type had already made it. A refusal is a statement about a *material*:
+    it carries the request it declines and a code from a vocabulary the **screens** declare,
+    so a refusal for "the formula was an integer" would have to name a candidate that was
+    never given and a rule that never ran. :attr:`Refusal.request` is typed as a
+    ``PredictionRequest``, so an input that cannot build one cannot be carried by the refusal
+    that would describe it -- the choice is closed by construction rather than by preference.
+    What that costs is one declared sentence: :class:`~hydms.screens.window.Window` writes a
+    reason for a temperature it cannot read, and no caller can express it here. It is not
+    dead vocabulary -- a curated frame reaches it with a missing value in the column, which is
+    #84's path and the training data's -- and ``docs/REFUSALS.md`` now says which door reaches
+    which row rather than leaving the reader to assume one. The transport turns this into a
+    422 at the boundary (#78), which is where a malformed body belongs.
     """
 
     formula: str
     temperature_k: float
 
     def __post_init__(self) -> None:
-        if not isinstance(self.formula, str) or not self.formula.strip():
+        # Two arms, two sentences. One guard for both said "the formula is empty" about
+        # `predict_capacity(5, 298.0)` -- every clause of it about a case that did not happen
+        # -- and `from_dict` checks only that the key is *present*, so a JSON body or a CSV
+        # column of part numbers reaches here and #78 and #84 would both hand a user the
+        # wrong explanation of what they did wrong. The temperature field below already
+        # distinguishes its two arms; this is that asymmetry closed (card #77, from #76's QA).
+        if not isinstance(self.formula, str):
+            raise ContractError(
+                f"formula must be a string, not {type(self.formula).__name__}. A part "
+                f"number or an identifier arriving where a composition belongs is a caller "
+                f"error about the type of the field, not a material this project cannot "
+                f"read."
+            )
+        if not self.formula.strip():
             raise ContractError(
                 "a request needs a composition; the formula is empty. An empty string is a "
                 "caller error rather than an unparseable material, and the two must not "

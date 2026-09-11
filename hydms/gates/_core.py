@@ -340,10 +340,16 @@ class GateReport:
         """Whether this run may be called green.
 
         A skip is tolerated under a broad selection and fatal under an explicit one. Asking
-        for ``HG-2`` and being told the criterion is unimplemented is not a pass -- you asked
+        for ``AC-5`` and being told the criterion is unimplemented is not a pass -- you asked
         a question and did not get an answer. Asking for the whole registry while most of the
         phase is unwritten is a different situation, and failing there would leave CI
         permanently red and therefore permanently ignored.
+
+        The example is ``AC-5`` deliberately. It was ``AC-2`` until card #21 landed and
+        ``HG-2`` until card #77 did, and each time the sentence became untrue about the gate
+        it named -- the same drift the ``unwritten`` fixture in ``tests/gates/conftest.py``
+        exists to keep out of the tests. ``AC-5`` is frozen with Phase T (``docs/FREEZE.md``),
+        so it outlives this phase and the example stops chasing whichever card landed last.
         """
         if any(r.status in (Status.FAILED, Status.ERRORED) for r in self.results):
             return False

@@ -23,6 +23,7 @@ Card #75.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from dataclasses import dataclass
 
@@ -362,6 +363,52 @@ def test_a_temperature_outside_the_trained_range_is_a_verdict_not_a_construction
 def test_an_empty_formula_is_a_caller_error_rather_than_an_unparseable_material() -> None:
     with pytest.raises(ContractError, match="needs a composition"):
         PredictionRequest(formula="   ", temperature_k=298.0)
+
+
+@pytest.mark.parametrize("wrong", [5, ["La1Ni5"], {"formula": "La1Ni5"}, 2.5])
+def test_a_formula_that_is_not_a_string_names_the_type_and_not_emptiness(
+    wrong: object,
+) -> None:
+    """Card #77, from #76's QA pass: the guard must name the cause it observed.
+
+    One sentence covered both arms, so ``predict_capacity(5, 298.0)`` was told "a request
+    needs a composition; the formula is empty" -- every clause of it about a case that did
+    not happen. It is reachable across a real boundary: ``from_dict`` checks only that the
+    key is *present*, so a JSON body or a CSV column of part numbers arrives here, and #78
+    and #84 would both hand a user the wrong explanation of what they did wrong. The
+    temperature field one line below already distinguished its two arms, so the asymmetry
+    was visible by reading one method.
+    """
+    with pytest.raises(ContractError) as raised:
+        PredictionRequest(formula=wrong, temperature_k=298.0)  # type: ignore[arg-type]
+
+    assert type(wrong).__name__ in str(raised.value)
+    assert "empty" not in str(raised.value)
+
+
+def test_a_non_string_formula_arrives_through_from_dict_which_only_checks_presence() -> None:
+    """The boundary the finding crosses: JSON delivers this without complaint."""
+    with pytest.raises(ContractError, match="must be a string"):
+        PredictionRequest.from_dict({"formula": 5, "temperature_k": 298.0})
+
+
+def test_a_malformed_request_raises_rather_than_becoming_a_refusal() -> None:
+    """#77's decision, and the type had already made it.
+
+    A refusal is a statement about a *material*: it carries the request it declines, so an
+    input that cannot build a ``PredictionRequest`` cannot be carried by the ``Refusal`` that
+    would describe it. The choice is closed by construction rather than by preference, which
+    is why this test asserts the *type* rather than a policy.
+    """
+    fields = {f.name: f.type for f in dataclasses.fields(Refusal)}
+
+    assert "request" in fields
+    with pytest.raises(ContractError):
+        Refusal(
+            request="LaNi5",  # type: ignore[arg-type]
+            code=INDETERMINATE,
+            explanation="the formula was an integer",
+        )
 
 
 def test_a_request_carries_nothing_a_caller_could_widen_its_own_band_with() -> None:
