@@ -990,9 +990,24 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
       sentence that is false, which no assertion fits. Two halves *are* automatic — the emitted code
       set must equal `reason_codes()` exactly, and every probe declares the path it was chosen for.
       **Not a gate**: registration as HG-5 is boxed on #91, after the freeze lifts.
-- [ ] **#76** `hydms/delivery/predict.py`. Use `codebase-design` / `software-design-philosophy`: this
-      is the phase's one genuinely deep module, and the place a shallow pass-through would leak the
-      whole pipeline into the API and the app.
+- [x] **#76** `hydms/delivery/predict.py` — the deep module. **Landed 2026-09-11.** One call over an
+      immutable `ArtifactBundle`; the API and the app are transports above it. The order is
+      **null-check, featurise, predict, screen, resolve, answer**, and it is forced rather than
+      chosen: the applicability screen judges a *prediction*, so "screen before featurising" was
+      never available and a parse failure is caught where it raises and mapped to `INDETERMINATE`
+      with the featuriser's own sentence. Three decisions the card owed, all recorded on #85:
+      **(a)** that order; **(b)** the ElMD novelty screen joins `delivery_screens()`, so the
+      `novelty` extra is now required to predict — a bill `pyproject.toml` and the GPL-3.0 licence
+      had already paid, and whose only alternative was `PredictionResult.novelty` permanently
+      `None` in a deployment no test covers; **(c)** two caches over one artifact version, holding
+      one `Surrogate`, both cleared together. The screen references are **digested, not pinned** —
+      `v1`/`v2` are sealed and a re-save would look like a promotion — and the fit-time binding is
+      boxed on #91. `resolve()` moved from #90's catalogue into `contract.py` and `_verdicts_for`
+      into `predict.py`, so the production path no longer needs to import a document generator.
+      Two smaller findings, boxed rather than fixed here: `untrusted-family` is declared and
+      published but **unreachable through `predict_capacity()`** (a novel composition has no alloy
+      class) → #77; and `"NaN"` is sodium-plus-nitrogen to both parsers and cannot be guarded once
+      it is a string → #84 owns the CSV `na_values` decision. 25 tests, 5.0 s.
 - [ ] **#77 (HG-2)** The refusal path — unparseable formula, unknown element, T outside the trained
       range (195–773 K), outside the AD ceiling → a **structured refusal with a reason**, never a bare
       number.

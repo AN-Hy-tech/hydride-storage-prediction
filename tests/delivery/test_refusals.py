@@ -70,7 +70,12 @@ class _Extra:
     """
 
     name = "extra"
-    reasons = ("beyond-known-chemistry",)
+    #: A code no real screen declares. It read `beyond-known-chemistry` until card #76 put the
+    #: novelty screen on the delivery path and made that code real -- at which point both
+    #: tests below went green for the wrong reason, because a stand-in for "a code the
+    #: contract does not declare" had quietly become a code the contract declares. A fictional
+    #: rule is the right stand-in, and it cannot be overtaken by a fourth screen landing.
+    reasons = ("smells-wrong",)
 
     def __init__(self, *, reject: bool) -> None:
         self._reject = reject
@@ -102,8 +107,8 @@ def test_the_emitted_codes_are_exactly_the_declared_vocabulary(built) -> None:
 def test_a_declared_code_no_probe_reaches_is_named_as_dead_vocabulary(built) -> None:
     """A screen joining the delivery path without a probe must not publish quietly."""
     widened = (*delivery_screens(), _Extra(reject=False))
-    assert "beyond-known-chemistry" in reason_codes(widened)
-    with pytest.raises(CatalogueError, match="beyond-known-chemistry"):
+    assert "smells-wrong" in reason_codes(widened)
+    with pytest.raises(CatalogueError, match="smells-wrong"):
         check_vocabulary(answers(screens=widened), widened)
 
 
@@ -113,7 +118,7 @@ def test_an_emitted_code_the_contract_does_not_declare_is_refused_by_the_contrac
     `_Extra` is not in `delivery_screens()`, so `reason_codes()` -- which the contract's own
     `_code` check reads -- does not carry its code, and `ScreenVerdict` rejects it.
     """
-    with pytest.raises(ContractError, match="beyond-known-chemistry"):
+    with pytest.raises(ContractError, match="smells-wrong"):
         answers(screens=(*delivery_screens(), _Extra(reject=True)))
 
 
@@ -230,8 +235,13 @@ def test_resolve_carries_every_screens_sentence_when_nothing_rejected() -> None:
 
 
 def test_resolve_refuses_a_candidate_no_screen_judged() -> None:
-    """Admitted *because* the rules did not run is the silent drop's mirror image."""
-    with pytest.raises(CatalogueError, match="no screen judged"):
+    """Admitted *because* the rules did not run is the silent drop's mirror image.
+
+    A `ContractError` rather than a `CatalogueError`: card #76 moved `resolve` into the
+    contract, because the real prediction path needs the same rule and a production module
+    must not import this one -- a document generator -- to borrow it.
+    """
+    with pytest.raises(ContractError, match="no screen judged"):
         resolve(())
 
 
@@ -240,9 +250,15 @@ def test_a_row_rejected_by_two_screens_reports_one_code_and_both_reasons(built) 
     answer = next(found for probe, found in built if probe.name == "too-hot")
     assert isinstance(answer, Refusal)
     assert answer.code == "outside-window"
-    assert len([verdict for verdict in answer.screens if not verdict.passed]) == 2
-    for verdict in answer.screens:
+    rejecting = [verdict for verdict in answer.screens if not verdict.passed]
+    assert len(rejecting) == 2
+    for verdict in rejecting:
         assert verdict.reason in answer.explanation
+    # Only the rejecting sentences. The novelty screen admits this row, and an explanation
+    # that also carried "within the corpus's own spread" would be telling a refused caller
+    # what went right.
+    admitted = [verdict for verdict in answer.screens if verdict.passed]
+    assert admitted and all(v.reason not in answer.explanation for v in admitted)
 
 
 # --------------------------------------------------------------------------------------

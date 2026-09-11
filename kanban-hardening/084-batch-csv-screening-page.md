@@ -42,6 +42,18 @@ was built to prevent, one export away.
 - [ ] The download includes the artifact version
 - [ ] Results are sortable by interval width, so the least certain rows can be found
 
+- [ ] **A missing cell must not reach the formula column as text, and `"NaN"` is why**
+      (added 2026-09-11 by #76). #76 measured every spelling of a missing value at the prediction
+      path: each object null (`None`, `nan`, `pd.NA`, `pd.NaT`) is refused before a parser sees it,
+      and each stringified null (`"nan"`, `"<NA>"`, `"None"`, `"NaT"`, `"N/A"`) is refused by the
+      grammar. **One survives and cannot be guarded downstream: `"NaN"` parses to sodium and
+      nitrogen in both parsers**, featurises to real numbers, and would be answered with a confident
+      capacity, an interval and a novelty distance. It is indistinguishable from chemistry *once it
+      is a string*, so the only place it can be caught is here — this card chooses how the CSV is
+      read. State the `na_values` decision explicitly and test it with a file whose missing-value
+      token is `NaN`: `df.to_csv(na_rep="NaN")` is a real export and this is the file it produces.
+      Do **not** solve it by refusing the string; that refuses a real material
+
 ## Runnable check
 
 ```bash

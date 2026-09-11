@@ -56,6 +56,27 @@ no training alloy" tells them what to do next.
       other, in which case this gate owns making it one. An unreachable branch that writes prose is
       exactly where a stale sentence hides
 
+- [ ] **`untrusted-family` is declared, published and unreachable through `predict_capacity()`**
+      (added 2026-09-11 by #76). The applicability screen judges it from an alloy-class label and
+      the leave-one-class-out transfer measured for that family (#30). A user types a formula and a
+      temperature; there is no label, and nothing in the package maps a novel composition to a
+      family. Supplying the column with an unknown value is **worse** than omitting it — the screen
+      answers `indeterminate` for a class it has no transfer estimate for, so every novel candidate,
+      which is the entire point of the exercise, would be refused for the wrong reason. So #76
+      omits it, and `docs/REFUSALS.md` documents a code the delivery path cannot produce. This gate
+      owns saying which codes are reachable **through which entry point**: reachable from the batch
+      CSV path (#84) and from screening a curated frame, not from a single prediction. A bare
+      "every code is reachable" assertion here would be false or would have to quietly widen what
+      "reachable" means
+
+- [ ] **The null-check obligation is discharged by measurement, and this gate inherits the pin**
+      (added 2026-09-11 by #76). Every object null is refused at three independent guards and every
+      stringified null but one is refused by the grammar;
+      `test_every_spelling_of_a_missing_value_is_refused_except_the_one_that_is_chemistry` pins it.
+      **`"NaN"` is sodium and nitrogen to both parsers and must keep being answered** — if this gate
+      adds a null blocklist, it refuses a real material. #84 owns the boundary where a missing value
+      becomes text
+
 ## Runnable check
 
 ```bash

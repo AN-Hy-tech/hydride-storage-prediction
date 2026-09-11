@@ -58,6 +58,27 @@ and it catches nondeterminism, artifact drift, and a served path diverging from 
       list or need a footnote explaining its absence. Neither this card nor #90 is an unfreeze
       condition; both may sit open across the lift, and this box is the reason one of them will
 
+- [ ] **Bind the screen references to the artifact version, so a mismatch is *detectable* and not
+      merely *visible*** (added 2026-09-11 by #76). **Not an unfreeze condition** — `docs/FREEZE.md`
+      names HG-1 … HG-4 and the inherited AC criteria, and this widens none of them.
+
+      A promoted artifact version is sealed; `hydms/screens/domain-reference.json` and
+      `novelty-reference.json` are not, because they are properties of the **curated data** rather
+      than of any one fit. So a served `v2` can in principle be screened against numbers measured
+      from data it was never fitted on, and nothing says so. #76 did the half available to it —
+      `ArtifactBundle.reference_digests` is the SHA-256 of each reference **as loaded**, so #78's
+      `/v1/model` can state which reference answered — but a digest with nothing to compare against
+      is provenance, not a check. The missing half is a **fit-time record**: the version's manifest
+      (or a sibling written beside it) carrying the digests the fit was validated against, so a
+      replay can say *mismatched* rather than only *here is what answered*.
+
+      It lands here rather than on #34 or #4 for two reasons. Replay is the consumer that needs it —
+      a record that reproduces an answer must know whether the rules that judged it moved — and #34
+      is mid-flight promoting `v2`; adding a manifest field would require a re-save, and a re-save
+      that looks like a promotion is the exact confusion FREEZE.md's "named by role, not by number"
+      note exists to prevent. Until this lands, the honest reading of a digest is "this is what
+      answered", **never** "this matches what was fitted": an absent record means unknown
+
 ## Runnable check
 
 ```bash

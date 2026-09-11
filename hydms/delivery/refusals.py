@@ -60,13 +60,14 @@ committing the error it exists to catch.
 The screens are ``delivery_screens()`` exactly
 -----------------------------------------------
 
-Not the screens that *exist* -- the ones the delivery path runs. #49's ElMD novelty screen has
-landed and is deliberately outside that tuple (#76 owns whether it joins, because it makes an
-optional extra a hard requirement of every prediction). Running it here would emit
-``beyond-known-chemistry``, which :func:`~hydms.delivery.contract.reason_codes` does not
-declare, and the contract would refuse it -- correctly. When #76 adds it, the vocabulary widens
-on its own, this page needs a probe for the new code, and the byte-identity test goes red until
-``--emit`` has run. That sequence is the design, not an inconvenience.
+Not the screens that *exist* -- the ones the delivery path runs. **That sequence has now run
+once, and it worked.** #49's ElMD novelty screen was outside the tuple when this page was
+written; card #76 put it in, and nothing here was edited to let its code through:
+:func:`~hydms.delivery.contract.reason_codes` widened on its own, ``check_vocabulary`` failed
+naming ``beyond-known-chemistry`` as declared-and-unreached, a probe was added for it, the
+byte-identity test went red, and ``--emit`` closed it. The page gained a row, three verdict
+lines per probe, and a sharper sentence for ``unreadable-formula`` -- #49's cross-check names
+the offending symbol, where the domain screen could only say the ceiling was uncomputable.
 
 One path a probe cannot reach, and it is the contract's doing
 --------------------------------------------------------------
@@ -84,14 +85,19 @@ raise is #77's call, and it is boxed there rather than assumed here.
 Composing one answer out of several verdicts
 ---------------------------------------------
 
-:func:`resolve` is the only judgement this module adds, and it is deliberately small: the code
-is the **first rejecting screen's**, in the order the screens ran, and the reason carries *every*
-rejecting screen's sentence joined by ``"; "`` -- the same composition
+:func:`~hydms.delivery.contract.resolve` is the judgement, and it is deliberately small: the
+code is the **first rejecting screen's**, in the order the screens ran, and the reason carries
+*every* rejecting screen's sentence joined by ``"; "`` -- the same composition
 :class:`~hydms.screens.domain.ApplicabilityDomain` already makes across its own signals. Screen
-order is the only precedence declared across screens, which is why it is the tiebreak and why
-this docstring says so rather than leaving it to be inferred. #76 owns the real prediction path
-and should **call this** rather than re-derive it; a second composition rule is how the API's
-sentence and the app's come to differ.
+order is the only precedence declared across screens, which is why it is the tiebreak.
+
+It was written here and card #76 **moved it to the contract**, along with
+:func:`~hydms.delivery.predict.screen_verdicts`, which moved to the prediction path. The real
+prediction path needs both, and the alternative to moving them was one of two defects: a second
+composition rule, which is how the API's sentence and the app's come to differ, or a production
+module importing this one -- a documentation generator, with twelve probes and a Markdown
+writer in it -- to borrow two functions. This module imports *them* now, which is the direction
+that makes the page a report on the delivery path rather than a thing beside it.
 
 This module is not re-exported from :mod:`hydms.delivery`. It imports pandas and the screens;
 :mod:`hydms.delivery.contract` deliberately imports neither, and a consumer that only needs the
@@ -119,14 +125,17 @@ from hydms.delivery.contract import (
     Answer,
     DomainVerdict,
     Interval,
+    Novelty,
     PredictionRequest,
     PredictionResult,
     Refusal,
     ScreenVerdict,
     delivery_screens,
     reason_codes,
+    resolve,
 )
-from hydms.screens.protocol import SEPARATOR, Screen, Verdicts, apply_screens
+from hydms.delivery.predict import novelty_from, screen_verdicts
+from hydms.screens.protocol import Screen, apply_screens
 
 __all__ = [
     "BASELINE_CLASS",
@@ -398,6 +407,13 @@ PROBES: tuple[Probe, ...] = (
         expects="high-uncertainty",
         interval_width=1.6,
     ),
+    Probe(
+        name="beyond-known-chemistry",
+        purpose="two alkali metals: real elements with real descriptors, and no hydride "
+        "chemistry anywhere near them. This row is about the corpus, not the domain",
+        expects="beyond-known-chemistry",
+        formula="K1Rb1",
+    ),
 )
 
 
@@ -481,55 +497,6 @@ def candidates(
     return pd.DataFrame(rows, index=pd.Index([probe.name for probe in chosen], name="probe"))
 
 
-def _verdicts_for(verdicts: Verdicts, label: str) -> tuple[ScreenVerdict, ...]:
-    """One :class:`~hydms.delivery.contract.ScreenVerdict` per screen, for one candidate.
-
-    The contract's own type, built from the composite table's cells -- so a code the screens
-    emitted and the delivery layer does not declare is refused here, by
-    :class:`~hydms.delivery.contract.ScreenVerdict` itself, rather than by a check this module
-    would have to keep in step with it.
-    """
-    return tuple(
-        ScreenVerdict(
-            screen=name,
-            passed=bool(verdicts.table.loc[label, f"{name}{SEPARATOR}passed"]),
-            code=str(verdicts.table.loc[label, f"{name}{SEPARATOR}code"]),
-            reason=str(verdicts.table.loc[label, f"{name}{SEPARATOR}reason"]),
-        )
-        for name in verdicts.screens
-    )
-
-
-def resolve(screens: Sequence[ScreenVerdict]) -> tuple[str, str]:
-    """The one code and the one sentence a caller receives, from every screen that ran.
-
-    Args:
-        screens: Each screen's verdict, in the order the screens ran.
-
-    Returns:
-        ``(code, reason)``. The code is the **first rejecting** screen's -- run order is the
-        only precedence declared across screens -- and the reason carries *every* rejecting
-        screen's sentence, joined by ``"; "``. A candidate rejected by two rules and explained
-        by one is the partial truth this layer exists to remove; where nothing rejected, the
-        reason is what every screen said about admitting it.
-
-    Raises:
-        CatalogueError: if no screen ran. A verdict nothing judged is the silent drop's mirror
-            image, and :func:`~hydms.screens.protocol.apply_screens` refuses the same call.
-    """
-    ran = tuple(screens)
-    if not ran:
-        raise CatalogueError(
-            "no screen judged this candidate, so there is no code and no sentence to give. An "
-            "answer composed from an empty verdict list is admitted *because* the rules did "
-            "not run."
-        )
-    rejecting = [verdict for verdict in ran if not verdict.passed]
-    if not rejecting:
-        return ADMITTED, "; ".join(verdict.reason for verdict in ran)
-    return rejecting[0].code, "; ".join(verdict.reason for verdict in rejecting)
-
-
 def answers(
     probes: Sequence[Probe] | None = None,
     cfg: Config | None = None,
@@ -561,10 +528,11 @@ def answers(
     chosen = PROBES if probes is None else tuple(probes)
     running = tuple(delivery_screens() if screens is None else screens)
     verdicts = apply_screens(candidates(chosen, config), running)
+    names = tuple(str(screen.name) for screen in running)
 
     built: list[tuple[Probe, Answer]] = []
     for probe in chosen:
-        judged = _verdicts_for(verdicts, probe.name)
+        judged = screen_verdicts(verdicts, probe.name)
         code, reason = resolve(judged)
         if code != probe.expects:
             raise CatalogueError(
@@ -574,7 +542,19 @@ def answers(
                 f"hydms/screens/domain-reference.json) or the probe needs re-choosing; do not "
                 f"change `expects` to match what it reaches now."
             )
-        built.append((probe, _answer(probe, code, reason, judged, config)))
+        built.append(
+            (
+                probe,
+                _answer(
+                    probe,
+                    code,
+                    reason,
+                    judged,
+                    config,
+                    novelty_from(verdicts, names, probe.name),
+                ),
+            )
+        )
     return tuple(built)
 
 
@@ -584,6 +564,7 @@ def _answer(
     reason: str,
     judged: Sequence[ScreenVerdict],
     cfg: Config,
+    novelty: Novelty | None = None,
 ) -> Answer:
     """One probe's answer, in the contract's own types.
 
@@ -612,7 +593,11 @@ def _answer(
         domain=DomainVerdict(
             admitted=True, code=ADMITTED, reason=reason, screens=tuple(judged)
         ),
-        novelty=None,
+        # Measured, not stated: the novelty screen reads the probe's own formula and
+        # computes a real ElMD distance from it. Reporting `None` here would be this page
+        # saying "not measured" about something it measured, which is the class of defect it
+        # exists to catch.
+        novelty=novelty,
         model_version=PROBE_VERSION,
     )
 

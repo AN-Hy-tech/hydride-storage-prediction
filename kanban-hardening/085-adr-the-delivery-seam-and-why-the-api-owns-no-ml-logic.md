@@ -39,6 +39,29 @@ see the HTTP hop as pointless overhead and remove it.
       exists however it is called — so it belongs in this ADR rather than in a second one. Two ADRs
       about one seam is how a seam ends up with two stories
 
+- [ ] **Record the three decisions #76 was asked to make, and the reason each was forced**
+      (added 2026-09-11 by #76). The card boxed all three "say which in the ADR (#85)", so they are
+      owed here with their arguments, not just their outcomes:
+
+      1. **The assembly order.** Null-check, featurise, predict, screen, resolve, answer — and a
+         parse failure is caught where it raises and mapped to `INDETERMINATE`. "Screen before
+         featurising" was not an available alternative: the applicability screen judges a
+         *prediction*, so it cannot run before one exists, and screening first would have needed two
+         passes and a second rule for merging them.
+      2. **Novelty is in `delivery_screens()`, so ElMD is required to predict at all.** The stated
+         cost was already paid: `pyproject.toml` calls `novelty` a prediction-path dependency, CI
+         installs it, and the project is GPL-3.0-or-later because ElMD is. Leaving it out bought only
+         a deployment where `PredictionResult.novelty` is permanently `None` — and no test would
+         have shown it.
+      3. **One cache or two.** The delivery bundle memoises by `(store, version)` *and*
+         `hydms.surrogate.predict._LOADED` still memoises the surrogate. Two caches, one object:
+         the bundle holds the surrogate the lower layer memoised rather than unpickling the booster
+         twice, and `hydms.delivery.predict.clear_cache()` clears both. Neither caches the promotion
+         pointer, so a rollback takes effect on the next call.
+
+      There is a fourth the card did not ask for and the ADR should carry: **the library writes
+      nothing.** `predict_capacity()` is pure, which is the seam #91 depends on
+
 ## Runnable check
 
 ```bash

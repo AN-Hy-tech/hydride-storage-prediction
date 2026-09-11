@@ -40,22 +40,23 @@ declared rather than discovered for exactly this reason, and
 :func:`~hydms.screens.protocol.apply_screens` refuses a code outside it, so the two ends
 cannot disagree.
 
-:func:`delivery_screens` is what "the screens the delivery path runs" means today: the
-temperature window (#44) and the applicability-domain ceiling (#48). The ElMD novelty screen
-(#49) has **landed** -- :func:`hydms.screens.novelty.novelty_screen` -- and is still not in
-that tuple, which is now a decision rather than an absence: adding it makes ElMD, an optional
-extra, a hard requirement of every prediction. #76 owns that call, because #76 owns what the
-bundle and the service require. When it joins, the vocabulary widens on its own and nothing in
-this module changes.
+:func:`delivery_screens` is what "the screens the delivery path runs" means: the temperature
+window (#44), the applicability-domain ceiling (#48) and the ElMD novelty screen (#49). The
+third joined on card #76 and the vocabulary widened on its own -- ``beyond-known-chemistry``
+is reachable now and nothing in this module was edited to let it through, which is the
+property the derivation exists for. What that costs is stated where the decision is, in
+:func:`delivery_screens`: ElMD is a hard requirement of predicting at all.
 
 **A cause no screen can judge is** :data:`~hydms.screens.protocol.INDETERMINATE`. #77 refuses
 an unparseable formula and an unknown element, and neither is a threshold any screen declares
 a code for. They are not a gap in the vocabulary: ``INDETERMINATE`` is the declared code for
 "this rule could not be evaluated on this candidate", the applicability screen already emits
 it for a formula it cannot give a physical ceiling to, and the *explanation* is where the
-parse error's own sentence goes. What that costs #76 is an ordering constraint -- screen
-before featurising, or catch :class:`~hydms.descriptors.featurize.FeaturisationError` and map
-it -- and it is boxed on #76 and #77 rather than assumed here.
+parse error's own sentence goes. The ordering constraint that cost was settled on #76 and the
+choice was forced rather than free: the applicability screen reads a *prediction*, so it
+cannot run before featurisation at all, and "screen before featurising" would have meant two
+screening passes and a second rule for merging them. :func:`hydms.delivery.predict.predict_capacity`
+therefore catches :class:`~hydms.descriptors.featurize.FeaturisationError` and maps it.
 
 Usage::
 
@@ -69,7 +70,7 @@ Usage::
         capacity=1.42,
         interval=Interval(lower=0.98, upper=1.91, level=0.8),
         domain=DomainVerdict.admitted_by(("temperature", "domain")),
-        novelty=None,                      # #49 has not landed; None means "not measured"
+        novelty=Novelty(distance=0.0, nearest="LaNi5"),   # None would mean "not measured"
         model_version="v2",
     )
     answer_from(json.loads(json.dumps(result.to_dict()))) == result      # True
@@ -105,6 +106,7 @@ __all__ = [
     "answer_from",
     "delivery_screens",
     "reason_codes",
+    "resolve",
 ]
 
 #: The payload shape, carried in every serialised answer. Same convention and same spelling
@@ -174,22 +176,45 @@ def _sentence(value: object, what: str) -> str:
 # --------------------------------------------------------------------------------------
 
 
-def delivery_screens() -> tuple[Screen, ...]:
+def delivery_screens(cfg: Any | None = None) -> tuple[Screen, ...]:
     """The screens the delivery path runs, in the order their verdicts are reported.
 
-    The temperature window (#44) and the applicability-domain ceiling (#48). #49's ElMD
-    novelty screen has landed and is deliberately still absent: it would make the optional
-    ``novelty`` extra a hard requirement of every prediction, which is #76's decision to make
-    rather than this function's. When it joins, :func:`reason_codes` widens on its own.
+    The temperature window (#44), the applicability-domain ceiling (#48) and the ElMD novelty
+    screen (#49). Run order is the precedence :func:`resolve` uses across screens, and it is
+    cheapest-first by accident rather than by design: the window is a comparison, the domain
+    is arithmetic over a prediction, and novelty is a distance to 780 compositions.
 
-    Built fresh on each call rather than held as a module constant: both screens read
-    ``hydms/config/pipeline.yaml`` for their thresholds, and a constant would freeze whatever
+    Args:
+        cfg: A loaded :class:`~hydms.config.Config`, so a caller building all three screens at
+            once pays for the YAML read once. Each screen loads its own when this is ``None``,
+            which is 14 ms apiece -- measured, and the reason
+            :class:`~hydms.delivery.predict.ArtifactBundle` holds the built screens rather
+            than calling this per prediction.
+
+    **Novelty is in the tuple, and that makes ElMD a hard requirement of predicting.** Card
+    #76 owned the call and the argument that framed it had already dissolved. The cost was
+    stated as making an optional extra mandatory -- but ``pyproject.toml`` already says of
+    that extra, in its own words, that "unlike ``uq``, this extra is **not** a fit-time-only
+    dependency, and CI installs it. A candidate formula must be parsed onto the
+    modified-Pettifor scale before any distance exists, so ElMD is on the prediction path that
+    AC-7 obliges to report a distance." The licence half of the bill is paid too: this project
+    is GPL-3.0-or-later *because* ElMD is, a choice card #49 and ADR 2 both record. So the
+    only thing keeping the screen out was a deployment that installs ``hydms`` without
+    ``[novelty]``, and what that deployment would get is not a prediction without a distance
+    but :attr:`~hydms.delivery.contract.PredictionResult.novelty` permanently ``None`` -- a
+    field whose documented meaning is "not measured" quietly becoming "never measured", which
+    is how a promise becomes an option. CI installs the extra, so no test would have shown the
+    difference; only a deployment would, and only by answering AC-7 with a blank.
+
+    Built fresh on each call rather than held as a module constant: every screen reads
+    ``hydms/config/pipeline.yaml`` for its thresholds, and a constant would freeze whatever
     configuration happened to be loaded when this module was first imported.
     """
     from hydms.screens.domain import applicability_domain
+    from hydms.screens.novelty import novelty_screen
     from hydms.screens.window import temperature_window
 
-    return (temperature_window(), applicability_domain())
+    return (temperature_window(cfg), applicability_domain(cfg), novelty_screen(cfg))
 
 
 def reason_codes(screens: Sequence[Screen] | None = None) -> tuple[str, ...]:
@@ -572,6 +597,47 @@ class DomainVerdict:
         )
 
 
+def resolve(screens: Sequence[ScreenVerdict]) -> tuple[str, str]:
+    """The one code and the one sentence a caller receives, from every screen that ran.
+
+    Args:
+        screens: Each screen's verdict, in the order the screens ran.
+
+    Returns:
+        ``(code, reason)``. The code is the **first rejecting** screen's -- run order is the
+        only precedence declared *across* screens, the precedence *within* a screen being its
+        own business -- and the reason carries *every* rejecting screen's sentence, joined by
+        ``"; "``. A candidate rejected by two rules and explained by one is the partial truth
+        card #44 exists to remove; where nothing rejected, the reason is what every screen
+        said about admitting it.
+
+    Raises:
+        ContractError: if no screen ran. A verdict nothing judged is the silent drop's mirror
+            image, and :func:`~hydms.screens.protocol.apply_screens` and
+            :meth:`DomainVerdict.admitted_by` both refuse the same call.
+
+    **It lives here, in the vocabulary, rather than beside either of its callers.** It was
+    written for :mod:`hydms.delivery.refusals` -- the generator behind ``docs/REFUSALS.md`` --
+    and card #76 moved it, because the real prediction path needs the same rule and the
+    alternative was one of two defects: a second composition rule, which is how the catalogue
+    and the API come to explain the same refusal differently, or a production module importing
+    a documentation generator to borrow one function. Nothing about it needs pandas or the
+    screens: it reads :class:`ScreenVerdict`, which is this module's own type, so it costs
+    this module no import it did not already have.
+    """
+    ran = tuple(screens)
+    if not ran:
+        raise ContractError(
+            "no screen judged this candidate, so there is no code and no sentence to give. An "
+            "answer composed from an empty verdict list is admitted *because* the rules did "
+            "not run."
+        )
+    rejecting = [verdict for verdict in ran if not verdict.passed]
+    if not rejecting:
+        return ADMITTED, "; ".join(verdict.reason for verdict in ran)
+    return rejecting[0].code, "; ".join(verdict.reason for verdict in rejecting)
+
+
 @dataclass(frozen=True)
 class Novelty:
     """How far this composition is from the nearest alloy the model was trained on.
@@ -635,9 +701,13 @@ class PredictionResult:
     there is no way to construct this object holding a point estimate alone.
 
     ``novelty`` has no default either, so a caller must *say* what it knows. ``None`` is
-    legal and means "not measured" -- #49's screen is unstarted and ``ElMD`` is not in the
-    ``Project`` environment -- and it is a stated absence rather than a missing field, which
-    is the distinction AC-7 will need when it asks every published candidate for a distance.
+    legal and means "not measured" -- a stated absence rather than a missing field, which is
+    the distinction AC-7 needs when it asks every published candidate for a distance. Since
+    card #76 put the novelty screen in :func:`delivery_screens`, the delivery path itself
+    never returns ``None`` here: every admitted candidate has been measured against 780
+    training compositions to get admitted at all. It stays legal for a caller that screened
+    with a narrowed set, and for the probe answers behind ``docs/REFUSALS.md``, which state
+    their inputs rather than predicting.
 
     Attributes:
         request: What was asked. Carried so that an answer read from a log or a batch file is

@@ -1,6 +1,6 @@
 ---
 id: 76
-status: backlog
+status: done
 priority: High
 blocked_by: [28, 48, 49, 75]
 assignee: "@amirhossein"
@@ -30,10 +30,10 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
 
 ## Done when
 
-- [ ] `hydms/delivery/predict.py` exposes `predict_capacity()` and nothing else of substance
-- [ ] An `ArtifactBundle` — model, scaler, feature contract, conformal calibration, AD reference set —
+- [x] `hydms/delivery/predict.py` exposes `predict_capacity()` and nothing else of substance
+- [x] An `ArtifactBundle` — model, feature contract, conformal calibration, the screens and their references —
       loads once, is immutable, and carries the artifact version
-- [ ] ~~The scaler is **used**, never fitted, on this path~~ — **the scaler is not used on the
+- [x] ~~The scaler is **used**, never fitted, on this path~~ — **the scaler is not used on the
       prediction path at all (from #26 and #28).** CatBoost splits on thresholds and `FittedScaler`
       is affine, so #26 fits on raw features and records that in `QuantileModel.feature_names`;
       applying the persisted scaler on the way in feeds the model a matrix it was never fitted on.
@@ -42,20 +42,20 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       `hydms.surrogate.scaler.scaler_from(bundle)`. `hydms/surrogate/predict.py` proves the
       negative rather than promising it — `test_the_stored_scaler_is_never_applied` stores a scaler
       that raises on `transform` and demands identical numbers
-- [ ] **The surrogate half of the bundle already exists: wrap it, do not re-load it (from #28).**
+- [x] **The surrogate half of the bundle already exists: wrap it, do not re-load it (from #28).**
       `hydms.surrogate.predict.load_surrogate(version=, store=)` returns a frozen `Surrogate` that
       holds the model, the correction and the featurisation contract, is pinned to one version,
       refuses a version whose gates are unestablished, and is memoised by `(store, version)` — the
       immutability this box asks for. `ArtifactBundle` is that plus the AD reference set and the
       ElMD reference set. A second unpickle of the same booster is what the "loads once" box is
       trying to prevent, and calling `artifacts.load` again here is how it comes back
-- [ ] **"No global mutable state" needs a stated exception, or it is already false (from #28).**
+- [x] **"No global mutable state" needs a stated exception, or it is already false (from #28).**
       `hydms.surrogate.predict._LOADED` is a module-level memo of immutable, content-addressed
       objects; the promotion pointer is deliberately not cached, so rollback still takes effect on
       the next call. Decide whether this layer inherits that cache or holds the bundle itself, and
       say which in the ADR (#85) — two caches for one artifact version is the failure
-- [ ] Feature column order is asserted against the contract, not assumed
-- [ ] **An unparseable formula has no screen code, and `INDETERMINATE` is the answer (from #75).**
+- [x] Feature column order is asserted against the contract, not assumed
+- [x] **An unparseable formula has no screen code, and `INDETERMINATE` is the answer (from #75).**
       The delivery vocabulary is `ADMITTED` + the union of the configured screens' `reasons` +
       `INDETERMINATE`, so "this string does not parse" and "the `oliynyk` table has no mass for this
       element" have no code of their own — and `featurize` raises before any screen has seen the
@@ -65,7 +65,7 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       exactly this case, so the second keeps one vocabulary; the first keeps one code path. Whichever
       is chosen, say so in the ADR (#85)
 
-- [ ] **A missing value in the formula column is not always unparseable, and one spelling of it is
+- [x] **A missing value in the formula column is not always unparseable, and one spelling of it is
       real chemistry** (added 2026-09-07 by #49's QA pass). `None` and `np.nan` are refused on this
       path — the latter only because `str(nan)` happens to parse to nothing — but `str(pd.NA)` is
       `<NA>`, which ElMD read as **nitrogen** until #49 cross-checked it against
@@ -76,17 +76,17 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       owns "everything between a formula string and a trustworthy answer", so **the null check
       belongs here, before the string reaches any parser** — a null is a `Refusal`, not a formula.
       #84 inherits the same obligation for CSV upload, where the value arrives from a user's file
-- [ ] The domain verdict (#48) and the ElMD distance (#49) are computed on every call
-- [ ] Predictions are returned in wt%, back-transformed, with the interval transformed consistently
-- [ ] No absolute path, no network call, no global mutable state
-- [ ] Ten known training alloys reproduce the trained model's predictions on those rows (AC-4)
-- [ ] **The trained-temperature bound is `hydms.screens.temperature_window()` (#44) — used, not
+- [x] The domain verdict (#48) and the ElMD distance (#49) are computed on every call
+- [x] Predictions are returned in wt%, back-transformed, with the interval transformed consistently
+- [x] No absolute path, no network call, no global mutable state (one stated exception, above)
+- [x] Ten known training alloys reproduce the trained model's predictions on those rows (AC-4)
+- [x] **The trained-temperature bound is `hydms.screens.temperature_window()` (#44) — used, not
       re-written.** This layer owns no comparison against `domain.temperature_min_k/max_k`: it runs
       the screens and reads the verdict, so the refusal path and the screening path cannot disagree
       about what is in range. Read the domain verdict off `Verdicts`, and note that a screen may
       answer `INDETERMINATE`, which is a refusal and not a pass.
 
-- [ ] **Decide whether the domain reference is pinned into the bundle** (added 2026-09-07 by
+- [x] **Decide whether the domain reference is pinned into the bundle** (added 2026-09-07 by
       #48). `hydms/screens/domain-reference.json` holds the numbers the applicability-domain
       screen judges against: the trained capacity range, the 5.19 wt% cross-family ceiling, the
       fourteen feature spans and the ten per-class transfer figures. It sits beside the module,
@@ -104,7 +104,7 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       the median head, not the lower confidence bound (the LCB is the ranking key and is
       deliberately conservative — bounding it would let a wide-banded unphysical claim through)
 
-- [ ] **Decide whether `delivery_screens()` gains the novelty screen, and accept what it costs**
+- [x] **Decide whether `delivery_screens()` gains the novelty screen, and accept what it costs**
       (added 2026-09-07 by #49). #49 has landed: `hydms.screens.novelty.novelty_screen()` returns a
       screen whose verdict frame carries `novelty.distance` and `novelty.nearest`, spelled exactly
       as `hydms.delivery.contract.Novelty` needs them. It is deliberately **not** in
@@ -127,7 +127,7 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       screen's ceiling is *chemistry*, not the applicability domain: a candidate rejected by it
       must not be reported as out-of-domain (#48 measured why they are different)
 
-- [ ] **The rule that turns several screen verdicts into one code and one sentence already exists
+- [x] **The rule that turns several screen verdicts into one code and one sentence already exists
       — call it, do not re-derive it** (added 2026-09-07 by #90). `hydms.delivery.refusals.resolve()`
       takes the verdicts in run order and returns `(code, reason)`: the code is the **first
       rejecting** screen's, because run order is the only precedence declared *across* screens (the
@@ -157,3 +157,85 @@ conda run -n Project python -m pytest tests/delivery/test_predict.py -q
 - 2026-09-04: #44 landed the screen contract, so the domain verdict this card must carry has a
   shape: `apply_screens(candidates, screens)` returns one row per candidate with a code and a
   sentence per screen, and nothing is filtered until `Verdicts.select` is called. (by @assistant)
+
+- 2026-09-11: **Closed. Three decisions were owed and all three turned out to be forced or already
+  paid for, which is the finding.**
+
+  **The INDETERMINATE ordering was not a choice.** The card offered "screen before featurising" or
+  "catch `FeaturisationError` and map it". The first does not exist: `ApplicabilityDomain` judges a
+  **prediction**, so it cannot run before one exists, and screening first would have meant two
+  passes and a rule for merging their verdicts — a second composition rule, the exact defect #90
+  exists to make visible. The path is null-check, featurise, predict, screen, resolve, answer, and
+  a parse failure comes back as `INDETERMINATE` carrying the featuriser's own sentence.
+
+  **The novelty screen is in `delivery_screens()`, and the cost the card warned about was already
+  paid.** The stated price was making an optional extra mandatory — but `pyproject.toml` already
+  says, in its own words, that `novelty` is "**not** a fit-time-only dependency, and CI installs
+  it… ElMD is on the prediction path that AC-7 obliges to report a distance", and this project is
+  GPL-3.0-or-later *because* ElMD is. So the only thing the screen's absence bought was a
+  deployment where `PredictionResult.novelty` is permanently `None` — a field whose documented
+  meaning is "not measured" quietly becoming "never measured". CI installs the extra, so no test
+  would ever have shown the difference; only a deployment would, by answering AC-7 with a blank.
+  The sequence #90 predicted then ran exactly as designed: the vocabulary widened on its own,
+  `check_vocabulary` went red naming `beyond-known-chemistry` as declared-and-unreached, a probe
+  was added, the byte-identity test went red, and `--emit` closed it. The page gained a row and a
+  **sharper sentence for `unreadable-formula`** — #49's cross-check names the offending symbol
+  where the domain screen could only say the ceiling was uncomputable.
+
+  **The reference is digested, not pinned, and the binding is #91's.** Pinning is unavailable to
+  `v1`/`v2`: a manifest is sealed when written and a re-save to add a field would look like a
+  promotion. So the bundle does the half available today — it digests the reference **as loaded**
+  and reports it (`ArtifactBundle.reference_digests`, SHA-256 per screen, duck-typed on
+  `reference.to_json()` so the temperature window is absent rather than empty) for #78's
+  `/v1/model` to state. The fit-time *binding* is boxed on #91, marked not an unfreeze condition.
+  Both references answered the same way, as the card required.
+
+  **The null-check box was aimed at a symptom #49 had already fixed.** Measured rather than
+  implemented — every object null (`None`, `nan`, `pd.NA`, `pd.NaT`) is refused at *three*
+  independent guards before any parser sees it, and every stringified null (`"nan"`, `"<NA>"`,
+  `"None"`, `"NaT"`, `"N/A"`) is refused by the grammar, which names the offending character. A
+  null check here would have duplicated three guards. **`"NaN"` is the sole survivor and must not
+  be guarded**: it parses to sodium-plus-nitrogen in *both* parsers, so a blocklist here would
+  refuse a real material. The obligation moves to the boundary that turns a missing value into
+  text — #84's CSV reader and its `na_values` — and the measurement is pinned by a test that goes
+  red naming the spelling that got through.
+
+  **Two functions moved rather than being copied**, as the card's last box required.
+  `resolve()` went to `contract.py` (it needs neither pandas nor the screens — it reads
+  `ScreenVerdict`, the contract's own type) and `_verdicts_for` became
+  `predict.screen_verdicts()`. The alternative was a production module importing
+  `hydms.delivery.refusals` — a document generator with twelve probes and a Markdown writer in it
+  — to borrow two functions. `refusals.py` now imports *them*, which makes the page a report on
+  the delivery path rather than a thing beside it. One test moved with them:
+  `resolve(())` raises `ContractError` now, not `CatalogueError`.
+
+  **A stand-in in #90's tests had gone green for the wrong reason.** `_Extra` declared
+  `beyond-known-chemistry` as its fictional "code the contract does not declare"; the moment the
+  novelty screen landed, that code became real and both vocabulary-direction tests were asserting
+  nothing. Re-aimed at `smells-wrong`, which no screen can overtake.
+
+  **"Loads once" is worth 47 ms, not just AC-4.** Measured: `load_config()` is 14.4 ms and each of
+  the three screens loads its own, so rebuilding them per call costs ~47 ms against ~4 ms to
+  featurise one candidate. `delivery_screens()` therefore takes an optional `cfg` and the bundle
+  holds the built screens. Its docstring's reason for *not* being a module constant still stands
+  — a constant freezes whichever config was loaded first — and a bundle is the thing that may
+  legitimately hold them, because it is already pinned to one version and `clear_cache()` drops it.
+
+  **One guard was added that the card did not ask for.** `applicability_domain()` reads the median
+  head from *config*'s `model.quantiles`; the artifact was fitted with its own. If they disagreed,
+  the screen would find no prediction column and silently fall back to judging feature spans alone
+  — dropping `above-physical-ceiling` and `out-of-domain`, the two rules that bound the number
+  itself. That is a silent weakening of the guard rail the phase exists to install, so
+  `load_bundle` raises `DeliveryError` instead.
+
+  **One code is declared, documented and unreachable through this function, and it is stated
+  rather than hidden.** `untrusted-family` needs an alloy-class label and a novel composition has
+  none; supplying an unknown one would make the screen answer `indeterminate` for every novel
+  candidate — the entire point of the exercise — for the wrong reason. Boxed on #77, which owns
+  reachability, and pinned by a test here so a reader of `docs/REFUSALS.md` is not left to infer it.
+
+  25 tests, `tests/delivery/test_predict.py`, 5.0 s. 251 in `tests/delivery` + `tests/screens`,
+  14 s. Fast lane (`pytest -m "not slow"`) **1334 passed, 4 deselected, 872 s** — up from 1308 at
+  #90, which is these 25 plus the thirteenth refusal probe. ruff and mypy clean. **Not run against
+  a real artifact**: `v2` records no gate run, so `load_surrogate` refuses it — correctly, and
+  that is #34's to close. (by @assistant)

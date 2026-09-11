@@ -144,7 +144,7 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** Take **#76** -- S6's deep module, now unblocked on every side since **#49 landed and S5 is closed** -- reading #75's contract and the three boxes waiting on #76: `INDETERMINATE`, the predict-then-screen assembly, and whether `delivery_screens()` takes the novelty screen and with it a hard dependency on the `novelty` extra; promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+**Next session, in one line.** **#76 is `done` and its three decisions are made** -- read its narrative before anything else, because two of them changed what the cards below it say. Your job is **not** to start #77: it is to **test #76 and run a QA pass on it** (`docs/QA-PROTOCOL.md`, the L6 row and the reviewer checklist in §4) -- the module is green and self-tested, and nobody has yet come at it adversarially or run it against a real artifact; promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
 
 **Handoff, 2026-09-07 (latest) — #49 is `done` and S5 is closed.** `hydms/screens/novelty.py`
 ships `novelty_screen()`, whose verdict frame carries `novelty.distance` and `novelty.nearest`
@@ -414,6 +414,83 @@ contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The han
 and their authority is over intent, not over facts.
 
 ---
+
+### Handoff -- 2026-09-11 - #76 is closed; the next session tests it and runs a QA
+
+**What you are being asked to do.** `hydms/delivery/predict.py` exists and `predict_capacity()`
+answers. Do **not** move straight to #77. Take a QA pass at #76 first -- `docs/QA-PROTOCOL.md`, the
+**L6** row in §2 and the reviewer checklist in §4 -- because three things are true at once: the
+module is green on its own 25 tests, it has never been exercised against a real fitted artifact,
+and it took three decisions that other cards now depend on. A session that writes the API on top
+of an untested assumption is how this repository got REPORT.md.
+
+**Start with the runnable check, then read the card's narrative.**
+
+```bash
+conda run -n Project python -m pytest tests/delivery/test_predict.py
+conda run -n Project python -m pytest tests/delivery tests/screens      # 251, ~14 s
+conda run -n Project python -m pytest -m "not slow"                     # 1334 passed, 4 deselected, 872 s
+ruff check hydms/ tests/ scripts/ && mypy                                # outside `Project`
+```
+
+**Where to aim a QA pass, in the order the risk sits.**
+
+1. **It has never run against a real artifact.** `v2` records no gate run, so `load_surrogate`
+   refuses it -- correctly, and that is #34's to close, not a defect here. Every number in
+   `tests/delivery/test_predict.py` comes from a 400-row synthetic fixture whose target was
+   *deliberately* scaled to land under the 5.19 wt% ceiling, so the admitted branch runs at all.
+   **That fixture is a shape check, not evidence about the model.** The first real prediction this
+   project makes will come from whoever closes #34.
+2. **`resolve()` and `_verdicts_for` moved.** `resolve()` is in `contract.py` now (it needs no
+   pandas -- it reads `ScreenVerdict`) and raises `ContractError`, not `CatalogueError`;
+   `_verdicts_for` is `predict.screen_verdicts()`. `hydms/delivery/refusals.py` imports both, so
+   the dependency runs generator -> production instead of the reverse. Check nothing else copied
+   either rule.
+3. **The vocabulary widened and `docs/REFUSALS.md` was regenerated.** The novelty screen is in
+   `delivery_screens()`, so `beyond-known-chemistry` is reachable and the page has a thirteenth
+   probe. **Never hand-edit that file** -- `python -m hydms.delivery.refusals --emit`. The
+   `unreadable-formula` row now carries #49's sharper sentence; read it and judge whether it is
+   *true*, which is the only check that page has.
+4. **A stand-in had gone green for the wrong reason, and the same trap is live elsewhere.**
+   `_Extra` in `tests/delivery/test_refusals.py` declared `beyond-known-chemistry` as its fictional
+   "code nothing declares"; the novelty screen made that code real and two vocabulary tests started
+   asserting nothing. Re-aimed at `smells-wrong`. **Look for the same shape anywhere a test double
+   borrows a real name.**
+5. **Two findings were boxed, not fixed, and a QA pass should confirm the boxes are in the right
+   place.** `untrusted-family` is declared and published but **unreachable through
+   `predict_capacity()`** -- a novel composition has no alloy class, and supplying an unknown one
+   would refuse every novel candidate for the wrong reason (boxed on **#77**, which owns
+   reachability). And **`"NaN"` is sodium-plus-nitrogen to both parsers**: it cannot be guarded once
+   it is a string, so the obligation is #84's CSV `na_values` decision (boxed on **#84**). A
+   blocklist here refuses a real material -- a test pins that.
+
+**The three decisions, so you can disagree with them on the record rather than by accident.** All
+three are owed to #85's ADR and boxed there.
+
+- **The assembly order was forced, not chosen.** The applicability screen judges a *prediction*, so
+  "screen before featurising" never existed; a parse failure is caught where it raises and mapped
+  to `INDETERMINATE` with the featuriser's own sentence.
+- **ElMD is now required to predict at all.** The cost the card warned about was already paid:
+  `pyproject.toml` calls `novelty` a prediction-path dependency, CI installs it, and this project is
+  GPL-3.0-or-later *because* ElMD is. The alternative bought only a deployment where
+  `PredictionResult.novelty` is permanently `None`, which no test would ever show.
+- **The screen references are digested, not pinned.** `ArtifactBundle.reference_digests` says which
+  reference answered; it does **not** say that reference matches what the fit was validated against,
+  because nothing records that yet. The fit-time binding is boxed on **#91**, marked *not an
+  unfreeze condition*. Until it lands, an absent record means unknown -- never "matching".
+
+**One guard the card did not ask for.** `load_bundle` raises `DeliveryError` if the artifact's
+median head is not the one config's `model.quantiles` names. Without it the domain screen finds no
+prediction column and silently falls back to judging feature spans alone -- dropping
+`above-physical-ceiling` and `out-of-domain`, the two rules that bound the number itself.
+
+**One measurement worth keeping.** `load_config()` is 14.4 ms and each of the three screens loads
+its own, so rebuilding the screens per call costs ~47 ms against ~4 ms to featurise one candidate.
+That, not purity, is why the bundle holds them and why `delivery_screens()` grew a `cfg` argument.
+
+**After the QA pass, #77 is the unblocked card** -- HG-2, the gate that asserts no path through
+`predict_capacity()` returns a point estimate without an interval and a verdict. Ask the board
+rather than trusting this line.
 
 ### Handoff -- 2026-09-08 - #90 is closed, and #76 is the card it was written for
 
