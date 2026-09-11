@@ -285,4 +285,6 @@ conda run -n Project python -m pytest tests/delivery/test_predict.py -q
   sentence and zero verdicts. Both are the entry-point question #77 already owns for
   `untrusted-family`, found on two more rows.
 
-  28 tests here now, 4.9 s. ruff and mypy clean. (by @assistant)
+  28 tests here now, 4.9 s. Fast lane (`pytest -m "not slow"`) **1337 passed, 4 deselected,
+  643 s** — 1334 plus these three. ruff and mypy clean; gates 6 passed / 6 skipped, HG-1 green.
+  (by @assistant)

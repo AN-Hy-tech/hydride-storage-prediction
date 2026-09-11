@@ -451,9 +451,10 @@ rows, and the gate owns the qualifier.
 artifact. `v2` records no gate run, so `load_surrogate` refuses it -- correctly -- and that is
 **#34**'s to close. Every QA measurement above was taken against the fixture store.
 
-**#77 is the unblocked card.** 28 tests in `tests/delivery/test_predict.py`, 4.9 s; `ruff` and
-`mypy` clean; `check_board.py` green; the gate harness reports 6 passed / 6 skipped, with HG-2 still
-skipped because #77 has not built it.
+**#77 is the unblocked card.** 28 tests in `tests/delivery/test_predict.py`, 4.9 s; fast lane
+(`pytest -m "not slow"`) **1337 passed, 4 deselected, 643 s** — 1334 plus these three; `ruff` and
+`mypy` clean; `check_board.py` and `check_freeze.py` green; the gate harness reports 6 passed /
+6 skipped, with HG-2 still skipped because #77 has not built it.
 
 ---
 
