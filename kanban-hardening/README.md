@@ -226,6 +226,17 @@ slow lane and it will want a machine.
 Grep `../CONTEXT.md` for your card's number before you close it — **nothing reads that file**, no
 test, no gate, no `--emit`.
 
+**The knowledge graph is stale and a rebuild is a whole session's budget.** `graphify-out/cost.json`
+records its last completed run as **2026-08-29** — it has never seen S5, S6, `hydms/delivery/`,
+`hydms/screens/`, or any card from #75 up, so `CLAUDE.md`'s "ask the graph before you grep" will
+answer you out of a corpus that predates the delivery layer. A rebuild was attempted on 2026-09-11
+and **failed**: six subagents over 117 files / 1.26 MB of prose hit the session rate limit after
+reading their chunks and before writing them, so nothing was salvaged and `graph.json` is untouched.
+If you want it fresh, run `/graphify . --update` **first, before any other work** — the durable
+caches under `graphify-out/cache/` replay what has not changed — and delete
+`graphify-out/.graphify_{ast,cached,detect,uncached}.*` if it aborts again; they are untracked but
+not gitignored, and a leftover `.graphify_cached.json` can be merged by the next run.
+
 **Handoff, 2026-09-07 (latest) — #49 is `done` and S5 is closed.** `hydms/screens/novelty.py`
 ships `novelty_screen()`, whose verdict frame carries `novelty.distance` and `novelty.nearest`
 spelled exactly as `contract.Novelty` needs them. Three things to know before you touch it.
