@@ -9,7 +9,7 @@ tags: [p1, l2, R3]
 
 # Composite descriptors (_divi_ and _mult_)
 
-**Phase 1 — Hardening Chapter 1** · **L2 Descriptors** · Estimate: 1 d
+**Stage S3 — Descriptor layer** · **L2 Descriptors** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How two element properties combine into one derived property.
 

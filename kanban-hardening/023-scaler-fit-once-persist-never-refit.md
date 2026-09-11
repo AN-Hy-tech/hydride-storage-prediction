@@ -9,7 +9,7 @@ tags: [p1, l3, AC-4]
 
 # Scaler: fit once, persist, never refit
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 0.5 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** The feature scaling transform and the fact that it belongs to the trained model.
 

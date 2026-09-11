@@ -9,7 +9,7 @@ tags: [p0, l0, S1]
 
 # Board and prose integrity check — the fast-lane seed
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 0.5 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** What "the plan is still coherent" means, and how CI decides it.
 

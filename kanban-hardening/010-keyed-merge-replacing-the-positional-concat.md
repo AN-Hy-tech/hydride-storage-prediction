@@ -9,7 +9,7 @@ tags: [p1, l1, S1]
 
 # Keyed merge replacing the positional concat
 
-**Phase 1 — Hardening Chapter 1** · **L1 Data** · Estimate: 1 d
+**Stage S2 — Data layer** · **L1 Data** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How featurisation outputs are joined into one table.
 

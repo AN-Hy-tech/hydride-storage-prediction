@@ -9,7 +9,7 @@ tags: [p1, l3, AC-4]
 
 # GATE AC-4: known alloys round-trip through predict()
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 0.5 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** That the screening path and the training path agree.
 

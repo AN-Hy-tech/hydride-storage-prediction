@@ -9,7 +9,7 @@ tags: [ph, l0, S1, AC-1]
 
 # End-to-end smoke pipeline on a sampled fixture
 
-**Stage S1 — QA foundation** · **L0 Foundation** · Estimate: 1 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Proof that raw data reaches a prediction in one command, fast enough to run on every push.
 

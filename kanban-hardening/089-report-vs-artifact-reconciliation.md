@@ -2,7 +2,7 @@
 id: 89
 status: backlog
 priority: High
-blocked_by: [34]
+blocked_by: [29, 30]
 assignee: "@amirhossein"
 tags: [ph, l7, R4]
 ---
@@ -86,3 +86,12 @@ python scripts/check_board.py --root .
   weight-percent number from a log-space one, and the archival code not doing what the footnote
   says. The per-metric space table is in `hydms/data/target.py`'s module docstring; this card
   owns what to say about it. (by @assistant)
+
+- **This card never needed #34, and the edge was holding S8 shut (corrected 2026-09-11).** Its
+  *Done when* names its own sources — "the new honest numbers from #29 and #30 … beside the
+  published ones" — and every one of them is a CSV committed under `reports/`. A **promoted**
+  artifact version is not among them: this document compares `REPORT.md` to the evidence in the
+  repository, not to a pointer. `blocked_by: [34]` was therefore fiction, and an expensive one,
+  because #34 is itself blocked on #79 and #86 — so the reconciliation, and #83's link to it, sat
+  behind two gates that have nothing to do with either. Now `[29, 30]`, both `done`: this card is
+  startable. (by @assistant)

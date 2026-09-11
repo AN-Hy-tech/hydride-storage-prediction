@@ -9,7 +9,7 @@ tags: [p1, l2, AC-2]
 
 # The 22-feature contract
 
-**Phase 1 — Hardening Chapter 1** · **L2 Descriptors** · Estimate: 0.5 d
+**Stage S3 — Descriptor layer** · **L2 Descriptors** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** The exact feature names, their order, and their dtypes.
 

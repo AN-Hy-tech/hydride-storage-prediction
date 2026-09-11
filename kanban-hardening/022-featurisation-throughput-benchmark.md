@@ -9,7 +9,7 @@ tags: [p1, l2, R6]
 
 # Featurisation throughput benchmark
 
-**Phase 1 — Hardening Chapter 1** · **L2 Descriptors** · Estimate: 0.5 d
+**Stage S3 — Descriptor layer** · **L2 Descriptors** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** How many candidates per second the system can evaluate.
 

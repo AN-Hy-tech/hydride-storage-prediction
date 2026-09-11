@@ -9,7 +9,7 @@ tags: [p1, l3, S6, AC-6, R2]
 
 # Leave-one-alloy-class-out cross-validation
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 1 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How well the model transfers to a family it has not seen.
 

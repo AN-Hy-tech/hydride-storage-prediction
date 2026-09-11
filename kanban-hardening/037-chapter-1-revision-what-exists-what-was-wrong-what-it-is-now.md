@@ -2,14 +2,14 @@
 id: 37
 status: backlog
 priority: High
-blocked_by: [25, 29, 30, 34]
+blocked_by: [25, 29, 30, 34, 89]
 assignee: "@amirhossein"
 tags: [p1, l7, S6, S7, R4]
 ---
 
 # Chapter 1 revision: what exists, what was wrong, what it is now
 
-**Phase 1 — Hardening Chapter 1** · **L7 Evidence** · Estimate: 2 d
+**Stage S8 — Evidence and close** · **L7 Evidence** · Estimate: 2 d
 
 > **Owns (hidden behind this module):** The written account of the starting line and the correction.
 
@@ -111,3 +111,9 @@ test -f docs/chapter1-revision.md
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- **#89 is now a blocker (added 2026-09-11).** #89's own card says it plainly: "This document is
+  what card #37 is written from." The reconciliation table is the evidence this revision cites for
+  every "what was wrong" claim, so writing the chapter first would mean deriving those eight
+  disagreements a second time, by hand, in prose nothing checks. The runbook's "#37 is unblocked on
+  everything but #34" is corrected with this edge. (by @assistant)

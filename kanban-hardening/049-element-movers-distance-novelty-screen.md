@@ -9,7 +9,7 @@ tags: [pa, l4, S4, AC-7]
 
 # Element Mover's Distance novelty screen
 
-**Phase A — Screen-and-Rank** · **L4 Screens** · Estimate: 1 d
+**Stage S5 — Guard rails** · **L4 Screens** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How chemically far a candidate is from everything already known.
 

@@ -9,7 +9,7 @@ tags: [p0, l2, R3, AC-2]
 
 # PROVENANCE SPIKE: resolve elem_prop for all 22 features
 
-**Phase 0 — Foundation & provenance** · **L2 Descriptors** · Estimate: 0.5 d
+**No stage — slots in where its blockers allow** · **L2 Descriptors** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** Which element-property table each of the 22 selected features comes from.
 

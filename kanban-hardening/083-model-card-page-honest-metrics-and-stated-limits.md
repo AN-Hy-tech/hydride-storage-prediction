@@ -2,7 +2,7 @@
 id: 83
 status: backlog
 priority: High
-blocked_by: [29, 30, 82]
+blocked_by: [29, 30, 82, 89]
 assignee: "@amirhossein"
 tags: [ph, l6, S6, R4]
 ---
@@ -114,3 +114,10 @@ conda run -n Project python -m pytest tests/delivery/test_model_card.py -q
   about, both measured during S3 (by @assistant)
 
 - 2026-09-02: Created for Phase H (by @assistant)
+
+- **#89 is now a blocker, because one of the boxes above cannot be ticked without it
+  (added 2026-09-11).** *Done when* requires "a link to `docs/REPORT-RECONCILIATION.md`", and that
+  file does not exist — #89 writes it. A card cannot close on a dead link, and
+  `scripts/check_board.py` validates relative Markdown links, so writing the link early turns the
+  board red rather than shipping a broken page. The edge costs nothing now that #89 no longer
+  waits on #34. (by @assistant)

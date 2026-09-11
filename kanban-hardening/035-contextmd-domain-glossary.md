@@ -9,7 +9,7 @@ tags: [p1, l7, S7]
 
 # CONTEXT.md domain glossary
 
-**Phase 1 — Hardening Chapter 1** · **L7 Evidence** · Estimate: 0.5 d
+**Stage S8 — Evidence and close** · **L7 Evidence** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** The project's vocabulary, pinned so that easily-conflated terms stay distinct.
 

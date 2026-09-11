@@ -9,7 +9,7 @@ tags: [p1, l3, S2, AC-3]
 
 # MAPIE conformal calibration
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 1 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How raw quantiles become intervals with a coverage guarantee.
 

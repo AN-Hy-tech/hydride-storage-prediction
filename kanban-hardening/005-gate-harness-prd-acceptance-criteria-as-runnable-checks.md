@@ -9,7 +9,7 @@ tags: [p0, l0, AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8]
 
 # Gate harness: PRD acceptance criteria as runnable checks
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 1 d
+**Stage S1 — QA foundation** · **L0 Foundation** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** What 'passing' means. Each PRD acceptance criterion becomes executable here.
 

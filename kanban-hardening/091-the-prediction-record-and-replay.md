@@ -9,7 +9,7 @@ tags: [ph, l6]
 
 # The prediction record, and replay as its consumer
 
-**Stage S6 — Delivery: contract and API** · **L6 Delivery** · Estimate: 1.5 d
+**No stage — belongs beside S6, may sit open across the lift** · **L6 Delivery** · Estimate: 1.5 d
 
 > **Owns (hidden behind this module):** What the system remembers about an answer it gave — and the
 > guarantee that the memory is enough to produce that answer again.

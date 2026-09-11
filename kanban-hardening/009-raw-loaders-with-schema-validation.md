@@ -9,7 +9,7 @@ tags: [p1, l1, S1]
 
 # Raw loaders with schema validation
 
-**Phase 1 — Hardening Chapter 1** · **L1 Data** · Estimate: 1 d
+**Stage S2 — Data layer** · **L1 Data** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** The shape and dtypes of each raw source, and what a valid row is.
 

@@ -233,3 +233,34 @@ A named, sited way held-out data influenced something before it was scored. Thir
 with their exact locations in the archival pipeline.
 _Avoid_: "a bug", "data leakage" unqualified — each of the thirteen has an id, and the id is how it
 is discussed
+
+---
+
+## The board
+
+**Stage** (`S0`…`S8`):
+A step of Phase H's execution order, owned by `kanban-hardening/README.md` § Stage → card map and
+executed by `docs/PHASE-H-RUNBOOK.md` §3. It is stated on a card's **bold line under the title**,
+and `No stage` is an assignment — the foundation and CI cards that slot in where their blockers
+allow — never an absence.
+_Avoid_: "phase" (Phase H is the whole freeze; `Phase 0 / Phase 1 / Phase A` belong to the frozen
+board), and **reading an `S`-number in `tags:` as a stage**
+
+**User story** (`S1`…`S12`):
+A row of PRD §5 — who wants it, why, and what proves it. It appears in a card's `tags:` as a trace,
+which is the entire reason the two collide: `S10` on #78 is "explore results without running code",
+and there is no Stage 10.
+
+> *State of the term, not part of the definition:* on 2026-09-11 **thirty-nine of sixty-four cards
+> stated the wrong stage** — thirty-six still carrying the frozen board's `Phase` heading after
+> #72's `git mv`, two claiming an `S1` the runbook contradicts, one an `S6` the README does. Nothing
+> reads that line: not `check_board.py`, not a test, not an `--emit`. All are corrected and **#92**
+> is the card for making the map load-bearing. Until it lands, this pair is checked by a reader or
+> not at all.
+
+**Blocker** (`blocked_by`):
+The board's machine-readable dependency graph, and **the authority on order**. Where a runbook
+arrow and a `blocked_by` edge disagree, the edge is right and the arrow is prose — S4 opened at #88,
+not at the #24 its chain pointed to. An edge nothing supports is worse than a missing one: #89 was
+held shut by an edge to #34 that its own *Done when* never asked for, and that took #83 with it.
+_Avoid_: reading the runbook's `→` chains as dependencies; ask the board which card is startable

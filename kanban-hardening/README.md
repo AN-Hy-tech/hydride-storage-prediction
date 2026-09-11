@@ -32,7 +32,10 @@ preserved when cards migrated: renumbering would have broken every `blocked_by` 
 Three cards were pulled out of the frozen PA phase — **#44** (screen interface), **#48**
 (applicability-domain ceiling), **#49** (ElMD novelty). They are not inverse-design work: they are
 what lets the interface **refuse** to answer instead of guessing. #44 landed 2026-09-04 and owns
-the contract the other two implement; both of those wait on #30.
+the contract the other two implement. **Only #48 waited on #30** — its ceiling is derived from the
+leave-one-alloy-class-out result — and this line said "both of those" until 2026-09-11. #49 was
+blocked by #44 alone, which is right on the substance: an ElMD distance is a property of two
+compositions and reads nothing the surrogate produces. All three are `done`; S5 is closed.
 
 **The next free id is #92.** Scan both directories for `max(id) + 1`.
 
@@ -49,8 +52,8 @@ needs to know that knowledge.
 | **L1 Data** | source schemas, merge keys, the canonical composition key, split protocol, CleanLab | 9–15, 87 |
 | **L2 Descriptors** | element property tables, statistics, the 22-feature contract | 8, 16–22 |
 | **L3 Surrogate** | model choice, scaler, quantiles, conformal calibration, the validation protocol | 23–34, 88 |
-| **L4 Screens** | the screen verdict, the AD ceiling, novelty | 44, 48, 49 |
-| **L6 Delivery** | the prediction contract, the API, the app, the chart vocabulary | 75–84 |
+| **L4 Screens** | the screen verdict, the AD ceiling, novelty | 44, 48, 49, **90** (L4 *and* L6 — it is the catalogue of what both refuse) |
+| **L6 Delivery** | the prediction contract, the API, the app, the chart vocabulary | 75–84, 91 |
 | **L7 Evidence** | glossary, ADRs, the reconciliation, the Chapter 1 revision | 35, 36, 37, 85, 89 |
 
 L5 Search is entirely frozen — it is how *candidates are proposed*, which is inverse design.
@@ -72,8 +75,23 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | **S6** Delivery: contract + API | 75, 76, 77, 78, 79, 80 | 5 |
 | **S7** Delivery: interface | 81, 82, 83, 84 | 3.5 |
 | **S8** Evidence & close | 89, 85, 86, 35, 36, 37 | 5 |
+| **No stage** | 1, 2, 4, 6, 7, 8, 68, 73, 74, 90, 91 | — |
 
-**#90 and #91 are in neither column and that is deliberate.** They came out of a grilling session on
+**Every card's own first line now states its stage, and this table is where it comes from.** Until
+2026-09-11 thirty-nine cards still carried the *frozen* board's `Phase 0 / Phase 1 / Phase A`
+heading — they were `git mv`-ed here by #72 with their ids preserved and their prose untouched — so
+a reader opening #26 was told "Phase 1", a vocabulary that belongs to [../kanban/README.md](../kanban/README.md).
+Two more were worse than stale: #73 and #74 claimed **Stage S1** when the runbook §2 says in so many
+words that both landed after S4 closed, and #91 claimed **S6** when the paragraph below says it is in
+no stage at all. Nothing reads that line — no test, no gate, no `--emit` — which is exactly why it
+drifted; #92 is the card for making it checkable.
+
+**The `S1`…`S12` in a card's `tags:` are not stages.** They are the PRD's **user stories** (§5) — `S10`
+on #78 is "explore results without running code", not "Stage 10", and there is no Stage 10. The stage
+is the bold line under the title; the tag is a trace. They were never the same vocabulary and reading
+one as the other is the single most available mistake on this board.
+
+**#90 and #91 are in neither stage and that is deliberate.** They came out of a grilling session on
 2026-09-07 about catching bugs during the working cycle, and neither is an unfreeze condition —
 `../docs/FREEZE.md` fixed those four "before results are seen, so it cannot be softened later", and
 widening that list is the one thing it exists to resist. **#90** (the refusal catalogue) has no
@@ -81,9 +99,12 @@ unfinished blocker and slots in wherever there is room; **#91** (the prediction 
 belongs beside S6 but may sit open across the lift. The gate they will eventually register, HG-5, is
 boxed on #91 and is explicitly post-freeze.
 
-Cards **4, 6, 7, 73, 74** are foundation and CI work that slots in where its blockers allow rather
-than sitting in one stage. **#5** (the gate harness) was the same kind of card and has landed inside
-S1, where it belonged: every gate card on the board was blocked behind it.
+Cards **1, 2, 4, 6, 7, 8, 68, 73, 74** are foundation and CI work that slots in where its blockers
+allow rather than sitting in one stage — the environment pin, the package scaffold, the artifact
+store, both CI lanes, the `elem_prop` provenance spike, the board integrity check, and the two
+suites (#73 smoke, #74 metamorphic) that could not be written until `predict()` existed. **#5** (the
+gate harness) was the same kind of card and has landed inside S1, where it belonged: every gate card
+on the board was blocked behind it.
 
 ---
 
@@ -144,7 +165,66 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **#77 is `done` and HG-2 is green against the real `v2`, so the delivery path has now run against a fitted artifact -- #78 (the FastAPI service) is the unblocked card -- but **fix the board's blockers and stages first** (the maintainer asked for it; the `blocked_by` graph and the stage map have drifted from the runbook's prose), then QA #77.** Read #77's narrative before anything else: `bundle_from()` is the seam it added (the same split #33 made on `load_surrogate`, one layer up -- `load_bundle` still refuses an ungated version and a test pins that), reachability is now stated **per door** with `NOT_ALWAYS` separating "no fit can reach it" from "this fit does not", and **two of the card's four named causes were not rules this system has** -- there is no element-membership screen and the AD ceiling is a capacity, not a distance. #78 inherits one boxed finding and one standing obligation: a `ContractError` must become a **422** at the transport rather than a 500, and `/v1/model` should report `ArtifactBundle.reference_digests`. Expect **#34** to stay open until #79 and #86 build HG-3/HG-4; promote **`v2`** never `v1`. Grep `CONTEXT.md` for your card's number before you close it -- **nothing reads that file**, no test, no gate, no `--emit`.
+**Next session, in one line.** **The board is fixed — #77 is `done` and HG-2 is green against the
+real `v2`. Your card is **QA on #77**, and then **#78** (the FastAPI service), which is unblocked.**
+
+**Handoff, 2026-09-11 — the board's blockers and stages were repaired; QA #77 next.**
+
+**What moved, so you can trust the board again.** Four `blocked_by` edges and thirty-nine stage
+lines were wrong, and none of them could go red — `check_board.py` reads ids, statuses, blockers
+and links, and nothing reads a stage line at all. **#34** was `doing` with all four declared
+blockers `done`, which reads as "ready to close", while the runbook said three times that promotion
+waits on HG-2, HG-3 and HG-4; it is now `backlog` behind `[29, 31, 32, 33, 77, 79, 86]` and renamed
+off `v1`, because `artifacts/v1` records `code_modified: true` and can never be promoted. **#89**
+carried an edge to #34 that its own *Done when* does not support — its sources are #29's and #30's
+committed CSVs, not a promoted pointer — so that edge is cut and **#89 is startable today**, which
+also unshuts **#83**, whose model card must link to the file #89 writes (#83 and #37 gained that
+edge). Thirty-nine cards stated the frozen board's `Phase 0/1/A` heading, or an S-number the map
+contradicts; all sixty-five now state the stage this README assigns. **#92** is the card for making
+that checkable instead of remembered — explicitly **not** an unfreeze condition.
+
+**Read `S1`…`S12` in `tags:` as PRD user stories, never as stages.** `S10` on #78 is "explore
+results without running code". There is no Stage 10. The stage is the bold line under the title.
+
+**QA #77 before you open #78.** The gate is green — `python -m hydms.gates run HG-2` exits 0
+against `v2` — so QA here is not "does it pass", it is **does it pass for its stated reasons**. Four
+things are worth an hour, in this order:
+
+1. **Make it go red on purpose, twice.** HG-2's three claims fail differently: give
+   `PredictionResult` a default for `interval` (structural claim), add a `return 0.0` branch to
+   `predict_capacity` (the read-the-exits claim), and confirm the gate names *which* claim broke
+   rather than reporting one failure. #77's narrative records that staging the red case already
+   found a defect — the "names the range" check was satisfied by a **neighbouring screen's**
+   sentence, which is #49's partial-parse defect one layer up. Look for a second instance of that
+   shape: any check that reads a message without pinning which screen produced it.
+2. **Check the red-in-CI-but-not-green claim.** #77 says the structural half needs no artifact, so
+   HG-2 can fail in CI where it cannot pass. Run `python -m hydms.gates run HG-2` in a tree with no
+   `artifacts/` and confirm `SKIPPED`/exit 1 with the structural half still executed — not skipped
+   wholesale. If the structural half is skipped with the rest, the gate is weaker in CI than it
+   reads.
+3. **Audit the `NOT_ALWAYS` split, which is the subtle part.** It separates "no fit can reach this
+   code" (red if it appears) from "this fit does not" (reported). `untrusted-family` is in the first
+   bucket at the request door and must stay unreachable there; `above-physical-ceiling` and
+   `out-of-domain` are in the second on `v2`. Confirm nothing quietly moves a code from bucket one
+   to bucket two to keep a run green — that is the failure mode the whole gate exists to prevent.
+4. **Two of #77's own four named causes were not rules this system has.** There is no
+   element-membership screen (`Tc2Ni` is *answered*, 4.17 against an 11.73 ceiling — #49 built
+   novelty as a composition distance on purpose), and the AD ceiling is a **capacity**, not a
+   distance (#48). Check `docs/REFUSALS.md` still says so; it is generated
+   (`python -m hydms.delivery.refusals --emit`), so regenerate and diff rather than reading it.
+
+**Then #78, which inherits one boxed finding and one standing obligation:** a `ContractError` must
+become a **422** at the transport rather than a 500, and `GET /v1/model` should report
+`ArtifactBundle.reference_digests`. Read #77's narrative first — `bundle_from()` is the seam it
+added, the same split #33 made on `load_surrogate` one layer up, and `load_bundle` still refuses an
+ungated version with a test pinning that.
+
+**#81 and #89 are also unblocked** if you want parallel work: #81 is the chart vocabulary (pure
+`hydms/figures/`, needs no API) and #89 is the reconciliation. **#7** is unblocked too but it is the
+slow lane and it will want a machine.
+
+Grep `../CONTEXT.md` for your card's number before you close it — **nothing reads that file**, no
+test, no gate, no `--emit`.
 
 **Handoff, 2026-09-07 (latest) — #49 is `done` and S5 is closed.** `hydms/screens/novelty.py`
 ships `novelty_screen()`, whose verdict frame carries `novelty.distance` and `novelty.nearest`

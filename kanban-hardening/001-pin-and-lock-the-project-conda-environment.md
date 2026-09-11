@@ -9,7 +9,7 @@ tags: [p0, l0, S1, AC-1]
 
 # Pin and lock the Project conda environment
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 0.5 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** The exact interpreter and package versions every later result depends on.
 

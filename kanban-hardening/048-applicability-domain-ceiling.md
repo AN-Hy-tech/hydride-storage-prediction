@@ -9,7 +9,7 @@ tags: [pa, l4, S4, AC-8, R1]
 
 # Applicability-domain ceiling
 
-**Phase A — Screen-and-Rank** · **L4 Screens** · Estimate: 1 d
+**Stage S5 — Guard rails** · **L4 Screens** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How far from known chemistry a prediction may be trusted.
 

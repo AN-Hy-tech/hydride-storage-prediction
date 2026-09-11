@@ -9,7 +9,7 @@ tags: [p1, l3, S2, R4]
 
 # CatBoost MultiQuantile with honest early stopping
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 1 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** The capacity model and its quantile heads.
 

@@ -1,17 +1,24 @@
 ---
 id: 34
-status: doing
+status: backlog
 priority: High
-blocked_by: [29, 31, 32, 33]
+blocked_by: [29, 31, 32, 33, 77, 79, 86]
 assignee: "@amirhossein"
 tags: [p1, l3, S1]
 ---
 
-# Train and publish artifacts v1
+# Train and publish the deployed artifact version
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 0.5 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** The first promoted artifact version.
+
+**The title said `v1` until 2026-09-11 and that was a trap.** `artifacts/v1` was fitted from a
+modified tree — its manifest records `code_modified: true`, and a manifest is sealed when written,
+so it can never be cleaned up. **`v2` is the version to promote** (re-saved 2026-09-07 from a clean
+tree; same model, same `model-chosen.csv:outer-0` configuration, the five report CSVs byte-identical).
+The card is renamed rather than the number corrected in place, because the id is the identity and
+`v1` remains on disk as the candidate it always was.
 
 ## Why this exists
 
@@ -385,3 +392,20 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
   three frozen criteria leaves AC-6, HG-2, HG-3 and HG-4 — #30, S6, S8 — every one of them Phase
   H's own. That is the honest outcome: the decision made the remaining work *sufficient*, where
   before it was not. (by @assistant)
+
+- **The three gates this card waits on are now `blocked_by` edges, and the status went back to
+  `backlog` (2026-09-11).** Everything above was already written down — the skipped-gate table in
+  *Done when* names #77, #79 and #86 by id, and the runbook says three times that promotion needs
+  HG-2, HG-3 and HG-4 — but the board's `blocked_by` recorded none of them, so
+  `list_all_cards.sh` showed a card in `doing` with every declared blocker `done`: the one reading
+  of the board that says "this is ready to close". It was not. HG-2 landed with #77; HG-3 and HG-4
+  do not exist.
+
+  **Why `backlog` and not `doing`.** `scripts/check_board.py` refuses `doing` *or* `done` while a
+  blocker is unfinished, so the edge and the status could not both stay. `backlog` is the repo's
+  own precedent for this shape — #15 was written green and held in `backlog` until #14 landed —
+  and it is the truthful one: no work on this card can proceed until #79 and #86 build the gates
+  `promote` will demand. The work that *has* landed is not lost; it is every ticked box above and
+  the whole of this Narrative. **This is bookkeeping, not a reversal** — `python -m
+  hydms.surrogate.promote` exists and works, and `v2` is the version it will be pointed at.
+  (by @assistant)

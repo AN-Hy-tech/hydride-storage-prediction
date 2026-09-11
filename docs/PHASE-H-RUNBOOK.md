@@ -506,17 +506,35 @@ could mean anything. See below.
 
 **Goal:** an honestly-validated, calibrated model with artifacts on disk.
 **Closes:** L1, L2, L4, L5, L6, L7, L11, L12.
-**State (2026-09-07):** closed as far as a stage can close — **twelve of thirteen boxes ticked and
+**State (2026-09-11):** closed as far as a stage can close — **twelve of thirteen boxes ticked and
 no measurement left to take**. The one open box is **#34**, and it is not waiting on anything S4
 owns: promotion needs HG-2, HG-3 and HG-4, which #76-#79 (S6) and #86 (S8) build, and they are
-Phase H's own criteria so they must not be waived. Nothing downstream is blocked on it.
+Phase H's own criteria so they must not be waived. HG-2 landed with #77 on 2026-09-11; **#79 and #86
+are what is left**, and they are now `blocked_by` edges on #34 rather than a sentence here — the
+board showed a `doing` card with every declared blocker `done` until then, which reads as "ready to
+close". It is back in `backlog` for the same reason (`check_board.py` refuses `doing` behind an
+unfinished blocker; #15 is the precedent).
+
+~~Nothing downstream is blocked on it.~~ **Nothing in the *delivery* chain is** — S6 and S7 run
+without it, which is the claim that mattered. Three S8 cards do wait on it: #36 (the ADRs), #37
+(Chapter 1) and, until 2026-09-11, #89. **#89's edge was fiction and has been cut**: its own
+*Done when* names #29 and #30 as its sources and every one of them is a committed CSV, so the
+reconciliation never needed a promoted version. That mattered more than bookkeeping — #83 (S7)
+cannot tick "a link to `docs/REPORT-RECONCILIATION.md`" until #89 writes the file, so an S7 card was
+sitting behind #34 behind #86 behind #79 by way of an edge nothing supported.
 
 ```
-#23 scaler fit-once → #24 selection inside folds (L6) → #25 old-22 vs new-N
-→ #88 group-aware nested CV (L4, L7) → #26 CatBoost, honest early stopping (L1, L5)
+#23 scaler fit-once → #88 group-aware nested CV (L4, L7) → #24 selection inside folds (L6)
+→ #25 old-22 vs new-N → #26 CatBoost, honest early stopping (L1, L5)
 → #27 MAPIE conformal → #28 predict() → #29 metrics + bootstrap CI → #30 LOACO CV
 → #31 AC-3 · #32 AC-1 · #33 AC-4 → #34 promote the artifact (v2)
 ```
+
+**These arrows are prose; `blocked_by` is the graph, and where they disagreed the graph was right.**
+This chain read `#24 → #25 → #88` until 2026-09-11, but #88 is blocked by `[13, 23]` and #24 by
+`[14, 20, 88]`, so S4 opened at **#88**, not at the #24 the arrows pointed at. Ask the board which
+card is startable — `bash $S/list_all_cards.sh kanban-hardening/` — and read this line for the
+*shape* of the stage, never for its order.
 
 - [x] **#23** Scaler: fit once on train, persist, never refit. **Landed 2026-09-04.**
       `hydms.surrogate.fit_scaler(features, split)` is handed the whole matrix with #13's split
@@ -960,7 +978,7 @@ conda run -n Project python -m hydms.screens.novelty --emit   # novelty-referenc
 
 ---
 
-### S6 — Delivery: the deep module and the API · #75–#80 · 5 d
+### S6 — Delivery: the deep module and the API · #75–#80 (and #90, which has no stage of its own) · 5 d
 
 **The design rule:** one deep module owns prediction; the API and the UI are thin transports with no
 ML logic in them.
@@ -1081,12 +1099,19 @@ single prediction path and HG-3 covers the UI too.
 
 - [ ] **#89** `docs/REPORT-RECONCILIATION.md` — the eight prose-vs-artifact contradictions, each with
       the CSV that refutes it. **REPORT.md is not corrected in place**; it is the archival record.
+      **Unblocked since 2026-09-11** — `blocked_by` is now `[29, 30]`, the two cards that produced
+      the honest numbers it sets beside the published ones, and both are `done`. It is the one piece
+      of S8 that can be written today, and two later cards want it: #83's model card links to it and
+      #37 is written from it.
 - [ ] **#85** ADR — the delivery seam and why the API owns no ML logic.
 - [ ] **#86 (HG-4)** Extend the CI fast lane with the delivery suite, the freeze check, and
       ruff / mypy / coverage.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
-- [ ] **#36** five ADRs · **#37** Chapter 1 revision. #37 is unblocked on everything but #34.
+- [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~
+      **#37 waits on #34 *and* #89** (edge added 2026-09-11): #89's card says the reconciliation is
+      "what card #37 is written from", and writing the chapter first would mean re-deriving those
+      eight disagreements by hand, in prose nothing checks.
 - [ ] Lift the freeze: set `freeze: lifted` in [FREEZE.md](FREEZE.md), record the closing date, and the
       PA/PB board resumes.
 

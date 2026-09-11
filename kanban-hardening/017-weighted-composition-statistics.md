@@ -9,7 +9,7 @@ tags: [p1, l2, S12]
 
 # Weighted composition statistics
 
-**Phase 1 — Hardening Chapter 1** · **L2 Descriptors** · Estimate: 1 d
+**Stage S3 — Descriptor layer** · **L2 Descriptors** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How a per-element property becomes a per-composition number.
 

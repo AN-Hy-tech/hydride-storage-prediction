@@ -9,7 +9,7 @@ tags: [p1, l2, AC-2, R3]
 
 # GATE AC-2: featuriser parity with CBFV to 1e-9
 
-**Phase 1 — Hardening Chapter 1** · **L2 Descriptors** · Estimate: 1 d
+**Stage S3 — Descriptor layer** · **L2 Descriptors** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Proof that the reimplementation is faithful.
 

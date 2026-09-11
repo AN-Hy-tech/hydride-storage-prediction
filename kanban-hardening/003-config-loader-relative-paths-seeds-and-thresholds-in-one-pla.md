@@ -9,7 +9,7 @@ tags: [p0, l0, S1, AC-1]
 
 # Config loader: relative paths, seeds and thresholds in one place
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 1 d
+**Stage S2 — Data layer** · **L0 Foundation** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Every path, seed and threshold. Nothing else may hard-code them.
 

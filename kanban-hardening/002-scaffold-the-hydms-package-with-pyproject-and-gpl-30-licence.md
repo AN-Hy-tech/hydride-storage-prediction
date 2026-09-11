@@ -9,7 +9,7 @@ tags: [p0, l0, S12]
 
 # Scaffold the hydms package with pyproject and GPL-3.0 licence
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 0.5 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** Where new code lives and under what licence it ships.
 

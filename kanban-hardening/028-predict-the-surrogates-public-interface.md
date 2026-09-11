@@ -9,7 +9,7 @@ tags: [p1, l3, S2]
 
 # predict() — the surrogate's public interface
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 1 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Model choice, scaling, quantile heads and conformal calibration — all of it.
 

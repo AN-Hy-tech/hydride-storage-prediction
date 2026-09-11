@@ -9,7 +9,7 @@ tags: [p1, l2, S3, S12]
 
 # featurize() — the descriptor layer's public interface
 
-**Phase 1 — Hardening Chapter 1** · **L2 Descriptors** · Estimate: 1 d
+**Stage S3 — Descriptor layer** · **L2 Descriptors** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Everything above: tables, statistics, composites and column order.
 

@@ -9,7 +9,7 @@ tags: [p1, l3, AC-1]
 
 # GATE AC-1: seed reproducibility
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 0.5 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** That the same seed produces the same numbers.
 

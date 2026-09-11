@@ -9,7 +9,7 @@ tags: [ph, l0]
 
 # Metamorphic tests for featurize() and predict()
 
-**Stage S1 — QA foundation** · **L0 Foundation** · Estimate: 0.5 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** The invariants that must hold between two related inputs, where no ground truth exists to assert against.
 

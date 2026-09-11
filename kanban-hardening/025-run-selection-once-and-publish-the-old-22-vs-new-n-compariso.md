@@ -9,7 +9,7 @@ tags: [p1, l3, S7, R4]
 
 # Run selection once and publish the old-22 vs new-N comparison
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 0.5 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** Which features the corrected pipeline actually selects, and how that differs.
 

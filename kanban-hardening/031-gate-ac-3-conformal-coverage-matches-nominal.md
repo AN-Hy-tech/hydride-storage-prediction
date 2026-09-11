@@ -9,7 +9,7 @@ tags: [p1, l3, AC-3, R1]
 
 # GATE AC-3: conformal coverage matches nominal
 
-**Phase 1 — Hardening Chapter 1** · **L3 Surrogate** · Estimate: 0.5 d
+**Stage S4 — Surrogate layer** · **L3 Surrogate** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** Whether the intervals mean what they claim.
 

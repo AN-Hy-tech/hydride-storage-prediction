@@ -9,7 +9,7 @@ tags: [p0, l0, S1]
 
 # CI fast lane: lint, tests and gates on cached artifacts
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 1 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** The per-push feedback loop.
 

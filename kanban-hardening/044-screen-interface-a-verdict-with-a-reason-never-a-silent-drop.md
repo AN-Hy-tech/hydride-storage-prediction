@@ -9,7 +9,7 @@ tags: [pa, l4, S3]
 
 # Screen interface: a verdict with a reason, never a silent drop
 
-**Phase A — Screen-and-Rank** · **L4 Screens** · Estimate: 0.5 d
+**Stage S5 — Guard rails** · **L4 Screens** · Estimate: 0.5 d
 
 > **Owns (hidden behind this module):** What it means to admit or reject a candidate.
 

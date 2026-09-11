@@ -9,7 +9,7 @@ tags: [p1, l7, S7]
 
 # Five architecture decision records
 
-**Phase 1 — Hardening Chapter 1** · **L7 Evidence** · Estimate: 1 d
+**Stage S8 — Evidence and close** · **L7 Evidence** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** Why the hardest-to-reverse choices were made, so they are not silently re-litigated.
 

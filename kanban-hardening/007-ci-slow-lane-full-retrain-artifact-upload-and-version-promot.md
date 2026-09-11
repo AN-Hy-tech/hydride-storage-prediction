@@ -9,7 +9,7 @@ tags: [p0, l0, S1]
 
 # CI slow lane: full retrain, artifact upload and version promotion
 
-**Phase 0 — Foundation & provenance** · **L0 Foundation** · Estimate: 1 d
+**No stage — slots in where its blockers allow** · **L0 Foundation** · Estimate: 1 d
 
 > **Owns (hidden behind this module):** How a new artifact version is produced and promoted.
 
