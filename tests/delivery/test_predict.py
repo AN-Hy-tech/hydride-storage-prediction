@@ -588,6 +588,54 @@ def test_an_artifact_whose_median_head_the_screens_would_not_read_is_refused(
         load_bundle(store=store, cfg=dataclasses.replace(cfg, model=shifted))
 
 
+def _aimed(cfg, **overrides: object):
+    """``delivery_screens(cfg)`` with the domain screen's column names moved."""
+    from hydms.screens.domain import applicability_domain
+    from hydms.screens.novelty import novelty_screen
+    from hydms.screens.window import temperature_window
+
+    domain = dataclasses.replace(applicability_domain(cfg), **overrides)  # type: ignore[arg-type]
+    return (temperature_window(cfg), domain, novelty_screen(cfg))
+
+
+def test_a_screen_aimed_at_a_width_column_this_path_does_not_write_is_refused(
+    store: Path,
+) -> None:
+    """The third rule the domain screen can silently drop, and the only one reading the band.
+
+    Found by #76's QA pass, and it is the same defect the median-head check was written for
+    rather than a new one. ``ApplicabilityDomain`` evaluates whichever signals a frame carries,
+    so a ``width`` it cannot find does not raise: ``high-uncertainty`` simply never fires and
+    the screen reports ``admitted``. The check was reading *config* -- which can only ever
+    describe the screens ``load_bundle`` builds itself, the one case where it is redundant --
+    so an explicitly supplied screen set, which the signature exists to allow, was unchecked in
+    both columns.
+    """
+    cfg = load_config()
+    with pytest.raises(DeliveryError, match="interval width"):
+        load_bundle(store=store, cfg=cfg, screens=_aimed(cfg, width="band_width"))
+
+
+def test_a_screen_aimed_at_a_head_this_path_does_not_write_is_refused(store: Path) -> None:
+    """The same check, reaching the screen it was handed rather than the config beside it."""
+    cfg = load_config()
+    with pytest.raises(DeliveryError, match="point estimate"):
+        load_bundle(store=store, cfg=cfg, screens=_aimed(cfg, prediction="q0.42"))
+
+
+def test_the_alloy_class_column_is_not_required_of_a_screen(store: Path) -> None:
+    """The third optional input is a *stated* absence, not an oversight the check forgot.
+
+    ``alloy_class`` is declared by the same screen and is deliberately never written by
+    :func:`_candidate`, so requiring it would refuse every deployment. The distinction is
+    pinned here because a reader of ``_REQUIRED_COLUMNS`` would otherwise see two of three and
+    wonder about the third.
+    """
+    cfg = load_config()
+    bundle = load_bundle(store=store, cfg=cfg, screens=_aimed(cfg, alloy_class="not-a-column"))
+    assert isinstance(predict_capacity(KNOWN, WARM, bundle=bundle), PredictionResult)
+
+
 def test_the_candidate_frame_carries_the_features_in_fitting_order(
     bundle: ArtifactBundle,
 ) -> None:

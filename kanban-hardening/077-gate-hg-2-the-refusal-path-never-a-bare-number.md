@@ -77,6 +77,52 @@ no training alloy" tells them what to do next.
       adds a null blocklist, it refuses a real material. #84 owns the boundary where a missing value
       becomes text
 
+- [ ] **A formula that is not a string is reported as "the formula is empty", which is false about
+      the input** (added 2026-09-11 by #76's QA pass). `PredictionRequest.__post_init__` runs
+      `if not isinstance(self.formula, str) or not self.formula.strip()` and raises **one** sentence
+      for both arms, so `predict_capacity(5, 298.0)` and `predict_capacity(["La1Ni5"], 298.0)` are
+      both told "a request needs a composition; the formula is empty. An empty string is a caller
+      error rather than an unparseable material" — a sentence whose every clause is about a case
+      that did not happen. The temperature field one line below does **not** make this conflation:
+      it distinguishes `temperature_k must be a number, not bool` from `temperature_k is nan, which
+      is not a finite number`, so the asymmetry is within one `__post_init__` and is visible by
+      reading it.
+
+      It is reachable and it crosses a real boundary. `PredictionRequest.from_dict` checks only that
+      the two keys are *present*, so `{"formula": 5, "temperature_k": 298}` — which JSON delivers
+      without complaint and a CSV column of part numbers produces by accident — arrives here, and
+      #78's API and #84's uploader will both hand a user the wrong explanation of what they did
+      wrong. This gate owns every sentence the refusal path can produce; a `ContractError` is not a
+      `Refusal`, but #77 already owns the question of whether a malformed request should *become*
+      one (the non-finite-temperature box above), and the two decisions are the same decision. Fix
+      the wording where it is raised, or fold both arms into a refusal — but do not leave a guard
+      whose message names a cause it did not observe
+
+- [ ] **`docs/REFUSALS.md` catalogues a sentence for `unreadable-formula` that `predict_capacity()`
+      cannot produce** (added 2026-09-11 by #76's QA pass). This is the *same* entry-point question
+      the `untrusted-family` box above asks, found on a second row, and it is the more visible of
+      the two because an unreadable formula is the refusal a user is most likely to trigger by
+      typing.
+
+      The page's probe hands the screens a frame whose feature columns are already filled and whose
+      formula column is unreadable, so the screens run and the row carries **their** sentence:
+      *"'LaNi5Xx2' could not be given a physical capacity ceiling -- it does not parse, or it names
+      an element the 'oliynyk' table has no mass for; …ElMD does not raise on it…"*. The delivery
+      path never reaches a screen for that input — `featurize` raises first, by the ordering #76
+      settled and could not avoid — so `predict_capacity("LaNi5Xx2", 298.0)` returns the same code
+      with the **featuriser's** sentence (*"1 of 1 formula(e) could not be parsed: ['candidate']
+      'Xx1' names 'Xx', which is not a chemical element…"*) and, correctly, zero screen verdicts.
+      Two true sentences; the catalogue shows the one the API will not send.
+
+      Neither sentence is wrong and nothing is mis-refused — this is a *wrong words* finding, which
+      is the class this page was built to catch, landing on the page itself. The page's own framing
+      is what makes it one: it says it holds "every sentence the delivery path can produce", and the
+      predict module's docstring says the catalogue "documents this function rather than something
+      adjacent to it". For eleven of thirteen rows that is true. This gate owns the qualifier, and
+      it already owns a section for it (*"One sentence this page cannot show"*). Either add a probe
+      that goes through `predict_capacity()` so the typed-formula sentence is on a diff line too, or
+      say per row which entry point reaches it — but do not let the page keep claiming both
+
 ## Runnable check
 
 ```bash

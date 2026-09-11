@@ -1007,7 +1007,20 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
       Two smaller findings, boxed rather than fixed here: `untrusted-family` is declared and
       published but **unreachable through `predict_capacity()`** (a novel composition has no alloy
       class) → #77; and `"NaN"` is sodium-plus-nitrogen to both parsers and cannot be guarded once
-      it is a string → #84 owns the CSV `na_values` decision. 25 tests, 5.0 s.
+      it is a string → #84 owns the CSV `na_values` decision.
+      **QA pass, same day: the card's own guard was aimed one step away from its subject.**
+      `ApplicabilityDomain` is deliberately partial — a column it cannot find does not raise, the
+      rule just does not run and the screen answers `admitted` — so it is the one screen that can be
+      half-run in silence, and the bundle is the only object positioned to notice. The check read
+      *config*'s median head, which can only describe the screens `load_bundle` builds itself, the
+      one case where it is redundant; a bundle assembled with an explicit `screens=` aimed at
+      `q0.42` loaded silently. It also checked one of the two columns that matter: a screen aimed at
+      a different `width` loses `high-uncertainty` — the only rule that judges the *band* this call
+      is about to report — and the answer said nothing. `_check_columns` now reads each screen's own
+      `prediction` and `width`; `alloy_class` stays deliberately unrequired, with a test saying so.
+      Two more *wrong words* findings went to #77: a non-string formula is told "the formula is
+      empty", and `docs/REFUSALS.md` catalogues the screens' `unreadable-formula` sentence, which
+      this path cannot produce because `featurize` raises first. 28 tests, 4.9 s.
 - [ ] **#77 (HG-2)** The refusal path — unparseable formula, unknown element, T outside the trained
       range (195–773 K), outside the AD ceiling → a **structured refusal with a reason**, never a bare
       number.

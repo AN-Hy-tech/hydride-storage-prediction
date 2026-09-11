@@ -330,9 +330,9 @@ def load_bundle(
         test's narrowed screen set answer a later caller's prediction.
 
     Raises:
-        DeliveryError: the version's model reports a median head the configured screens would
-            not read. See below -- this is the one deployment inconsistency that would
-            otherwise be silent.
+        DeliveryError: a screen would look for a column this path does not write -- the
+            version's median head, or the interval width. See below; this is the one class of
+            deployment inconsistency that would otherwise be silent.
         PredictionError: nothing is promoted and no version was named, or the artifact is
             internally inconsistent.
         VersionNotFound: no such version.
@@ -344,13 +344,15 @@ def load_bundle(
     Calling :func:`hydms.artifacts.load` again here is how a second unpickle of the same
     booster comes back, so this function does not.
 
-    **Why the median head is checked.** The applicability screen is built from *config*: it
-    reads the median of ``model.quantiles``, which is ``q0.5`` today. The artifact was fitted
-    with its own quantiles. If the two ever disagreed, the screen would find no prediction
-    column, and :class:`~hydms.screens.domain.ApplicabilityDomain` would quietly fall back to
-    judging only the feature spans -- dropping ``above-physical-ceiling`` and
-    ``out-of-domain``, the two rules that bound the number itself. That is a silent weakening
-    of the guard rail this whole phase exists to install, so it is a loud failure instead.
+    **Why the screens' own columns are checked.** Of the three screens, two raise on a column
+    they cannot find; :class:`~hydms.screens.domain.ApplicabilityDomain` deliberately does not,
+    because it is built to judge whichever of its signals a frame carries. That makes it the
+    one rule in the set that can be half-run in silence, and a bundle is the first object that
+    knows both what it will look for and what :func:`_candidate` will write, so
+    :func:`_check_columns` is where the two are made to agree -- for the median head *and* for
+    the interval width, whose screen is the only one that reads the band rather than the
+    number. A screen aimed elsewhere does not fail: it answers ``admitted`` because the rule
+    did not run, which is the silent weakening this whole phase exists to remove.
     """
     from hydms.surrogate.predict import load_surrogate
 
@@ -381,7 +383,7 @@ def load_bundle(
         str(described["median_head"]),
         str(described["upper_head"]),
     )
-    _check_heads(surrogate, heads, running, config)
+    _check_columns(surrogate, heads, running, config)
 
     bundle = ArtifactBundle(
         version=surrogate.version,
@@ -406,32 +408,84 @@ def load_bundle(
     return bundle
 
 
-def _check_heads(
+#: Each optional input a screen may declare that :func:`_candidate` writes a column for, as
+#: ``(attribute, what a reader calls it)``. Read by :func:`_check_columns`, which is the only
+#: place that can demand a partial screen be evaluated whole -- see its docstring for why the
+#: screen itself cannot. ``alloy_class`` is deliberately not in this tuple.
+_REQUIRED_COLUMNS = (("prediction", "point estimate"), ("width", "interval width"))
+
+
+def _check_columns(
     surrogate: Any, heads: tuple[str, str, str], screens: Sequence[Screen], config: Config
 ) -> None:
-    """Refuse an artifact whose median head the configured screens would not find."""
+    """Refuse a bundle whose screens would look for a column this path does not write.
+
+    :class:`~hydms.screens.domain.ApplicabilityDomain` is deliberately **partial**: it judges
+    whichever of its signals the frame carries, because a caller screening a curated frame has
+    a class label and a caller screening a prediction frame does not. That is right at its own
+    layer and it is why the two screens either side of it can afford to be strict --
+    :class:`~hydms.screens.window.TemperatureWindow` and the novelty screen both raise
+    ``ScreenError`` on a column they cannot find. It leaves the domain screen the one rule in
+    the set that can be silently half-run, and **this function is the only place that can
+    notice**, because a bundle is the first object that knows both what the screens will look
+    for and what :func:`_candidate` will write.
+
+    Two of the screen's three optional inputs are checked here and the third is a stated
+    absence:
+
+    ``prediction``
+        The median head. If it disagreed with the artifact's, the screen would find no
+        prediction to bound and would drop ``above-physical-ceiling`` and ``out-of-domain`` --
+        the two rules that bound the capacity itself.
+    ``width``
+        :data:`WIDTH_COLUMN`. If it disagreed, the screen would drop ``high-uncertainty`` --
+        the rule that bounds the band this function is about to report, which is the one screen
+        that reads the interval rather than the number.
+    ``alloy_class``
+        Deliberately not written, and therefore deliberately not required. A user types a
+        formula; there is no family. See :func:`_candidate`, which states what that costs.
+
+    **It reads the screens it was handed, not the configuration they were probably built
+    from.** Those are the same object on the default path -- :func:`load_bundle` builds the
+    screens from this very ``config`` -- and that is exactly the path where the check is
+    redundant. On the path where it could matter, an explicit ``screens=``, the configuration
+    is no longer evidence about what the screens will read. ``config`` survives as a parameter
+    only to explain a mismatch: where the screen *is* the configured one, naming
+    ``model.quantiles`` says which of the two ends to move.
+    """
     from hydms.surrogate.model import column_names
 
     configured = column_names(config.model.quantiles)
-    expected = configured[len(configured) // 2]
-    if expected == heads[1]:
-        return
-    reading = [
-        str(screen.name)
-        for screen in screens
-        if getattr(screen, "prediction", None) is not None
-    ]
-    if not reading:
-        return
-    raise DeliveryError(
-        f"artifact {surrogate.version} reports its point estimate in {heads[1]!r}, and "
-        f"{', '.join(reading)} would look for {expected!r}, which config's "
-        f"model.quantiles={tuple(config.model.quantiles)} names. The screen would find no "
-        f"prediction to bound and would fall back to judging the feature spans alone -- "
-        f"dropping the two rules that bound the capacity itself. Refit the version against "
-        f"this configuration, or restore the quantiles it was fitted with; do not serve the "
-        f"pair."
-    )
+    expected = {
+        "prediction": (heads[1], configured[len(configured) // 2]),
+        "width": (WIDTH_COLUMN, None),
+    }
+    for screen in screens:
+        for attribute, noun in _REQUIRED_COLUMNS:
+            looks_for = getattr(screen, attribute, None)
+            written, from_config = expected[attribute]
+            if looks_for is None or looks_for == written:
+                continue
+            # The remedy depends on which of the two the screen is, and saying both would
+            # send half the readers after the wrong one: only a screen built from this
+            # config can be fixed by moving the quantiles.
+            source, remedy = (
+                (
+                    f", which config's model.quantiles={tuple(config.model.quantiles)} names",
+                    "Refit the version against this configuration, or restore the quantiles "
+                    "it was fitted with",
+                )
+                if looks_for == from_config
+                else ("", "Aim the screen at the column this path writes")
+            )
+            raise DeliveryError(
+                f"screen {str(screen.name)!r} reads the {noun} from {str(looks_for)!r}"
+                f"{source}, and artifact {surrogate.version} is served through a frame "
+                f"carrying {written!r}. The screen would find no {noun} to judge and would "
+                f"fall back to whichever of its signals it *can* read -- answering "
+                f"`admitted` because the rule did not run, which is the silent weakening "
+                f"this phase exists to remove. {remedy}; do not serve the pair."
+            )
 
 
 # --------------------------------------------------------------------------------------

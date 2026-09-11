@@ -239,3 +239,50 @@ conda run -n Project python -m pytest tests/delivery/test_predict.py -q
   #90, which is these 25 plus the thirteenth refusal probe. ruff and mypy clean. **Not run against
   a real artifact**: `v2` records no gate run, so `load_surrogate` refuses it — correctly, and
   that is #34's to close. (by @assistant)
+
+- 2026-09-11: **QA pass. The one guard this card added was aimed one step away from its subject,
+  and it was guarding one of the two columns it needed to.**
+
+  `_check_heads` existed for a real and well-argued reason: `ApplicabilityDomain` is deliberately
+  **partial** — it judges whichever of its signals a frame carries, because a caller screening a
+  curated frame has an alloy class and a caller screening a prediction frame does not — so a
+  column it cannot find does not raise, the rule simply does not run, and the screen answers
+  `admitted` because nothing judged. It is the only screen in the set that can do that; the
+  temperature window and the novelty screen both raise `ScreenError` on a missing column. A bundle
+  is the first object that knows both what the screens will look for and what `_candidate` will
+  write, so this layer is the only place the two can be made to agree.
+
+  **It compared config's median head to the artifact's, and never read the screens it was handed.**
+  Those are the same value on the default path — `load_bundle` builds the screens from that very
+  config — which is precisely the path where the check is redundant. On the path where it could
+  matter, an explicit `screens=` (a documented deployment parameter, and how #78 and every test
+  here assemble a bundle), the configuration is no longer evidence about what the screens will
+  read. Measured: a bundle assembled with the domain screen aimed at `q0.42` loaded without a
+  murmur. The function already took `screens` and already iterated them — but only to compose the
+  error message, never to decide.
+
+  **And `width` had no check at all, which cost the third rule.** `high-uncertainty` is the only
+  rule that reads the *band* rather than the number — the interval this function is about to
+  report. `"interval_width"` is spelled independently in three places (`surrogate.predict`,
+  `WIDTH_COLUMN` here, and the domain factory's own default), and a screen aimed elsewhere loses
+  the rule in silence. Measured: a bundle with `width="band_width"` answered `PredictionResult`
+  with `domain: admitted`, and nothing anywhere in the answer said the band had gone unjudged.
+  That is the same silent weakening the median-head check was written against, one column over.
+
+  `_check_columns` replaces it: it reads each screen's own `prediction` and `width` and requires
+  them to name the columns `_candidate` actually writes, keeping `config` only to *explain* a
+  mismatch (naming `model.quantiles` when the screen is the configured one tells a reader which
+  end to move). `alloy_class` is the third optional input and is deliberately **not** required —
+  that absence is this card's own decision, and it now has a test saying so, because a reader of
+  `_REQUIRED_COLUMNS` would otherwise see two of three and wonder.
+
+  **Two findings went to #77 rather than being fixed here**, both *wrong words* rather than wrong
+  numbers. A formula that is not a string is told "the formula is empty" — false about the input,
+  reachable through `from_dict` from any JSON or CSV transport, and an asymmetry visible within one
+  `__post_init__`, since the temperature field one line below distinguishes its two arms. And
+  `docs/REFUSALS.md` catalogues the *screens'* sentence for `unreadable-formula`, which this path
+  cannot produce: `featurize` raises first, so a typed `LaNi5Xx2` comes back with the featuriser's
+  sentence and zero verdicts. Both are the entry-point question #77 already owns for
+  `untrusted-family`, found on two more rows.
+
+  28 tests here now, 4.9 s. ruff and mypy clean. (by @assistant)

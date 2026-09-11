@@ -144,7 +144,7 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **#76 is `done` and its three decisions are made** -- read its narrative before anything else, because two of them changed what the cards below it say. Your job is **not** to start #77: it is to **test #76 and run a QA pass on it** (`docs/QA-PROTOCOL.md`, the L6 row and the reviewer checklist in §4) -- the module is green and self-tested, and nobody has yet come at it adversarially or run it against a real artifact; promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
+**Next session, in one line.** **#76 is `done`, tested and QA'd, and #77 is the unblocked card** -- read #76's narrative before anything else, because its three decisions changed what the cards below it say and the QA pass added a fourth note about the guard it shipped. #77 inherits **three** boxed *wrong words* findings, all the same entry-point question: which sentence a code arrives with depends on which door the candidate came through. The module has still **never run against a real artifact** -- `v2` records no gate run, so `load_surrogate` refuses it; promote **`v2`** never `v1`, and expect **#34** to stay open until #76-#79 and #86 build HG-2/HG-3/HG-4.
 
 **Handoff, 2026-09-07 (latest) — #49 is `done` and S5 is closed.** `hydms/screens/novelty.py`
 ships `novelty_screen()`, whose verdict frame carries `novelty.distance` and `novelty.nearest`
@@ -412,6 +412,48 @@ superseded. Here is every one of them, so nobody has to discover it by quoting i
 Anything else in an older handoff that contradicts a *card* — the card wins. Anything that
 contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The handoffs are narrative,
 and their authority is over intent, not over facts.
+
+---
+
+### Handoff -- 2026-09-11 (later) - #76 is tested and QA'd; #77 is yours
+
+**The QA pass asked for below has run.** #76 stays `done`. Three findings, one fixed in place and
+two boxed; nothing was mis-refused and no number was wrong, which is worth saying because all three
+are about a guard or a sentence rather than about arithmetic.
+
+**Fixed on #76, because it is #76's own code.** The card's one added guard, `_check_heads`, was
+aimed one step away from its subject and covered one of the two columns that need covering. The
+premise is sound and worth carrying forward: `ApplicabilityDomain` is deliberately **partial** --
+it judges whichever of its signals a frame carries, so a column it cannot find does not raise, the
+rule simply does not run, and the screen answers `admitted` because nothing judged it. It is the
+only screen that can do that; the window and the novelty screen both raise `ScreenError`. The
+bundle is the first object that knows both what the screens will look for and what `_candidate`
+writes, so this layer is the only place the two can be made to agree -- and it was comparing
+*config*'s median head to the artifact's, never reading the screens it was handed. Those agree on
+the default path, the one path where the check is redundant; on an explicit `screens=`, which is
+how #78 and every test here assemble a bundle, nothing was checked. Measured: a domain screen aimed
+at `q0.42` loaded silently, and one aimed at a different `width` answered `PredictionResult` with
+`domain: admitted` while `high-uncertainty` -- the only rule that judges the *band* -- could never
+fire. `_check_columns` now reads each screen's own `prediction` and `width`. `alloy_class` stays
+deliberately unrequired and has a test saying so.
+
+**Boxed on #77, and they are the same question it already owns.** Both are *wrong words*, the class
+§4.8 of the protocol exists for. (a) A formula that is not a string is told "the formula is empty"
+-- false about the input, reachable through `from_dict` from any JSON or CSV transport, and an
+asymmetry inside one `__post_init__`, since `temperature_k` one line below distinguishes its two
+arms properly. (b) `docs/REFUSALS.md` catalogues the *screens'* sentence for `unreadable-formula`,
+which `predict_capacity()` cannot produce: `featurize` raises first, so a typed `LaNi5Xx2` comes
+back with the featuriser's sentence and zero verdicts. Two true sentences, and the page shows the
+one the API will not send. #77 already carries this shape for `untrusted-family`; it is now three
+rows, and the gate owns the qualifier.
+
+**What is still not done, unchanged from below:** the module has **not** run against a real fitted
+artifact. `v2` records no gate run, so `load_surrogate` refuses it -- correctly -- and that is
+**#34**'s to close. Every QA measurement above was taken against the fixture store.
+
+**#77 is the unblocked card.** 28 tests in `tests/delivery/test_predict.py`, 4.9 s; `ruff` and
+`mypy` clean; `check_board.py` green; the gate harness reports 6 passed / 6 skipped, with HG-2 still
+skipped because #77 has not built it.
 
 ---
 
