@@ -214,5 +214,10 @@ bash $S/list_all_cards.sh kanban-hardening/   # id | status | blocked_by | title
   JSONs and the smoke fixture are each rebuilt by an `--emit` flag, and a test asserts the committed
   bytes are what the code produces. Change the code and regenerate; an edit there fails the suite
   and, worse, is the exact drift those files exist to prevent.
+- Landing a card without grepping [CONTEXT.md](CONTEXT.md) for its number. The glossary's *"State
+  of the term"* blocks name cards by id, and **nothing reads that file** — no test, no gate, no
+  `--emit`. When the card closes, the tense stays wrong and no diff goes red. Closing #76 left
+  "the domain-verdict half is not built yet (cards #48, #49, #75, #76)" standing after all four
+  were `done`.
 - Quoting a suite count without saying which command produced it. The full run and the fast lane
   (`-m "not slow"`) differ by the four slow tests; the runbook §5 keeps both, labelled.

@@ -105,12 +105,20 @@ An estimate together with **an interval and a domain verdict**. A bare number is
 here — it is a model output that has not yet been made into one.
 _Avoid_: "the estimate", "the output", "the number"
 
-> *State of the term, not part of the definition:* the interval half is enforced today — the
-> surrogate returns `lcb` and `interval_width` as columns, so a caller cannot get a point estimate
-> without them. **The domain-verdict half is not built yet** (cards #48, #49, #75, #76, gate HG-2),
-> and the surrogate's own docstring says so outright: it does not refuse an out-of-domain candidate.
-> So "prediction" currently names something the delivery layer will produce and the surrogate alone
-> does not.
+> *State of the term, not part of the definition:* **both halves are enforced today, at the
+> delivery layer** (cards #48, #49, #75, #76, all `done` 2026-09-11). The interval half is the
+> surrogate's: it returns `lcb` and `interval_width` as columns, so a caller cannot get a point
+> estimate without them. The domain-verdict half is `hydms.delivery.predict.predict_capacity()`,
+> which answers with a `PredictionResult` whose `interval` and `domain` fields have **no defaults
+> and cannot be `None`** — the structural half of HG-2, a type rather than a check. `novelty` has
+> no default either, so a caller must *say* what it knows; `None` means "not measured", and the
+> delivery path itself never returns it, because the novelty screen is in `delivery_screens()`.
+>
+> **The layer is the qualifier.** The surrogate alone still does not refuse an out-of-domain
+> candidate, and its docstring still says so outright — so "prediction" in this glossary's sense
+> is what the *delivery* layer produces, not what `hydms.surrogate.predict` returns. What remains
+> is #77 (gate HG-2): asserting **exhaustively, not by sampling**, that no path can return a bare
+> number, and saying which refusal codes are reachable through which entry point.
 
 **Lower confidence bound**:
 The bottom of the calibrated interval, and **the ranking signal**. Ranking on the mean is what lets
@@ -159,6 +167,20 @@ named a *different* object, and the committed explainability tables described a 
 An immutable directory holding a model, its correction, its scaler and a manifest. **Written once
 and never edited**, which is why certifying a version produces a *new* one.
 _Avoid_: "the model", "the checkpoint", "the saved model"
+
+**Artifact bundle**:
+An **artifact version plus the screens that judge its answers**, loaded once and frozen —
+`hydms.delivery.predict.ArtifactBundle`, built only by `load_bundle`. A version is a directory on
+disk; a bundle is that directory *and* the rules, their reference sets and the digests of those
+references. The distinction is load-bearing in two directions. **A version is sealed and a screen's
+reference is not**, so the bundle reports `reference_digests` (SHA-256 of each reference **as
+loaded**) to make a mismatch detectable — the fit-time *binding* is #91's and does not exist yet.
+And a bundle is the only object that knows both what the screens will read and what the prediction
+frame will write, which is why the column agreement is checked there and nowhere else (#76's QA
+pass).
+_Avoid_: "the model", "the artifacts", using it interchangeably with **artifact version** — and
+caching it in a second place, because two caches for one artifact version is the failure the
+"loads once" rule exists to prevent
 
 **Promotion**:
 The dated, recorded act of pointing `current` at a version. A pointer, so rolling back is a small

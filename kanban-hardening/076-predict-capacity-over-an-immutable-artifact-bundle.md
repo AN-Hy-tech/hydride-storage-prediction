@@ -288,3 +288,27 @@ conda run -n Project python -m pytest tests/delivery/test_predict.py -q
   28 tests here now, 4.9 s. Fast lane (`pytest -m "not slow"`) **1337 passed, 4 deselected,
   643 s** — 1334 plus these three. ruff and mypy clean; gates 6 passed / 6 skipped, HG-1 green.
   (by @assistant)
+
+- 2026-09-11: **The glossary still said this card was unbuilt, and nothing could have told us.**
+  `CONTEXT.md`'s **Prediction** entry carried a *"State of the term"* block reading "**the
+  domain-verdict half is not built yet** (cards #48, #49, #75, #76, gate HG-2)" — false on all
+  four counts the moment this card landed, since `PredictionResult.interval` and `.domain` have no
+  defaults and cannot be `None`. `grep -rln CONTEXT.md tests/ scripts/ hydms/` returns nothing: no
+  test, no gate, no `--emit` reads that file, and `check_board.py` only resolves its links. So the
+  one document written for a reader outside this room is the one document with no guard on it.
+
+  Corrected in place, and the correction keeps the distinction the block existed to make: both
+  halves are enforced **at the delivery layer**, while `hydms.surrogate.predict` alone still does
+  not refuse an out-of-domain candidate — so "prediction" in the glossary's sense names what
+  `predict_capacity()` returns, not what the surrogate does. What remains is #77's, and the block
+  now says so.
+
+  **`Artifact bundle` was added as a term**, beside `Artifact version` where the conflation would
+  happen. A version is a sealed directory; a bundle is that plus the screens, their references and
+  the digests of those references — and the two differ in exactly the way that matters twice over:
+  the version is sealed and the reference is not (hence `reference_digests`, with the fit-time
+  binding owed by #91), and the bundle is the only object that knows both what the screens read
+  and what `_candidate` writes (hence `_check_columns` living there and nowhere else).
+
+  The gap is now an anti-pattern in `CLAUDE.md` and a step in the end-of-card ritual, because the
+  fix for a document nothing tests is a habit, not a check. (by @assistant)
