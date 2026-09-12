@@ -99,3 +99,20 @@ ls docs/adr/*.md | wc -l
 ## Narrative
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)
+
+- 2026-09-12: **A further candidate was proposed and is declined as a duplicate.** Unmerged PR #7
+  (2026-09-05) widened this card to "Six architecture decision records", renamed its title, moved
+  the glob to `0001..0006`, and added *"persist a promoted artifact and load it everywhere; never
+  refit"* as ADR 6. None of that is carried, for two reasons that are both later than the PR.
+
+  The decision itself is **superseded**: #34's box of 2026-09-06 dissolved persist-vs-refit rather
+  than resolving it — the deployed fit was the wrong object — and its successor is already
+  candidate **7** above, *"one definition of the deployed fit"*, which is the same subject with the
+  premise corrected. A further entry restating the losing frame would be the re-litigation this card
+  exists to prevent.
+
+  And the renaming is **against this card's own standing decision**: the 2026-09-06 entry above
+  says in as many words that the card is not renamed, that "five" was the count when it was cut,
+  and that *the ADRs are numbered, not counted*. The PR predates that sentence and could not have
+  known it. Recorded here rather than silently dropped, so the next reader who finds PR #7 in the
+  repository's history does not re-open it. (by @assistant)

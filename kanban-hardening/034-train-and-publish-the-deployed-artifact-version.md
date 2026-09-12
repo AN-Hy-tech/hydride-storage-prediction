@@ -435,3 +435,24 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
   the whole of this Narrative. **This is bookkeeping, not a reversal** — `python -m
   hydms.surrogate.promote` exists and works, and `v2` is the version it will be pointed at.
   (by @assistant)
+
+- 2026-09-12: **An unmerged pull request answering this card's open decision was found and closed
+  without merging.** PR #7 (`claude/persist-vs-refit-resolved-dk4iss`, opened 2026-09-05 21:15,
+  two commits) recorded the persist-vs-refit question as *"resolved in favour of persist"* and
+  wrote that conclusion onto six cards. It was opened the same evening the OPEN DECISION below was
+  framed, and the session that settled it the next day never saw it — it targets `main`, which the
+  Phase H branch has not merged into since 2026-08-30.
+
+  **Nothing was ported, and that is the correct outcome rather than a loss.** Its answer is one
+  side of the decision the box above dissolved: the deployed fit was the wrong object, so the
+  question was not persist-or-refit at all. This card already keeps that framing in full, beside
+  the measurement that ended it, for exactly the reason it gives. Porting the PR's text would have
+  re-asserted a settled question's losing frame as though it were current.
+
+  Worth recording *how* this nearly went the other way. The first check was
+  `grep persist-vs-refit kanban-hardening/`, which found nothing and looked like proof the content
+  had been dropped when the cards moved off the frozen board. It was proof of the opposite: the
+  successor decision is on this card under different words, and on #36 as ADR candidate 7, *"one
+  definition of the deployed fit"*. **A grep for the old vocabulary cannot find a question that was
+  renamed by being answered.** See [[an-inherited-decision-can-dissolve]].
+  (by @assistant)

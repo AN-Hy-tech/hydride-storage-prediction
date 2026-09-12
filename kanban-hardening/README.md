@@ -11,8 +11,10 @@
 > and the maintainer runs those**: build it, verify at sentinel budget, and hand over one command.
 >
 > **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no push
-> checks any more, and now also owes installing from `requirements-lock.txt`. **#94** is new, from
-> #93: a crossed band raises where it should refuse.
+> checks any more, and now also owes installing from `requirements-lock.txt`. Two new cards from
+> #93: **#94**, a crossed band raises where it should refuse; and **#95**, the freeze is unenforced
+> on `main` — **PR #7 on GitHub is green, mergeable, and edits the frozen board**, so close it
+> unmerged rather than reading its tick marks.
 >
 > Detail: [#34](034-train-and-publish-the-deployed-artifact-version.md),
 > [#94](094-a-crossed-band-raises-where-it-should-refuse.md), and the latest handoff at the foot of
