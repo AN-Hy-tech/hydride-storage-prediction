@@ -509,8 +509,8 @@ could mean anything. See below.
 **State (2026-09-11):** closed as far as a stage can close — **twelve of thirteen boxes ticked and
 no measurement left to take**. The one open box is **#34**, and it is not waiting on anything S4
 owns: promotion needs HG-2, HG-3 and HG-4, which #76-#79 (S6) and #86 (S8) build, and they are
-Phase H's own criteria so they must not be waived. HG-2 landed with #77 on 2026-09-11; **#79 and #86
-are what is left**, and they are now `blocked_by` edges on #34 rather than a sentence here — the
+Phase H's own criteria so they must not be waived. HG-2 landed with #77 on 2026-09-11 and HG-3 with
+#79 on 2026-09-12; **#86 is what is left**, and they are now `blocked_by` edges on #34 rather than a sentence here — the
 board showed a `doing` card with every declared blocker `done` until then, which reads as "ready to
 close". It is back in `backlog` for the same reason (`check_board.py` refuses `doing` behind an
 unfinished blocker; #15 is the precedent).
@@ -850,8 +850,8 @@ card is startable — `bash $S/list_all_cards.sh kanban-hardening/` — and read
       promoted version's embedded report still records all three as `SKIPPED`. Promotion is now
       blocked by **work rather than by a decision**: AC-6, HG-2, HG-3 and HG-4 are this phase's own
       (#30, #77, #79, #86) and must not be waived. **AC-6 came green on 2026-09-06** with the LOCO
-      run, so what remains is HG-2, HG-3 and HG-4 — built by #76-#79 and #86, which is why #34
-      cannot close inside S4 and is not waiting on anything S4 owns. **The version to promote is
+      run, HG-2 with #77 on 2026-09-11 and HG-3 with #79 on 2026-09-12, so what remains is **HG-4
+      alone** — built by #86, which is why #34 cannot close inside S4 and is not waiting on anything S4 owns. **The version to promote is
       `v2`, not `v1`** (re-saved 2026-09-07 from a clean tree; v1's manifest records
       `code_modified: true` and a manifest is sealed when written). Same model: correction
       +0.037355, the same `model-chosen.csv:outer-0` configuration, and the five regenerated
@@ -1056,16 +1056,47 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
       with its door and shows what a caller typing it receives instead. Staging the red case found
       a defect in the gate: the "names the range" check was satisfied by a *neighbouring* screen's
       sentence, #49's defect one layer up.
-- [ ] **#78** `hydms/delivery/api/` — FastAPI: `POST /v1/predict`, `POST /v1/predict/batch`,
-      `GET /v1/health`, `GET /v1/model`. Use `backend-development`: validation at the boundary, **no ML
-      in the route handler**, structured errors, a health check reporting the loaded artifact version,
-      no silent fallback to an unversioned model.
-- [ ] **#79 (HG-3)** API contract tests — OpenAPI snapshot + **transport parity** against
-      `predict_capacity()`.
+- [x] **#78** `hydms/delivery/api/` — FastAPI: `POST /v1/predict`, `POST /v1/predict/batch`,
+      `GET /v1/health`, `GET /v1/model`. **Landed 2026-09-12.** The bundle resolves once, in the
+      lifespan, so a store with nothing promoted is a server that does not come up rather than one
+      that guesses — there is no lazy load in any request path. **Two things arrive at 422 and the
+      body is the only thing that separates them**: a refusal carries `refused` and a rejected
+      request carries `error`, which is the inherited obligation from #77 (a `ContractError` must
+      not reach a client as a 500) discharged by one envelope, whoever noticed — pydantic or the
+      contract. The request models declare only what the transport can see (JSON types, unknown
+      fields, `extra="forbid"` so a caller cannot name its own screens or version, #75); every
+      semantic rule stays with `PredictionRequest`, so a caller is shown the contract's own
+      sentence rather than a second opinion. The batch limit is **256**, measured rather than
+      chosen: a served prediction costs 66–78 ms against `v2` (13 ms featurise, 22 ms surrogate,
+      34 ms screens) and is linear in the rows, so 256 is ~19 s here and ~38 s on a machine half
+      this speed — inside the 60 s a client or proxy typically allows. `GET /v1/model` reports
+      `reference_digests` (the other inherited obligation), the training date and the gate record
+      from the version's manifest — which is now carried on the `ArtifactBundle`, `None` for a
+      bundle the gate door assembled, because an absent record must read as unknown and never as
+      clean. **No ML in a handler** is executable twice over: no module under `api/` may import the
+      surrogate, the descriptors, the screens or an array library, and no handler may touch a
+      private attribute of anything — the second closes the hole the first leaves, since the bundle
+      it is handed already holds the model. Both were staged red. 32 tests, 13.6 s.
+- [x] **#79 (HG-3)** API contract tests — OpenAPI snapshot + **transport parity** against
+      `predict_capacity()`. **Landed 2026-09-12.** The gate sends **HG-2's own probe set** over HTTP
+      rather than a second list of its own — a second list drifts, and then "the API agrees with the
+      library" is established over inputs nobody checked the library on — and requires the served
+      body to equal `to_dict()` **value for value**, reporting a difference by JSON pointer
+      (`/interval/lower: the library 1.2345678901234, served 1.23`). The same probes in one batch
+      must come back in order, each row equal to its own single-shot answer, which is
+      order-preservation and per-row refusal in one comparison. Eight **rejected requests** are this
+      gate's own, because `predict_capacity()` has no way to be asked them: an unknown field, a
+      formula that is not a string, `NaN` typed as a literal, a batch over the published limit. Each
+      must come back 422 carrying `error` and no `refused`, and `answer_from()` must **refuse** it —
+      a client that reads an error body as an answer is the one failure in that pair that is silent.
+      The **OpenAPI document is committed** at `hydms/delivery/api/openapi.json`, generated by
+      `python -m hydms.delivery.api.openapi --emit`, and the comparison needs no artifact: it is the
+      half that can go red on a push, and the reason CI now installs the `api` extra. 4.52 s against
+      `v2`; 37 tests.
 - [ ] **#80** `docs/API.md`. Use `grill-with-docs`; the interview must answer *"how does a caller tell
       a refusal from a genuinely low prediction?"* before the doc is written.
 
-**Exit check:** `conda run -n Project python -m pytest tests/delivery -q` · HG-2 and HG-3 green.
+**Exit check:** `conda run -n Project python -m pytest tests/delivery` (do **not** add `-q`; pyproject already sets it and a second one hides the count; it is **160 passed in 12.9 s** as of 2026-09-12) · HG-2 and HG-3 green. **Both are** — `run --fast` is 7 passed / 0 failed / 2 skipped in 26 s, the two skips being AC-5 (frozen) and HG-4 (#86, unwritten). #80 is the stage's last card.
 
 ---
 
@@ -1137,9 +1168,11 @@ Three properties are worth knowing before you write a gate:
 
 - **A skip is never a pass.** An unimplemented criterion reports `SKIPPED`, the table prints a
   `NOT CHECKED` banner naming every one of them, and `--strict` turns any skip into a failure.
-- **Naming a gate makes the run strict.** `run HG-3` exits non-zero while HG-3 is unimplemented —
-  which is why the `## Runnable check` on #31, #32, #33, #71 and #79 is honest from the day it
-  is written. **HG-2 is no longer one of them**: `run HG-2` exits 0 against a version on disk, and
+- **Naming a gate makes the run strict.** `run HG-4` exits non-zero while HG-4 is unimplemented —
+  which is why the `## Runnable check` on #31, #32, #33, #71 and #86 is honest from the day it
+  is written. **HG-3 is no longer one of them either**: `run HG-3` exits 0 against a version on disk,
+  and `SKIPPED` (exit 1) in a checkout with none — the OpenAPI comparison and the request-door check
+  still run there and can still fail. **HG-2 is the same**: `run HG-2` exits 0 against a version on disk, and
   `SKIPPED` (exit 1) in a checkout with none, which is the honest answer — the structural half
   still runs there and can still fail. `run --all` tolerates skips, because CI that is red for the length of the phase is CI
   nobody reads. **AC-2 is the first gate for which this is no longer true**: `run AC-2` exits 0, in
@@ -1160,7 +1193,7 @@ lives in `current.json` and never in the report; see §3's artifact-store bullet
 |---|---|---|
 | **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red: a detector stopped firing, a sentinel's subject module exists with nothing wired to it, or a leak has neither a sentinel nor a recorded deferral. Green only when all thirteen are checked against the real pipeline |
 | **HG-2** No bare numbers | #77 | A contract type gains a default for `interval` or `domain`; any `return` in `predict_capacity` stops being a `Refusal` or a `PredictionResult`; a probe comes back without a code, a sentence, or the thing its refusal is about — named *outside* the echo of the formula that was typed, since every sentence here quotes its input and `'Xx'` is in `'Xx2'`; a declared code stops being reachable through either door with nothing saying why; or a code with no input at the request door becomes reachable there. Skips, loudly, where no artifact is on disk or where every probe was refused |
-| **HG-3** Transport parity | #79 | The API's answer differs from `predict_capacity()`'s for the same input |
+| **HG-3** Transport parity | #79 | The API's answer differs from `predict_capacity()`'s for the same input at any JSON pointer; a served body cannot be rebuilt by `answer_from()` into an equal object; a batch reorders its rows, fails whole over a refused row, or does not enforce the limit it publishes; a rejected request carries `refused`, or `answer_from()` reads one as an answer; the committed OpenAPI document is not what the code produces; the request model declares a field `PredictionRequest` does not, or stops forbidding unknown ones; `/v1/health` or `/v1/model` names a version other than the one that answered. Skips, loudly, where no artifact is on disk or the `api` extra is absent — the document and the door are checked first either way |
 | **HG-4** Hygiene | #86 | ruff, mypy, or the coverage floor fail on `hydms/` |
 | AC-1 | #32 | Same seed does not reproduce identical metrics |
 | AC-2 | #21 | The featuriser does not match CBFV to 1e-9 on all 1,279 formulae |
@@ -1190,9 +1223,10 @@ python scripts/verify_environment.py
 # below was last measured at **1229 passed, 0 skipped on 2026-09-07 (24 min 58 s)** on a quiet
 # machine — up from 1117 on 2026-09-06 by cards #73, #74 and #75 — and it PREDATES #48, #49 and
 # #90, so read it as a floor rather than as today's count. The FAST LANE (`-m "not slow"`, which
-# deselects the four `@pytest.mark.slow` tests) reported **1371 passed / 4 deselected of 1375
-# collected on 2026-09-12 (14 min 9 s)** — up from 1308/1312 after #90 on 2026-09-07. That is the
-# figure the recent handoffs quote. A handoff that
+# deselects the four `@pytest.mark.slow` tests) reported **1440 passed / 4 deselected of 1444
+# collected on 2026-09-12 (12 min 3 s)** — up from 1371/1375 the same day by #78's service and
+# #79's gate, and from 1308/1312 after #90 on 2026-09-07. That is the figure the recent handoffs
+# quote. A handoff that
 # states one of these must say which. Anything red is a real failure. Do NOT pass -q: pyproject already sets
 # it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
 # is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
@@ -1205,7 +1239,7 @@ conda run -n Project python -m pytest tests/leaks               # HG-1
 # dependencies, and card #68 fixed that the fast lane installs nothing (docs/QA-PROTOCOL.md §6).
 ruff check hydms/ tests/ scripts/ && mypy
 # `run` with no selection exits 2 -- a selection is a decision, so name one.
-conda run -n Project python -m hydms.gates run --all           # 6 passed, 0 failed, 6 skipped (3.1 min)
+conda run -n Project python -m hydms.gates run --all           # 8 passed, 0 failed, 4 skipped (3.0 min)
 
 # Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical output.
 # This is the SMOKE run (card #73), not a retrain: every stage over a committed 235-row fixture
@@ -1215,7 +1249,19 @@ conda run -n Project python -m hydms.gates run --all           # 6 passed, 0 fai
 conda run -n Project python -m hydms.pipeline.smoke
 conda run -n Project python -m hydms.pipeline.smoke --digest
 
-# API
+# The published contract, and the cheapest check in this block: it builds the OpenAPI document
+# from the code and compares it to the committed `hydms/delivery/api/openapi.json`, exiting 1 and
+# printing the pointers that moved when they differ. `--emit` rewrites the file; commit the diff
+# deliberately, because it is what a client author reads. Gate HG-3 runs the same comparison, and
+# this is the half of it that needs no artifact and no environment beyond the `api` extra.
+conda run -n Project python -m hydms.delivery.api.openapi
+
+# API. It resolves the PROMOTED version at startup and refuses to start if there is none, so
+# until card #34 promotes `v2` this command exits with `load_bundle`'s own sentence -- "nothing
+# is promoted in artifacts" -- and that is the card working, not a fault. The two checks below
+# were run against the real `v2` through the gate door on 2026-09-12 and produced exactly what
+# they say they will. `python -m hydms.delivery.api` is the same thing with the uvicorn line
+# remembered for you.
 conda run -n Project uvicorn hydms.delivery.api:app --port 8000
 curl -s localhost:8000/v1/model
 curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
@@ -1223,7 +1269,14 @@ curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
 # expect: estimate + interval + level + domain verdict + elmd + model_version
 curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
      -d '{"formula":"Xx9Zz3","temperature_k":298}'
-# expect: a structured refusal with a reason, HTTP 422 — never a number
+# expect: a structured refusal with a reason, HTTP 422 — never a number.
+# Measured against `v2` on 2026-09-12: code `indeterminate`, and the sentence is the
+# featuriser's own — "'Xx9Zz3' names 'Xx', which is not a chemical element".
+curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
+     -d '{"formula":"","temperature_k":298}'
+# expect: ALSO 422, and a different body — `error: invalid_request`, no `refused` key. The
+# status cannot separate a declined material from an unreadable request; the body is what does.
+curl -s localhost:8000/v1/health   # {"status":"ok","model_version":"v2","max_batch_rows":256}
 
 conda run -n Project streamlit run app/main.py
 ```

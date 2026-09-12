@@ -126,8 +126,18 @@ jobs:
       # skipped: that the batched `cdist` path is ElMD's own metric to 1e-12 rather than an
       # approximation of it, and that `hydms.screens.novelty` normalises a composition the same
       # way in every process where ElMD does not (card #49).
+      #
+      # `api` IS installed, and it is the third variation on the same argument. FastAPI, uvicorn
+      # and pydantic are permissively licensed pure-Python wheels already pinned in
+      # `requirements-lock.txt`, and without them *nothing* about the transport runs here: the
+      # service cannot be built, so `tests/delivery/test_api.py` skips itself away and gate HG-3
+      # reports SKIPPED instead of comparing the committed OpenAPI document to the one the code
+      # produces. That document is the one thing a client author reads and it changes as a side
+      # effect of editing a model, so the snapshot comparison is the half of HG-3 that has to
+      # run on every push — this lane has no artifact on disk, so it is also the only half that
+      # *can* (card #79).
       - name: Install hydms and its test dependencies
-        run: python -m pip install --disable-pip-version-check -e ".[dev,uq,novelty]"
+        run: python -m pip install --disable-pip-version-check -e ".[dev,uq,novelty,api]"
 
       - name: pytest
         run: python -m pytest

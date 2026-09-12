@@ -1,0 +1,650 @@
+{
+  "components": {
+    "schemas": {
+      "BatchBody": {
+        "additionalProperties": false,
+        "description": "Many candidates in one request. Answers come back in the order they were sent.",
+        "properties": {
+          "candidates": {
+            "description": "The candidates to answer, in order. The per-request limit is reported by GET /v1/health as `max_batch_rows`; a longer list is refused whole, because truncating it would answer a question nobody asked.",
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidates"
+        ],
+        "title": "BatchBody",
+        "type": "object"
+      },
+      "BatchResponse": {
+        "additionalProperties": false,
+        "description": "Many answers, positionally matched to the candidates that were sent.",
+        "properties": {
+          "answers": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/components/schemas/PredictionResultBody",
+                  "True": "#/components/schemas/RefusalBody"
+                },
+                "propertyName": "refused"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PredictionResultBody"
+                },
+                {
+                  "$ref": "#/components/schemas/RefusalBody"
+                }
+              ]
+            },
+            "title": "Answers",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "schema": {
+            "default": "hydms.delivery/1",
+            "title": "Schema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "answers"
+        ],
+        "title": "BatchResponse",
+        "type": "object"
+      },
+      "Candidate": {
+        "additionalProperties": false,
+        "description": "One composition at one temperature -- the whole of what a caller may choose.",
+        "properties": {
+          "formula": {
+            "description": "The composition, as written. Not normalised by the caller: 'Pr1Co5' and 'Pr1Co5 ' are the same material and the pipeline is what says so.",
+            "examples": [
+              "LaNi5",
+              "La0.8Ce0.2Ni5"
+            ],
+            "title": "Formula",
+            "type": "string"
+          },
+          "temperature_k": {
+            "description": "Kelvin. Outside the trained window the answer is a refusal with a reason, not an error.",
+            "examples": [
+              298.0
+            ],
+            "title": "Temperature K",
+            "type": "number"
+          }
+        },
+        "required": [
+          "formula",
+          "temperature_k"
+        ],
+        "title": "Candidate",
+        "type": "object"
+      },
+      "DomainVerdictBody": {
+        "additionalProperties": false,
+        "description": "The applicability verdict every answer carries -- with a reason, never a bare flag.",
+        "properties": {
+          "admitted": {
+            "title": "Admitted",
+            "type": "boolean"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "screens": {
+            "items": {
+              "$ref": "#/components/schemas/ScreenVerdictBody"
+            },
+            "title": "Screens",
+            "type": "array"
+          }
+        },
+        "required": [
+          "admitted",
+          "code",
+          "reason",
+          "screens"
+        ],
+        "title": "DomainVerdictBody",
+        "type": "object"
+      },
+      "Health": {
+        "additionalProperties": false,
+        "description": "Liveness, and the two facts a caller needs before it trusts anything else.",
+        "properties": {
+          "max_batch_rows": {
+            "description": "The most candidates POST /v1/predict/batch will accept in one request.",
+            "title": "Max Batch Rows",
+            "type": "integer"
+          },
+          "model_version": {
+            "description": "The artifact version answering right now.",
+            "title": "Model Version",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "model_version",
+          "max_batch_rows"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "IntervalBody": {
+        "additionalProperties": false,
+        "description": "The calibrated band, its nominal level, and the width a reader should see.",
+        "properties": {
+          "level": {
+            "title": "Level",
+            "type": "number"
+          },
+          "lower": {
+            "title": "Lower",
+            "type": "number"
+          },
+          "space": {
+            "default": "capacity",
+            "title": "Space",
+            "type": "string"
+          },
+          "unit": {
+            "default": "wt%",
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper": {
+            "title": "Upper",
+            "type": "number"
+          },
+          "width": {
+            "title": "Width",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lower",
+          "upper",
+          "level",
+          "width"
+        ],
+        "title": "IntervalBody",
+        "type": "object"
+      },
+      "InvalidRequest": {
+        "additionalProperties": false,
+        "description": "A request that was not understood. Never an answer, and it says so by its shape.\n\nIt carries no ``refused`` key, so :func:`~hydms.delivery.contract.answer_from` refuses it\nwith its own sentence rather than reading it as a prediction. That is the distinction the\nstatus code alone cannot carry: both this and a refusal are served as 422 -- ``docs/\nPHASE-H-RUNBOOK.md`` fixes the refusal's code and card #78 fixes this one -- and the body\nis what says whether a *material* was declined or a *request* was rejected.",
+        "properties": {
+          "error": {
+            "description": "'invalid_request' or 'batch_too_large'.",
+            "title": "Error",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/Problem"
+            },
+            "title": "Problems",
+            "type": "array"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "problems"
+        ],
+        "title": "InvalidRequest",
+        "type": "object"
+      },
+      "NoveltyBody": {
+        "additionalProperties": false,
+        "description": "How far this composition is from the nearest alloy the model was trained on.",
+        "properties": {
+          "distance": {
+            "title": "Distance",
+            "type": "number"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "nearest": {
+            "title": "Nearest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "distance",
+          "nearest",
+          "metric"
+        ],
+        "title": "NoveltyBody",
+        "type": "object"
+      },
+      "PredictionResultBody": {
+        "additionalProperties": false,
+        "description": "An answer with a number in it -- and therefore with an interval and a verdict.",
+        "properties": {
+          "capacity": {
+            "title": "Capacity",
+            "type": "number"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/DomainVerdictBody"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/IntervalBody"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "novelty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoveltyBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refused": {
+            "const": false,
+            "title": "Refused",
+            "type": "boolean"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RequestBody"
+          },
+          "schema": {
+            "default": "hydms.delivery/1",
+            "title": "Schema",
+            "type": "string"
+          },
+          "space": {
+            "default": "capacity",
+            "title": "Space",
+            "type": "string"
+          },
+          "unit": {
+            "default": "wt%",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refused",
+          "request",
+          "capacity",
+          "interval",
+          "domain",
+          "novelty",
+          "model_version"
+        ],
+        "title": "PredictionResultBody",
+        "type": "object"
+      },
+      "Problem": {
+        "additionalProperties": false,
+        "description": "One thing wrong with a request, and where in the request it is.",
+        "properties": {
+          "kind": {
+            "description": "Which layer refused it: a pydantic error type for a JSON-shape problem, or 'contract' when hydms.delivery.contract refused the request it was handed.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "location": {
+            "description": "The path to the offending field, e.g. ['candidates', 3, 'formula'].",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location",
+          "message",
+          "kind"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "RefusalBody": {
+        "additionalProperties": false,
+        "description": "An answer with no number in it, and a stated reason for that.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "refused": {
+            "const": true,
+            "title": "Refused",
+            "type": "boolean"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RequestBody"
+          },
+          "schema": {
+            "default": "hydms.delivery/1",
+            "title": "Schema",
+            "type": "string"
+          },
+          "screens": {
+            "items": {
+              "$ref": "#/components/schemas/ScreenVerdictBody"
+            },
+            "title": "Screens",
+            "type": "array"
+          }
+        },
+        "required": [
+          "refused",
+          "request",
+          "code",
+          "explanation",
+          "model_version",
+          "screens"
+        ],
+        "title": "RefusalBody",
+        "type": "object"
+      },
+      "RequestBody": {
+        "additionalProperties": false,
+        "description": "The request an answer carries, so a stored answer says what it answers.",
+        "properties": {
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "temperature_k": {
+            "title": "Temperature K",
+            "type": "number"
+          }
+        },
+        "required": [
+          "formula",
+          "temperature_k"
+        ],
+        "title": "RequestBody",
+        "type": "object"
+      },
+      "ScreenVerdictBody": {
+        "additionalProperties": false,
+        "description": "One rule's judgement: which rule, whether it passed, its code and its sentence.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "screen": {
+            "title": "Screen",
+            "type": "string"
+          }
+        },
+        "required": [
+          "screen",
+          "passed",
+          "code",
+          "reason"
+        ],
+        "title": "ScreenVerdictBody",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Maximum gravimetric hydrogen-storage capacity for one composition at one temperature, with a calibrated interval and an applicability verdict. Every answer carries the artifact version that produced it; a candidate the screens decline comes back as a structured refusal with a reason and no number, never as a bare estimate.",
+    "title": "HydMS prediction service",
+    "version": "hydms.delivery/1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "operationId": "health_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness, and which artifact version is answering"
+      }
+    },
+    "/v1/model": {
+      "get": {
+        "operationId": "model_v1_model_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "features": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "interval": {
+                      "type": "object"
+                    },
+                    "metrics": {
+                      "type": "object"
+                    },
+                    "provenance": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "schema": {
+                      "type": "string"
+                    },
+                    "screens": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "trained_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "trained_ranges": {
+                      "type": "object"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "version",
+                    "features",
+                    "interval",
+                    "screens",
+                    "metrics"
+                  ],
+                  "title": "Response Model V1 Model Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The deployment's own description of itself."
+          }
+        },
+        "summary": "The model card: version, training date, what has been certified, and ranges"
+      }
+    },
+    "/v1/predict": {
+      "post": {
+        "operationId": "predict_v1_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Candidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "False": "#/components/schemas/PredictionResultBody",
+                      "True": "#/components/schemas/RefusalBody"
+                    },
+                    "propertyName": "refused"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PredictionResultBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalBody"
+                    }
+                  ],
+                  "title": "Response Predict V1 Predict Post"
+                }
+              }
+            },
+            "description": "An answer: an estimate, its interval and a domain verdict. **Only ever an answer** -- a refusal is served as 422 and never here, so of the two shapes below only the first arrives with this status."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequest"
+                    }
+                  ],
+                  "title": "Response 422 Predict V1 Predict Post"
+                }
+              }
+            },
+            "description": "Either a refusal -- a material this deployment declines to answer about, carrying `refused: true`, a code and a reason -- or an invalid request, carrying `error`. Never a number."
+          }
+        },
+        "summary": "Predict one composition's capacity at one temperature"
+      }
+    },
+    "/v1/predict/batch": {
+      "post": {
+        "operationId": "predict_batch_v1_predict_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            },
+            "description": "One answer per candidate, in the order they were sent. A refused row is a refusal in the list, not a failed request: the request succeeded, and each row says for itself whether it carries a number."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "The request was rejected whole -- a malformed row, or more rows than `max_batch_rows`."
+          }
+        },
+        "summary": "Predict many compositions in one request"
+      }
+    }
+  }
+}

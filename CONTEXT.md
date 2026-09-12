@@ -121,6 +121,26 @@ _Avoid_: "the estimate", "the output", "the number"
 > candidate, and its docstring still says so outright — so "prediction" in this glossary's sense
 > is what the *delivery* layer produces, not what `hydms.surrogate.predict` returns.
 
+**Refusal** vs **Invalid request**:
+A **refusal** is an answer *about a material*: the screens judged this candidate and declined it, so
+it carries a code from their declared vocabulary, a sentence naming the rule, and no number. An
+**invalid request** is not an answer at all — the question could not be read, so no candidate ever
+existed to judge, and there is nothing a refusal could honestly name. Over HTTP the two share a
+status: **422** for both, fixed by `docs/PHASE-H-RUNBOOK.md` §6 for the refusal and by card #78 for
+the other. **The body is therefore the whole of the difference** — a refusal carries `refused`, an
+invalid request carries `error` — and a client that branches on the status code alone will read one
+as the other. A third thing is neither: a `DeliveryError` is the *deployment* failing and is never a
+statement about a candidate, so it is a 500.
+_Avoid_: "error" for a refusal, "refused" for a malformed request, and reading the status alone
+
+> *State of the term, not part of the definition:* **gate HG-3 measures the distinction at the
+> transport** (card #79, `done` 2026-09-12). Eight malformed bodies are sent over HTTP and each must
+> come back 422 carrying `error`, carrying no `refused`, and be **refused** by
+> `hydms.delivery.contract.answer_from()`; every refusal must come back carrying `refused`, carrying
+> no `error`, and rebuild through the same function into an object equal to the library's. So the
+> one-key split is executable rather than a convention — and the failure it exists to catch, a
+> client reading a rejected request as an answer, is the one that would otherwise be silent.
+
 **Lower confidence bound**:
 The bottom of the calibrated interval, and **the ranking signal**. Ranking on the mean is what lets
 an optimiser exploit extrapolation.
