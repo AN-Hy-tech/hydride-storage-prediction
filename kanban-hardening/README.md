@@ -21,7 +21,7 @@ Cards live in two directories that are validated together:
 
 | Directory | Ids | State |
 |---|---|---|
-| `kanban-hardening/` | 1–37, 44, 48, 49, 68, 69–89 | **Active** |
+| `kanban-hardening/` | 1–37, 44, 48, 49, 68, 69–93 | **Active** |
 | `../kanban/` | 38–43, 45–47, 50–67 | **Frozen** — every card must stay `backlog` |
 
 **The directories are a freeze boundary, not an id-space boundary.** `blocked_by` reaches across
@@ -37,7 +37,8 @@ leave-one-alloy-class-out result — and this line said "both of those" until 20
 blocked by #44 alone, which is right on the substance: an ElMD distance is a property of two
 compositions and reads nothing the surrogate produces. All three are `done`; S5 is closed.
 
-**The next free id is #92.** Scan both directories for `max(id) + 1`.
+**The next free id is #94.** Scan both directories for `max(id) + 1` — this line has been stale
+before (it said #92 while #92 existed), so scan rather than trust it.
 
 ---
 
@@ -787,7 +788,7 @@ and their authority is over intent, not over facts.
 
 ---
 
-### Handoff -- 2026-09-12 (latest) - #86 is written but NOT closed; read the CI run before anything else
+### Handoff -- 2026-09-12 (latest) - #86 is written but NOT closed; the lane works and #93 is why it is still red
 
 **#86 is `doing` with one box open, and the box is the point of the card.** Everything else in it
 is done: the HG-4 gate is implemented and registered, `--cov` and `-m "not slow"` are in the
@@ -829,12 +830,28 @@ So: **no handoff below this one was ever evidence about CI**, however green its 
   *conformal* coverage — they are both percentages in `gate-results.json` and mean nothing
   about each other.)
 
-**The one thing you must chase.** The timed-out log shows **two tests already failing in CI** at
-roughly 84 % and 89 % — near `tests/surrogate/test_model.py` and `tests/surrogate/test_promote.py`
-— which **pass locally**. They are unnamed because no run has ever reached the summary line that
-would name them. They are not regressions from #86; they are the first thing the lane will report
-now that it gets far enough to report anything. Map a percentage to a file with
-`pytest --collect-only` (no `-q` — pyproject already sets it) and index the node-id list.
+**The one thing you must chase — and it is now named, in card #93.** The commit was pushed while
+this session was still open, so the answer arrived rather than being left as a guess. Run
+`34696231293`: hygiene **green in 16 s**, suite **finished in 13 m 40 s** — the first completed
+`suite` job this branch has ever had — and it reported two failures that **pass locally on the
+same commit**:
+
+```
+FAILED tests/surrogate/test_conformal.py::test_calibration_moves_coverage_toward_nominal
+  - assert 0.021428571428571352 <= (0.014285714285714346 + 1e-09)
+FAILED tests/surrogate/test_predict.py::test_the_width_is_the_calibrated_span_and_varies_row_to_row
+  - assert False
+```
+
+That is a claim about the surrogate's numbers on hardware that is not a twenty-core Windows box;
+AC-1's own docstring warns that its thread-invariance measurement buys no cross-platform
+determinism. **#93 owns it, and #86's last box is blocked on it.** #93 is explicitly *not* an
+unfreeze condition.
+
+*An earlier draft of this handoff guessed those failures were near `test_model.py` and
+`test_promote.py`, by mapping the 84 % and 89 % progress marks onto the collection order. That
+was wrong — CI skips nine tests the machine does not, so the orders differ. **Do not identify a
+test by its position in a progress bar.** The fix was to make the run print its own summary.*
 
 **Then:** tick #86's timeout box against a green `suite` job and close it. #86 is the last
 unfinished blocker on **#34** (promotion), which is the unfreeze condition, so closing it is what

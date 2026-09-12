@@ -78,9 +78,15 @@ takes minutes and around eight gigabytes to construct.
       is written into #7 as a box: the four slow tests are now checked on no push at all until
       #7's slow lane runs them.
 
-      **Still unverified, and this is why the box is open and the card is `doing`:** no CI run
-      has yet finished, so "comfortably under" is a prediction, not a measurement. Tick it
-      against a green `suite` job, not against this reasoning
+      **VERIFIED 2026-09-12 on run `34696231293`: the `suite` job finished in 13 m 40 s against
+      its 20-minute cap** — the first time it has ever finished at all — with the pytest step
+      itself at 12 m 41 s. The hygiene job went green in 16 s, confirming the mypy fix on the
+      bare runner that could not be reproduced locally. Locally the same selection is
+      `1451 passed, 4 deselected in 19 m 36 s`, **test coverage 89.66 %**.
+
+      *The lane is not green yet, and that is card **#93**, not this box.* The run that finally
+      fitted inside the timeout could finally also report what was failing, and it named two
+      tests that fail **only on the runner** — see the box below
 - [x] The conda rebuild remains in the slow lane. **Untouched** — the `suite` job still
       installs from `pyproject.toml` and never restores a lockfile (#6's measurement; the
       lockfile is win-64 by construction)
@@ -127,6 +133,16 @@ takes minutes and around eight gigabytes to construct.
       rows over the same six columns as `hydride_data.csv`, which is its downstream, and nothing in
       the repository has ever read it. This is the same decision as `pytest-cov` above, so make both
       once rather than twice
+- [ ] **The lane is green. Blocked on #93, and that is the only thing left.** Making the job
+      finish made its failures legible for the first time, and there are two:
+      `test_calibration_moves_coverage_toward_nominal` (`0.0214 <= 0.0143 + 1e-9`) and
+      `test_the_width_is_the_calibrated_span_and_varies_row_to_row` (a bare `assert False`).
+      **Both pass on the maintainer's machine** on the same commit, so they are a claim about
+      the surrogate's numbers on hardware that is not a twenty-core Windows box — AC-1's own
+      docstring warns that its thread-invariance measurement buys no cross-platform
+      determinism. Filed as **#93**, which owns the diagnosis; this card owns the lane and the
+      lane now works
+
 - [x] Registered in the gate harness as HG-4. **Implemented 2026-09-12** in
       `hydms/gates/hg4_hygiene.py`, replacing the `Pending`. Three legs — ruff, mypy, the
       coverage floor — all of them run even when one has already failed, because a red build
@@ -202,12 +218,22 @@ python scripts/check_board.py --root . && python scripts/check_freeze.py --base 
   the CSV-minus-four-rows that three documents said it was, but a differently-normalised file
   sharing 117 of ~1,180 composition strings with it. (by @assistant)
 
-- 2026-09-12: **Left `doing`, deliberately, with one box open.** The timeout box cannot be
-  ticked from this machine — it needs a `suite` job that actually finishes, and none ever has.
-  The next session should read the CI run for the pushed commit and either tick it or chase
-  what it names. **It will name something:** the timed-out log shows two tests already
-  `F`-ing in CI at roughly 84 % and 89 % — near `tests/surrogate/test_model.py` and
-  `tests/surrogate/test_promote.py` — that pass locally. They are unidentified because no run
-  has ever reached the summary line that would name them. They are not regressions from this
-  card; they are the first thing anyone will see now that the lane gets far enough to report.
+- 2026-09-12: **Pushed as `86c828f`, and the CI run came back while the session was still
+  open.** Run `34696231293`: hygiene **green in 16 s** (the mypy fix confirmed on the bare
+  runner, which is the only place it could be confirmed), suite **finished in 13 m 40 s** —
+  the first completed `suite` job in this branch's history — against the 20-minute cap.
+
+  Two predictions in the handoff were wrong and are corrected here, both by measurement. The
+  guess that the failures sat near `test_model.py` and `test_promote.py`, inferred by mapping
+  84 % and 89 % onto the collection order, was **wrong**: they are
+  `tests/surrogate/test_conformal.py::test_calibration_moves_coverage_toward_nominal` and
+  `tests/surrogate/test_predict.py::test_the_width_is_the_calibrated_span_and_varies_row_to_row`.
+  The percentage mapping is unreliable because CI's collection differs from the machine's —
+  nine tests skip there that do not skip here. **Do not identify a test by its position in a
+  progress bar; make the run report its own summary.** That is the whole reason this card's
+  timeout fix was worth more than it looked.
+
+  Filed **#93** for the two failures rather than fixing them here: they are a claim about the
+  surrogate's arithmetic on other hardware, each attempt costs a thirteen-minute CI round
+  trip, and #86 owns the lane rather than the numbers. #86 stays `doing` on that one box.
   (by @assistant)

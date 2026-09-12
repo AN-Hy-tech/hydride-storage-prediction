@@ -1144,9 +1144,14 @@ single prediction path and HG-3 covers the UI too.
       It also found CI's `mypy` red on six `import-not-found` errors that **cannot reproduce on
       the maintainer's machine**, because this interpreter has fastapi and pydantic and the
       runner does not. Coverage is **88.43 %** against the 80 % floor. The open box is the
-      timeout itself: tick it against a green run, not against the reasoning. Two tests were
-      already failing in CI at ~84 % and ~89 % and are still unnamed, because no run has ever
-      reached the summary line.
+      timeout itself, and it is now blocked on **#93**: the first completed `suite` job
+      (`34696231293`, 13 m 40 s against a 20-minute cap) reported two failures that pass on the
+      maintainer's machine — `test_calibration_moves_coverage_toward_nominal` and
+      `test_the_width_is_the_calibrated_span_and_varies_row_to_row`. That is a claim about the
+      surrogate's arithmetic on other hardware, not about the lane.
+
+- [ ] **#93** The two CI-only failures. Filed by #86; **not an unfreeze condition**, but #86's
+      last box waits on it.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
 - [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~

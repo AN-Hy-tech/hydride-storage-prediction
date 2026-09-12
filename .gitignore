@@ -80,6 +80,16 @@ temp/
 
 # ── Test cache ────────────────────────────────────────────────────────────────
 .pytest_cache/
+.mypy_cache/
+
+# Coverage data, written by `pytest --cov` (card #86). It is a measurement of one run on one
+# machine, so committing it would put a machine-specific artifact in the tree — and gate HG-4
+# reads it, which is exactly why it must be the *local* run's file and never a stale committed
+# one. `coverage.xml` and `htmlcov/` are the other shapes the same tool writes.
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
 # ── IDE / tool settings ───────────────────────────────────────────────────────
 .vscode/
