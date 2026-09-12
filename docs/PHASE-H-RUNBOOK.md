@@ -1239,7 +1239,12 @@ single prediction path and HG-3 covers the UI too.
       condition**. `hydms.delivery.contract.Interval` raises `ContractError` on `upper < lower`
       and nothing between the surrogate and that boundary looks at the sign, so a crossed
       candidate is a loud failure rather than a refusal carrying a reason code.
-- [ ] **#100** A render test passes alone and fails after the slow tests. Filed by #81,
+- [ ] **#100** A render test passes alone and fails after the slow tests — **intermittent, and the
+      renderer no longer has the state it would need to be order-dependent.** Four full-length
+      runs after the filing are green (134, 1530, 1530 again, and **1531 in 26 m 45 s post-repair
+      on a quiet machine**), so no traceback exists and none can be manufactured. `hydms/figures/render.py` no longer chooses a
+      backend or imports `pyplot`, and a subprocess test holds it that way. The card stays `doing`
+      on one box — the traceback — which only a future red run can tick. Filed by #81,
       2026-09-12; **not an unfreeze condition**, and `High`.
       `tests/test_figures.py::test_every_figure_renders_in_both_themes` passes on its own (55),
       in the fast lane (1526) and beside the four `slow` tests (134) — and fails in a full run.
@@ -1348,14 +1353,26 @@ python scripts/check_freeze.py --base origin/main
 python scripts/verify_environment.py
 
 # Suite. TWO numbers live here and they are different commands; do not compare them. The FULL run
-# below was last measured at **1229 passed, 0 skipped on 2026-09-07 (24 min 58 s)** on a quiet
-# machine — up from 1117 on 2026-09-06 by cards #73, #74 and #75 — and it PREDATES #48, #49 and
-# #90, so read it as a floor rather than as today's count. The FAST LANE (`-m "not slow"`, which
+# below was last measured at **1531 passed, 0 skipped on 2026-09-13 (26 min 45 s)** on a quiet
+# machine, post-#100 — the previous entry here was 1229 in 24 min 58 s on 2026-09-07, which the
+# cards since have grown past. The FAST LANE (`-m "not slow"`, which
 # deselects the four `@pytest.mark.slow` tests) reported **1440 passed / 4 deselected of 1444
 # collected on 2026-09-12 (12 min 3 s)** — up from 1371/1375 the same day by #78's service and
 # #79's gate, and from 1308/1312 after #90 on 2026-09-07. That is the figure the recent handoffs
 # quote. A handoff that
-# states one of these must say which. Anything red is a real failure. Do NOT pass -q: pyproject already sets
+# states one of these must say which.
+#
+# AND IT MUST SAY WHETHER THE MACHINE WAS QUIET, which card #100 learned the expensive way on
+# 2026-09-13: two sessions spent this 29-minute command concurrently, ~18 minutes of it
+# simultaneously, and one of them landed a source edit WHILE the other's run was still going. pytest
+# imports test modules at collection but a production module whenever the code first reaches it, so
+# that run tested the old test body against the new renderer — a combination nobody wrote, and a
+# green that meant nothing. Before a run you intend to quote:
+#     Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Select ProcessId, CreationDate, CommandLine
+# and print Get-Date either side of the command, so an mtime inside that window tells you the run is
+# not a measurement. Contention costs only a minute or two of wall time here (26 m 45 s quiet against
+# 28 m 24 s contended), so the number that misleads you is the PASS, not the duration.
+# Anything red is a real failure. Do NOT pass -q: pyproject already sets
 # it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
 # is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
 # run, which happened on 2026-09-06, so it now asserts the committed reports/loco/loco.md against

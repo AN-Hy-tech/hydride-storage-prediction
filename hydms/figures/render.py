@@ -10,6 +10,18 @@ reason the ``figures`` extra exists, and a page or a test that only builds descr
 not pay for it -- the same shape as :mod:`hydms.surrogate.conformal`'s MAPIE import, for the
 same reason.
 
+**Nothing here touches ``pyplot`` or ``matplotlib.use()``**, and that is the point rather than
+a style preference. ``pyplot`` keeps a process-wide registry of open figures and a
+process-wide *current backend*; a library that renders to a file needs neither, and a library
+that sets one decides for its caller. The object graph is built directly --
+:class:`matplotlib.figure.Figure`, then :meth:`~matplotlib.figure.Figure.subplots`, then
+:meth:`~matplotlib.figure.Figure.savefig`, which attaches the canvas the format needs -- so a
+render leaves no trace behind it and depends on nothing left in front of it. This is
+matplotlib's own recommendation for any non-interactive context, on the grounds that the
+pyplot registry leaks; here it also removes the close-the-figure bookkeeping that registry
+made necessary, and with it the only reason this module's result could depend on what ran
+before it. Card #100.
+
 The renderer is under CI rather than optional-and-skipped. That is a decision, not an
 oversight: an extra CI does not install is a guarantee nobody checks, and the cheapest way to
 keep this one honest was to name ``figures`` in the workflow's install line.
@@ -49,10 +61,7 @@ def render(figure: Figure, *, theme: str = "light") -> Any:
             below 3:1 contrast against the surface with no visible direct label. The rule is
             not dismissable, so the renderer refuses rather than drawing an unreadable mark.
     """
-    import matplotlib
-
-    matplotlib.use("Agg", force=False)
-    import matplotlib.pyplot as plt
+    from matplotlib.figure import Figure as MplFigure
 
     active = get_theme(theme)
     unlabelled = figure.relief(theme)
@@ -65,10 +74,10 @@ def render(figure: Figure, *, theme: str = "light") -> Any:
 
     count = len(figure.panels)
     if figure.layout == "column":
-        fig, axes = plt.subplots(
+        fig = MplFigure(figsize=(_PANEL_WIDTH * 1.7, _HEIGHT * (1.0 + 0.45 * (count - 1))))
+        axes = fig.subplots(
             count,
             1,
-            figsize=(_PANEL_WIDTH * 1.7, _HEIGHT * (1.0 + 0.45 * (count - 1))),
             squeeze=False,
             sharex=True,
             # The first panel is the subject; what is stacked under it is the evidence for
@@ -77,9 +86,8 @@ def render(figure: Figure, *, theme: str = "light") -> Any:
         )
         drawn = [row[0] for row in axes]
     else:
-        fig, axes = plt.subplots(
-            1, count, figsize=(_PANEL_WIDTH * count, _HEIGHT), squeeze=False
-        )
+        fig = MplFigure(figsize=(_PANEL_WIDTH * count, _HEIGHT))
+        axes = fig.subplots(1, count, squeeze=False)
         drawn = list(axes[0])
     fig.patch.set_facecolor(active.plane)
     for position, (panel, ax) in enumerate(zip(figure.panels, drawn, strict=True)):
@@ -108,12 +116,14 @@ def render(figure: Figure, *, theme: str = "light") -> Any:
 
 
 def save(figure: Figure, path: Any, *, theme: str = "light", dpi: int = 200) -> Any:
-    """Render and write to ``path``, closing the matplotlib figure afterwards."""
-    import matplotlib.pyplot as plt
+    """Render and write to ``path``.
 
+    There is nothing to close afterwards. The figure was never registered anywhere, so it is
+    collected when the last reference to it goes -- which is what makes this callable in a
+    loop, in a request handler, or in a test suite that has already run for half an hour.
+    """
     drawn = render(figure, theme=theme)
     drawn.savefig(path, dpi=dpi, facecolor=drawn.get_facecolor())
-    plt.close(drawn)
     return path
 
 

@@ -2,12 +2,27 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-12 (night)
+> ## ▶ Next action — as of 2026-09-13 (early hours)
 >
-> **Handoff, one line: #81 landed and S7 is open at #82 — but the full suite is red at
-> `tests/test_figures.py::test_every_figure_renders_in_both_themes`, which passes alone, in the
-> fast lane, and beside the four slow tests, so #100 needs a full 29-minute run redirected to a
-> file before anyone theorises about it again.**
+> **Handoff, one line: the full suite is green again — 1531 passed in 26 m 45 s on a quiet machine
+> — #100's renderer no longer touches `pyplot` or a global backend, and S7's opening move is still
+> #82.**
+>
+> **#100 is repaired but stays `doing`, and the reason is the interesting part.** Five full-length
+> runs since it was filed are green and none reproduced the failure, so **there is no traceback and
+> the card's second box cannot be ticked** — left unticked deliberately, because a criterion edited
+> until it passes is not a criterion. What was removed is the *mechanism*: `hydms/figures/render.py`
+> no longer calls `matplotlib.use()` or imports `pyplot`, so the rendering path holds no
+> process-wide state for one test's result to depend on, and a subprocess test holds it that way.
+> Not claimed as a fix. **Do not spend a sixth run looking for the traceback** — spend one only if
+> a run goes red on its own, and redirect it to a file when it does.
+>
+> **Before you quote any suite number, check the machine is yours.** On 2026-09-13 two sessions ran
+> this 29-minute command concurrently without knowing, ~18 minutes overlapping, and one landed a
+> source edit *while the other's run was still going* — producing a green that tested the old test
+> body against the new renderer. Contention costs only a minute or two of wall clock, so the
+> misleading number is the **pass**, not the duration. `docs/PHASE-H-RUNBOOK.md` §5 carries the
+> two commands that check it.
 >
 > **#81 is `done`. S7 has started, and `hydms/figures/` is the vocabulary the rest of it draws
 > with.** Five chart builders over the delivery contract's own types, 55 tests, 4.4 s, none `slow`.
@@ -37,13 +52,10 @@
 > **#36** (the five ADRs) is unblocked and has a directory to land into: `docs/adr/README.md`
 > reserves `0001`–`0005` for its five and records why #85 took `0006`.
 >
-> **#91** is startable in parallel; **#94**, **#95**, **#96**, **#97**, **#98**, **#99** and
-> **#100** are open and none is an unfreeze condition. **#100 is `High`** and is why `pytest` with
-> no `-m` is red on this branch: two render smoke tests fail only in a full run. The obvious
-> diagnosis — that one of the four `slow` tests is the trigger — was **tested and refuted** (those
-> four plus the figures tests: 134 passed). Both halves of the suite are green and only the whole
-> is red. The fast lane — which is what CI runs — is **1526 passed, 13 m 32 s**, so CI stays green
-> over it. **#97 is `High`** — `comparison.py:703` sorts with
+> **#91** is startable in parallel; **#94**, **#95**, **#96**, **#97**, **#98** and **#99** are
+> open and none is an unfreeze condition. **#100 is no longer the thing blocking a believable full
+> run** — `pytest` with no `-m` is **1531 passed, 26 m 45 s** as of 2026-09-13; see the top of this
+> block for why it is still `doing`. **#97 is `High`** — `comparison.py:703` sorts with
 > pandas' default unstable quicksort over a tied key, which makes a *published* document
 > non-reproducible; one keyword, and do not loosen the comparison. **#7** still owes a portable
 > artifact — `artifacts/` is gitignored, so `v3` is on the maintainer's machine and nowhere else,
@@ -863,7 +875,56 @@ and their authority is over intent, not over facts.
 
 ---
 
-### Handoff -- 2026-09-12 (latest) - #81 is done; S7 has started and the charts found two defects
+### Handoff -- 2026-09-13 (latest) - #100 is repaired without a traceback, and three green runs were measuring nothing
+
+**The suite is green: 1531 passed, 26 m 45 s, exit 0**, `pytest` with no `-m`, `--tb=long -rf`
+redirected to a file, on a machine checked to be quiet before and after. That is the number to
+quote, and it is the first one on this card that was measured under conditions anybody stated.
+
+**#100's renderer is repaired and the card stays `doing`.** `hydms/figures/render.py` no longer
+calls `matplotlib.use()` and no longer imports `pyplot`; it builds `matplotlib.figure.Figure`
+directly and lets `savefig` attach the canvas the format needs, so `save()` has nothing to close
+and the rendering path holds no process-wide state. `test_rendering_leaves_the_interpreter_as_it_found_it`
+renders in a **subprocess** and asserts a fresh interpreter finishes a `save()` with pyplot
+unimported and the stored backend unmoved -- in-process it would compare two identical values and
+pass against the code it exists to reject. None of this is claimed as the fix: five full-length
+runs since the filing are green, so **no traceback exists**, the card's second box stays unticked
+on purpose, and only a future red run can tick it.
+
+**The part worth carrying forward is not the repair.** Two sessions worked #100 concurrently in
+this one worktree on the night of 2026-09-12/13, neither aware of the other, and **three of the
+four green runs the card rested on overlapped each other**. One session landed its repair at
+00:29:18 while the other's run -- started 00:10:59 -- had not yet reached the figures tests.
+pytest imports test modules at collection but a production module whenever the code first reaches
+it, so that run collected the *old* test body and then imported the *new* renderer off disk
+twenty-five minutes later. Its green described a combination nobody wrote. The card recorded that
+run as "on the same commit with a clean tree": true of git, false of the machine.
+
+So **"clean tree" is not the check** -- `git status` cannot see another process. Before a run you
+intend to quote a number from:
+
+```
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Select ProcessId, CreationDate, CommandLine
+```
+
+and print `Get-Date` either side of it, so a source mtime inside that window tells you the run was
+not a measurement. Contention costs only a minute or two of wall clock here (26 m 45 s quiet against
+28 m 24 s contended), which is the trap: **the number that misleads is the pass, not the duration.**
+`docs/PHASE-H-RUNBOOK.md` §5 now carries this beside the two suite counts.
+
+**Two findings boxed on other cards while passing through, neither actioned, neither an unfreeze
+condition.**
+
+| Card | Finding |
+|---|---|
+| **#1** | `matplotlib` is installed twice in `Project` -- conda's 3.9.2 metadata with pip's 3.10.1 written over it, one package directory, `_version.py` reading 3.10.1. So `conda env export` reports a version this machine does not run, and `pyproject.toml` floors it at `>=3.8` so CI resolves a third. First instance found where the shadowed package is one a *test* depends on |
+| **#68** | **`scripts/check_board.py` has no done-card checkbox rule**, and #23, #29, #71, #94, #97, #100 and this README all state that it does. Its docstring lists six promises and boxes are not among them; nothing in `scripts/` or `tests/` reads a `- [ ]`; and #1, #14, #30, #34 and #86 are `done` carrying **eleven** unticked boxes while the checker prints `OK   100 cards`. The convention is good and worth keeping -- a `done` card's unticked boxes are how this board records a finding that is not work -- but it is a convention, and #97 and #100 were both *filed* on the belief that it was a check |
+
+**S7's opening move is unchanged: #82**, `app/main.py` as an HTTP client of the service, handing
+each `PredictionResult` to a builder in `hydms.figures`. It must not acquire a matplotlib call of
+its own -- and after this card, there is no longer a global backend for one to fight over.
+
+### Handoff -- 2026-09-12 (earlier) - #81 is done; S7 has started and the charts found two defects
 
 **Start here.** Ask the board, not this block:
 

@@ -46,6 +46,30 @@ That constraint is what keeps the job under a minute with no install step.
 - [x] `.github/workflows/integrity.yml` runs it on push, PR and dispatch against `main`
 - [x] Negative-tested: a broken board produces a non-zero exit and names every violation
 - [x] No `pip install` step; runs on a bare `setup-python`
+- [ ] **Six cards and the board README credit this script with a rule it does not have.** Found
+      2026-09-13 by #100, which was itself *filed* on the belief. The claim, stated mechanically
+      in #23, #29, #71, #94, #97, #100 and `kanban-hardening/README.md`, is that
+      "`scripts/check_board.py` refuses a `done` card carrying an unticked box". It does not:
+
+      | asked | answer |
+      |---|---|
+      | the script's own docstring | lists six promises; checkboxes are not among them |
+      | `grep` for `- [ ]`, `unticked`, `unchecked` across `scripts/` and `tests/` | no rule anywhere |
+      | `done` cards carrying unticked boxes today | **#1, #14, #30, #34, #86 — eleven boxes** |
+      | `python scripts/check_board.py` | `OK   100 cards ... freeze in force.` |
+
+      The README already describes the *practice* correctly at its 2026-09-07 handoff — "#30 moved
+      to `done` ... its three unticked boxes are recorded findings, not work" — so the convention is
+      deliberate and worth keeping: filing a new card instead of reopening a closed one preserves
+      the closed card's history, and a `done` card's unticked boxes are how this board records a
+      finding that is not work. **The error is only in calling it a check.** It is load-bearing
+      where it appears — #97 and #100 both give it as the reason they exist as separate cards — so
+      a session that believes it will keep spending cards on it, and nobody will notice the day a
+      box that *is* work gets closed over, because nothing goes red.
+
+      Left unticked rather than actioned, and deliberately so: the fix is a choice between
+      implementing the rule and correcting seven files' prose, this card is `done`, and Phase H is
+      frozen against work that is not in the runbook. **Not an unfreeze condition.**
 
 ## Runnable check
 

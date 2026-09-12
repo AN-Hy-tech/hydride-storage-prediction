@@ -711,13 +711,100 @@ def test_every_figure_renders_in_both_themes(
     """Smoke only. CI installs the `figures` extra so this runs rather than skips, but no
     guarantee above rests on it: what would be lost is a check that the drawing code
     executes, not a check that a chart tells the truth."""
-    matplotlib = pytest.importorskip("matplotlib", reason="the `figures` extra is not installed")
-    matplotlib.use("Agg", force=True)
+    pytest.importorskip("matplotlib", reason="the `figures` extra is not installed")
     from hydms.figures.render import save
 
     for figure in figures(out_of_fold, neighbours):
         written = save(figure, tmp_path / f"{figure.name}-{mode}.png", theme=mode)
         assert Path(written).stat().st_size > 0
+
+
+#: Rendered in a *fresh* interpreter by the test below. It reports two facts about the process
+#: after one `save()`: whether pyplot was dragged in, and whether the stored backend moved.
+#:
+#: The backend is read the way matplotlib stores it rather than through `rcParams["backend"]`,
+#: because that key resolves an "auto" sentinel on first read -- importing pyplot and a GUI
+#: toolkit as a side effect. The obvious spelling of this check would manufacture the state it
+#: is meant to detect.
+_STATE_PROBE = """
+import sys
+
+import matplotlib
+
+stored = dict.__getitem__(matplotlib.rcParams, "backend")
+
+from hydms.figures.charts import Axis, Figure, MEASURED, Panel, Series
+from hydms.figures.render import save
+
+save(
+    Figure(
+        name="probe",
+        title="probe",
+        panels=(
+            Panel(
+                title="one",
+                x=Axis(label="x", unit="wt%", lower=0.0, upper=2.0),
+                y=Axis(label="y", unit="wt%", lower=0.0, upper=2.0),
+                series=(
+                    Series(
+                        name="measured",
+                        origin=MEASURED,
+                        mark="dot",
+                        x=(1.0,),
+                        y=(1.0,),
+                        slot=1,
+                    ),
+                ),
+            ),
+        ),
+        caption="a render in a process that has done nothing else",
+    ),
+    sys.argv[1],
+)
+
+print("pyplot:", "matplotlib.pyplot" in sys.modules)
+print("backend-moved:", dict.__getitem__(matplotlib.rcParams, "backend") != stored)
+"""
+
+
+def test_rendering_leaves_the_interpreter_as_it_found_it(tmp_path: Path) -> None:
+    """Card #100: a render must not depend on what ran before it, or change what runs after.
+
+    The defect that card describes -- this file green on its own and red in a full suite -- is
+    only *possible* because rendering read and wrote process-wide state: it chose a backend, and
+    it registered every figure in pyplot's global list. This asserts the property that puts the
+    whole class of defect out of reach, rather than the one symptom, because the symptom is
+    invisible to every per-file run and did not reproduce in two full runs.
+
+    **It runs in a subprocess, and that is the point.** In this process pyplot may already be
+    imported and the backend already pinned by whatever ran earlier -- including, before the
+    repair, the smoke test a few lines up. An in-process version of this check would therefore
+    compare two identical values and pass against the very code it exists to reject. A fresh
+    interpreter is the only place where "renders without ever importing pyplot" is observable.
+    """
+    pytest.importorskip("matplotlib", reason="the `figures` extra is not installed")
+    import subprocess
+    import sys
+
+    finished = subprocess.run(
+        [sys.executable, "-c", _STATE_PROBE, str(tmp_path / "probe.png")],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+
+    assert finished.returncode == 0, (
+        f"a render in a fresh interpreter failed outright:\n{finished.stderr}"
+    )
+    assert "pyplot: False" in finished.stdout, (
+        "rendering imported pyplot, whose global figure registry is what `save()` used to have "
+        f"to clean up after itself:\n{finished.stdout}"
+    )
+    assert "backend-moved: False" in finished.stdout, (
+        "rendering changed the interpreter's matplotlib backend -- the process-wide state that "
+        f"lets one test's result depend on whether another ran first:\n{finished.stdout}"
+    )
+    assert (tmp_path / "probe.png").stat().st_size > 0
 
 
 def test_the_renderer_refuses_a_figure_that_breaks_the_relief_rule() -> None:

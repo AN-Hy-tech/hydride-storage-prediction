@@ -108,6 +108,24 @@ aliases. Pin it before anyone writes code against the wrong interpreter.
       deny-list and that file was never on it, so option 1 is not blocked by the charter. Do not
       start the rebuild unasked: it is a long run, and option 1 is only worth it if the gate
       comparison is actually going to be read. Not an unfreeze condition.
+- [ ] **`matplotlib` is installed twice in `Project`, and the export names the version that is not
+      running.** Found 2026-09-13 by #100, which needed to know what the renderer was actually
+      being drawn by. `site-packages` carries two metadata directories over one package:
+
+      | dist-info | `INSTALLER` | written |
+      |---|---|---|
+      | `matplotlib-3.9.2.dist-info` | `conda` | 2024-11-25 |
+      | `matplotlib-3.10.1.dist-info` | `pip` | 2025-04-22 |
+
+      `matplotlib/_version.py` reads **3.10.1**, so pip installed over the conda package and conda's
+      metadata was left behind rather than removed. The consequence is the one this card exists to
+      prevent: **`conda env export -n Project` reports 3.9.2** — a version this machine does not
+      run — and CLAUDE.md names that export as the source of truth for versions until this card's
+      lock is trustworthy. `pyproject.toml` floors the `figures` extra at `matplotlib>=3.8`, so CI
+      resolves a third version again, and nothing compares the three. This is one more instance of
+      the pip-over-conda pollution recorded in the Narrative below, not a new problem; it is boxed
+      here because it is the first one found where the shadowed package is one a *test* depends on.
+      **Not an unfreeze condition**, and not actioned: the remedy is the open box above.
 
 ## Runnable check
 

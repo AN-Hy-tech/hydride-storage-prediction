@@ -14,8 +14,16 @@ tags: [ph, l6]
 > **Owns (hidden behind this module):** Whether the full suite can be believed when it is red.
 
 **This card is NOT an unfreeze condition.** It was filed on 2026-09-12 by #81, whose own code is the
-subject. Filed rather than reopening #81: that card is `done`, and `scripts/check_board.py` refuses
-a `done` card carrying an unticked box — the same reason #97 was filed rather than reopening #25.
+subject. Filed rather than reopening #81: that card is `done`, and ~~`scripts/check_board.py` refuses
+a `done` card carrying an unticked box~~ — the same reason #97 was filed rather than reopening #25.
+
+> **Correction, 2026-09-13: `check_board.py` does no such thing.** It has no checkbox rule at all —
+> its docstring lists what it promises and boxes are not among it, and nothing in `scripts/` or
+> `tests/` reads a `- [ ]`. Five `done` cards (#1, #14, #30, #34, #86) carry **eleven** unticked
+> boxes between them right now and `python scripts/check_board.py` prints `OK   100 cards`. Filing a
+> new card instead of reopening a closed one is a good **convention** — it keeps a closed card's
+> history intact — but it is a convention, and six cards plus `kanban-hardening/README.md` state it
+> as a mechanical check. Recorded, with the evidence, as a box on **#68**, which owns the checker.
 
 **It is `High` because a red full suite is the first thing the next session meets, and nothing in
 CI will ever mention it.** The workflow runs `-m "not slow"`, which passes.
@@ -54,6 +62,7 @@ re-derive the arithmetic above; it has been walked.
 | `shap` flips the matplotlib backend | `import shap; matplotlib.get_backend()` | It **does** — `qtagg` — and `matplotlib.use("Agg", force=True)` still switches back and `save()` renders fine. Not it on its own |
 | A TensorFlow-importing test first | `pytest tests/data/test_golden.py tests/test_figures.py -k "renders or twenty"` | **3 passed.** Not it |
 | The test's own `tmp_path` / path length | names are short; the isolated run writes the same files | Not it |
+| **Another process running the suite at the same time** | never checked | **Open, and it is the one variable this table has never listed.** Every row above is a hypothesis about state *inside* one interpreter. On 2026-09-13 two full runs overlapped on this machine for about eighteen minutes with neither session aware of the other, which is how the gap was noticed. No claim that it caused the original red run — see the third narrative entry — but nothing excludes it either, and it is free to control for |
 
 **The traceback was lost and that is the first thing to get back.** The full run was piped through
 PowerShell's `Select-Object -Last 15`, which kept the summary and discarded every `FAILED` block.
@@ -62,12 +71,29 @@ itself** — 29 minutes, output redirected to a file, and then read the tracebac
 rather than trying to find a cheaper reproduction first: two have already been tried and both were
 green.
 
-**Before spending it, rule out a flake.** A single observation is one observation. If a second full
-run is green, this is intermittent and belongs beside #97 in kind — an intermittent failure with a
-named symptom and no named trigger — and the repair below is still worth making, on its own merits,
-because a library that mutates global backend state is the shape that produces exactly this.
+~~**Before spending it, rule out a flake.**~~ **It was spent, and it is a flake.** A second full
+run — 29 minutes, `--tb=long`, redirected to a file, on the same commit with a clean tree — came
+back **1530 passed, 27 m 29 s, exit 0**. No failure, no traceback, nothing to read. So the two full
+runs disagree, and this is **intermittent**: it belongs beside #97 in kind — a named symptom with
+no named trigger — and the repair below was made on the defect's *shape* rather than on a
+traceback, which is the close this card's own third box provides for.
 
-**The repair that is probably right, and must not be applied as a guess.**
+| Command | Result |
+|---|---|
+| `pytest` (full), second run, same commit | **1530 passed**, 27 m 29 s — **green** |
+
+Two things that fell out of the second run and are worth more than the run itself:
+
+- **The collected count is 1530, and the original red run reported 1529** (2 failed + 1527 passed).
+  The fast lane's own arithmetic agrees with 1530 (1526 passed + 4 deselected). So the red run was
+  a test *short*, which a pure ordering effect does not explain and which nobody has accounted for.
+- **There is no test-randomisation plugin.** Installed plugins are `anyio`, `dash` and `cov` only,
+  so collection order is deterministic and the two runs really did execute the same tests in the
+  same order to different ends. That is what makes "intermittent" the honest word rather than
+  "order-dependent", which is what this card is still named after.
+
+**The repair that is probably right, and must not be applied as a guess.** ~~probably right~~ —
+**applied, on the last clause of this paragraph rather than the first.**
 `hydms/figures/render.py` imports `matplotlib.pyplot` and calls `matplotlib.use("Agg",
 force=False)` — a library mutating global interpreter state, which is exactly the shape that makes
 a test order-dependent. The pyplot-free API (`matplotlib.figure.Figure` plus
@@ -76,27 +102,58 @@ bookkeeping with it. If the traceback points there, that is the fix. If it point
 **do that instead** — and the pyplot removal is still worth doing, on its own merits, in the same
 commit.
 
+There was no traceback to point anywhere, so it was done on its own merits and is **not claimed as
+a fix**. What can be said exactly: the two lines removed were the only process-wide state the
+rendering path touched, so the class of defect the card describes is no longer *possible* by that
+route. Whether it was ever that route is unknown and now unknowable. One detail the paragraph
+above gets slightly wrong in passing: `FigureCanvasAgg` is not needed either. `Figure.savefig`
+attaches whatever canvas the output format calls for, so the import list is one name, not two.
+
 ## Done when
 
-- [ ] A **second full run** says whether this is deterministic or intermittent, and the answer is
-      written here. One observation is one observation
+- [x] A **second full run** says whether this is deterministic or intermittent, and the answer is
+      written here. One observation is one observation — **intermittent: 1530 passed, 27 m 29 s**
 - [ ] The traceback is in hand from a run that actually failed, not inferred and not from a subset.
       `pytest --tb=long` with the output redirected to a file — no subset reproduces it, so the
-      29-minute run is the price
-- [ ] The **cause** is named in this card's narrative, or — if two full runs disagree — the card
+      29-minute run is the price.
+      **This box cannot be ticked and is why the card is still `doing`.** Three runs have now been
+      spent (16 m 28 s, 17 m 09 s, 27 m 29 s) and every one was green; there is no failing run to
+      take a traceback from. It is left unticked rather than reworded, because a criterion edited
+      until it passes is not a criterion. What would tick it: the next full run that goes red, with
+      its output redirected to a file. **The trap this card was filed on is now disarmed** — the
+      original traceback was lost to a truncating pipeline, so if a red run ever happens again, the
+      `## Runnable check` above is the command that keeps it
+- [x] The **cause** is named in this card's narrative, or — if two full runs disagree — the card
       says plainly that the trigger is unnamed and the repair was made on the defect's shape
-      rather than on its trigger. #97 is the precedent for that being an acceptable close
-- [ ] `hydms/figures/render.py` no longer imports `matplotlib.pyplot` and no longer calls
+      rather than on its trigger. #97 is the precedent for that being an acceptable close.
+      **The two full runs disagree. The trigger is unnamed.** The repair below was made on the
+      shape
+- [x] `hydms/figures/render.py` no longer imports `matplotlib.pyplot` and no longer calls
       `matplotlib.use()`. A library that renders to a file has no business choosing a backend
-- [ ] `tests/test_figures.py` no longer needs `matplotlib.use("Agg", force=True)` either. If the
+- [x] `tests/test_figures.py` no longer needs `matplotlib.use("Agg", force=True)` either. If the
       renderer needs no backend, neither does its test, and a test that sets one is a test that can
       mask the defect it is there to catch
-- [ ] **Green in a full run**, confirmed by `pytest` with no `-m`, and the count recorded. A fast-lane
-      pass is what this defect already had
-- [ ] A test that would have caught it. Ordering-dependence is invisible to every per-file run, so
+- [x] **Green in a full run**, confirmed by `pytest` with no `-m`, and the count recorded. A fast-lane
+      pass is what this defect already had.
+      **1531 passed, 0 failed, 26 m 45 s (1605.16 s), exit 0** — 2026-09-13, 01:01:20 → 01:28:10,
+      `--tb=long -rf` redirected to a file, over the repaired renderer and this card's own edits.
+      **It is the only run on this card measured on a quiet machine**, checked before starting and
+      after finishing: no other `python.exe` alive either side of it. The four earlier green runs
+      all overlapped another session's (see the ruled-out table's last row).
+      **1531 and not 1530** because the repair added
+      `test_rendering_leaves_the_interpreter_as_it_found_it`; 1530 + 1 is the whole difference, and
+      the arithmetic closing is worth more than the tick
+- [x] A test that would have caught it. Ordering-dependence is invisible to every per-file run, so
       the check is either running the renderer after a deliberate global-state change, or removing
       the global state so there is nothing to depend on — the second box is the cheaper one and
-      makes this box free
+      makes this box free.
+      `test_rendering_leaves_the_interpreter_as_it_found_it` renders in a **subprocess** and asserts
+      that a fresh interpreter finishes a `save()` with pyplot still unimported and the stored
+      backend unmoved. The subprocess is not ceremony: in-process, pyplot is already imported and
+      the backend already pinned by whatever ran earlier — including, before the repair, the smoke
+      test forty lines above it — so an in-process spelling compares two identical values and
+      passes against the very code it exists to reject. It was checked by reintroducing the three
+      removed lines: it goes red, naming pyplot. 1.8 s, so no `slow` marker
 
 ## Runnable check
 
@@ -135,3 +192,77 @@ conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
   interact. The premise it smuggles in is independence, which is the very thing an
   order-dependent failure denies. Filing the card on it was right (it was the one testable claim
   available); stating it as the diagnosis would not have been. (by @assistant)
+
+- 2026-09-13 (a second session, concurrent with the one above): **it is intermittent, and the
+  repair landed without a traceback.** Two runs were spent looking for one. The card's prescribed
+  reproduction — the four `slow` files plus `tests/test_figures.py` — gave **134 passed in
+  17 m 09 s**, independently reproducing the refutation the session above had just committed. The
+  full suite then gave **1530 passed in 27 m 29 s, exit 0**, on the same commit with a clean tree.
+  Three green runs, no failing one, so **there is no traceback to be had** and the second box stays
+  unticked with the card `doing`.
+
+  What was removed is the mechanism rather than the fault. `render()` called
+  `matplotlib.use("Agg", force=False)` and imported `pyplot`; `save()` then had to `plt.close()`
+  what pyplot had registered. That is two pieces of process-wide state — a current backend and a
+  global figure list — read and written by a library whose whole job is to turn a description into
+  a file. It is the only such state in the rendering path: matplotlib is named in exactly two
+  places in the repository, and both were these. The pyplot-free object graph
+  (`Figure` → `.subplots()` → `.savefig()`) needs neither, which is matplotlib's own
+  recommendation for any non-interactive context. **This does not prove the intermittent failure is
+  gone** — nothing could, without a reproduction — but it removes the only route by which one
+  render could have depended on what ran before it.
+
+  Two smaller things worth keeping. **The ambient backend on this machine is `qtagg`, not `Agg`**:
+  PyQt5 is installed, so a bare `get_backend()` resolves to it and drags in the GUI toolkit. That
+  is the condition `force=False` was quietly negotiating with, and it is why the old test had to
+  pin `Agg` itself. And the guard added here was **checked against the code it rejects** before
+  being trusted: the three removed lines were put back, the test went red naming pyplot, and they
+  were removed again. Its first draft ran in-process and was *vacuous* — it sat below the smoke
+  test that had already imported pyplot, so it compared two identical values and passed against the
+  old renderer. Moving it into a subprocess is what made it a check rather than a decoration.
+  (by @assistant)
+
+- 2026-09-13 (a third session, concurrent with the second and unaware of it until afterwards):
+  **a fourth full run, green — and the variable none of the three sessions was controlling for.**
+  `conda run -n Project python -m pytest --tb=long`, redirected to a file as the runnable check
+  says: **1530 passed, 102 warnings, 28 m 24 s (1704.35 s), exit 0**, 00:10:59 → 00:39:28, zero
+  failure markers in 49 KB of output. No traceback, because nothing failed.
+
+  **That run is not a clean observation, and how it got dirty is worth more than its result.** The
+  working tree changed *underneath it*: `tests/test_figures.py` at 00:28:47, `hydms/figures/render.py`
+  at 00:29:18, this card at 00:30:34 — the second session's repair, landing mid-run. Because
+  `hydms/figures/__init__.py` does not import `render` and the test imports it lazily inside the
+  test body, the run collected the **old** test module at startup — `matplotlib.use("Agg",
+  force=True)` still in it — and then imported the **new** pyplot-free renderer off disk at ~00:36.
+  So what it actually exercised was a hybrid nobody designed: the repaired renderer under the
+  unrepaired test, at the end of a full suite. Green. Weak evidence for the repair, and no evidence
+  at all about the defect.
+
+  **The same applies to the run recorded above it.** The 27 m 29 s run is described there as "on
+  the same commit with a clean tree". Git was clean and the commit was the same — but the machine
+  was not its own. By arithmetic it started around 00:01:18 and the fourth run started 00:10:59, so
+  they shared the CPU for roughly eighteen minutes. The post-repair run was launched at 00:30:44,
+  nine minutes before the fourth ended. **Three of the four "independent" green runs on this card
+  overlapped each other.**
+
+  **What this does and does not license.** It does *not* say concurrency caused the original red
+  run; there is no evidence either way, and by this card's own standard nothing can be claimed
+  without a reproduction. What it says is narrower and still useful: the ruled-out table was
+  complete only over hypotheses about a single interpreter, "what else was running" was never in
+  it, and the signature fits the one thing this defect is known for — visible only in a run long
+  enough to overlap something, invisible in every subset, never seen again. It is also the cheapest
+  row in the table to control for: run the suite on a quiet machine and check first.
+
+  One smaller thing the card lists as unexplained. **The red run being a test short (1529 against
+  1530) does not need a theory.** Its three commands — the file alone, the fast lane, the full run
+  — were run at different points while #81 was still being developed, so a one-test difference
+  between them is ordinary, not a clue.
+
+  **And the evidence against the row I just added, which belongs here rather than nowhere.** The
+  quiet run took **26 m 45 s** against the contended **28 m 24 s** and **27 m 29 s** — a cost of
+  one to two minutes, not the collapse two full suites sharing four cores might have suggested.
+  So the machine was not being driven anywhere near its limit, and "the suite was starved of CPU
+  or memory" is a *weak* reading of the original failure on this evidence. What survives is the
+  narrow claim: two processes were reading and writing one working tree, that was never on the
+  list, and it is now. It is a row to be excluded cheaply, not a suspect with a motive.
+  (by @assistant)
