@@ -51,6 +51,22 @@ A figure from `REPORT.md` or the archival pipeline. It is *history*, not current
 was produced by a pipeline with thirteen named leaks.
 _Avoid_: quoting it without the qualifier
 
+**Reading** *(of a number)*:
+**Which evidence set a number was computed over** — never how the number was produced. The three
+scores above are three readings of one model; `reports/model/evaluation-metrics.csv` carries a
+column of that name; `hydms.figures.charts.parity()` takes one panel per reading, in the same
+sense. It is not a synonym for "measured versus predicted": every point in a parity panel is a
+prediction, and what the panel's name states is which protocol scored it.
+_Avoid_: "reading" for the origin of a mark *(the charts call that `origin`, deliberately)*, and
+"the out-of-fold reading" as though it named a model
+
+> *State of the term, not part of the definition* (card #81, 2026-09-12): the collision was caught
+> before it landed rather than after. `Series` was first written with a `reading` field holding
+> `measured` / `predicted`, which would have put two senses of the word inside one module and one
+> import of `evaluate`'s tables away from a page that draws both. The chart vocabulary has
+> `Series.origin` instead, and `parity(readings=...)` keeps the word in the sense this glossary
+> defines. Nothing enforces that — this entry is the whole of it.
+
 ---
 
 ## What is being predicted

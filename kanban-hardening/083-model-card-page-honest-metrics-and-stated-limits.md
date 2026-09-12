@@ -114,6 +114,28 @@ DOE system target, and the published figures inherited as though nothing had cha
       The arithmetic and the other two rows are in #14's box; the L4 ceiling screen that catches
       this class at serve time is #48's. Not an unfreeze condition.
 
+- [ ] **The parity figure's second panel has no data on disk, and this page must not ship with
+      one panel** (added 2026-09-12 by #81). The first box above asks for random-split and
+      leave-one-class-out metrics "together, at the same scale", and
+      `hydms.figures.charts.parity()` makes that structural: it refuses a figure with fewer than
+      two readings, because a parity plot of one protocol is the optimistic number on its own
+      page. What it cannot supply is the second reading. `hydms.surrogate.train` writes
+      `evaluation.out_of_fold` — 893 scored rows — and `hydms.surrogate.loco` writes four tables
+      and that is not one of them, so `reports/loco/` holds ten class averages and no scored
+      rows. **Card #98** adds the table; it needs a LOACO run, which is the maintainer's.
+
+      Until then this page shows the per-class R² comparison, which *is* the right evidence for
+      AC-6's claim and the wrong evidence for a scatter: it can say a family transfers badly, not
+      where. Do not relax `parity()` to draw the one panel it can. Not an unfreeze condition.
+
+- [ ] **Every chart on this page comes from `hydms.figures`, none from a local helper** (added
+      2026-09-12 by #81). The five builders exist so that this page and #82's cannot draw the
+      same quantity two different ways, which is the drift a per-page chart helper always
+      reaches. The parity plot and the domain strip are this page's; `prediction_band` and
+      `temperature_sweep` are #82's; `nearest_neighbours` is shared. A chart this page needs that
+      `hydms.figures` does not have is a builder added *there*, with its guards, not a matplotlib
+      call added here
+
 ## Runnable check
 
 ```bash

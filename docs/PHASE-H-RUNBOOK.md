@@ -1143,16 +1143,33 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
 **The deliverable.** Streamlit is an **HTTP client**, not an in-process caller, so the API stays the
 single prediction path and HG-3 covers the UI too.
 
-- [ ] **#81** App chart vocabulary in `hydms/figures/`. Use the `dataviz` skill. Five charts, each
+- [x] **#81** App chart vocabulary in `hydms/figures/`. **Done 2026-09-12.** Five charts, each
       chosen because it makes a false prediction harder to believe:
       1. **Prediction band** — the point estimate drawn *inside* its conformal interval, width stated
          numerically. A wide band must look wide.
       2. **Domain strip** — where this composition sits against the training distribution and the AD ceiling.
       3. **Temperature sweep** — predicted wt% across the valid T range with the interval as a band.
-         Only 39 test rows sit above 500 K; the chart must not hide that.
+         ~~Only 39 test rows sit above 500 K~~ — that is `REPORT.md`'s count over the archival
+         **247-row test split**, which this protocol no longer has. Measured against
+         `reports/model/model-out-of-fold.csv`: **130 of 893** scored rows sit above 500 K. The
+         claim is unchanged (15.8% then, 14.6% now); only the number was inherited. The string
+         still stands in four docstrings and two tests — that is **#99**.
       4. **Nearest neighbours** — the k closest training alloys by ElMD with their *measured* capacities.
-      5. **Parity plot** *(model card)* — predicted vs measured on the held-out test set, with the
-         **LOACO** version beside it. The optimistic number and the honest number share a page.
+      5. **Parity plot** *(model card)* — predicted vs measured, with the **LOACO** version beside it
+         at the same scale. `parity()` refuses fewer than two readings, so the optimistic panel
+         cannot ship alone — **and the LOACO panel has no data**: `train` writes
+         `evaluation.out_of_fold`, `loco` does not, so `reports/loco/` holds ten class averages and
+         no scored rows. That is **#98**, and it needs a run.
+
+      **The shape it landed in.** A chart is a *description* before it is an image:
+      `hydms/figures/charts.py` builds `Figure` objects and imports no plotting library;
+      `render.py` draws one in matplotlib. Every promise above is a construction error in the
+      description — a predicted `Series` cannot exist without a band, a quantitative `Axis` cannot
+      exist without a unit, a `Panel` refuses a series its axis would clip (so a builder widens the
+      axis instead), and `Figure.shared` makes "at the same scale" checked rather than intended.
+      Put in the renderer, each would have been a guarantee that runs only where a plotting library
+      is installed. matplotlib is a new `figures` extra, already in both lock files, and **CI
+      installs it**.
 - [ ] **#82** `app/main.py` — formula + temperature → capacity.
 - [ ] **#83** `app/pages/` model card. **Must carry two things** or the UI recreates the problem it was
       built to fix: the material-vs-system caveat from PRD §4.4 (comparing a material wt% to a DOE
@@ -1222,6 +1239,23 @@ single prediction path and HG-3 covers the UI too.
       condition**. `hydms.delivery.contract.Interval` raises `ContractError` on `upper < lower`
       and nothing between the surrogate and that boundary looks at the sign, so a crossed
       candidate is a loud failure rather than a refusal carrying a reason code.
+- [ ] **#100** A render test passes alone and fails after the slow tests. Filed by #81,
+      2026-09-12; **not an unfreeze condition**, and `High`.
+      `tests/test_figures.py::test_every_figure_renders_in_both_themes` passes on its own (55) and
+      in the fast lane (1526) and fails in a full run, so the trigger is one of the four `slow`
+      tests that sort before it. **CI runs `-m "not slow"` and will never report it.** The
+      traceback was discarded by a truncating pipeline; get it before changing a line.
+- [ ] **#98** The LOACO run discards its own per-row predictions. Filed by #81, 2026-09-12;
+      **not an unfreeze condition**. `hydms/surrogate/train.py:369` writes
+      `evaluation.out_of_fold` as a table and `hydms/surrogate/loco.py:595` writes four tables
+      without it, so the honest protocol leaves aggregates and the optimistic one leaves 893
+      scored rows. The code change is small; the run is the maintainer's. It holds #83's parity
+      figure shut.
+- [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
+      2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
+      `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.
+      The claim is unaffected and the number is not; `REPORT.md` itself is not touched, which is
+      #89's business.
 - [ ] **#96** An output flag that silently changes the fit. Moved off #34 at its close, 2026-09-12;
       **not an unfreeze condition**. `calibrate --report` is both where a run writes its tables and
       where `deploy.py:163` reads `model-chosen.csv`, so redirecting it to a scratch directory falls

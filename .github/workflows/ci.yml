@@ -137,7 +137,7 @@ jobs:
       # run on every push — this lane has no artifact on disk, so it is also the only half that
       # *can* (card #79).
       - name: Install hydms and its test dependencies
-        run: python -m pip install --disable-pip-version-check -e ".[dev,uq,novelty,api]"
+        run: python -m pip install --disable-pip-version-check -e ".[dev,uq,novelty,api,figures]"
 
       # `-m "not slow"` is what makes this lane fit in its own timeout, and it is what
       # `pyproject.toml` has said the marker means since card #69 wrote it: "slow: takes more

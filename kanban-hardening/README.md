@@ -2,58 +2,56 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-12 (late evening)
+> ## ▶ Next action — as of 2026-09-12 (night)
 >
-> **#80 and #85 are `done`. `docs/API.md` is published and `docs/adr/` exists.** S6 is closed —
-> #80 was its last card — and **three of the four unfreeze conditions now hold**.
+> **Handoff, one line: #81 landed and S7 is open at #82 — but the full suite is red at
+> `tests/test_figures.py::test_every_figure_renders_in_both_themes`, which passes alone and in the
+> fast lane, so start by reading #100's traceback rather than trusting a green `-m "not slow"`.**
 >
-> | Condition | State |
-> |---|---|
-> | Every gate green | **met** — 9 passed, the 3 skips are the frozen AC-5/AC-7/AC-8 |
-> | An artifact version promoted | **met** — `current` → `v3`, 2026-09-12T17:37:26Z |
-> | `docs/API.md` published | **met** — #80, generated, examples captured against `v3` |
-> | The Chapter 1 revision | **#37**, waiting on **#89 alone** |
+> **#81 is `done`. S7 has started, and `hydms/figures/` is the vocabulary the rest of it draws
+> with.** Five chart builders over the delivery contract's own types, 55 tests, 4.4 s, none `slow`.
 >
-> **So the opening move is #81, and #89 runs beside it.** Two different goals, and the first
-> session to read this got them backwards — so they are spelled out separately:
+> **The opening move is #82** — unblocked, with 78 and 81 both `done`. It is `app/main.py`: an HTTP
+> client of the service, handing each `PredictionResult` to a builder. It must not acquire a
+> matplotlib call of its own; a chart it needs that `hydms.figures` does not have is a builder
+> added *there*, with its guards.
 >
 > | Goal | Path | Why it is not the other one |
 > |---|---|---|
-> | **Deliver Phase H's objective** — a user-facing predictor | **S7: #81 → #82 → #84**, then #83 | `docs/FREEZE.md` §Why: *"The stated objective for this phase is a user-facing interface that predicts gravimetric capacity."* The freeze exists so it can be built on defensible numbers, **not instead of it** |
+> | **Deliver Phase H's objective** — a user-facing predictor | **#82 → #84**, then #83 | `docs/FREEZE.md` §Why: *"The stated objective for this phase is a user-facing interface that predicts gravimetric capacity."* The freeze exists so it can be built on defensible numbers, **not instead of it** |
 > | **Lift the freeze** — let PA/PB resume | **#89 → #37** | The four unfreeze bullets gate the *frozen* board reopening. They are not a to-do list for this phase |
 >
-> **The runbook's execution order puts S7 next**, not S8: `S7 needs S6` (closed by #80) and
-> `S8 needs S7`, and §2 says *"S2 and S3 are the only parallelism worth taking. Everything else is
-> a chain."* **#81** is unblocked (29, 30, 76 all `done`) and is where the interface either does or
-> does not inherit this phase's honesty — five charts each chosen because it makes a false
-> prediction harder to believe.
+> Three of the four unfreeze conditions hold (gates green; `current` → `v3`; `docs/API.md`
+> published). The fourth is **#37**, waiting on **#89 alone**, and #89 is independent of S7 — no
+> shared files, no shared blockers — so it runs beside it. **#83 needs both**, which is where the
+> two paths converge.
 >
-> **#89 is genuinely independent** — no shared files, no shared blockers — so it runs beside S7
-> rather than instead of it, and **#83 needs both**, which is where the two paths converge.
+> **#81 filed two cards by measuring its own instructions. Neither is an unfreeze condition.**
 >
-> **#36** (the five ADRs) is unblocked and now has a directory and a numbering convention to land
-> into: `docs/adr/README.md` **reserves `0001`–`0005`** for its five and explains why #85 took
-> `0006` instead of the next free number. #36's later candidates take `0007` onward.
+> | Card | What it is | Who it blocks |
+> |---|---|---|
+> | **#98** | `loco.py:595` writes four tables and not `evaluation.out_of_fold`, so LOACO leaves ten class averages and no scored rows. `parity()` refuses fewer than two readings, so **#83's parity figure cannot be built from committed evidence** | #83's second panel. Needs a **LOACO run** — the maintainer's |
+> | **#99** | *"Only 39 test rows sit above 500 K"* is `REPORT.md`'s count over the archival 247-row test split. Measured now: **130 of 893**. The claim is unchanged; the number was inherited. Three production docstrings and two tests still carry it | nothing |
 >
-> **CI is green on the branch head** (run `34711343772`: 1462 passed, 0 failed, 12 m 46 s; gates
-> 3 passed / 0 failed / 6 skipped). **#97 is new and is `High` anyway.**
-> `test_comparison.py`'s byte-identity test failed **once** and has passed since, with nothing
-> touching `comparison.py` or its inputs — so it is *intermittent*, not environmental. Cause found:
-> `comparison.py:703` calls `sort_values` with pandas' default `kind="quicksort"`, which is
-> documented as **not stable**, and the two swapped rows tie at `rows_blocked == 1`. The card
-> records what was ruled out (versions identical, not platform, not hash seed, no random ordering)
-> so nobody re-walks it. Not an unfreeze condition; one keyword to fix. Do not loosen the
-> comparison.
+> **#36** (the five ADRs) is unblocked and has a directory to land into: `docs/adr/README.md`
+> reserves `0001`–`0005` for its five and records why #85 took `0006`.
 >
-> **#81, #91** are startable in parallel; **#94**, **#95**, **#96** and **#97** are open and none
-> is an unfreeze condition. **#7** still owes a portable artifact — `artifacts/` is gitignored, so `v3`
-> is on the maintainer's machine and nowhere else, and a fresh clone has no model.
+> **#91** is startable in parallel; **#94**, **#95**, **#96**, **#97**, **#98**, **#99** and
+> **#100** are open and none is an unfreeze condition. **#100 is `High`** and is why `pytest` with
+> no `-m` is red on this branch: two render smoke tests are order-dependent behind the four `slow`
+> tests. The fast lane — which is what CI runs — is **1526 passed, 13 m 32 s**, so CI will stay
+> green over it. **#97 is `High`** — `comparison.py:703` sorts with
+> pandas' default unstable quicksort over a tied key, which makes a *published* document
+> non-reproducible; one keyword, and do not loosen the comparison. **#7** still owes a portable
+> artifact — `artifacts/` is gitignored, so `v3` is on the maintainer's machine and nowhere else,
+> and a fresh clone has no model.
 >
-> **One thing to know before touching `docs/API.md`: it is generated.** `python -m
-> hydms.delivery.apidoc --emit` rebuilds it and a test asserts the committed bytes are what the
-> code produces; the prose lives in `hydms/delivery/apidoc.py`. Its examples are real exchanges
-> captured by `--probe`, which is the **only** part that needs a promoted artifact — so after a
-> new fit, re-probe, or the page keeps describing `v3` while saying so on its own face.
+> **Two generated documents on this board, and the rule is the same for both.** `docs/API.md`
+> (`python -m hydms.delivery.apidoc --emit`) and `reports/loco/loco.md`
+> (`python -m hydms.surrogate.loco --emit`) are rebuilt by code and a test asserts the committed
+> bytes are what that code produces. Change the code and regenerate; an edit there fails the suite.
+> `docs/API.md`'s examples come from `--probe`, the only part needing a promoted artifact — so
+> after a new fit, re-probe, or the page keeps describing `v3` while saying so on its own face.
 >
 > **This block is a pointer with a date on it, not a source.** It is the one place on this board
 > that restates state, which means it is the one place that can silently go stale — the cards and
@@ -131,12 +129,20 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | **S1** QA foundation | 69, 70, 5, 71 | 2 |
 | **S2** Data layer | 3, 9, 10, 11, 87, 12, 13, 14, 15 | 7 |
 | **S3** Descriptor layer | 16, 17, 18, 19, 20, 21, 22 | 6 |
-| **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34 | 13 |
+| **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34, 97, 98 | 13 |
 | **S5** Guard rails | 44, 48, 49 | 2.5 |
 | **S6** Delivery: contract + API | 75, 76, 77, 78, 79, 80 | 5 |
 | **S7** Delivery: interface | 81, 82, 83, 84 | 3.5 |
-| **S8** Evidence & close | 89, 85, 86, 35, 36, 37 | 5 |
-| **No stage** | 1, 2, 4, 6, 7, 8, 68, 73, 74, 90, 91 | — |
+| **S8** Evidence & close | 89, 85, 86, 35, 36, 37, 99 | 5 |
+| **No stage** | 1, 2, 4, 6, 7, 8, 68, 73, 74, 90, 91, 92, 93, 94, 95, 96 | — |
+
+**Cards 92–99 were found during the phase, not planned into it.** Each was filed by a card working
+somewhere else, each names the card that found it, and **none is an unfreeze condition** — that
+list is fixed and `../docs/FREEZE.md` exists to resist widening it. They are placed in a stage row
+above where they belong to one (97 and 98 are surrogate-layer defects, 99 is prose), and in *No
+stage* where they are CI or board work that slots in wherever its blockers allow. The day count in
+each row is the runbook's original estimate and is deliberately not re-added to: it is what the
+phase was planned at, and #92 is the card that makes this table checked rather than remembered.
 
 **Every card's own first line now states its stage, and this table is where it comes from.** Until
 2026-09-11 thirty-nine cards still carried the *frozen* board's `Phase 0 / Phase 1 / Phase A`
@@ -854,7 +860,95 @@ and their authority is over intent, not over facts.
 
 ---
 
-### Handoff -- 2026-09-12 (latest) - #80 and #85 are done; S6 is closed and three of four unfreeze conditions hold
+### Handoff -- 2026-09-12 (latest) - #81 is done; S7 has started and the charts found two defects
+
+**Start here.** Ask the board, not this block:
+
+```bash
+bash ../.claude/skills/kanban-ai/scripts/show_blocked.sh .
+```
+
+**What landed.** `hydms/figures/` — the chart vocabulary, three modules — and
+`tests/test_figures.py`, 55 tests in 4.4 s, nothing marked `slow`. S7's first card is closed and
+**#82 is unblocked** (78 and 81 both `done`).
+
+**The shape, because #82 and #83 both build on it.** A chart is a *description* before it is an
+image. `charts.py` builds `Figure` objects and imports no plotting library; `render.py` draws one
+in matplotlib and is thin. That split is not tidiness — **every promise the card makes is a
+property of the description**: a `Series` with `origin=PREDICTED` cannot be constructed without a
+band, a quantitative `Axis` cannot be constructed without a unit, a `Panel` refuses a series or a
+marker its axis would clip (so a builder widens the axis instead of clipping), and `Figure.shared`
+makes "at the same scale" a checked equality rather than an intention. In the renderer, each of
+those would have been a guarantee that only runs where a plotting library is installed, and CI's
+install list would have decided which guarantees this project has.
+
+**The five builders take the delivery contract's own types**, so the app stays an HTTP client: read
+a JSON answer through `answer_from()`, hand the `PredictionResult` to a builder. No chart function
+loads a model, reads an artifact, or touches the surrogate.
+
+**Two defects the card found by measuring its own instructions, both filed, neither an unfreeze
+condition.**
+
+**#99 — the card told it a number that is no longer true.** *"Only 39 test rows sit above 500 K"*
+traces to `REPORT.md:394`, a count over the archival pipeline's **247-row test split**. That split
+does not exist under the group-aware nested protocol, which scores every row out of fold.
+Measured against `reports/model/model-out-of-fold.csv`: **130 of 893**. The *claim* is untouched —
+15.8 % then, 14.6 % now — and only the number was inherited, which is why `TemperatureSupport`
+takes counts instead of carrying a constant. The string still stands in three production
+docstrings and two tests.
+
+**#98 — the honest protocol throws away the evidence a chart needs.**
+`hydms/surrogate/train.py:369` writes `evaluation.out_of_fold`; `hydms/surrogate/loco.py:595`
+writes four tables and that is not one of them. So the random-split protocol leaves 893 scored rows
+and the leave-one-alloy-class-out protocol leaves ten class averages. `parity()` requires at least
+**two** readings by construction — a parity plot of one protocol is the optimistic number on its
+own page — so the figure #83 is meant to carry **cannot be built from committed evidence today**,
+and the refusal's own message says so and names the card. The code change is small; getting the
+table needs a LOACO run, which is the maintainer's. Do not relax `parity()` to draw the panel it
+can.
+
+**A word this project already spends, nearly spent twice.** `Series` was first written with a
+`reading` field holding `measured` / `predicted`. "Reading" already means *which evidence set a
+number was computed over* — the procedure, artifact and transfer scores are three readings of one
+model, and `evaluation-metrics.csv` has a column of that name. Two senses in one module, one import
+away from a page drawing both. The field is `Series.origin`; `parity(readings=...)` keeps the word
+in the glossary's sense; `CONTEXT.md` now has the entry, and nothing enforces it but that entry.
+
+**The palette is computed, not chosen.** Three slots, run through the `dataviz` skill's Node
+validator on the **all-pairs** list in both modes: worst CVD ΔE 9.2 light / 9.4 dark against a gate
+of 8, worst normal-vision ΔE 24.0 / 20.9 against a floor of 15. Three and not eight because the
+reference palette's full set clears only the *adjacent* list and these are scatter and dot plots.
+The light aqua raised the one contrast WARN, so slot 3 carries the relief rule: a series in it needs
+a visible direct label, `Figure.relief()` reports any that does not, and **the renderer refuses such
+a figure**. `tests/test_figures.py` pins every hex and every reported number — which cannot prove
+the palette is safe, because the simulation that decides that runs in another language outside this
+repository, but does force the command in `palette.py`'s docstring to be re-run rather than the
+reasoning re-done.
+
+**Open the PNGs. Two things only the rendered figure showed.** The sweep was first two panels side
+by side sharing an x axis, and a support histogram *beside* the curve it supports is not the claim
+the card makes — hence `Figure.layout='column'`, which is required to share x because stacking is
+itself the claim that the panels line up. And the support bins are unequal (55 K to 100 K), so a
+uniform bar width overstated the narrow bins by up to 2×; `Series.widths` carries the bin extent.
+Both were invisible in the spec and obvious in the image, which is the last step of the skill's
+procedure and the one easiest to skip.
+
+**matplotlib is a new `figures` extra and CI installs it.** `figures = ["matplotlib>=3.8"]`,
+`app = ["hydms[figures]", "streamlit>=1.30"]`, and the workflow now installs
+`.[dev,uq,novelty,api,figures]`. Both lock files already carry matplotlib as a leftover of the
+archival pipeline — `matplotlib-base=3.9.2` and `matplotlib==3.10.1` — so the floor names a version
+`Project` already satisfies and nothing was re-solved. Naming it in CI is the point: an extra CI
+skips is a guarantee nobody checks. It is a *separate* extra from `app` because `render.py` is its
+only importer and the description tests must run with no plotting library at all.
+
+**What #82 should not do.** Not add a matplotlib call of its own. A chart it needs that
+`hydms.figures` does not have is a builder added *there*, with its guards — the five exist so the
+prediction page and the model card cannot draw the same quantity two different ways, which is the
+drift a per-page chart helper always reaches.
+
+---
+
+### Handoff -- 2026-09-12 (earlier, late evening) - #80 and #85 are done; S6 is closed and three of four unfreeze conditions hold
 
 **Start here.** Ask the board, not this block:
 

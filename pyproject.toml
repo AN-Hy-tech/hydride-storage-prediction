@@ -95,8 +95,22 @@ search = ["pymoo>=0.6"]
 # itself version 0.4.25, so pip discards it as inconsistent and the pin is unsatisfiable.
 novelty = ["ElMD>=0.5"]
 
-# Streamlit screening and Pareto-front pages.
-app = ["streamlit>=1.30"]
+# The chart vocabulary (card #81). matplotlib is the only plotting library this project
+# draws with, and it is already in both lock files -- `matplotlib-base=3.9.2` in
+# environment.lock.yml and `matplotlib==3.10.1` in requirements-lock.txt, both leftovers of
+# the archival pipeline -- so the `>=3.8` floor names a version the `Project` environment
+# already satisfies and the locks stay valid.
+#
+# It is its own extra rather than part of `app` because `hydms.figures.render` is the only
+# module that imports it and the app is not the only caller: the thesis figure set is written
+# from a script, and `tests/test_figures.py` must be able to check the *descriptions* with no
+# plotting library present at all. CI installs it (see .github/workflows/ci.yml), which is the
+# point -- an extra CI skips is a guarantee nobody checks.
+figures = ["matplotlib>=3.8"]
+
+# Streamlit screening and Pareto-front pages. It draws what `hydms.figures` describes, so it
+# takes the figures extra with it rather than leaving a page to discover the gap at runtime.
+app = ["hydms[figures]", "streamlit>=1.30"]
 
 # CBFV is the featuriser being *replaced*, kept only so the parity gate can diff against it.
 # It is unlicensed (all rights reserved by default), which is precisely why the descriptor
@@ -293,6 +307,10 @@ module = [
   "uvicorn", "uvicorn.*",
   "pydantic", "pydantic.*",
   "coverage", "coverage.*",
+  # matplotlib (card #81). Same case again: it ships no py.typed marker, and the conda-free
+  # lint lane installs nothing, so it is simply absent there. Only `hydms.figures.render`
+  # imports it, and it does so inside the function.
+  "matplotlib", "matplotlib.*",
 ]
 ignore_missing_imports = true
 
