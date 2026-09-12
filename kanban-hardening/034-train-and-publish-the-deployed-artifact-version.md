@@ -1,6 +1,6 @@
 ---
 id: 34
-status: backlog
+status: done
 priority: High
 blocked_by: [29, 31, 32, 33, 77, 79, 86]
 assignee: "@amirhossein"
@@ -280,22 +280,35 @@ that reason.
       buys is that the remaining work is now *sufficient*: before it, no amount of Phase H work
       could promote anything.
 
-- [ ] `current` points at a certified version — **no longer blocked by a decision; blocked by
-      work, which is the right kind of blocked.** The decision landed, so the command that
-      finishes this card now exists and is:
+- [x] **`current` points at a certified version — DONE 2026-09-12T17:37:26Z.** Run by the
+      maintainer, which is where a command that moves this pointer belongs:
 
-      ```bash
-      python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
+      ```powershell
+      conda run --no-capture-output -n Project python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
       ```
 
-      It still refuses today, and correctly: AC-6, HG-2, HG-3 and HG-4 are skipped and every one
-      of them is Phase H's to land (#30, then S6's #76–#79, then S8's #86). Run it with
-      `--dry-run` after each of those closes to see the list shrink. Do **not** add any of those
-      four to the waiver list — `tests/artifacts/test_waiver_scope.py` is the check that says
-      why, and the command prints each waiver's owning card so the board it belongs to is
-      visible at the prompt
+      It certified `v2` — 3 payloads (model, conformal, scaler), fitted at `4a06011` on
+      2026-09-06T21:31:41Z, notes `deployed fit` — with **9 passed, 0 failed, 3 skipped,
+      0 errored in 175.56 s**, then **wrote `artifacts/v3` carrying the gate report and pointed
+      `current` at it**. `current.json` now reads `v3`, `promoted_at
+      2026-09-12T17:37:26+00:00`, with the three waivers stored beside it.
 
-- [ ] **The waiver summary counts wrong, and no test asserts the string** (found 2026-09-06 by
+      **Two directories for one model is the cost of a manifest that cannot be edited after it is
+      written** — the command says exactly that on stdout. The report could not be added to `v2`,
+      so `v2` stays on disk as the record of the fit and `v3` is the certified pointer target.
+
+      **The waiver stayed an act and never became a property.** `v3`'s embedded report records
+      AC-5, AC-7 and AC-8 as `SKIPPED`, and the run printed *"NOT CHECKED: AC-5, AC-7, AC-8. This
+      run establishes nothing about them."* ~~It still refuses today~~ — the four that must never
+      be waived (AC-6, HG-2, HG-3, HG-4) were green before it was run, their owing cards #30,
+      #77, #79 and #86 having closed, and `tests/artifacts/test_waiver_scope.py` is still the
+      check that would have stopped any of them being named.
+
+      **`artifacts/` is gitignored, so `v3` lives on the maintainer's machine and nowhere else.**
+      A fresh clone still has no model and `predict()` still refuses there. The promotion moved a
+      pointer; it did not make the fit portable, and card #7 is where that would be fixed
+
+- [x] **FIXED — the waiver summary counted wrong, and a test now asserts the string** (found 2026-09-06 by
       running `promote --dry-run --waive AC-5 --waive AC-7 --waive AC-8` against `artifacts/v1`).
       `hydms/surrogate/promote.py` prints
 
@@ -310,7 +323,15 @@ that reason.
       prints correctly to stderr as "4 of 12 criteria are unestablished". One command, one run, six
       lines apart, two answers to the same question. This card's own narrative records the correct
       one, which is how the drift was caught. Fix the expression and assert the sentence: the
-      project's own rule is that no number appears in prose that a test does not check
+      project's own rule is that no number appears in prose that a test does not check.
+
+      **Both halves landed.** `hydms/surrogate/promote.py:222` now prints `{len(outstanding)}`,
+      and `tests/surrogate/test_promote.py:335` asserts the rendered sentence — *"has 1 of 5
+      criteria left to establish"* on a five-criterion fixture with two waived and two passed, so
+      the test would fail on the old expression rather than on an arithmetic identity. Confirmed
+      against the real run on 2026-09-12: with 9 passed and 3 waived it printed **"v2 therefore
+      has 0 of 12 criteria left to establish"**, which is `len(outstanding)`; the broken
+      expression would have said 9 and the stderr block six lines below would have said 0
 
 - [x] **DONE 2026-09-07 — `artifacts/v2` is the deployed fit with a clean provenance line.**
       `artifacts/v1`'s manifest records `git.code_modified: true` — honestly, because a concurrent
@@ -331,7 +352,12 @@ that reason.
       partial-dependence included. So the committed evidence behind Chapter 1 is reproducible at
       the file level from a clean checkout, not merely at the metric level
 
-- [ ] **`--report` is both the output directory and where the deployed configuration is read
+- [x] **MOVED to #96 (2026-09-12).** Both candidate fixes are in the surrogate seam, which is
+      what this box said when it was written, and this card is closing — so it gets an owner
+      rather than a tick. The reasoning stays here, struck through, because #96 is short and
+      this is where it was found.
+
+      ~~**`--report` is both the output directory and where the deployed configuration is read
       from, and that is a trap** (found 2026-09-07, in review). Pointing `--report` at a scratch
       directory to avoid overwriting the committed tables makes `deploy.py:163` look for
       `model-chosen.csv` *there*, not find it, and fall back to **CatBoost's own defaults** — a
@@ -345,9 +371,17 @@ that reason.
       read its own flag so an output redirect cannot move it, or refuse `--save` outright when
       the configuration fell back to defaults, on the same reasoning that makes a probe's
       artifact carry a note — **an artifact that does not say it came from a default is an
-      artifact somebody will promote**
+      artifact somebody will promote**~~
 
-- [ ] **The next version's payload set drops `SCALER_PAYLOAD`** (decided 2026-09-12 on #23,
+- [x] **MOVED to #7 (2026-09-12), because this card turned out not to write the next version in
+      the sense the box meant.** `promote` copies the payload set it certifies — `v3` was written
+      today and carries `model`, `conformal` **and `scaler`**, exactly as `v2` does — so a
+      promotion can never drop a key. Only a *fit* can, and the next fit is #7's full retrain.
+      `CONTEXT.md`'s *Artifact version* entry has been corrected accordingly: it said "the next
+      version written holds a model, its correction and a manifest", and the next version written
+      holds all four.
+
+      ~~**The next version's payload set drops `SCALER_PAYLOAD`** (decided 2026-09-12 on #23,
       boxed here because this card writes the next version). `DeployedFit.payloads` in
       `hydms/surrogate/deploy.py` names three keys under the rule that each is "declared by the
       module that reads it back, so this mapping cannot name a key nothing loads".
@@ -371,7 +405,7 @@ that reason.
       - `CONTEXT.md`'s **Artifact version** entry reads "a model, its correction, its scaler and
         a manifest". Nothing tests that file, so it changes here or it stays wrong.
 
-      Not an unfreeze condition.
+      Not an unfreeze condition.~~
 
 ## Runnable check
 
@@ -503,3 +537,20 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
   writes the pointer three screens read, so it is the maintainer's to run. See
   [[the-maintainer-runs-the-heavy-fits]] — the rule is about *consequence*, not wall time, and a
   three-minute command that certifies an artifact is squarely inside it. (by @assistant)
+
+- 2026-09-12 (close): **Promoted.** The maintainer ran
+  `promote --waive AC-5 --waive AC-7 --waive AC-8`; it certified `v2` with 9 passed, 0 failed,
+  3 skipped in 175.56 s, wrote `v3` carrying the report, and moved `current`. That is the
+  **unfreeze condition's second bullet**, and `docs/FREEZE.md` now has both of its first two
+  boxes ticked — every gate green, and a version promoted. The two that remain are ordinary work:
+  `docs/API.md` (#80) and the Chapter 1 revision (#37), which this close unblocks along with #36.
+
+  Two boxes did not close with the card and were moved rather than ticked, which is the whole of
+  what this card leaves behind. The `--report` trap went to **#96**: both of its candidate fixes
+  live in the surrogate seam and neither is this card's to take. The `SCALER_PAYLOAD` removal went
+  to **#7**, and the reason is a small correction worth keeping — the box said "boxed here because
+  this card writes the next version", and this card *did* write `v3`, which still carries the
+  scaler. **A promotion copies the payload set it certifies; only a fit can change it.** The
+  distinction was invisible until a version was actually written, and `CONTEXT.md` had already
+  promised the opposite in a *State of the term* block that nothing tests. Corrected there too.
+  (by @assistant)

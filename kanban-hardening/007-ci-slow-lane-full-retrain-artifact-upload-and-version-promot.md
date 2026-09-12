@@ -104,6 +104,39 @@ one-line change, not a retrain.
       say which versions it resolved, because the first question to ask of a CI-only failure is
       `Successfully installed`, and today that is four screens deep in a log
 
+- [ ] **The version this lane fits drops `SCALER_PAYLOAD`** (decided 2026-09-12 on #23; boxed on
+      #34 until that card closed and moved it here on 2026-09-12). `DeployedFit.payloads` in
+      `hydms/surrogate/deploy.py` names three keys under the rule that each is "declared by the
+      module that reads it back, so this mapping cannot name a key nothing loads".
+      `SCALER_PAYLOAD` breaks that rule: `scaler_from` has no production call site, because #26
+      fits on raw features and #48 landed as a *capacity* ceiling that reads no scaled matrix.
+      #23 weighed keeping it as insurance against a future refit-on-candidates and rejected
+      that — the insurance only pays for a consumer that scales, and #48 measured that the
+      distance consumer is not coming back.
+
+      **Why this card and not #34.** #34 wrote `artifacts/v3` on 2026-09-12 and it carries
+      `model`, `conformal` **and `scaler`**, exactly as `v2` does. `promote` copies the payload
+      set of the version it certifies; it fits nothing, so it cannot drop a key. **Only a fit can,
+      and the next fit is this lane's retrain.**
+
+      Three things it touches, none of them optional:
+
+      - `DeployedFit.payloads` stops emitting the key, and `DeployedFit.scaler` stops being fitted
+        for persistence. `fit_scaler`, `FittedScaler` and `scaler_from` all **stay** — `TRAIN` is
+        imported by `hydms.screens.domain`, `selection.py` fits one in the moment for VIF, and the
+        refuse-on-`fit` behaviour is what makes "never refit" enforceable if a consumer ever does
+        appear.
+      - `tests/artifacts/` and the manifest name the payload; both have to stop expecting it for a
+        version written after this change, **while still reading `v1`, `v2` and `v3`**, which keep
+        it. A version is sealed when written — this is a change to the *next* contract, never a
+        rewrite of a sealed one.
+      - `CONTEXT.md`'s **Artifact version** entry. It has been corrected once already, on
+        2026-09-12, because it promised that "the next version written" would hold three things
+        and `v3` holds four. Nothing tests that file, so it changes when this lands or it stays
+        wrong again.
+
+      Not an unfreeze condition.
+
 ## Runnable check
 
 ```bash

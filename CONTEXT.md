@@ -231,12 +231,23 @@ and never edited**, which is why certifying a version produces a *new* one.
 _Avoid_: "the model", "the checkpoint", "the saved model"
 
 > *State of the term, not part of the definition:* **the scaler is on its way out of this list**
-> (card #23, decided 2026-09-12; removal boxed on #34). `v1` and `v2` carry a `scaler` payload and
-> always will — a version is sealed when written — but nothing reads it back at inference. The
-> justification for keeping it named exactly one consumer, #48's applicability domain, and #48
-> landed as a *capacity* ceiling that reads no scaled matrix. So the next version written holds a
-> model, its correction and a manifest, and this entry changes with it. Until then the sentence is
-> true of every version that exists, which is why it has not already been edited.
+> (card #23, decided 2026-09-12; removal boxed on #7 since #34 closed). `v1`, `v2` and `v3` carry a
+> `scaler` payload and always will — a version is sealed when written — but nothing reads it back
+> at inference. The justification for keeping it named exactly one consumer, #48's applicability
+> domain, and #48 landed as a *capacity* ceiling that reads no scaled matrix.
+>
+> **Corrected 2026-09-12, the day after this block was written, by the thing it predicted.** It
+> said "the next version written holds a model, its correction and a manifest". The next version
+> written was **`v3`**, promoted that evening, and it holds all four. The sentence was wrong about
+> *which act changes a payload set*: **`promote` copies the payloads of the version it certifies —
+> it fits nothing — so only a fit can drop a key.** The next *fit* is card #7's retrain, which is
+> where the box now lives and where this entry changes with it. Until then the definition above is
+> true of every version that exists.
+>
+> *Keep the correction rather than the clean sentence.* Nothing tests this file, so a prediction
+> written into it is a claim no diff can go red on; this one survived exactly one day, and it
+> survived because the version that falsified it was written by a command nobody thought of as
+> writing a version.
 
 **Artifact bundle**:
 An **artifact version plus the screens that judge its answers**, loaded once and frozen —

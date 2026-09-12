@@ -98,19 +98,39 @@ phase exists to remove. They live in `kanban-hardening/`.
 
 Fixed now, before results are seen, so it cannot be softened later. All four must hold:
 
-- [ ] **Every gate green.** HG-1 … HG-4 and the inherited AC-1, AC-2, AC-3, AC-4, AC-6.
+- [x] **Every gate green.** HG-1 … HG-4 and the inherited AC-1, AC-2, AC-3, AC-4, AC-6.
       (AC-5 is thermodynamic and AC-7/AC-8 are inverse-design; they stay frozen.)
-- [ ] **An artifact version promoted** — card #34. A trained model, scaler, feature contract and
-      conformal calibration on disk, reachable by manifest pointer. *Written as `artifacts/v1`
-      when this condition was fixed; the version to promote is now **`v2`**, re-saved 2026-09-07
-      from a clean tree because v1's manifest records `code_modified: true` and a manifest is
-      sealed when written. The requirement is unchanged — a promoted version — and is named by
-      role here rather than by number so a re-save cannot look like a softening.*
+      **Met 2026-09-12: 9 passed, 0 failed, 3 skipped, 0 errored** — the three skips are exactly
+      AC-5, AC-7 and AC-8, the three this bullet excludes in its own parenthesis, and they were
+      named as waivers at the prompt rather than counted as passes. The four that must never be
+      waived (AC-6, HG-2, HG-3, HG-4) came green with #30, #77, #79 and #86. Re-check with
+      `python -m hydms.surrogate.promote --dry-run --waive AC-5 --waive AC-7 --waive AC-8`; it
+      is ~3 minutes and fits nothing.
+- [x] **An artifact version promoted** — card #34, **done 2026-09-12T17:37:26Z**. A trained
+      model, scaler, feature contract and conformal calibration on disk, reachable by manifest
+      pointer. *Written as `artifacts/v1` when this condition was fixed; the version to promote
+      became **`v2`**, re-saved 2026-09-07 from a clean tree because v1's manifest records
+      `code_modified: true` and a manifest is sealed when written. The requirement is unchanged —
+      a promoted version — and is named by role here rather than by number so a re-save cannot
+      look like a softening.* **What `current` points at is `v3`, and the role is still what is
+      met:** a manifest is sealed when written, so the gate report could not be added to `v2`;
+      `promote` wrote `v3` carrying the report and moved the pointer, leaving `v2` on disk as the
+      record of the fit. `current.json` records the three waivers beside the pointer, which is
+      where the decision to proceed lives — the embedded report still says `SKIPPED`.
+      **Caveat that belongs here rather than only on the card: `artifacts/` is gitignored.** The
+      promoted version exists on the maintainer's machine and nowhere else, so a fresh clone has
+      no model and `predict()` refuses there. That is card #7's to fix and it does not reopen this
+      bullet, which asks for a promoted version and not for a portable one.
 - [ ] **`docs/API.md` published** — card #80.
 - [ ] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
 
 When all four hold: set `freeze: lifted` in this file's frontmatter, record the closing date below,
 and the PA/PB board resumes.
+
+**Two of four hold as of 2026-09-12**, and the two that remain are ordinary work with no blocker
+between them and a keyboard: `docs/API.md` is #80, unblocked since #79 closed, and the Chapter 1
+revision is #37, which waits on #89 now that #34 is done. Nothing left in this condition needs a
+fit, a decision, or a run of the pipeline.
 
 **Closed:** _(not yet)_
 

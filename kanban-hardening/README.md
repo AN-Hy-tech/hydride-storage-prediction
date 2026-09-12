@@ -2,27 +2,36 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-12
+> ## ▶ Next action — as of 2026-09-12 (evening)
 >
-> **The gates are green and #34 is one command from done.** `promote --dry-run` against `v2`
-> returns **9 passed, 0 failed, 3 skipped** in 194 s (2026-09-12) — the first time every reachable
-> criterion has been green at once. The three skips are AC-5, AC-7 and AC-8, all frozen and all
-> exactly the three #34 settled as `--waive`. **No fit is owed**: Step 4's 1 h 41 m is already paid
-> and committed as `model-chosen.csv`, and `artifacts/v2` is the deployed fit built from it.
+> **#34 is `done`: the artifact is promoted and `current` points at `v3`.** The maintainer ran
+> `promote --waive AC-5 --waive AC-7 --waive AC-8` at **17:37:26Z**; it certified `v2` with
+> **9 passed, 0 failed, 3 skipped, 0 errored in 175.56 s**, wrote `v3` carrying the gate report,
+> and moved the pointer. `v2` stays on disk as the record of the fit — a manifest is sealed when
+> written, so the report could not be added to it.
 >
-> **The remaining act is the maintainer's**, because it writes the pointer three screens read:
+> **Two of the four unfreeze conditions now hold** (`docs/FREEZE.md`), and the other two are
+> ordinary work with nothing between them and a keyboard:
 >
-> ```powershell
-> conda run --no-capture-output -n Project python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
-> ```
+> | Condition | State |
+> |---|---|
+> | Every gate green | **met** — 9 passed, the 3 skips are the frozen AC-5/AC-7/AC-8 |
+> | An artifact version promoted | **met** — `current` → `v3`, 2026-09-12T17:37:26Z |
+> | `docs/API.md` published | **#80**, unblocked, S6's last card |
+> | The Chapter 1 revision | **#37**, now waiting on **#89 alone** |
 >
-> That is the unfreeze condition's second bullet. Its other three are #80 (`docs/API.md`), #37
-> (Chapter 1) and every gate green — which the dry-run now says is true.
+> **So the opening move is #80 or #89**, and #89 unblocks #37 and #83 as well as itself.
+> **#36** (the five ADRs) is also unblocked by this close. **#81, #85, #91** are startable in
+> parallel; **#94** and **#95** are open and are *not* unfreeze conditions.
 >
-> **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no
-> push checks any more, and now also owes installing from `requirements-lock.txt`. Two new cards
-> from #93: **#94**, a crossed band raises where it should refuse; and **#95**, the freeze is
-> unenforced on `main` — PR #7 is closed unmerged, leaving #6 the only open PR.
+> **#7** owes the four slow tests no push checks any more, installing from
+> `requirements-lock.txt`, and — new today — dropping `SCALER_PAYLOAD`, because `promote` copies
+> payloads and only a fit can change the set. **#96** is new: `calibrate --report` is both an
+> output directory and an input path, and redirecting it silently fits CatBoost's defaults.
+>
+> **The one thing this promotion did not do is make the model portable.** `artifacts/` is
+> gitignored, so `v3` is on the maintainer's machine and nowhere else; a fresh clone still has no
+> model and `predict()` refuses there.
 >
 > **This block is a pointer with a date on it, not a source.** It is the one place on this board
 > that restates state, which means it is the one place that can silently go stale — the cards and
@@ -50,7 +59,7 @@ Cards live in two directories that are validated together:
 
 | Directory | Ids | State |
 |---|---|---|
-| `kanban-hardening/` | 1–37, 44, 48, 49, 68, 69–93 | **Active** |
+| `kanban-hardening/` | 1–37, 44, 48, 49, 68, 69–96 | **Active** |
 | `../kanban/` | 38–43, 45–47, 50–67 | **Frozen** — every card must stay `backlog` |
 
 **The directories are a freeze boundary, not an id-space boundary.** `blocked_by` reaches across
@@ -195,11 +204,13 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **#79 is `done` — HG-3 is green against `v2`, so #86 (HG-4) is now
-the last unfinished blocker on #34, which is promotion, which is the unfreeze condition; #80 is
-S6's last card, #81 opens S7, and #85, #89 and #91 are startable in parallel.** The three deferred
-boxes below stay parked, #30's third box is still an obligation that travels, and #1 ends in an OPEN
-maintainer decision that needs an answer before anyone re-solves the lock.
+**Next session, in one line.** **#34 is `done` — `current` points at `v3`, so two of the four
+unfreeze conditions are met and the other two are #80 (`docs/API.md`) and #37 (Chapter 1, waiting
+on #89 alone); #36 is unblocked too, and #81, #85, #91 are startable in parallel.** The three
+deferred boxes below stay parked, #30's third box is still an obligation that travels, and #1 ends
+in an OPEN maintainer decision that needs an answer before anyone re-solves the lock.
+~~#79 is `done` … #86 (HG-4) is now the last unfinished blocker on #34~~ — both closed on
+2026-09-12.
 
 **Handoff, 2026-09-12 (latest) — #79 is `done`; HG-3 is green, and #86 is the last gate #34 waits
 on.** This is the live handoff; the three below it are history in the order they happened.
@@ -336,8 +347,12 @@ result worth carrying forward: **both were posed as "design this", and both turn
    admits only two moves — find a reader, or drop the key. #48 *measured* that distance in the
    model's feature space does not order transfer failure, so that consumer is not returning;
    #49's ElMD reads compositions. So the key goes. `v1`/`v2` keep it — a version is sealed when
-   written — and the removal is boxed on **#34**, with `CONTEXT.md`'s **Artifact version** entry
-   listed there because nothing tests that file. **Four live sentences rested on the retired
+   written — and the removal was boxed on **#34**, with `CONTEXT.md`'s **Artifact version** entry
+   listed there because nothing tests that file. **Moved to #7 on 2026-09-12 when #34 closed, and
+   the move corrected the premise:** #34 wrote `v3` that evening and it carries the scaler, because
+   `promote` copies the payload set of the version it certifies and fits nothing. **Only a fit can
+   drop a key**, so the owner is the next retrain. `CONTEXT.md` had already predicted the opposite
+   and has been corrected there. **Four live sentences rested on the retired
    reason** and were corrected (`deploy.py`'s invariant, the `test_the_stored_scaler_is_never_applied`
    docstring, two passages in this README); #76's box list carried the same false consumer.
 
@@ -816,6 +831,66 @@ contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The han
 and their authority is over intent, not over facts.
 
 ---
+
+### Handoff -- 2026-09-12 (latest) - the artifact is promoted; the unfreeze condition is half met and the rest is ordinary work
+
+**Start here.** Ask the board, not this block:
+
+```bash
+bash ../.claude/skills/kanban-ai/scripts/show_blocked.sh .
+```
+
+**What happened.** The maintainer ran the promotion this session's predecessor handed over:
+
+```
+conda run --no-capture-output -n Project python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
+```
+
+It certified `v2` -- 3 payloads, fitted at `4a06011` on 2026-09-06T21:31:41Z, notes `deployed
+fit` -- with **9 passed, 0 failed, 3 skipped, 0 errored in 175.56 s**, then wrote **`artifacts/v3`**
+carrying the gate report and pointed `current` at it. **#34 is `done`.** Two directories for one
+model is the design working, not a mistake: a manifest is sealed when written, so the report cannot
+be added to `v2`, and `v2` stays as the record of the fit.
+
+**Where the unfreeze condition stands: two of four.** Every gate green -- met. An artifact version
+promoted -- met. `docs/API.md` -- **#80**. The Chapter 1 revision -- **#37**, which now waits on
+**#89 alone**. Nothing that remains needs a fit, a decision, or a pipeline run. **#36 is also
+unblocked** by #34's close.
+
+---
+
+**Three things this close leaves behind, and the middle one is the interesting one.**
+
+**1. #96 is new.** `calibrate --report` is both the directory a run writes its tables to and the
+directory `deploy.py:163` reads `model-chosen.csv` from. Redirecting it to a scratch directory --
+the careful thing to do -- makes the chosen configuration unfindable and falls back to **CatBoost's
+own defaults**, and `--save` then persists that as `deployed fit`. It happened on 2026-09-07: a
+correction of **+0.030990** instead of +0.037355, caught in a minute because the command says so on
+stdout. It was a box on #34; it is a seam decision, so it got a card.
+
+**2. `promote` copies payloads; only a fit can change them.** #34 carried a box reading "the next
+version's payload set drops `SCALER_PAYLOAD`", boxed there "because this card writes the next
+version". #34 *did* write the next version -- **and `v3` carries the scaler**, because a promotion
+certifies and copies, it does not fit. The box moved to **#7**, whose retrain is the next actual
+fit. `CONTEXT.md`'s *Artifact version* entry had already promised that "the next version written
+holds a model, its correction and a manifest"; it was falsified within a day, by a command nobody
+thought of as writing a version. **The correction is kept in the file rather than tidied away** --
+nothing tests `CONTEXT.md`, so a prediction written into it is a claim no diff can go red on.
+
+**3. The promotion did not make the model portable.** `artifacts/` is gitignored. `v3` is on the
+maintainer's machine and nowhere else; a fresh clone has no model and `predict()` refuses there.
+That is card **#7**'s to fix, and it does not reopen the unfreeze bullet, which asks for a promoted
+version and not for a portable one.
+
+---
+
+**One box was ticked without being worked, and it is worth saying why.** #34's "the waiver summary
+counts wrong, and no test asserts the string" had been *fixed* -- `promote.py:222` prints
+`len(outstanding)` and `test_promote.py:335` asserts the rendered sentence -- and nobody had ticked
+it. The real run confirmed it: 9 passed and 3 waived printed **"0 of 12 criteria left to
+establish"**, which is `len(outstanding)`; the broken expression would have said 9. **Read the code
+before believing a card's open box**; a box can outlive its defect, and an open box on a closing
+card is the last moment anyone will check.
 
 ### Handoff -- 2026-09-12 (latest) - every reachable gate is green; #34 is one command from done, and that command is the maintainer's
 

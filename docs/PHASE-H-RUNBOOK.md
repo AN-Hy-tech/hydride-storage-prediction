@@ -506,14 +506,25 @@ could mean anything. See below.
 
 **Goal:** an honestly-validated, calibrated model with artifacts on disk.
 **Closes:** L1, L2, L4, L5, L6, L7, L11, L12.
-**State (2026-09-11):** closed as far as a stage can close — **twelve of thirteen boxes ticked and
-no measurement left to take**. The one open box is **#34**, and it is not waiting on anything S4
-owns: promotion needs HG-2, HG-3 and HG-4, which #76-#79 (S6) and #86 (S8) build, and they are
-Phase H's own criteria so they must not be waived. HG-2 landed with #77 on 2026-09-11 and HG-3 with
-#79 on 2026-09-12; **#86 is what is left**, and they are now `blocked_by` edges on #34 rather than a sentence here — the
-board showed a `doing` card with every declared blocker `done` until then, which reads as "ready to
-close". It is back in `backlog` for the same reason (`check_board.py` refuses `doing` behind an
-unfinished blocker; #15 is the precedent).
+**State (2026-09-12): closed.** All thirteen boxes are ticked. **#34 promoted the artifact on
+2026-09-12 at 17:37:26Z** — `promote --waive AC-5 --waive AC-7 --waive AC-8` certified `v2` with
+**9 passed, 0 failed, 3 skipped, 0 errored in 175.56 s**, wrote **`artifacts/v3`** carrying the gate
+report, and pointed `current` at it. `v2` remains on disk as the record of the fit: a manifest is
+sealed when written, so the report could not be added to it and a certification necessarily produces
+a new version.
+
+~~The one open box is **#34**, and it is not waiting on anything S4 owns.~~ That was true from
+2026-09-06 to 2026-09-12 and is worth keeping as the shape of the stage: promotion needed HG-2, HG-3
+and HG-4, which #76–#79 (S6) and #86 (S8) build, and they are Phase H's own criteria so they must
+not be waived. HG-2 landed with #77 on 2026-09-11, HG-3 with #79 on 2026-09-12 and HG-4 with #86 the
+same day; they were `blocked_by` edges on #34 rather than a sentence here, because the board had
+shown a `doing` card with every declared blocker `done`, which reads as "ready to close".
+
+**Two boxes left the card rather than closing with it.** The `--report` trap went to **#96** (both
+its candidate fixes are in the surrogate seam), and the `SCALER_PAYLOAD` removal went to **#7** —
+because `v3` was written that evening and *carries* the scaler. `promote` copies the payload set of
+the version it certifies; it fits nothing, so **only a fit can change the set**, and the next fit is
+#7's retrain.
 
 ~~Nothing downstream is blocked on it.~~ **Nothing in the *delivery* chain is** — S6 and S7 run
 without it, which is the claim that mattered. Three S8 cards do wait on it: #36 (the ADRs), #37
@@ -834,7 +845,10 @@ card is startable — `bash $S/list_all_cards.sh kanban-hardening/` — and read
       opinion about gates. `surrogate_from(bundle)` is now the second half; `hydms/gates/_artifact.py`
       loads with `require_gates=False` and runs that same assembly, so the only line of the delivery
       path a gate skips is the check whose input it is producing. `load_surrogate` grew no parameter.
-- [ ] **#34** Train and publish `artifacts/v1`. Its "persist versus refit" decision is **settled**:
+- [x] **#34** Train and publish the deployed artifact version. **Done 2026-09-12: `current` →
+      `v3`.** The account below is the decision history and is left standing, because the shape of
+      the wall it describes is the reusable part. Its "persist versus refit" decision is
+      **settled**:
       neither. The deployed fit is rebuilt in two minutes from the committed `model-chosen.csv`, and
       rebuilding it cannot move a published number. **The certification mechanism landed 2026-09-06**
       — `python -m hydms.surrogate.promote` gates a candidate version and, only if everything
@@ -856,6 +870,14 @@ card is startable — `bash $S/list_all_cards.sh kanban-hardening/` — and read
       `code_modified: true` and a manifest is sealed when written). Same model: correction
       +0.037355, the same `model-chosen.csv:outer-0` configuration, and the five regenerated
       report CSVs byte-identical to the committed ones.
+
+      **Closed 2026-09-12T17:37:26Z.** HG-4 came green with #86 that morning, so the maintainer ran
+      `promote --waive AC-5 --waive AC-7 --waive AC-8`: **9 passed, 0 failed, 3 skipped, 0 errored
+      in 175.56 s** certifying `v2`, then `v3` written with the gate report embedded and `current`
+      moved to it. The waiver stayed an *act* to the end — `v3`'s report still records AC-5, AC-7
+      and AC-8 as `SKIPPED`, and the run printed *"NOT CHECKED: AC-5, AC-7, AC-8. This run
+      establishes nothing about them."* **`artifacts/` is gitignored**, so `v3` exists on the
+      maintainer's machine and nowhere else; a fresh clone has no model and that is #7's to fix.
 
 **Exit check:** `conda run -n Project python -m hydms.gates run --fast` · all HG-1 sentinels green.
 
@@ -1155,9 +1177,7 @@ single prediction path and HG-3 covers the UI too.
       `requirements-lock.txt`, and `catboost>=1.2` resolved to **1.2.10** against the `Project`
       environment's **1.2.8**. A venv on the resolved versions reproduces both failures **on the
       maintainer's own Windows box**, to every digit the runner printed, so neither failure needs
-      a CI round trip to see. Isolated by elimination: with scikit-learn and pandas restored to
-      the `Project` versions and CatBoost left at 1.2.10, the runner's numbers are unchanged, so
-      **the cause is `catboost>=1.2` alone**. Both tests were asserting more than the code guarantees:
+      a CI round trip to see. Both tests were asserting more than the code guarantees:
       `test_calibration_moves_coverage_toward_nominal` compared a constant — calibrated coverage
       on the calibration rows is the conformal rank over n, `46/56`, identical on every
       configuration — against the *raw* coverage, which is the fitted half and moved 49/56 →
@@ -1172,12 +1192,19 @@ single prediction path and HG-3 covers the UI too.
       condition**. `hydms.delivery.contract.Interval` raises `ContractError` on `upper < lower`
       and nothing between the surrogate and that boundary looks at the sign, so a crossed
       candidate is a loud failure rather than a refusal carrying a reason code.
+- [ ] **#96** An output flag that silently changes the fit. Moved off #34 at its close, 2026-09-12;
+      **not an unfreeze condition**. `calibrate --report` is both where a run writes its tables and
+      where `deploy.py:163` reads `model-chosen.csv`, so redirecting it to a scratch directory falls
+      back to CatBoost's own defaults and `--save` persists that as `deployed fit`. It produced a
+      correction of +0.030990 instead of +0.037355 on 2026-09-07 and was discarded.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
 - [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~
-      **#37 waits on #34 *and* #89** (edge added 2026-09-11): #89's card says the reconciliation is
-      "what card #37 is written from", and writing the chapter first would mean re-deriving those
-      eight disagreements by hand, in prose nothing checks.
+      ~~**#37 waits on #34 *and* #89**~~ (edge added 2026-09-11). **#34 closed 2026-09-12, so #37
+      waits on #89 alone, and #36 is unblocked outright.** The #89 edge stands and is the load-
+      bearing one: #89's card says the reconciliation is "what card #37 is written from", and
+      writing the chapter first would mean re-deriving those eight disagreements by hand, in prose
+      nothing checks.
 - [ ] Lift the freeze: set `freeze: lifted` in [FREEZE.md](FREEZE.md), record the closing date, and the
       PA/PB board resumes.
 
@@ -1312,9 +1339,11 @@ conda run -n Project python -m hydms.pipeline.smoke --digest
 # this is the half of it that needs no artifact and no environment beyond the `api` extra.
 conda run -n Project python -m hydms.delivery.api.openapi
 
-# API. It resolves the PROMOTED version at startup and refuses to start if there is none, so
-# until card #34 promotes `v2` this command exits with `load_bundle`'s own sentence -- "nothing
-# is promoted in artifacts" -- and that is the card working, not a fault. The two checks below
+# API. It resolves the PROMOTED version at startup and refuses to start if there is none. Until
+# 2026-09-12 this command exited with `load_bundle`'s own sentence -- "nothing is promoted in
+# artifacts" -- and that was card #34 working, not a fault. **#34 closed that evening: `current`
+# points at `v3`, so the service now starts.** It still refuses on a fresh clone, because
+# `artifacts/` is gitignored and the promoted version is on one machine. The two checks below
 # were run against the real `v2` through the gate door on 2026-09-12 and produced exactly what
 # they say they will. `python -m hydms.delivery.api` is the same thing with the uvicorn line
 # remembered for you.
