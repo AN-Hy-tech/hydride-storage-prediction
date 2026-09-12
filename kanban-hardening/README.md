@@ -186,8 +186,9 @@ into them in the same tree; the second commit carries them and says so.
 4.52 s** against `v2`: 11 probes (3 answered, 8 refused), 8 malformed requests, 257 candidates
 against the published limit of 256, **0 differences**. `pytest tests/gates/test_hg3_transport_parity.py
 tests/delivery/test_openapi.py` — **37 passed**. `pytest tests/delivery` — **160 passed, 12.9 s** (was 145). `pytest tests/delivery
-tests/gates/test_harness.py tests/gates/test_cli.py` — **195 passed, 9 min 57 s**. The fast lane, `pytest -m "not slow"` on the
-final tree — **1440 passed, 4 deselected, 12 min 3 s** (was 1371/1375 before #78 and #79). The gate
+tests/gates/test_harness.py tests/gates/test_cli.py` — **195 passed, 9 min 57 s**. The fast lane, `pytest -m "not slow"` —
+**1440 passed, 4 deselected, 12 min 3 s** (was 1371/1375 before #78 and #79), measured before the
+last documentation edits and one test rename; the `tests/delivery` run above is after them. The gate
 lane, `run --fast` — **7 passed, 0 failed, 2 skipped, 26.2 s** (was 6/3); `run --all` — **8 passed,
 0 failed, 4 skipped, 3.0 min**. The remaining skips are AC-5, AC-7 and AC-8 (frozen) and **HG-4**.
 ruff and mypy clean over `hydms/ tests/ scripts/`; `check_board.py` OK over 92 cards.
