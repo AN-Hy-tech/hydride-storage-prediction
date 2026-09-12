@@ -817,7 +817,99 @@ and their authority is over intent, not over facts.
 
 ---
 
-### Handoff -- 2026-09-12 (latest) - #93 closed, #86 closed, the lane is green; #34 is yours
+### Handoff -- 2026-09-12 (latest) - every reachable gate is green; #34 is one command from done, and that command is the maintainer's
+
+**Start here.** Run this, and nothing else, before planning anything:
+
+```powershell
+conda run --no-capture-output -n Project python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
+```
+
+It is **three minutes and fits nothing.** It writes a new sealed version carrying the gate report
+and points `current` at it, which is **the unfreeze condition's second bullet**. Do not run it from
+an agent session: it was denied here by auto mode (*Blind Apply*), and correctly — it moves the
+pointer `predict()`, the API and the model card all read.
+
+---
+
+**The gate run, so you do not pay 194 s to learn it again.** `promote --dry-run` against `v2`
+(fitted at `4a06011`, 2026-09-06T21:31:41Z, `code_modified: false`, catboost 1.2.8) returned
+**9 passed, 0 failed, 3 skipped, 0 errored**. The first time every reachable criterion has been
+green at once. The full table and AC-1's per-metric agreement are on #34; the headline is that the
+three skips are AC-5, AC-7 and AC-8 — all frozen, all exactly the three #34 settled as `--waive` —
+and the four the runbook says must **never** be waived (AC-6, HG-2, HG-3, HG-4) are green, their
+owing cards #30, #77, #79 and #86 having closed. The command then refuses, correctly: *"a SKIPPED
+gate is a criterion nobody checked."*
+
+**Correcting a claim this board carried for weeks, and which this session repeated twice before
+checking: #34 needs no fit.** Step 4's 1 h 41 m is already paid, `model-chosen.csv` is committed,
+`reports/model/` holds its numbers, and `artifacts/v2` is the deployed fit built from that
+configuration in about two minutes. `docs/RUNNING-THE-FIT.md` Step 9.5 says promotion *"fits
+nothing"* apart from AC-1's two fits, which are most of those 194 seconds. **Read the operator doc
+before repeating a cost estimate from card prose.** The deferral to the maintainer still stands,
+but for consequence rather than for wall time.
+
+**`artifacts/` is gitignored, so `v2` exists on the maintainer's machine and nowhere else.** A
+fresh clone has no model. If the promotion is run somewhere else, it has nothing to certify.
+
+---
+
+**What #93 was, in one paragraph**, because the card that filed it guessed wrong and the guess is
+instructive. Two tests failed only on CI. The suspect on record was Linux, a different BLAS and a
+two-core runner. The variable was the `pip install` line: `suite` resolves `pyproject.toml`'s
+**floors**, not `requirements-lock.txt`, and `catboost>=1.2` resolved to **1.2.10** against the
+`Project` environment's **1.2.8**. A venv on the resolved versions reproduces both failures **on
+the maintainer's Windows box** to every digit; restoring scikit-learn and pandas and leaving
+CatBoost at 1.2.10 leaves them unchanged. **One wheel.** Neither test was fixed with a tolerance:
+one compared a constant (calibrated coverage is the conformal rank over n, `46/56`, everywhere) to
+a variable (raw coverage, 49/56 here and 44/56 there), and the other demanded positive widths where
+`quantile_metrics` measures quantile crossing at **23 % of rows**. The recipe for rebuilding the
+CI-resolved venv is in #93's *Runnable check*; a CI-only failure costs one `gh run view`, not a
+round trip.
+
+---
+
+**Three cards were opened and one PR closed, none of them unfreeze conditions.**
+
+**#94** — a crossed band leaves the surrogate as a negative width by design, and
+`hydms.delivery.contract.Interval` raises `ContractError` on it. `hydms/delivery/predict.py` never
+checks the sign, so that is a loud failure rather than a refusal with a reason code. Its first box
+is *measure before adding a code*: the candidates that cross are the ones #48 and #49 should
+already be refusing.
+
+**#95** — the freeze is unenforced on `main`, which has no `check_freeze.py` at all. PR **#7** was
+green and MERGEABLE while editing six cards under `kanban/`, because the check was **absent**, not
+passing. It is now **closed unmerged** (`mergedAt=null`; branch left on origin at `d07a66e`), so
+#6 is the only open PR. What #95 still owes is one paragraph in `docs/FREEZE.md`: `main` gets a
+freeze check only when #6 merges, and the freeze prevents that until it lifts. **Bounded, not
+fixed.**
+
+**A box on #7** — the slow lane must install from `requirements-lock.txt`, because a floor-resolved
+retrain is not a retrain of the published pipeline.
+
+---
+
+**Two things this session could not run, and both should be handed on rather than routed around.**
+
+| Command | Denied as | Cost | Why it matters |
+|---|---|---|---|
+| `promote --waive AC-5 --waive AC-7 --waive AC-8` | *Blind Apply* | ~3 min | The unfreeze condition's second bullet |
+| `pytest -m slow` | *CI Bypass* | ~15 min | The four tests **no push checks any more** — #7's open box |
+
+**Where the unfreeze condition stands.** Every gate green — the dry-run now says yes. An artifact
+version promoted — **the command above**. `docs/API.md` — **#80**, startable. The Chapter 1
+revision — **#37**, which waits on #34 and #89. So two of four are answered and the other two are
+ordinary work. **#81, #85, #89, #91** are startable in parallel.
+
+Ask the board rather than trusting this paragraph:
+
+```bash
+bash ../.claude/skills/kanban-ai/scripts/show_blocked.sh .
+```
+
+---
+
+### Handoff -- 2026-09-12 (earlier today) - #93 closed, #86 closed, the lane is green
 
 **The two CI-only failures were not what the card that filed them guessed, and the difference
 matters more than the fix.** #93's "Why this exists" reasons from AC-1's thread-invariance
