@@ -21,6 +21,7 @@ Card #27.
 
 from __future__ import annotations
 
+import math
 import subprocess
 import sys
 import textwrap
@@ -402,10 +403,27 @@ def test_a_swapped_prefit_order_is_caught_rather_than_calibrated(
         fit_conformal(frame, model, calibrate_on=list(calibrating))
 
 
-def test_calibration_moves_coverage_toward_nominal(calibrated) -> None:
-    """The card's whole claim, measured. On the calibration rows the calibrated coverage is
-    nominal *by construction* -- that is what makes this a check of the arithmetic rather than
-    of generalisation, which is gate AC-3's question and reads the test split."""
+def test_calibration_pins_coverage_at_the_conformal_rank(calibrated) -> None:
+    """On the calibration rows the calibrated coverage is the conformal *rank* over n.
+
+    This is the arithmetic check -- generalisation is gate AC-3's question and reads the test
+    split -- and it is stated as the rank because that is the only part of it that is a
+    theorem. Split CQR takes the correction to be the ``k``-th smallest conformity score with
+    ``k = ceil((n + 1) * level)``; a row is covered after widening exactly when its score is at
+    or below that constant, so ``k`` of ``n`` rows are covered and coverage is ``k / n``. It
+    is at least the nominal level and overshoots it by at most ``(1 + level) / n``, and both
+    bounds are finite-sample and distribution-free.
+
+    **This test used to assert that calibration moves coverage closer to nominal, and that is
+    not a thing conformal prediction promises.** ``k / n`` is a constant -- it does not know
+    what the raw heads did -- so the old assertion held only when the *uncalibrated* band
+    happened to be worse than the overshoot, which is a property of the fit and not of the
+    calibration. Card #93 measured it: on this fixture the calibrated coverage is
+    ``46/56 = 0.8214285714285714`` on the maintainer's Windows box and on the Linux CI runner
+    alike, to every digit, while the raw coverage is ``49/56`` there and ``44/56`` here. The
+    constant was never the machine-dependent half. Raw coverage is therefore reported below
+    and not asserted on.
+    """
     frame, model, conformal, calibrating, _ = calibrated
     rows = frame.loc[list(calibrating)]
     raw = quantile_metrics(rows[TARGET], model.predict(rows), model.quantiles)
@@ -413,10 +431,24 @@ def test_calibration_moves_coverage_toward_nominal(calibrated) -> None:
         rows[TARGET], calibrated_heads(model, rows, conformal=conformal), model.quantiles
     )
     nominal = conformal.confidence_level
-    assert abs(fixed["interval_coverage"] - nominal) <= abs(
-        raw["interval_coverage"] - nominal
-    ) + 1e-9
-    assert abs(fixed["interval_coverage"] - nominal) < 0.06
+    n = conformal.calibration_rows
+    rank = math.ceil((n + 1) * nominal)
+    covered = fixed["interval_coverage"] * n
+    measured = (
+        f"n={n}, level={nominal:g}, correction={conformal.correction:.12g}; "
+        f"calibrated coverage={fixed['interval_coverage']:.17g} ({covered:.4f}/{n}), "
+        f"conformal rank k={rank} (k/n={rank / n:.17g}); "
+        f"RAW coverage={raw['interval_coverage']:.17g} "
+        f"({raw['interval_coverage'] * n:.4f}/{n}), raw crossings={raw['crossings']:.4g}"
+    )
+
+    # The guarantee, and the only direction of it that is a theorem.
+    assert fixed["interval_coverage"] >= nominal - 1e-12, measured
+    # Exactly k of n, up to ties in the conformity scores, which lift coverage and never drop
+    # it. A correction larger than the k-th score covers more than k and would pass the line
+    # above while quietly over-covering, so the overshoot is bounded rather than left open.
+    assert covered >= rank - 1e-9, measured
+    assert fixed["interval_coverage"] - nominal <= (1.0 + nominal) / n + 1e-12, measured
 
 
 def test_the_widened_band_keeps_the_spread_that_makes_cqr_worth_choosing(calibrated) -> None:

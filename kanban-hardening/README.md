@@ -4,15 +4,22 @@
 
 > ## ▶ Next action — as of 2026-09-12
 >
-> **#93 first** — diagnose the two CI-only failures (`test_calibration_moves_coverage_toward_nominal`,
-> `test_the_width_is_the_calibrated_span_and_varies_row_to_row`: they pass locally and fail on the
-> runner, almost certainly a cross-platform CatBoost fit — **do not just widen the tolerance**), then
-> tick **#86**'s last box against a green `suite` job and close it, which unblocks **#34** → promotion
-> → unfreeze; **#80, #81, #85, #89, #91** are startable in parallel, and **#7** owes the four slow
-> tests that no push checks any more.
+> **#93 is diagnosed and its fix is pushed; the next act is to read the run.** The two CI-only
+> failures were **not** a cross-platform CatBoost fit. `suite` installs from `pyproject.toml`'s
+> floors, `catboost>=1.2` resolved to **1.2.10** against the `Project` environment's **1.2.8**, and
+> a venv on the resolved versions reproduces both failures **on the maintainer's Windows box** to
+> every digit the runner printed. Both tests asserted more than the code guarantees and now assert
+> what it does; no tolerance was widened. **When the `suite` job is green: tick #86's last box and
+> close it, and close #93** — which unblocks **#34** → promotion → unfreeze.
+>
+> **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no
+> push checks any more, and now also owes installing from `requirements-lock.txt` — a floor-resolved
+> retrain is not a retrain of the published pipeline. **#94** is new, from #93: a crossed band
+> raises where it should refuse.
 >
 > Detail: [#93](093-two-tests-that-fail-only-on-the-ci-runner.md), [#86](086-gate-hg-4-ci-fast-lane-with-delivery-suite-and-hygiene.md),
-> and the latest handoff at the foot of this file.
+> [#94](094-a-crossed-band-raises-where-it-should-refuse.md), and the latest handoff at the foot of
+> this file.
 >
 > **This block is a pointer with a date on it, not a source.** It is the one place on this board
 > that restates state, which means it is the one place that can silently go stale — the cards and

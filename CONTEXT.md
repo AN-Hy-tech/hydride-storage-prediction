@@ -152,10 +152,37 @@ in transformed space and the inverse transform is convex, so the same correction
 high prediction than at a low one.
 _Avoid_: reading a single correction constant off a manifest and doubling it
 
+> **A width can be negative, and that is a signal rather than an error** (card #93, 2026-09-12).
+> A `MultiQuantile` booster fits its heads jointly without constraining them to be monotone —
+> `quantile_metrics` counts `crossings` and measured **23 % of rows** on a small fit — and CQR's
+> correction is one constant added to both outer heads, so it shifts a crossed band without
+> re-ordering it. On the versions CI resolves, two of three probe candidates came back at
+> **−0.094422** and **−0.029760** wt%. `hydms.surrogate.predict` reports that unclipped on purpose;
+> `hydms.delivery.contract.Interval` refuses it.
+>
+> **State of the term:** "width" alone is a *measurement*, not a promise of a positive number. Say
+> **crossed band** for the negative case and do not call it a narrow one — the whole danger is that
+> `abs()` or a clip turns a defect a screen can see into the most confident-looking row in a batch.
+> What the delivery layer should *say* about one is card **#94**, which is open.
+
 **Coverage**:
 The share of held-out rows whose true value falls inside the interval, read against the nominal
 level the intervals claim. Always reported with the level it is being judged against.
 _Avoid_: "accuracy", "confidence"
+
+> **Held-out is load-bearing: coverage on the *calibration* rows is a construction, not a
+> measurement** (card #93, 2026-09-12). Split CQR sets the correction to the `k`-th smallest
+> conformity score with `k = ceil((n + 1) * level)`, so exactly `k` of `n` calibration rows sit
+> inside the widened band and their coverage is `k / n` — on the fixture that found this,
+> `46/56 = 0.8214285714285714`, identical on three different installations to every digit. It is a
+> property of the arithmetic and it knows nothing about the fit. **Only the held-out number is
+> evidence**, and that one is AC-3's.
+>
+> **State of the term:** never report coverage without saying which rows it is over. A conformal
+> guarantee is `>= nominal`, never "closer to nominal" — on a finite calibration set it overshoots
+> by up to `(1 + level) / n`, so a *better* uncalibrated model moves the calibrated number
+> *further* from nominal. #93 exists because a test asserted the "closer" reading and a better fit
+> broke it.
 
 > **The word now names two unrelated numbers, and they are both reported by gates** (card #86,
 > 2026-09-12). **Conformal coverage** is the entry above — a property of the *model*, measured

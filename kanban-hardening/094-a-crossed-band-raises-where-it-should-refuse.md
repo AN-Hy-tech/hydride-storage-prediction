@@ -1,0 +1,95 @@
+---
+id: 94
+status: backlog
+priority: Normal
+blocked_by: []
+assignee: "@amirhossein"
+tags: [ph, l6]
+---
+
+# A crossed band raises where it should refuse
+
+**Stage S8 — Evidence and close** · **L6 Delivery** · Estimate: 0.5 d
+
+> **Owns (hidden behind this module):** What a caller is told when the surrogate's own heads come back out of order.
+
+**This card is NOT an unfreeze condition.** It was found by #93 and is filed so it has an owner,
+not to widen `docs/FREEZE.md`. The unfreeze condition is fixed and stays fixed.
+
+## Why this exists
+
+Quantile crossing is a measured property of this surrogate, not a hypothetical.
+`hydms.surrogate.model.quantile_metrics` returns a `crossings` field because "MultiQuantile fits
+the heads jointly but does not constrain them to be monotone … **measured at 23 % of rows on a
+small fit**, so this is a real number to report rather than a defensive zero"
+(`hydms/surrogate/model.py:1291`), and `hydms/surrogate/conformal.py`'s header records that
+**CQR's widening cannot repair a crossing** — the correction is one constant added to both outer
+heads, so it shifts a band it cannot re-order.
+
+Card #93 then watched it happen on a real prediction. On the versions CI resolves, two of three
+candidates — `Ti1Fe1` and `Mg2Ni1`, both outside the fixture's La–Ni training family — came back
+from `hydms.surrogate.predict.predict` with widths of **−0.094422** and **−0.029760** wt%.
+
+The surrogate is right to hand that on unclipped: repairing it would turn a defect a screen can
+see into a plausible narrow band, and
+`tests/surrogate/test_predict.py::test_a_crossed_band_reaches_the_caller_unclipped` now pins that.
+**The question this card owns is what happens next**, and today the answer is:
+
+- `hydms.delivery.contract.Interval.__post_init__` raises `ContractError` on `upper < lower`, with
+  a message that names quantile crossing explicitly. So the behaviour is *known* and *deliberate*
+  at that boundary.
+- `hydms/delivery/predict.py` never mentions crossing. Nothing between the surrogate and the
+  contract looks at the sign of the width.
+
+So a crossed candidate produces a **raised exception, not a refusal carrying a reason code** —
+which is the one shape of answer this project has decided it does not give. #44's interface is "a
+verdict with a reason, never a silent drop"; HG-2 (#77) makes a bare number unconstructible; #90
+committed the catalogue of every reason the system can give. A `ContractError` escaping
+`predict_capacity` is outside all three: a batch screen (#84) hits it on one bad row and loses the
+batch, and the API (#78) turns it into a 500 rather than a refusal the client can read.
+
+**It is not obvious that a new reason code is the right answer**, and this card should decide
+rather than assume. A crossed band may belong under an existing domain verdict — the candidates
+that crossed here are exactly the ones an applicability-domain screen (#48) or an ElMD novelty
+screen (#49) should already be refusing, and a reason code that fires only for rows another screen
+has already caught is a code no request can reach, which is the defect #90's own reachability
+check exists to find. Measure before adding.
+
+## Done when
+
+- [ ] **Measure it.** On a real fit, how many rows cross, and how many of those are *already*
+      refused by the domain ceiling or the novelty screen? If the answer is "all of them", the fix
+      is ordering — make sure the screens run before an `Interval` is constructed — and no new
+      code is declared. If some cross while passing every screen, that is the case a reason has to
+      cover
+- [ ] **Decide and record**: a new reason code, an existing verdict, or an ordering guarantee.
+      Whichever it is, `docs/REFUSALS.md` is **generated** (`hydms.delivery.refusals --emit`) —
+      regenerate it, never edit it
+- [ ] No declared-but-unreachable code is added. See
+      [[enumerate-the-vocabulary-when-the-prose-cannot-go-red]]: a reason nothing can reach passes
+      every shape check and means nothing
+- [ ] A test drives a crossed band through the **delivery** path, not the surrogate path, and
+      asserts what the caller is told. The surrogate half is already pinned by
+      `test_a_crossed_band_reaches_the_caller_unclipped`
+- [ ] The batch page (#84) and the API (#78) are checked against the decision: one crossed row
+      must not cost a batch, and must not become a 500
+
+## Runnable check
+
+```bash
+conda run -n Project python -m pytest tests/delivery/ -k "cross or interval"
+conda run -n Project python -m hydms.delivery.refusals --emit
+```
+
+## Traces to
+
+`docs/PHASE-H-RUNBOOK.md` — S8; gate HG-2 (card #77) owns the refusal path this extends;
+card #90 owns the catalogue any new reason lands in
+
+## Narrative
+
+- 2026-09-12: Created by the #93 session. Filed rather than fixed for two reasons. The first is
+  scope: #93 owns two tests and a diagnosis, and this is a question about what the delivery layer
+  *says*. The second is that every card that would naturally own it — #77, #90, #48 — is already
+  `done`, and an unticked box on a closed card is a finding nobody is going to see. The measured
+  numbers that opened it are in #93's Done-when table. (by @assistant)

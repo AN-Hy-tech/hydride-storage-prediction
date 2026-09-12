@@ -1144,14 +1144,32 @@ single prediction path and HG-3 covers the UI too.
       It also found CI's `mypy` red on six `import-not-found` errors that **cannot reproduce on
       the maintainer's machine**, because this interpreter has fastapi and pydantic and the
       runner does not. Coverage is **88.43 %** against the 80 % floor. The open box is the
-      timeout itself, and it is now blocked on **#93**: the first completed `suite` job
+      timeout itself, and it waits on **#93**: the first completed `suite` job
       (`34696231293`, 13 m 40 s against a 20-minute cap) reported two failures that pass on the
-      maintainer's machine — `test_calibration_moves_coverage_toward_nominal` and
-      `test_the_width_is_the_calibrated_span_and_varies_row_to_row`. That is a claim about the
-      surrogate's arithmetic on other hardware, not about the lane.
+      maintainer's machine. ~~That is a claim about the surrogate's arithmetic on other
+      hardware, not about the lane.~~ **It was not about hardware** — see #93.
 
-- [ ] **#93** The two CI-only failures. Filed by #86; **not an unfreeze condition**, but #86's
-      last box waits on it.
+- [~] **#93** The two CI-only failures. Filed by #86; **not an unfreeze condition**, but #86's
+      last box waits on it. **Diagnosed 2026-09-12, and the answer is the `pip install` line, not
+      the runner.** `suite` installs from `pyproject.toml`'s floors rather than
+      `requirements-lock.txt`, and `catboost>=1.2` resolved to **1.2.10** against the `Project`
+      environment's **1.2.8**. A venv on the resolved versions reproduces both failures **on the
+      maintainer's own Windows box**, to every digit the runner printed, so neither failure needs
+      a CI round trip to see. Both tests were asserting more than the code guarantees:
+      `test_calibration_moves_coverage_toward_nominal` compared a constant — calibrated coverage
+      on the calibration rows is the conformal rank over n, `46/56`, identical on every
+      configuration — against the *raw* coverage, which is the fitted half and moved 49/56 →
+      44/56; and `test_the_width_is_the_calibrated_span_and_varies_row_to_row` demanded positive
+      widths from three extrapolation candidates when `quantile_metrics` measures quantile
+      crossing at **23 % of rows** and `conformal.py` states that CQR cannot repair one. Restated
+      as what is guaranteed; **no tolerance was widened and AC-3 inherits nothing**. The lane's
+      environment obligation lands on **#7**, and what the delivery layer should *say* about a
+      crossed band lands on **#94**.
+
+- [ ] **#94** A crossed band raises where it should refuse. Filed by #93; **not an unfreeze
+      condition**. `hydms.delivery.contract.Interval` raises `ContractError` on `upper < lower`
+      and nothing between the surrogate and that boundary looks at the sign, so a crossed
+      candidate is a loud failure rather than a refusal carrying a reason code.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
 - [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~

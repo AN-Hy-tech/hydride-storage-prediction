@@ -79,6 +79,29 @@ one-line change, not a retrain.
       **regression #86 introduced deliberately**, to stop a lane that never reached the gates
       at all, and it is this card's to repay
 
+- [ ] **This lane must install from `requirements-lock.txt`, and that is now a measured
+      requirement rather than a tidiness one** (from #93, 2026-09-12). The fast lane installs
+      `pip install -e ".[dev,uq,novelty,api]"`, which resolves `pyproject.toml`'s **floors**. On
+      2026-09-12 `catboost>=1.2` resolved to **1.2.10** while the `Project` environment holds
+      **1.2.8**, and the two fit different trees: on the same fixture the raw interval coverage
+      moved from 49/56 to 44/56, the tree count from 7 to 9, and two of three probe candidates
+      went from an ordinary band to a **crossed** one. #93 reproduced every runner digit in a
+      Windows venv built on the resolved versions, so this is the wheel and not the platform.
+
+      The consequence for this card is direct: **a retrain that installs from floors is not a
+      retrain of the published pipeline.** The box above already says this lane is the only one
+      that rebuilds the pinned environment — this is the second reason, and the sharper one. The
+      first reason was that nothing proves `Project` still recreates; this one is that the
+      numbers a floor-resolved lane produces are *not the artifact's numbers*, and promoting a
+      version fitted by a wheel nobody pinned would put a silently different model behind
+      `current`.
+
+      For the fast lane the same fact is a *reporting* obligation rather than a defect — it
+      installs from floors on purpose, for reasons its own header sets out at length, and #93's
+      two tests now assert only what holds under both resolutions. But the lane's summary should
+      say which versions it resolved, because the first question to ask of a CI-only failure is
+      `Successfully installed`, and today that is four screens deep in a log
+
 ## Runnable check
 
 ```bash

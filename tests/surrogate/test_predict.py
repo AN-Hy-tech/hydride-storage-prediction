@@ -271,19 +271,38 @@ def test_the_bound_is_the_calibrated_lower_head_and_not_the_raw_one(store: Path,
     assert (frame[LOWER_BOUND] < raw[conformal.lower]).all()
 
 
-def test_the_width_is_the_calibrated_span_and_varies_row_to_row(store: Path) -> None:
+def test_the_width_is_the_calibrated_span_and_is_not_one_constant(store: Path) -> None:
     """The correction is one constant in model space; the width in weight percent is not.
 
     `expm1` is convex, so the same widening is a wider band at a high prediction than at a low
     one -- which is why a width column says something the stored number cannot.
+
+    **It does not assert that the width is positive**, and that omission is the finding of card
+    #93 rather than a softening. `quantile_metrics` counts `crossings` because a MultiQuantile
+    booster fits its heads jointly *without* constraining them to be monotone -- measured at
+    23% of rows on a small fit -- and `hydms.surrogate.conformal`'s header states that CQR's
+    widening cannot repair a crossing. Two of these three candidates are outside the fixture's
+    La-Ni training family, which is exactly where crossing is likeliest, and on the CI runner
+    two of the three came back with an inverted band: widths `[1.373140, -0.094422,
+    -0.029760]` where this machine measures `[1.2297, 0.1671, 0.1573]`. A negative width here
+    is the same class of signal as a negative lower bound one test below -- something cards
+    #48 and #77 act on -- so this layer reports it unclipped and the assertion that it is
+    positive was a claim the code has never made. Where the crossing is *refused* is
+    `hydms.delivery.contract.Interval`, and `test_a_crossed_band_reaches_the_caller_unclipped`
+    below pins this layer's half of that.
     """
     frame = predict(CANDIDATES, [250.0, 400.0, 600.0], store=store)
+    widths = [float(w) for w in frame[INTERVAL_WIDTH]]
+    measured = f"widths={widths}, heads={frame.loc[:, list(HEADS)].to_dict('list')}"
 
     assert np.allclose(
         frame[INTERVAL_WIDTH], frame[HEADS[-1]] - frame[HEADS[0]], rtol=0, atol=1e-12
-    )
-    assert (frame[INTERVAL_WIDTH] > 0.0).all()
-    assert frame[INTERVAL_WIDTH].nunique() == len(frame)
+    ), measured
+    # Not the stored constant, which is what a width column is for. Stated as "more than one
+    # value" rather than "all distinct": convexity guarantees the widths differ once the
+    # medians do, and two candidates landing in the same leaves for every head would make the
+    # stronger version fail without anything being wrong.
+    assert len(set(widths)) > 1, measured
 
 
 def test_an_empty_batch_is_an_empty_frame_with_the_right_columns(store: Path) -> None:
@@ -319,6 +338,51 @@ def test_nothing_is_clipped_when_the_calibrated_band_reaches_below_zero() -> Non
     frame = _with_bound_and_width(heads, correction)
     assert frame[LOWER_BOUND].iloc[0] == pytest.approx(-0.4)
     assert frame[INTERVAL_WIDTH].iloc[0] == pytest.approx(1.5)
+
+
+def test_a_crossed_band_reaches_the_caller_unclipped() -> None:
+    """A crossed band leaves this layer as a NEGATIVE width, reported rather than repaired.
+
+    Card #93. A MultiQuantile booster fits its heads jointly and does not constrain them to be
+    monotone -- `quantile_metrics` counts `crossings` for that reason and measured 23% of rows
+    on a small fit -- and the conformal constant widens both outer heads by the same amount, so
+    it cannot uncross one (`hydms.surrogate.conformal`'s header says so). The surrogate's job
+    here is therefore to hand the crossing on intact: clipping it to zero, sorting the heads or
+    swapping them would turn a defect a screen can see into a plausible narrow band, which is
+    the single failure the whole phase exists to prevent.
+
+    Asserted on the assembly step, because *which* candidates cross is a property of a fit and
+    differs between machines -- that difference is what card #93 was opened by. Where the
+    crossing is refused rather than reported is `hydms.delivery.contract.Interval`, which
+    raises on `upper < lower`; that this layer stays quiet is what gives that one something to
+    refuse.
+    """
+    correction = FittedConformal(
+        correction=0.02,
+        confidence_level=0.8,
+        quantiles=QUANTILES,
+        lower=HEADS[0],
+        upper=HEADS[-1],
+        median=HEADS[1],
+        calibration_rows=56,
+        fitted_on="train",
+    )
+    # Already-widened heads, in the order `calibrated_heads` returns them. Row 0 is ordinary;
+    # row 1 is crossed, the runner's `Ti1Fe1` in miniature.
+    heads = pd.DataFrame(
+        {HEADS[0]: [1.0, 1.2], HEADS[1]: [1.5, 0.9], HEADS[2]: [2.1, 0.8]}
+    )
+
+    frame = _with_bound_and_width(heads, correction)
+
+    assert frame[INTERVAL_WIDTH].iloc[0] == pytest.approx(1.1)
+    assert frame[INTERVAL_WIDTH].iloc[1] == pytest.approx(-0.4), (
+        "a crossed band must leave the surrogate as a negative width. Clipping it here hides "
+        "the defect from every screen downstream."
+    )
+    # The bound is still the lower head by name, crossed or not: it is not re-derived as
+    # min(heads), which would silently repair the row.
+    assert frame[LOWER_BOUND].iloc[1] == pytest.approx(1.2)
 
 
 def test_the_bound_is_read_by_name_rather_than_by_position() -> None:
