@@ -2,6 +2,25 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
+> ## ▶ Next action — as of 2026-09-12
+>
+> **#93 first** — diagnose the two CI-only failures (`test_calibration_moves_coverage_toward_nominal`,
+> `test_the_width_is_the_calibrated_span_and_varies_row_to_row`: they pass locally and fail on the
+> runner, almost certainly a cross-platform CatBoost fit — **do not just widen the tolerance**), then
+> tick **#86**'s last box against a green `suite` job and close it, which unblocks **#34** → promotion
+> → unfreeze; **#80, #81, #85, #89, #91** are startable in parallel, and **#7** owes the four slow
+> tests that no push checks any more.
+>
+> Detail: [#93](093-two-tests-that-fail-only-on-the-ci-runner.md), [#86](086-gate-hg-4-ci-fast-lane-with-delivery-suite-and-hygiene.md),
+> and the latest handoff at the foot of this file.
+>
+> **This block is a pointer with a date on it, not a source.** It is the one place on this board
+> that restates state, which means it is the one place that can silently go stale — the cards and
+> `show_blocked.sh` are the authority and they win on sight. **Rewrite it when you close a card**,
+> the way you already append to a card's `## Narrative`; if its date is older than the newest
+> handoff below, distrust it and ask the board:
+> `bash ../.claude/skills/kanban-ai/scripts/show_blocked.sh .`
+
 This file owns the board's *own logic* — how cards are organised here, how the two boards share one
 id space, and where to start. It does not restate what lives elsewhere:
 
