@@ -294,6 +294,13 @@ conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
   | **#81 — the chart vocabulary** | **cancelled**, superseded by the next push five minutes later |
   | #100's refutation — **four markdown files, no code** | **failure**, 8 m 28 s, step `pytest — fast lane, with the coverage floor` |
   | #100's repair (this commit) | **success** |
+  | the commit carrying this narrative — **prose only, as a control** | **success** |
+
+  The last row is deliberate. A prose-only push re-runs the same lane over the repaired code, so a
+  second green there separates "the repair fixed it" from "the one red was itself intermittent" as
+  far as two observations can. **Two green after, one red before**, and the red is on a commit that
+  changed no code. That is as far as the evidence goes; a third green would not change the shape of
+  the argument, and nobody should spend pushes manufacturing one.
 
   Read that table twice. The commit that went red changed **no code at all**; it was simply the
   first run to *complete* after #81, because #81's own run was cancelled by it before reporting.
