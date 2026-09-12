@@ -12,8 +12,15 @@
       "output_tokens": 0,
       "files": 258,
       "note": "partial: 5 of 6 semantic chunks landed; chunk 1 (20 router docs) lost to a rate limit and left unstamped for retry. Token figure is chunk 2 only -- the other five agents were killed before returning usage."
+    },
+    {
+      "date": "2026-09-12T05:48:39.348985+00:00",
+      "input_tokens": 357741,
+      "output_tokens": 0,
+      "files": 23,
+      "note": "retry of the 20 router documents the previous run lost to a rate limit, plus card #77 and the runbook edited since. Corpus now fully extracted: 0 files unstamped. Token figure is both agents combined (input+output)."
     }
   ],
-  "total_input_tokens": 264189,
+  "total_input_tokens": 621930,
   "total_output_tokens": 0
 }
