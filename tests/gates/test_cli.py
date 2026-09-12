@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from hydms.config import load
-from hydms.gates import registry, run, select
+from hydms.gates import Speed, Status, registry, run, select
 from hydms.gates.__main__ import EXIT_BAD_INVOCATION, EXIT_GATE_FAILED, EXIT_OK, main, summarise
 
 
@@ -95,9 +95,54 @@ def test_a_report_is_written_where_it_is_asked_for(
     assert str(destination) in capsys.readouterr().out
 
 
+def test_summary_is_appended_where_it_is_asked_for(tmp_path: Path) -> None:
+    """`--summary` is what gives `summarise()` a consumer: CI's `$GITHUB_STEP_SUMMARY`.
+
+    It appends rather than truncates, because a step summary is accumulated by every step in
+    the job and rewriting it would delete what ran before. Card #86.
+    """
+    destination = tmp_path / "summary" / "step.md"
+    destination.parent.mkdir()
+    destination.write_text("an earlier step wrote this\n", encoding="utf-8")
+
+    assert main(["run", "--fast", "--no-report", "--summary", str(destination)]) == EXIT_OK
+
+    written = destination.read_text(encoding="utf-8").splitlines()
+    assert written[0] == "an earlier step wrote this"
+    assert written[-1].startswith("gates --fast:")
+
+
 def test_summarise_is_one_line_and_says_which_way_it_went(unwritten) -> None:
     name = unwritten[0].name
     report = run(select([name]), load(), selection=name, strict=True)
     line = summarise(report)
     assert "\n" not in line
     assert "RED" in line and name in line
+
+
+def test_summarise_names_the_gates_rather_than_echoing_the_selection(unwritten) -> None:
+    """The naming must survive a selection that does not contain the names.
+
+    This is the question the test above *looks* like it asks and does not. There the
+    selection is the gate's own name, so `name in line` was satisfied by the echo of the
+    input — and it stayed satisfied while `summarise` reported nothing but tallies. Measured
+    on 2026-09-12 against the real fast lane, the line read `gates --fast: green -- 7 passed,
+    0 failed, 2 skipped, 0 errored` with AC-5 and HG-4 the skips, naming neither.
+
+    So: select by *lane*, strike the selection string out of the line, and only then ask
+    whether the gates that were not green are named. Card #86 owns the fix.
+    """
+    report = run(select(speed=Speed.FAST), load(), selection="--fast", strict=True)
+    not_green = [r.name for r in report.results if r.status is not Status.PASSED]
+    if not not_green:
+        pytest.skip("every fast gate passed in this checkout, so there is nothing to name")
+
+    line = summarise(report)
+    assert "\n" not in line
+    # Subtract the input before asking whether the sentence names anything: without this the
+    # assertion passes on the echo, which is exactly how the gap survived.
+    without_echo = line.replace("--fast", "")
+    for gate in not_green:
+        assert gate in without_echo, (
+            f"{gate} was not green and summarise() did not name it: {line!r}"
+        )

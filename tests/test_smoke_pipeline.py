@@ -251,11 +251,20 @@ def test_the_smoke_run_is_in_the_ci_fast_lane(
 ) -> None:
     """Card #73's last box, checked rather than remembered.
 
-    The fast lane runs `python -m pytest` over the whole `tests` tree with no `-m` deselection,
-    so this file is in it by construction -- as long as nothing in it is marked `slow`, which
-    is the half that could be lost by an edit to this file alone. The marker half is read off
-    the *collected items* rather than grepped out of this file: a source scan for the string
-    finds its own assertion, which is how that first draft failed.
+    The fast lane runs `python -m pytest` over the whole `tests` tree, so this file is in it
+    as long as nothing in it is marked `slow`. The marker half is read off the *collected
+    items* rather than grepped out of this file: a source scan for the string finds its own
+    assertion, which is how that first draft failed.
+
+    **The other half used to assert `"not slow" not in workflow`, and that was a proxy rather
+    than the subject.** It stood for "the lane deselects nothing, so everything is in it",
+    which was true until card #86 had to make it false: the `suite` job was running the full
+    24 m 58 s suite against a 20-minute cap and three consecutive pushes died on the timeout.
+    It now runs `-m "not slow"`, which is what `pyproject.toml` has always said the marker
+    means. This card's guarantee is untouched by that -- nothing here is marked slow -- so the
+    assertion is rewritten to check the guarantee instead of the proxy: if the lane deselects
+    by marker at all, the expression must be exactly `not slow`, because any other one could
+    drop this file for a reason this test would not see.
     """
     workflow = (repo_root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     deselected = [
@@ -265,5 +274,10 @@ def test_the_smoke_run_is_in_the_ci_fast_lane(
     ]
 
     assert "python -m pytest" in workflow
-    assert "not slow" not in workflow
     assert not deselected, f"the fast lane would deselect {deselected}"
+
+    selectors = re.findall(r'-m\s+"([^"]+)"', workflow)
+    assert set(selectors) <= {"not slow"}, (
+        f"the fast lane deselects by {selectors}, which this test cannot reason about. Only "
+        f'`-m "not slow"` is understood here, and this file carries no slow marker.'
+    )

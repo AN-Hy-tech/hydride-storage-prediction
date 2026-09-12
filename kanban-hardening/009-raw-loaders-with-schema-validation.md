@@ -27,13 +27,21 @@ Validation belongs here so no later layer has to defend against a malformed row.
 - [x] Schemas declared explicitly (names, dtypes, allowed ranges, nullability)
 - [x] A violation raises with the offending rows named, never silently coerces
 - [x] Row counts asserted against documented values (1279 hydride_data, 772 ML-HydPARK)
-- [ ] **The HyStor spreadsheet has no loader, and this box says why rather than hiding it.**
+- [x] **The HyStor spreadsheet has no loader, and this box says why rather than hiding it.
+      CLOSED 2026-09-12: #86 declined `openpyxl`, so the reopen condition cannot be met.**
       `HyStor_27_7_24 (1).xlsx` needs `openpyxl`, which is in neither `environment.lock.yml`
       nor the machine interpreter, and adding a package invalidates the lock file — **#86**'s
-      decision, boxed there. It is also not a fourth independent source: one sheet, 1283 rows,
-      the same six columns as `hydride_data.csv` (headed `H2_W%` rather than `H2_W% (max)`),
-      which is that file's upstream. Nothing in the repository or its history reads it. Reopen
-      this box only if #86 adds the dependency **and** a card needs the four extra rows.
+      decision, and #86 said no. It is also not a fourth independent source: one sheet, 1283
+      rows, six columns (headed `H2_W%` rather than `H2_W% (max)`), and `hydride_data.csv` is
+      its downstream. Nothing in the repository or its history reads it.
+
+      **The reopen condition said "and a card needs the four extra rows", and #86 found that
+      those cannot be named.** The CSV is not this sheet minus four rows; it is a
+      renormalisation of it — `CaNi5` → `Ca1Ni5`, `CaAl1.8B.2 (M)` → `Ca1Al1.8B0.2`, with only
+      **117** of ~1,180 composition strings matching literally — so there is no join key on
+      which a difference of four could be taken. If anyone ever wants that provenance, it is a
+      question for **#89**, which already carries a HyStor row-count box, and not a reason to
+      add a dependency.
 
 - [x] **Decided 2026-09-12: no correction layer. This module never changes a value it was
       given, and the "normalises nothing" contract stands.** `Mg0853Ni0.125La0.022` is a missing

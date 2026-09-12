@@ -59,6 +59,26 @@ one-line change, not a retrain.
       log records to include tuning fits, or have this lane read the wall time a previous run
       actually took.
 
+- [ ] **Run the four `@pytest.mark.slow` tests. Nothing in CI runs them any more** (from #86,
+      2026-09-12). The fast lane's `suite` job was running the whole suite against a 20-minute
+      cap it could not meet — the full run is 24 m 58 s — and the three pushes before #86 all
+      died with "The job has exceeded the maximum execution time of 20m0s", with nothing wrong
+      in any of them. #86 made that job `-m "not slow"`, which is what `pyproject.toml` has
+      said the marker means since #69 wrote it. The deselected four, and what each stops
+      checking on a push:
+
+      | Test | Costs | What goes unchecked |
+      |---|---|---|
+      | `tests/selection/test_selection.py::test_the_configured_budget_reproduces_the_reduced_one_on_which_rows_it_reads` | ~11 min | That `SENTINEL_BUDGET` changes only how long Boruta iterates, not which rows it reads |
+      | `tests/gates/test_ac1_reproducibility.py::test_the_deployed_fit_reproduces_itself_across_thread_counts` | ~3 min | AC-1's own claim, against two real fits at different thread counts |
+      | `tests/data/test_golden.py::test_the_deployed_screening_removes_twenty_of_the_eight_hundred_and_ninety_three` | ~18 s | What the pipeline actually drops — the only test that pins it |
+      | `tests/surrogate/test_loco.py::test_the_class_folds_are_the_ten_families_with_the_supports_88_measured` | — | That every alloy class stays estimable, before a 4.7 h run finds out |
+
+      Add `python -m pytest -m slow` to this lane. Until then the honest statement is that
+      those four are checked on the maintainer's machine and nowhere else — which is a
+      **regression #86 introduced deliberately**, to stop a lane that never reached the gates
+      at all, and it is this card's to repay
+
 ## Runnable check
 
 ```bash

@@ -369,13 +369,23 @@ on them — so no heavy run was needed and nothing was promoted.
 
 **Deferred by design — leave these parked. Each states its own reopen condition.**
 
-- **#9, first box (the HyStor spreadsheet has no loader).** Says it outright: *"Reopen this box
-  only if #86 adds the dependency **and** a card needs the four extra rows."* It needs `openpyxl`,
-  which would invalidate the lock — and note that #1 has since found the lock cannot be rebuilt
-  here at all, which makes changing it a larger question rather than a smaller one — and it is not
-  a fourth independent source — one sheet, 1283
-  rows, the same six columns as `hydride_data.csv`, which it is upstream of. Nothing in the
-  repository reads it.
+- **#9, first box (the HyStor spreadsheet has no loader). SETTLED 2026-09-12 by #86: the
+  dependency is not added, so the reopen condition cannot be met.** The box read *"Reopen this
+  box only if #86 adds the dependency **and** a card needs the four extra rows"*, and #86
+  declined the dependency — `openpyxl` would invalidate the lock, and #1 has since found the
+  lock cannot be rebuilt here at all, which makes changing it a larger question rather than a
+  smaller one.
+
+  **The second half of that condition was never askable, and the correction is worth keeping.**
+  #86 read the sheet with stdlib `zipfile`: it is `A1:F1284`, so 1,283 data rows over six
+  columns, and the CSV is not a copy of it missing four rows — it is a **renormalisation**.
+  The sheet writes `CaNi5` and `CaAl1.8B.2 (M)` where the CSV writes `Ca1Ni5` and
+  `Ca1Al1.8B0.2`; only **117** of ~1,180 composition strings match literally, and the header is
+  `H2_W%` against `H2_W% (max)`. So *"the four extra rows"* names nothing anyone could go and
+  fetch — the join key was rewritten between the two files. What became of them, and what
+  `(M)` meant, is a data-provenance question for **#89**, which already carries a HyStor
+  row-count box. Nothing in the repository reads the spreadsheet, and nothing should start
+  without that card.
 - **#30, first box (the LOCO run has no resume, 4.7 h).** *"Accepted as-is for this run."* It is
   boxed so the **next** protocol that costs hours is built with checkpointing, not so this one is
   retrofitted.
@@ -768,10 +778,74 @@ superseded. Here is every one of them, so nobody has to discover it by quoting i
 | Probe macro R2 **0.2240**, worst **HEA** -0.3026, best **A2B** 0.6703 | macro **0.2734**, worst **Mg** -0.3381, best **SS** 0.7626 | Sentinel-budget probe. The real run sized the gap the same and named different families at *both* ends |
 | Suite **1115 passed, 1 skipped**; gates **5 / 0 / 7** | **1117 passed, 0 skipped**; gates **6 / 0 / 6** | The LOCO run closed the skip and turned AC-6 green; the review session's promote test added the extra pass |
 | "AC-6 is SKIPPED / the run is owed" | **AC-6 PASSED** | The run happened 2026-09-06, 18:16:09 to 22:23:13 |
+| Any handoff implying CI was green | **CI had never once completed the `suite` job** | #86 read `gh run list` on 2026-09-12: every push run was `cancelled` or `failure`, the job timing out at its 20-minute cap against a 24 m 58 s suite. Local suite counts in older handoffs are still correct *about the machine lane*, and were never evidence about CI |
+| "the four extra rows" in the HyStor spreadsheet | **Not identifiable** | The CSV is a renormalisation of the sheet, not a copy of it: 117 of ~1,180 composition strings match literally, so no join key supports a difference of four (#86, 2026-09-12) |
 
 Anything else in an older handoff that contradicts a *card* — the card wins. Anything that
 contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The handoffs are narrative,
 and their authority is over intent, not over facts.
+
+---
+
+### Handoff -- 2026-09-12 (latest) - #86 is written but NOT closed; read the CI run before anything else
+
+**#86 is `doing` with one box open, and the box is the point of the card.** Everything else in it
+is done: the HG-4 gate is implemented and registered, `--cov` and `-m "not slow"` are in the
+workflow, `--summary` writes the verdict into `$GITHUB_STEP_SUMMARY`, and both dependency
+decisions are made. What is not done is *verification*, and it cannot be done from the machine.
+
+**Start here, before you read any file:**
+
+```bash
+gh run list --limit 5          # is there a green push run yet?
+gh run view <id>               # per-job outcome, and the ANNOTATIONS block
+gh run view --job <id> --log   # the only place the error text lives
+```
+
+**Why this is the first thing.** #86 found that **CI has never once completed the `suite` job on
+this branch.** Every push run in the history is `cancelled` or `failure`. `cancel-in-progress`
+made that look like ordinary supersession; it was not. The newest run — the only one with no
+push after it to blame — carries *"The job has exceeded the maximum execution time of 20m0s"*.
+The job caps at 20 minutes and the full suite is 24 m 58 s, a number the runbook has recorded
+since 2026-09-07. Both facts were written down in different files and nobody had multiplied them.
+So: **no handoff below this one was ever evidence about CI**, however green its local numbers.
+
+**What #86 changed, and what it costs.**
+
+- The `suite` job now runs `pytest -m "not slow" --cov`. `-m "not slow"` is what
+  `pyproject.toml` has said the marker means since #69 (*"excluded from the CI fast lane"*) and
+  the workflow had simply never done it. The log shows the old job reaching 89 % and then
+  stalling nine minutes with no output, which lands exactly at
+  `tests/surrogate/test_selection.py` and its eleven-minute Boruta test.
+- **The four `@pytest.mark.slow` tests are now checked on no push at all.** That is a
+  deliberate regression, boxed on **#7**, which owns repaying it. It is worse than a lane that
+  ran them and better than a lane that timed out before reaching the gates.
+- CI's `mypy` was **red**, on six `import-not-found` errors for fastapi/uvicorn/pydantic that
+  #78 and #79 added without touching `[[tool.mypy.overrides]]`. It passed locally **only
+  because this machine has those packages installed and a bare runner does not**. Fixed, and
+  the lesson is in the runbook §5: reproduce the lane with a bare venv, not with your `mypy`.
+- `pytest-cov` is now in `Project` as well as the `dev` extra. Full-suite **test** coverage is
+  **88.43 %** against the 80 % floor. (`CONTEXT.md` now separates *test* coverage from
+  *conformal* coverage — they are both percentages in `gate-results.json` and mean nothing
+  about each other.)
+
+**The one thing you must chase.** The timed-out log shows **two tests already failing in CI** at
+roughly 84 % and 89 % — near `tests/surrogate/test_model.py` and `tests/surrogate/test_promote.py`
+— which **pass locally**. They are unnamed because no run has ever reached the summary line that
+would name them. They are not regressions from #86; they are the first thing the lane will report
+now that it gets far enough to report anything. Map a percentage to a file with
+`pytest --collect-only` (no `-q` — pyproject already sets it) and index the node-id list.
+
+**Then:** tick #86's timeout box against a green `suite` job and close it. #86 is the last
+unfinished blocker on **#34** (promotion), which is the unfreeze condition, so closing it is what
+unblocks the critical path. #80 (S6's last card), #81, #85, #89 and #91 remain startable in
+parallel and none of them is touched by this.
+
+**Unchanged and still parked:** the three deferred boxes, #30's third box, and #1's OPEN
+maintainer decision about re-solving the lock. #86 added `coverage` and `pytest-cov` to
+`requirements-lock.txt` by pip, which is the #27/#49 precedent and **not** a re-solve — it does
+not touch that decision. While counting, the lock header was found stale at 209 against 210
+actual; it now says 212 and `docs/ENVIRONMENT.md` agrees.
 
 ---
 

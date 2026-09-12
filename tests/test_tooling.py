@@ -11,6 +11,7 @@ Card #69.
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -109,6 +110,51 @@ def test_collected_tests_come_only_from_this_directory(pytest_config: dict) -> N
         assert tests_dir in path.parents or path.parent == tests_dir, (
             f"collected test module {name} lives outside tests/: {path}"
         )
+
+
+@pytest.fixture(scope="module")
+def dev_extra() -> dict[str, str]:
+    """The `dev` optional-dependency group, as ``{name: specifier}``."""
+    raw = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    parsed = tomllib.loads(raw)["project"]["optional-dependencies"]["dev"]
+    out: dict[str, str] = {}
+    for entry in parsed:
+        name = re.split(r"[<>=!;\[ ]", entry, maxsplit=1)[0].strip()
+        out[name] = entry
+    return out
+
+
+@pytest.mark.parametrize("tool", ["ruff", "mypy"])
+def test_the_lint_tools_are_pinned_exactly_and_agree_with_ci(dev_extra: dict, tool: str) -> None:
+    """The `dev` extra and the workflow must name the same ruff and the same mypy.
+
+    Two places install these. `.github/workflows/ci.yml`'s `hygiene` job pins them by hand,
+    because the first run of that workflow failed when a floor resolved to a newer ruff that
+    raised RUF100 on a `# noqa` the older one needs — the two versions are mutually
+    unsatisfiable, so a floor makes the lane "a check plus whatever was released this week".
+    The `suite` job installs the `dev` extra, and it runs gate HG-4, which shells out to ruff
+    and mypy itself. While this extra carried floors, HG-4 could have gone red in CI against a
+    version the hygiene job never runs, for a reason nobody could reproduce.
+
+    Card #86. Bumping a version is a deliberate commit that changes both sites together.
+    """
+    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    in_workflow = re.findall(rf'"{tool}==([0-9][^"]*)"', workflow)
+    assert in_workflow, f"the ci.yml hygiene job no longer pins {tool} exactly"
+
+    spec = dev_extra.get(tool)
+    assert spec is not None, f"{tool} is no longer in the dev extra"
+    assert "==" in spec, (
+        f"the dev extra floors {tool} ({spec!r}) instead of pinning it. CI's suite job "
+        f"installs this extra and runs gate HG-4, which runs {tool}; a floor there means the "
+        f"gate is checked against whatever was released this week."
+    )
+
+    pinned = spec.split("==", 1)[1].strip()
+    assert {pinned} == set(in_workflow), (
+        f"the dev extra pins {tool}=={pinned} but ci.yml installs {sorted(set(in_workflow))}. "
+        f"Both sites must name the same version."
+    )
 
 
 def test_leak_marker_is_registered(pytest_config: dict) -> None:

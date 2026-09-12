@@ -50,7 +50,7 @@ single-file `conda env create` provably cannot rebuild this environment, for the
 |---|---|---|
 | `environment.yml` | 248 conda packages, exact versions, no build strings | 1 — different OS or architecture |
 | `environment.lock.yml` | 248 conda packages with build strings — the resolved solve | 1 — same platform |
-| `requirements-lock.txt` | 209 pip packages, exact versions | 2 — both cases |
+| `requirements-lock.txt` | 212 pip packages, exact versions | 2 — both cases |
 
 All have the machine-local `prefix:` line stripped; it records wherever the exporting machine
 happened to keep its envs, and conda ignores it on create.

@@ -32,12 +32,20 @@ exactly as they are. Stripping them here would silently move the unique-formula 
 1149 to 1142 and pre-empt the canonical composition key, which is card #87's to define and
 to reconcile. A loader that quietly repairs its input is a loader that hides the repair.
 
-**The HyStor spreadsheet is not loaded.** ``HyStor_27_7_24 (1).xlsx`` is a single sheet of
-1283 rows over the same six columns as ``hydride_data.csv`` -- it is that file's upstream,
-not a fourth independent source -- and nothing in the repository has ever read it. Reading
-it needs ``openpyxl``, which is in neither ``environment.lock.yml`` nor the machine
-interpreter, and adding a package invalidates the lock file. That is card #86's decision,
-so card #9 carries the box rather than making it in passing.
+**The HyStor spreadsheet is not loaded, and card #86 decided on 2026-09-12 that it stays that
+way.** ``HyStor_27_7_24 (1).xlsx`` is a single sheet of 1283 rows over six columns, and
+``hydride_data.csv`` is its downstream -- not a fourth independent source -- and nothing in
+the repository has ever read it. Reading it needs ``openpyxl``, which is in neither
+``environment.lock.yml`` nor the machine interpreter, and adding a package invalidates the
+lock file.
+
+Be careful with "the same six columns", which this docstring used to say and which invites a
+wrong inference. The columns are the same *fields*, but the CSV is a **renormalisation** of
+the sheet rather than a copy of it: the sheet writes ``CaNi5`` and ``CaAl1.8B.2 (M)`` where
+the CSV writes ``Ca1Ni5`` and ``Ca1Al1.8B0.2``, and only 117 of roughly 1,180 composition
+strings match literally. So a loader here would not be a cheap second reader of the same
+rows; it would be a divergent view that nothing reconciles. #86 measured that with stdlib
+``zipfile`` and recorded it; #89 owns the provenance question it raises.
 
 Card #9.
 """

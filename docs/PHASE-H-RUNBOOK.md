@@ -1135,8 +1135,18 @@ single prediction path and HG-3 covers the UI too.
       of S8 that can be written today, and two later cards want it: #83's model card links to it and
       #37 is written from it.
 - [ ] **#85** ADR — the delivery seam and why the API owns no ML logic.
-- [ ] **#86 (HG-4)** Extend the CI fast lane with the delivery suite, the freeze check, and
-      ruff / mypy / coverage.
+- [~] **#86 (HG-4)** Extend the CI fast lane with the delivery suite, the freeze check, and
+      ruff / mypy / coverage. **Gate written and CI wired 2026-09-12; one box open.** It found
+      that **CI has never completed the `suite` job on this branch** — every push run is
+      `cancelled` or `failure`, the newest annotated *"exceeded the maximum execution time of
+      20m0s"* — because the job ran the full 24 m 58 s suite against a 20-minute cap. It now
+      runs `-m "not slow"`, which is what `pyproject.toml` has said the marker means since #69.
+      It also found CI's `mypy` red on six `import-not-found` errors that **cannot reproduce on
+      the maintainer's machine**, because this interpreter has fastapi and pydantic and the
+      runner does not. Coverage is **88.43 %** against the 80 % floor. The open box is the
+      timeout itself: tick it against a green run, not against the reasoning. Two tests were
+      already failing in CI at ~84 % and ~89 % and are still unnamed, because no run has ever
+      reached the summary line.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
 - [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~
@@ -1194,7 +1204,7 @@ lives in `current.json` and never in the report; see §3's artifact-store bullet
 | **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red: a detector stopped firing, a sentinel's subject module exists with nothing wired to it, or a leak has neither a sentinel nor a recorded deferral. Green only when all thirteen are checked against the real pipeline |
 | **HG-2** No bare numbers | #77 | A contract type gains a default for `interval` or `domain`; any `return` in `predict_capacity` stops being a `Refusal` or a `PredictionResult`; a probe comes back without a code, a sentence, or the thing its refusal is about — named *outside* the echo of the formula that was typed, since every sentence here quotes its input and `'Xx'` is in `'Xx2'`; a declared code stops being reachable through either door with nothing saying why; or a code with no input at the request door becomes reachable there. Skips, loudly, where no artifact is on disk or where every probe was refused |
 | **HG-3** Transport parity | #79 | The API's answer differs from `predict_capacity()`'s for the same input at any JSON pointer; a served body cannot be rebuilt by `answer_from()` into an equal object; a batch reorders its rows, fails whole over a refused row, or does not enforce the limit it publishes; a rejected request carries `refused`, or `answer_from()` reads one as an answer; the committed OpenAPI document is not what the code produces; the request model declares a field `PredictionRequest` does not, or stops forbidding unknown ones; `/v1/health` or `/v1/model` names a version other than the one that answered. Skips, loudly, where no artifact is on disk or the `api` extra is absent — the document and the door are checked first either way |
-| **HG-4** Hygiene | #86 | ruff, mypy, or the coverage floor fail on `hydms/` |
+| **HG-4** Hygiene | #86 | ruff or mypy fail on `hydms/ tests/ scripts/`, or the coverage floor in `[tool.coverage.report]` is not met. Runs the tools rather than reading a log — ruff is 0.045 s and a warm mypy 2.33 s, so re-asking is cheaper than trusting. Skips, loudly, where a tool is absent from `PATH`, where there is no `pyproject.toml` to lint by, or where no `pytest --cov` has been run; and **refuses to report a coverage number from data older than the newest file under `hydms/`**, because `pytest --cov` writes its data only when the run ends, so a gate running inside that suite would otherwise score the previous run |
 | AC-1 | #32 | Same seed does not reproduce identical metrics |
 | AC-2 | #21 | The featuriser does not match CBFV to 1e-9 on all 1,279 formulae |
 | AC-3 | #31 | Conformal coverage does not match its nominal level |
@@ -1233,10 +1243,31 @@ python scripts/verify_environment.py
 # run, which happened on 2026-09-06, so it now asserts the committed reports/loco/loco.md against
 # what `loco --emit` builds. A skip reappearing there means the tables have gone missing, not that
 # a test is quarantined.
+#
+# THE FULL RUN IS NOT WHAT CI RUNS, as of card #86 (2026-09-12). CI's `suite` job runs
+# `-m "not slow"` because the full run does not fit its 20-minute cap and never did — every
+# push run on this branch was `cancelled` or `failure`, the newest annotated "exceeded the
+# maximum execution time of 20m0s". So the FULL run below is the maintainer's command and the
+# only place the four slow tests are executed at all until card #7's slow lane exists.
+# Measured 2026-09-12 WITH `--cov`: 1443 passed in 37 m 52 s, TOTAL coverage 88.43 % against
+# the 80 % floor in [tool.coverage.report]. `--cov` needs pytest-cov, which card #86 installed
+# into `Project` (pytest-cov 7.1.0 + coverage 7.16.0, no existing pin moved).
 conda run -n Project python -m pytest
+conda run -n Project python -m pytest -m "not slow" --cov   # what CI actually runs
 conda run -n Project python -m pytest tests/leaks               # HG-1
 # Lint and types run OUTSIDE the environment, deliberately: neither imports the project's
 # dependencies, and card #68 fixed that the fast lane installs nothing (docs/QA-PROTOCOL.md §6).
+#
+# A GREEN `mypy` HERE IS NOT EVIDENCE ABOUT CI, and card #86 found that out the expensive way
+# on 2026-09-12: the hygiene job was failing on six `import-not-found` errors for fastapi,
+# uvicorn and pydantic that cannot occur on this machine, because this interpreter happens to
+# have them installed and a bare runner does not. The overrides in pyproject now cover them.
+# When you add an import under `hydms/` that is not in `[[tool.mypy.overrides]]`, ask the lane
+# the way the lane asks it — a bare interpreter, nothing installed but mypy:
+#     python -m venv /tmp/barelint && /tmp/barelint/bin/python -m pip install mypy==1.13.0
+#     /tmp/barelint/bin/python -m mypy
+# Keep the version equal to the workflow's; `tests/test_tooling.py` asserts the `dev` extra and
+# the workflow name the same ruff and the same mypy, so a bump is one commit touching both.
 ruff check hydms/ tests/ scripts/ && mypy
 # `run` with no selection exits 2 -- a selection is a decision, so name one.
 conda run -n Project python -m hydms.gates run --all           # 8 passed, 0 failed, 4 skipped (3.0 min)

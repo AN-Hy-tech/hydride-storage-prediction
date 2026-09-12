@@ -29,7 +29,7 @@ from typing import TextIO
 
 from hydms.config import Config, ConfigError, load
 
-from ._core import GateReport, Speed, UnknownGate, registry, run, select
+from ._core import GateReport, Speed, Status, UnknownGate, registry, run, select
 from ._report import render_registry, render_report, write_report
 
 # Written under the configured artifacts directory, beside the version directories. A saved
@@ -83,6 +83,16 @@ def _parser() -> argparse.ArgumentParser:
         help=f"where to write the JSON report; defaults to <artifacts>/{REPORT_NAME}",
     )
     runner.add_argument("--no-report", action="store_true", help="do not write a JSON report")
+    # The consumer this exists for is `$GITHUB_STEP_SUMMARY`, which GitHub gives every step as
+    # a path to append markdown to. Taking a path rather than reading that variable keeps the
+    # CLI honest about what it writes and where -- and testable without inventing an
+    # environment.
+    runner.add_argument(
+        "--summary",
+        type=Path,
+        default=None,
+        help="append the one-line verdict to this file, e.g. $GITHUB_STEP_SUMMARY",
+    )
     return parser
 
 
@@ -125,6 +135,17 @@ def _run(args: argparse.Namespace, stream: TextIO) -> int:
         written = write_report(report, destination)
         print(f"\nreport: {written}", file=stream)
 
+    if args.summary is not None:
+        # Append: a CI step summary is accumulated by every step in the job, and truncating it
+        # would delete what ran before this. A failure to write it must not change the
+        # verdict -- the gates are the answer, the summary is only how it is shown.
+        try:
+            args.summary.parent.mkdir(parents=True, exist_ok=True)
+            with args.summary.open("a", encoding="utf-8") as handle:
+                handle.write(summarise(report) + "\n")
+        except OSError as exc:
+            print(f"could not write the summary to {args.summary}: {exc}", file=sys.stderr)
+
     return EXIT_OK if report.ok else EXIT_GATE_FAILED
 
 
@@ -141,13 +162,37 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def summarise(report: GateReport) -> str:
-    """One line for a CI step summary or a commit comment."""
+    """One line for a CI step summary or a commit comment, **naming** what was not green.
+
+    The counts alone were not enough, and the way that was missed is worth recording. The
+    original version returned only the tallies, and its test looked like it checked the
+    naming -- it asserted the gate's name appeared in the line. It did, but only because
+    ``report.selection`` echoes the names you asked for: under ``--fast`` the selection is the
+    literal string ``--fast``, and the line named nothing. Measured on 2026-09-12 against the
+    real fast lane, it read ``gates --fast: green -- 7 passed, 0 failed, 2 skipped, 0
+    errored`` while AC-5 and HG-4 were the skips, and a reader could not tell which.
+
+    Card #86 asks that a failure name which gate failed, so the names are appended here and
+    the test now asks the question under a selection that does not contain them.
+    """
     counts = report.counts
     verdict = "green" if report.ok else "RED"
-    return (
+    line = (
         f"gates {report.selection}: {verdict} -- {counts['passed']} passed, "
         f"{counts['failed']} failed, {counts['skipped']} skipped, {counts['errored']} errored"
     )
+
+    # Ordered worst-first, and skips are named even when the run is green: a lane tolerates
+    # them (see GateReport.ok), which is exactly why they have to stay visible.
+    for status, label in (
+        (Status.ERRORED, "errored"),
+        (Status.FAILED, "failed"),
+        (Status.SKIPPED, "skipped"),
+    ):
+        named = [r.name for r in report.results if r.status is status]
+        if named:
+            line += f"; {label}: {', '.join(named)}"
+    return line
 
 
 if __name__ == "__main__":  # pragma: no cover - exercised through main()

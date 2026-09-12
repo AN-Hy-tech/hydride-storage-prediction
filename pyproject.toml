@@ -113,14 +113,35 @@ api = [
   "pydantic>=2.7",
 ]
 
+# The test and hygiene toolchain. Installed by CI's `suite` job and by anyone running the
+# suite outside the pinned `Project` environment.
+#
+# `pytest-cov` is here and is now also installed into `Project` — card #86's decision, made
+# 2026-09-12 after the gap had been deferred twice. Measured before deciding: it resolves to
+# `pytest-cov 7.1.0` and `coverage 7.16.0` and **moves no existing pin**, every other
+# requirement already being satisfied, so `requirements-lock.txt` gains two lines and nothing
+# else. The reason to install it rather than leave the floor to CI is that gate HG-4 reads the
+# coverage data, and a gate that can only ever answer in CI is a gate the maintainer cannot ask
+# before pushing. It is also categorically unlike `uq` and `novelty`: coverage is a measurement
+# tool that no fit and no prediction can reach, so installing it cannot move a published number.
+#
+# **ruff and mypy are pinned exactly, not floored, and that is load-bearing.**
+# `.github/workflows/ci.yml` installs `ruff==0.8.4` and `mypy==1.13.0` by hand in the hygiene
+# job, because the first run of that workflow failed when `>=0.6` resolved to a newer ruff that
+# raised RUF100 on a `# noqa` the older one needs — the two versions are mutually
+# unsatisfiable. Those exact pins were then contradicted by the floors that used to live here,
+# which matters because CI's `suite` job installs *this* extra and runs gate HG-4, which runs
+# ruff and mypy itself: a floor here could have turned HG-4 red against a ruff the hygiene job
+# never runs. `tests/test_tooling.py` asserts these two stay equal to the workflow's.
+# Bumping them is a deliberate commit that fixes what the new version finds, in both places.
 dev = [
   "pytest>=8.0",
   "pytest-cov>=5.0",
   "httpx>=0.27",      # the FastAPI TestClient transport
   "tomli>=2.0; python_version < '3.11'",   # tomllib is 3.11+; the pinned interpreter is 3.10
   "types-PyYAML>=6.0",                     # PyYAML is core; these are its stubs
-  "ruff>=0.6",
-  "mypy>=1.10",
+  "ruff==0.8.4",
+  "mypy==1.13.0",
 ]
 
 [project.urls]
@@ -247,6 +268,25 @@ module = [
   # joblib ships neither inline types nor a py.typed marker, and the conda-free lint lane
   # does not install it at all. It is the artifact store's persistence mechanism (card #4).
   "joblib",
+  # The delivery stack (cards #78, #79) and coverage (card #86). These are a different case
+  # from every entry above: fastapi and pydantic ship *good* inline types, so nothing here is
+  # a complaint about their stubs. They are listed because the lint lane installs nothing and
+  # they are therefore simply absent from it — which is the same reason `yaml` is listed.
+  #
+  # This was found the hard way. CI's hygiene job failed with six `import-not-found` errors
+  # while `mypy` on the maintainer's machine reported success, because the machine
+  # interpreter happens to have fastapi and pydantic installed and the runner does not. A
+  # green local mypy was therefore not evidence about CI at all. Reproduced on 2026-09-12 by
+  # running mypy 1.13.0 in a bare venv, which is what the lane actually is; card #86's
+  # narrative records the reproduction, and `docs/QA-PROTOCOL.md` §6 is the rule it broke.
+  #
+  # Both spellings of each are listed on purpose: `fastapi.*` does not cover `fastapi`
+  # itself, and the `pandas` entry above is the comment explaining what listing only one of
+  # them costs.
+  "fastapi", "fastapi.*",
+  "uvicorn", "uvicorn.*",
+  "pydantic", "pydantic.*",
+  "coverage", "coverage.*",
 ]
 ignore_missing_imports = true
 
