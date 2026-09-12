@@ -61,11 +61,17 @@ enforced everywhere the work happens, and unenforced on the branch the work has 
       freeze whose whole point is to stop drive-by edits; or accepting the gap on the grounds that
       exactly one PR targets `main` and it is being closed. **Record the reasoning either way** —
       the next person to notice this will otherwise re-open it
-- [ ] PR **#7** is closed unmerged, and the reason is on the cards rather than only in the PR
-      thread. *(The reasoning is already recorded — #34's and #36's Narratives of 2026-09-12 — so
-      this box is the act, not the write-up.)*
-- [ ] A check of the remaining open PRs against the deny-list, so this is answered as a set rather
-      than one PR at a time: `gh pr list --state open --json number,files`
+- [x] PR **#7** is closed unmerged, and the reason is on the cards rather than only in the PR
+      thread. **Closed 2026-09-12T17:22:36Z** — `state=CLOSED`, `mergedAt=null`, so `main` was not
+      touched. The branch `claude/persist-vs-refit-resolved-dk4iss` is deliberately **left on
+      origin** at `d07a66e`: it is the fullest record of the original reasoning, and #34 keeps the
+      framing precisely because the dissolution is only legible beside it. The rationale is also in
+      the PR thread, but the cards are the authority. **#6 is now the only open PR.**
+- [x] A check of the remaining open PRs against the deny-list, so this is answered as a set rather
+      than one PR at a time: `gh pr list --state open --json number,files`. **Done 2026-09-12: the
+      set is now one.** #6 is the hardening branch itself, targets `main`, and is the PR whose merge
+      *closes* this card. Nothing else is open, so the two boxes below are the whole of the
+      remaining exposure and it is bounded by a single pull request nobody intends to merge early.
 
 ## Runnable check
 
@@ -89,3 +95,13 @@ enforcement this extends
   is *absent* rather than failing. See [[a-check-that-reads-a-gitignored-path-never-runs]] — same
   failure mode, different mechanism: there the check ran and read nothing, here the check does not
   exist on the branch being checked. (by @assistant)
+
+- 2026-09-12 (later): PR #7 closed unmerged at 17:22:36Z, with the reasoning in the thread and on
+  #34 and #36. **What is left of this card is the part that cannot be closed by an act**: `main`
+  still has no freeze check, and it gets one only when #6 merges, which the freeze itself prevents
+  until it lifts. So the honest state is not "fixed" but "bounded" — the exposure is one pull
+  request, and that request is the fix. The first box, the paragraph in `docs/FREEZE.md`, is
+  therefore the one that matters most and is the cheapest: until it is written, the only place this
+  gap is recorded is a card, and a card is not what a reviewer reads before clicking merge.
+  (by @assistant)
+

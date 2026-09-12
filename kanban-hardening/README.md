@@ -13,8 +13,10 @@
 > **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no push
 > checks any more, and now also owes installing from `requirements-lock.txt`. Two new cards from
 > #93: **#94**, a crossed band raises where it should refuse; and **#95**, the freeze is unenforced
-> on `main` — **PR #7 on GitHub is green, mergeable, and edits the frozen board**, so close it
-> unmerged rather than reading its tick marks.
+> on `main`. PR #7 was green, mergeable and editing the frozen board; it is **closed unmerged as of
+> 2026-09-12**, leaving #6 the only open PR. What #95 still owes is one paragraph in
+> `docs/FREEZE.md`: `main` gets a freeze check only when #6 merges, and the freeze prevents that
+> until it lifts.
 >
 > Detail: [#34](034-train-and-publish-the-deployed-artifact-version.md),
 > [#94](094-a-crossed-band-raises-where-it-should-refuse.md), and the latest handoff at the foot of
