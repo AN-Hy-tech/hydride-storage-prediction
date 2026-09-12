@@ -28,15 +28,86 @@ aliases. Pin it before anyone writes code against the wrong interpreter.
 - [x] `environment.lock.yml` records the resolved solve, build strings included
 - [x] **`requirements-lock.txt` holds the 208 pip packages** — added to this card, see Narrative
 - [x] `docs/ENVIRONMENT.md` states which interpreter to use and why 3.13 is excluded
-- [x] A fresh rebuild from the lock files imports CBFV, catboost and sklearn without error
-- [ ] **The rebuild no longer reaches stage 1 on this machine.** Run 2026-09-03 while working #10:
-      `python scripts/verify_environment.py` fails after 26 s with
-      `UnavailableInvalidChannel: HTTP 403 FORBIDDEN for channel pkgs/main`. That is Anaconda's
-      `defaults` channel refusing the request, not a defect in the solve — but the lock lists
-      `defaults` alongside `conda-forge`, so the rebuild claim above depends on a channel this
-      machine cannot currently reach. Either re-verify from a host that can, or re-solve the lock
-      against `conda-forge` with `nodefaults` so the guarantee is one the project can actually
-      re-run. Until then the box above is history, not a check anybody can repeat (found by #10)
+- [x] ~~A fresh rebuild from the lock files imports CBFV, catboost and sklearn without error~~
+      — **true when run on 2026-08-30, and not repeatable on this machine since.** It is
+      history, not a check. See the box below for what it now takes to make it one again
+- [x] **The rebuild no longer reaches stage 1, the cause is permanent, and it is not a channel
+      outage** (found 2026-09-03 by #10; measured 2026-09-12). `python scripts/verify_environment.py`
+      fails after 26 s with `UnavailableInvalidChannel: HTTP 403 FORBIDDEN for channel pkgs/main`.
+      Re-probed 2026-09-12:
+
+      | endpoint | status |
+      |---|---|
+      | `repo.anaconda.com/pkgs/main/win-64/repodata.json` | **403** |
+      | `repo.anaconda.com/pkgs/main/noarch/repodata.json` | **403** |
+      | `conda.anaconda.org/conda-forge/win-64/repodata.json` | 200 |
+
+      This is Anaconda refusing the request, not a transient failure and not a defect in the
+      solve. Treat it as permanent for this host.
+
+      **It is not a tail of incidental packages — the blocked channel supplies the interpreter.**
+      `conda list --show-channel-urls -n Project` splits 459 packages as **211 pypi, 153
+      conda-forge, 95 defaults**, and the 95 include the things nothing else can stand in for:
+
+      | package | pinned build | from |
+      |---|---|---|
+      | `python` | `3.10.13=h966fe2a_0` | defaults |
+      | `numpy` | `1.26.4=py310h055cbcc_0` | defaults |
+      | `numpy-base` | `1.26.4=py310h65a83cf_0` | defaults |
+      | `blas` | `1.0=mkl` | defaults |
+      | `mkl` | `2023.1.0=h6b88ed4_46358` | defaults |
+      | `mkl_fft`, `mkl_random`, `mkl-service`, `intel-openmp` | — | defaults |
+
+      So the rebuild box above cannot be re-verified by anybody on this machine, at any effort,
+      while the lock names `defaults`. **The guarantee is currently unbacked**, which matters
+      more than it looks: this is the interpreter invariant, and every number the project
+      reports rests on it.
+
+      **A conda-forge re-solve is viable at the version level.** Checked against
+      `conda-forge` with `--override-channels`, every critical pin exists there:
+
+      | package | defaults build | conda-forge build |
+      |---|---|---|
+      | `python 3.10.13` | `h966fe2a_0` | `h4de0772_0_cpython` |
+      | `numpy 1.26.4` | `py310h055cbcc_0` | `py310hf667824_0` |
+      | `mkl 2023.1.0` | `h6b88ed4_46358` | `h6a75c08_46352` |
+
+      MKL itself is on conda-forge, so the BLAS backend does **not** have to become OpenBLAS —
+      it can be held with a `blas=*=mkl` / `libblas=*=*mkl` pin. What cannot be held is the rest:
+      ~95 builds change, and `mkl_fft` and `mkl_random` have no conda-forge equivalent at all,
+      because they are Anaconda's own numpy patches.
+
+      **Why that is a decision and not a chore.** The manifest records package *versions*, not
+      build strings and not the BLAS implementation — so a re-solved environment would report the
+      same provenance as `artifacts/v2` while potentially computing differently. Changing BLAS
+      reduction order is a larger perturbation than the one-ulp effects this project has already
+      measured and set its `1e-12` tolerance against. That collides with two live gates: **AC-1**
+      (seed reproducibility) and **AC-2** (featuriser parity to `1e-9`).
+
+      **The project already owns the instrument to settle it empirically**, which is the reason
+      not to guess: re-solve into a *throwaway* env, run AC-1, AC-2 and the suite there, and
+      compare against the committed numbers. If they hold, the re-solve is free and the lock
+      becomes re-runnable. If they move, that is a finding worth having explicitly rather than
+      discovering later.
+
+- [ ] **OPEN — which remedy, and who runs it.** Not a defect any more; a choice with a cost, and
+      it is the maintainer's. Three options, in the order this card recommends them:
+
+      1. **Re-solve against `conda-forge` + `nodefaults`, pinning `blas=*=mkl`, into a throwaway
+         env; verify with AC-1, AC-2 and the suite before touching `environment.lock.yml`.**
+         Makes the guarantee re-runnable and keeps MKL. Costs one ~8 GB / 15–20 min rebuild plus
+         a gate run. Only rewrite the lock if the gates hold.
+      2. **Re-verify from a host with a licensed `defaults` mirror.** Changes nothing and proves
+         the existing lock. Needs a machine this project does not have.
+      3. **Accept and say so.** Mark the rebuild box permanently historical and record in
+         `docs/ENVIRONMENT.md` that the lock describes the env that produced the results but can
+         no longer be rebuilt from scratch. Cheapest, and the least honest of the three, because
+         the lock's whole purpose is to be re-runnable.
+
+      `environment.lock.yml` **is editable** — #72 established 2026-09-12 that the freeze is a
+      deny-list and that file was never on it, so option 1 is not blocked by the charter. Do not
+      start the rebuild unasked: it is a long run, and option 1 is only worth it if the gate
+      comparison is actually going to be read. Not an unfreeze condition.
 
 ## Runnable check
 
@@ -94,3 +165,20 @@ file — deliberately not in CI, where it belongs to the slow lane at best.
   HTTP 403 from `repo.anaconda.com/pkgs/main`. Nothing in the repository changed; the channel did.
   Recorded here rather than fixed in passing because re-solving a lock file is this card's work and
   invalidates `environment.lock.yml`, which several other cards depend on. (by @assistant)
+
+- 2026-09-12: **Measured, and the finding grew.** The box read as "a channel is down, re-verify
+  or re-solve". Two cheap commands changed its size: the 403 is permanent, and
+  `conda list --show-channel-urls` shows **95 of 248 conda packages come from `defaults` —
+  `python` and `numpy` among them**. So this was never a tail of incidental packages that could
+  be swapped; the blocked channel supplies the interpreter, and the rebuild guarantee is
+  unbacked rather than inconvenient.
+
+  What kept it from being resolved on the spot is worth stating, because it is a real constraint
+  and not caution: `conda-forge` has every pinned version including MKL, so a re-solve is
+  genuinely viable — but the manifest records **versions**, not builds and not the BLAS
+  implementation. A re-solved environment would therefore report the same provenance as
+  `artifacts/v2` while possibly computing differently, and this project has already measured
+  one-ulp sensitivities and set a `1e-12` tolerance against them. That is precisely the silent
+  divergence the phase exists to remove, so the re-solve is gated on running AC-1 and AC-2 in a
+  throwaway env and reading the comparison — a real rebuild, and the maintainer's to start.
+  Left OPEN with three costed options rather than half-done. (by @assistant)

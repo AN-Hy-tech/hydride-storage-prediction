@@ -41,26 +41,32 @@ and card #37 are written from.
 - [x] `.github/workflows/integrity.yml` runs the freeze check
 - [x] `CLAUDE.md` and `kanban/README.md` point at the new board
 
-- [ ] **The charter's prose reads as an allow-list; the gate enforces a deny-list, and they do not
-      agree** (added 2026-09-12 by the QA pass on #77). `docs/FREEZE.md` § "Allowed paths" names
-      `hydms/** · tests/** · app/** · kanban-hardening/** · scripts/** · .github/** ·
-      pyproject.toml · CLAUDE.md · README.md · docs/** except the PRD`, which a reader takes as
-      exhaustive. `scripts/check_freeze.py` denies only `DENIED = (kanban/,
-      docs/PRD-inverse-design.md, research/, REPORT.md, Machine_Model/)` and passes everything
-      else.
+- [x] **The charter's prose read as an allow-list; the gate enforces a deny-list. The deny-list
+      wins, and the prose now says so** (added 2026-09-12 by the QA pass on #77; decided the same
+      day). `docs/FREEZE.md` § "Allowed paths" named `hydms/** · tests/** · app/** ·
+      kanban-hardening/** · scripts/** · .github/** · pyproject.toml · CLAUDE.md · README.md ·
+      docs/** except the PRD`, which a reader takes as exhaustive. `scripts/check_freeze.py`
+      denies only `DENIED = (kanban/, docs/PRD-inverse-design.md, research/, REPORT.md,
+      Machine_Model/)` and passes everything else — so `environment.lock.yml`, `environment.yml`,
+      `requirements-lock.txt`, `CONTEXT.md` and `.graphifyignore` were all editable and none was
+      named by the prose.
 
-      So `environment.lock.yml`, `environment.yml`, `requirements-lock.txt`, `CONTEXT.md` and
-      `.graphifyignore` are all editable, and none is named by the prose. This session edited
-      `.graphifyignore` and `CONTEXT.md`-adjacent files and CI was green, which is the gate
-      behaving as written.
+      **The deny-list is authoritative.** The section is now headed "Everything else is allowed"
+      and states the rule, the five protected paths, and the former allow-list as the thing it
+      corrects — so a reader who remembers the old wording sees it named rather than vanished.
 
-      It matters for **card #1**, whose open box proposes re-solving `environment.lock.yml`
-      against `conda-forge`: a session reading only FREEZE.md would conclude that work is
-      forbidden and defer it forever, and a session reading only the script would conclude the
-      charter means nothing. Decide which is authoritative and make the other say so — either
-      widen the prose to describe a deny-list, or give the script the allow-list the prose
-      already claims. Do **not** silently widen `DENIED`: the deny-list is deliberately short so
-      that ordinary hardening work is not gated on editing this file. Not an unfreeze condition.
+      The reasoning is about which document gets edited. A freeze expressed as an **allow**-list
+      must be amended every time hardening work reaches a file nobody listed in advance, which
+      turns the one document that exists to resist widening into the most frequently widened one,
+      and makes every ordinary change an occasion to renegotiate the boundary. A **deny**-list
+      names only what is protected — the frozen programme and the published record — and that set
+      does not grow as the phase proceeds. `DENIED` stays short, and the charter now says
+      explicitly that adding to it requires a reason of the same kind as the five, not a
+      preference.
+
+      **This unblocks #1**, whose open box proposes re-solving `environment.lock.yml` against
+      `conda-forge`: that file is not denied, was never denied, and the charter no longer implies
+      otherwise. Not an unfreeze condition.
 
 ## Runnable check
 
@@ -85,3 +91,15 @@ python scripts/check_board.py --root . && python scripts/check_freeze.py --base 
   needed one fix found by the check itself — it matched on filename, so card #24, which was renamed
   after moving boards, read as a deletion from the frozen board. It now matches on the id prefix,
   because a migrated card is free to be renamed. (by @assistant)
+
+- 2026-09-12: **Decided: the deny-list is authoritative.** The choice looked like "which half is
+  wrong" and was really "which document do we want people editing". An allow-list makes the freeze
+  charter the thing you must amend to do ordinary work — so it gets amended often, by whoever is
+  mid-task, and each amendment is an argument about the boundary. A deny-list names only the
+  frozen programme and the published record, which is a set that does not grow, so the document
+  stays still and stays readable. `DENIED` being short is the feature.
+
+  Found while checking whether #1 was even a legal path, which is the useful bit: the mismatch
+  had no symptom of its own. CI was green throughout, because the gate was behaving exactly as
+  written. Only a session trying to plan work against the prose would ever have hit it, and it
+  would have concluded the work was forbidden and moved on without reporting anything. (by @assistant)

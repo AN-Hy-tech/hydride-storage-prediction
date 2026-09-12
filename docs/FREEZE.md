@@ -61,10 +61,29 @@ The inverse-design programme: thermodynamics (PT), screen-and-rank (PA) and the 
 | `REPORT.md` | The archival record of the forward model *as published*. It is history, not status, and is corrected **beside** rather than in place — see `docs/REPORT-RECONCILIATION.md` (card #89) |
 | `Machine_Model/**` | The archival pipeline behind REPORT.md. Rewriting it orphans every published number (PRD §7.2) |
 
-### Allowed paths
+### Everything else is allowed
 
-`hydms/**` · `tests/**` · `app/**` · `kanban-hardening/**` · `scripts/**` · `.github/**` ·
-`pyproject.toml` · `CLAUDE.md` · `README.md` · `docs/**` except the PRD.
+**The table above is the whole of the freeze.** `scripts/check_freeze.py` enforces a *deny*-list
+— those five paths — and passes every other path in the repository. This section used to read as
+an allow-list (`hydms/** · tests/** · app/** · kanban-hardening/** · scripts/** · .github/** ·
+pyproject.toml · CLAUDE.md · README.md · docs/** except the PRD`), which a reader reasonably took
+as exhaustive. It was not, and the gap was load-bearing: `environment.lock.yml`,
+`environment.yml`, `requirements-lock.txt`, `CONTEXT.md` and `.graphifyignore` are all editable
+and none of them was named, so a session reading only this file would have deferred card #1's
+lock re-solve forever while a session reading only the script would have concluded this document
+meant nothing.
+
+**The deny-list is authoritative, and deliberately so** (decided 2026-09-12, card #72). A freeze
+expressed as an allow-list has to be edited every time hardening work reaches a file nobody
+listed in advance — which turns the one document that exists to *resist* widening into the most
+frequently widened one, and makes each ordinary change an occasion to renegotiate the boundary.
+Naming only what is protected inverts that: the five denied paths are the frozen programme and
+its archival record, they are the freeze's entire purpose, and they do not grow as the phase
+proceeds.
+
+So: **do not add to `DENIED` to express a preference.** It is short on purpose. If a path needs
+protecting it needs a reason of the same kind as the five — that it belongs to the frozen
+programme or to the published record — not that changing it seems unwise.
 
 ### Three cards were pulled out of the freeze
 

@@ -165,60 +165,91 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **Clear the parked findings before you open #78 — there are eight
-unticked boxes on five `done` cards, but only **four** are owed now (#23, then #14 with #9, then
-#1); three are deferred by design and must stay parked, and one is an obligation on a later card.**
+**Next session, in one line.** **The four owed findings are cleared — open #78.** The three
+deferred boxes below stay parked, #30's third box is still an obligation that travels, and #1
+ends in an OPEN maintainer decision that needs an answer before anyone re-solves the lock.
 
-**Handoff, 2026-09-12 (later) — the parked findings, triaged. Do these before #78.**
+**Handoff, 2026-09-12 (later still) — the four owed findings, cleared.**
 
-Eight unticked boxes sit on five `done` cards. They are not a backlog that was forgotten — this
-board deliberately parks a finding on the card it belongs to rather than blocking on it. **So
-"clear them all" is the wrong instruction, and three of them say so in their own text.** Read the
-box before you act on it.
+All four resolved. Two of them dissolved on measurement rather than on argument, which is the
+result worth carrying forward: **both were posed as "design this", and both turned out to be
+"check whether the bill is already paid".**
 
-**Owed now — four, in this order.**
+1. **#23 — the scaler payload leaves the next version's contract.** Decided, not built. What
+   settled it was not the missing reader but `deploy.py`'s own stated invariant: the three payload
+   keys are "each declared by the module that reads it back, **so this mapping cannot name a key
+   nothing loads**". `SCALER_PAYLOAD` is now the counter-example, and restoring the invariant
+   admits only two moves — find a reader, or drop the key. #48 *measured* that distance in the
+   model's feature space does not order transfer failure, so that consumer is not returning;
+   #49's ElMD reads compositions. So the key goes. `v1`/`v2` keep it — a version is sealed when
+   written — and the removal is boxed on **#34**, with `CONTEXT.md`'s **Artifact version** entry
+   listed there because nothing tests that file. **Four live sentences rested on the retired
+   reason** and were corrected (`deploy.py`'s invariant, the `test_the_stored_scaler_is_never_applied`
+   docstring, two passages in this README); #76's box list carried the same false consumer.
 
-1. **#23 — should the bundle still carry the persisted scaler?** Start here: it is self-contained
-   and it is a decision, not a build. Two docstrings justified keeping `FittedScaler` in the
-   bundle by naming exactly one downstream reader, the applicability domain — and #48 landed as a
-   *capacity ceiling* that reads no scaled matrix. Grepped: `scaler_from` and `SCALER_PAYLOAD` are
-   written by `deploy.py` and read by nothing at inference. #49's ElMD works on compositions, so
-   it is not the missing reader. **This is a decision about the next version's contract, never a
-   rewrite of `artifacts/v2`, which is sealed with it.** Do not resolve it by deleting the payload
-   quietly — the manifest and `tests/artifacts/` both name it.
+2. **#14 and #9 — no correction layer, and no data-layer plausibility filter.** The joint question
+   was whether the data layer may change a value it was given. **Answer: no**, and the loader's
+   "normalises nothing" contract stands unchanged.
 
-2. **#14 and #9's second box are one question — take them together.** Both ask whether the data
-   layer is entitled to change a value it was given. #9 has `Mg0853Ni0.125La0.022`, a missing
-   decimal point (0.853 + 0.125 + 0.022 = 1.000 exactly, so the intent is unambiguous), arriving
-   untouched because the loader's stated contract is that it normalises nothing — but the
-   canonical key, the split and the class join all run *before* screening, so #14 sees it already
-   keyed and split as essentially pure magnesium and can only drop it. #14 has three curated rows
-   whose reported wt% exceeds their own physical ceiling (`Ce1Ni3Cr2` at implied H/M **3.606**,
-   `Ce1Ni4Zr1` **3.807**, `Ce1Ni4Cr1` **3.339**, against `LaNi5H6` at 1.0). Both point at the same
-   unbuilt thing: a declared, cited correction table between `load_*` and `canonical_key`, which
-   would be the first place in the pipeline entitled to change an input.
+   The measurement that decided #14: running the stage's real path over the 893 training rows,
+   **CleanLab already removes both impossible training rows and ranks them the two worst labels
+   of 893** — `Ce1Ni3Cr2` quality 3.07e-08 (rank 1), `Ce1Ni4Zr1` 3.42e-08 (rank 2) — knowing
+   nothing about hydrogen, mass or the ceiling. A declared ceiling-based drop would therefore
+   change nothing it is allowed to change, and for the third row it would *break* the contract:
+   `Ce1Ni4Cr1` is in `val`, and a finding on a held-out row is reported, never acted on. The
+   ceiling stays an L4 screen, and the two mechanisms agreeing by unrelated routes is
+   corroboration worth keeping rather than duplication worth merging.
 
-   **Warning before you touch the data:** `tests/screens/test_applicability.py` asserts the set of
-   four over-ceiling rows *exactly*. Removing or fixing one will fail it. That is the intended way
-   for this to surface, not a break.
+   The fourth over-ceiling row is why the instinct to repair is dangerous here:
+   `Ti1.1Cr1Mn1V0.255Fe0.045` is a **real material** at Sahlberg's limit, over by <0.01, and it
+   scores 4.26e-04 at rank 11 — four orders of magnitude clear of the two defects. **Do not turn
+   3e-08 into a threshold**; nothing in the code reads it.
 
-3. **#1 — the environment rebuild claim is history, not a check.** `verify_environment.py` fails
-   after 26 s with `UnavailableInvalidChannel: HTTP 403 FORBIDDEN for channel pkgs/main` — Anaconda
-   refusing `defaults`, not a defect in the solve. Either re-verify from a host that can reach it,
-   or re-solve the lock against `conda-forge` with `nodefaults`. Last, because it is the
-   interpreter invariant and the riskiest, and because of the next paragraph.
+   #9 follows from the same split: the Mg row is *repairably* wrong, the Ce-Ni rows are
+   *detectably* wrong but not repairable. A correction table can only carry what it can justify,
+   so its entire payoff was one training row of 893 — against making the data layer the first
+   place entitled to rewrite an input, trusted downstream and checked by nothing. Same
+   unfalsifiability that decided #23.
 
-   **A thing worth knowing before you plan it:** `docs/FREEZE.md` § "Allowed paths" reads as an
-   exhaustive allow-list and does not name `environment.lock.yml`, so this looks forbidden. It is
-   not. `scripts/check_freeze.py` enforces a **deny-list** — `kanban/`, the PRD, `research/`,
-   `REPORT.md`, `Machine_Model/` — and passes everything else. Prose and gate disagree; **boxed on
-   #72**, decide it there rather than inferring from either half.
+   **One obligation travelled:** `Ce1Ni4Cr1`'s impossible label sits in `val` and feeds early
+   stopping and every validation figure. Not removable under L3, and that is the right rule — so
+   it is a **stated limit, boxed on #83**, with an unticked box on #14 that carries no action.
+
+   The warning in the old handoff held: `tests/screens/test_applicability.py` still asserts the
+   four over-ceiling rows exactly, and still passes — it measures the *curated record*, which
+   screening never edits.
+
+3. **#72 — the deny-list is authoritative, and the charter now says so.** Cleared first because
+   it gated #1. `docs/FREEZE.md` § "Allowed paths" is replaced by "Everything else is allowed",
+   naming the old list as the thing it corrects. The reasoning is about which document gets
+   edited: an allow-list must be widened every time work reaches an unlisted file, turning the
+   one document meant to resist widening into the most-edited one. `DENIED` stays short, and the
+   charter now states that adding to it needs a reason of the same kind as the five.
+
+4. **#1 — measured, and worse than assumed. The remedy is an OPEN decision.** The 403 is
+   permanent (`pkgs/main` 403, `conda-forge` 200, re-probed 2026-09-12), and it is not an
+   incidental tail: **95 of 248 conda packages come from `defaults`, including `python`
+   (`3.10.13=h966fe2a_0`), `numpy` (`1.26.4=py310h055cbcc_0`) and the whole MKL stack.** So the
+   rebuild box is unrepeatable by anyone here, not just inconvenient. Every pinned version —
+   MKL included — *is* on `conda-forge`, so a re-solve with `blas=*=mkl` is viable, but ~95 builds
+   change and `mkl_fft`/`mkl_random` have no equivalent. Because the manifest records versions
+   rather than builds or BLAS, a re-solved env would claim identical provenance while possibly
+   computing differently — which AC-1 and AC-2 are exactly the instruments to detect. The card
+   carries three options; **option 1 is gated on a throwaway-env gate run, and nobody should
+   start it unasked.**
+
+**Verification.** Fast lane **1371 passed / 4 deselected of 1375 collected (14 min 9 s)**,
+`ruff` and `mypy` clean, `check_board.py` and `check_freeze.py` green. Nothing in this session
+changed a code path — the diff is three decisions, one measurement, and the sentences that rested
+on them — so no heavy run was needed and nothing was promoted.
 
 **Deferred by design — leave these parked. Each states its own reopen condition.**
 
 - **#9, first box (the HyStor spreadsheet has no loader).** Says it outright: *"Reopen this box
   only if #86 adds the dependency **and** a card needs the four extra rows."* It needs `openpyxl`,
-  which would invalidate the lock, and it is not a fourth independent source — one sheet, 1283
+  which would invalidate the lock — and note that #1 has since found the lock cannot be rebuilt
+  here at all, which makes changing it a larger question rather than a smaller one — and it is not
+  a fourth independent source — one sheet, 1283
   rows, the same six columns as `hydride_data.csv`, which it is upstream of. Nothing in the
   repository reads it.
 - **#30, first box (the LOCO run has no resume, 4.7 h).** *"Accepted as-is for this run."* It is
@@ -236,6 +267,13 @@ box before you act on it.
   the same as one with two hundred. Nothing to build; it must be *said* wherever the number is
   published — **#83** (model card), **#37** (Chapter 1), **#89** (reconciliation). The per-class
   table carries `rows_scored` beside every row precisely so it can be said.
+- **#14, second box (an impossible label sits in `val`).** Added 2026-09-12 when #14's first box
+  was cleared. `Ce1Ni4Cr1` is recorded at 4.73 wt%, implied H/M **3.339** against `LaNi5H6`'s 1.0,
+  and it is in the validation split — so it feeds early stopping and every validation figure. L3
+  forbids touching a held-out row and that is the right rule, so there is nothing to build: it is
+  a **stated limit**, boxed on **#83**. Say both halves wherever it appears — the defect *and* why
+  it was left in place. A limits section that names the row without the reason reads as an
+  oversight.
 
 **None of this is an unfreeze condition, and none of it may become one.** If clearing a box turns
 into real work, cut a card and mark it *not an unfreeze condition*, the way #92 is marked.
@@ -1517,8 +1555,10 @@ candidate version before the promotion pointer moves.
 second artifact version stores a `FittedScaler` subclass that raises on `transform`, the test arms
 the trap (loads it back and confirms it still raises after a joblib round trip) and then demands
 `assert_frame_equal` against the ordinary version. The card's own box was right about *persisting*
-the scaler and wrong about where it is applied — its consumer is #48's distance-based AD. **The same
-mistake sits in #76's box list and has been boxed there.**
+the scaler and wrong about where it is applied — it named #48's distance-based AD as the consumer,
+and **that consumer never arrived**: #48 landed as a capacity ceiling reading no scaled matrix, so
+the payload has no reader at all. #23 decided it leaves the next version's payload set; the test is
+unaffected, because it proves a negative rather than exercising a reader.
 
 **`interval_width` is not the stored constant doubled.** The correction is constant in `log1p` space
 and `expm1` is convex, so the same widening is a wider band at a high prediction than at a low one:
@@ -1710,8 +1750,9 @@ python -m hydms.surrogate.train --target capacity --budget   # fits nothing; the
 - **No scaler.** CatBoost splits on thresholds and `FittedScaler` is affine, so the fit is invariant
   to it. A model from here consumes **raw** features and records that in `feature_names`; applying
   the persisted scaler on the way into `predict` would feed it a matrix it was never fitted on.
-  The scaler still has a job — #48's applicability domain is distance-based — and #28 carries the
-  box.
+  The scaler turned out to have **no** job: #48 landed as a capacity ceiling reading no scaled
+  matrix, so nothing reads the persisted payload back. #23 decided it leaves the next version's
+  payload set, and #34 carries the removal.
 - **Two prediction spaces.** `predict` returns weight percent; `predict_model_space` returns the
   `log1p` the booster emits. The back-transform is exact, not approximate: `expm1` is strictly
   increasing and a quantile is equivariant under a monotone map. Nothing is clipped.

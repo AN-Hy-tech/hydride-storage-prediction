@@ -321,6 +321,32 @@ that reason.
       artifact carry a note — **an artifact that does not say it came from a default is an
       artifact somebody will promote**
 
+- [ ] **The next version's payload set drops `SCALER_PAYLOAD`** (decided 2026-09-12 on #23,
+      boxed here because this card writes the next version). `DeployedFit.payloads` in
+      `hydms/surrogate/deploy.py` names three keys under the rule that each is "declared by the
+      module that reads it back, so this mapping cannot name a key nothing loads".
+      `SCALER_PAYLOAD` breaks that rule: `scaler_from` has no production call site, because #26
+      fits on raw features and #48 landed as a capacity ceiling reading no scaled matrix. #23
+      weighed keeping it as insurance against a future refit-on-candidates and rejected that —
+      the insurance only pays for a consumer that scales, and #48 measured that the distance
+      consumer is not coming back.
+
+      Three things this touches, none of them optional:
+
+      - `DeployedFit.payloads` stops emitting the key, and `DeployedFit.scaler` stops being
+        fitted for persistence. `fit_scaler`, `FittedScaler` and `scaler_from` all **stay** —
+        `TRAIN` is imported by `hydms.screens.domain`, `selection.py` fits one in the moment for
+        VIF, and the refuse-on-`fit` behaviour is what makes "never refit" enforceable if a
+        consumer ever does appear.
+      - `tests/artifacts/` and the manifest name the payload; both have to stop expecting it for
+        a version written after this change, while still reading `v1`/`v2`, which keep it. A
+        version is sealed when written — this is a change to the *next* contract, never a
+        rewrite of a sealed one.
+      - `CONTEXT.md`'s **Artifact version** entry reads "a model, its correction, its scaler and
+        a manifest". Nothing tests that file, so it changes here or it stays wrong.
+
+      Not an unfreeze condition.
+
 ## Runnable check
 
 ```bash

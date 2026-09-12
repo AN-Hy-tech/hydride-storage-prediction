@@ -37,9 +37,13 @@ pick up a different model between two calls cannot honour AC-4, and cannot be re
       prediction path at all (from #26 and #28).** CatBoost splits on thresholds and `FittedScaler`
       is affine, so #26 fits on raw features and records that in `QuantileModel.feature_names`;
       applying the persisted scaler on the way in feeds the model a matrix it was never fitted on.
-      This box is right that it is never *fitted* and wrong about where it is used: its consumer is
-      #48's distance-based applicability domain, which reads it with
-      `hydms.surrogate.scaler.scaler_from(bundle)`. `hydms/surrogate/predict.py` proves the
+      This box is right that it is never *fitted* and wrong about where it is used: it named
+      #48's distance-based applicability domain as the consumer, reading it with
+      `hydms.surrogate.scaler.scaler_from(bundle)`. **That consumer never arrived** — #48 landed
+      2026-09-07 as a capacity ceiling that reads no scaled matrix, and `scaler_from` has no
+      production call site. #23 decided the payload leaves the next version's contract (#34
+      carries the removal); nothing on this path changes, because this path never read it.
+      `hydms/surrogate/predict.py` proves the
       negative rather than promising it — `test_the_stored_scaler_is_never_applied` stores a scaler
       that raises on `transform` and demands identical numbers
 - [x] **The surrogate half of the bundle already exists: wrap it, do not re-load it (from #28).**

@@ -35,17 +35,45 @@ Validation belongs here so no later layer has to defend against a malformed row.
       which is that file's upstream. Nothing in the repository or its history reads it. Reopen
       this box only if #86 adds the dependency **and** a card needs the four extra rows.
 
-- [ ] **Decide whether a correction layer sits above this module, and if so, where.** #14 needs
-      one and cannot host it. `Mg0853Ni0.125La0.022` is a missing decimal point — 0.853 + 0.125 +
-      0.022 = 1.000 exactly, so the intended formula is unambiguous — and this loader's stated
-      contract is that it **normalises nothing**, which is why the row arrives untouched. But the
-      canonical key, the split and the class join all run *before* screening, so by the time #14
-      sees the row it has already been keyed and split as essentially pure magnesium; a correction
-      applied there arrives too late to matter. #14 therefore drops the row from training and names
-      it in `MALFORMED_FORMULAE`. The open question is this card's: a declared, cited correction
-      table read between `load_*` and `canonical_key` would fix the row properly, and it would also
-      be the first place in the pipeline entitled to change a value it was given. That is a
-      deliberate widening of this module's contract, not a repair made in passing
+- [x] **Decided 2026-09-12: no correction layer. This module never changes a value it was
+      given, and the "normalises nothing" contract stands.** `Mg0853Ni0.125La0.022` is a missing
+      decimal point — 0.853 + 0.125 + 0.022 = 1.000 exactly, so the intended formula is
+      unambiguous — and the row still arrives untouched. #14 drops it from training and names it
+      in `MALFORMED_FORMULAE`, which records the intended formula **in prose** so the reading is
+      not lost; what it does not do is apply it.
+
+      This was posed together with #14's three physically impossible rows as one question: **may
+      the data layer change a value it was given?** Answering it needed the two halves measured
+      rather than argued, and both came back against the correction table.
+
+      **The payoff is one row.** A cited correction applied between `load_*` and `canonical_key`
+      would fix the Mg row properly — it is keyed and split as essentially pure magnesium today,
+      so a repair anywhere later arrives too late. But that is the *whole* benefit: one training
+      row out of 893. #14's rows do not add to it, because they are the other kind of defect —
+      **detectably wrong, not repairably wrong.** We can show 5.19 wt% is impossible for an AB5;
+      we cannot recover what it should have been. A correction table can only carry corrections
+      it can justify, so those three get exclusion, never a value — and #14 measured that the
+      screening stage already removes the two it is allowed to touch.
+
+      **The cost is a kind of error this phase exists to remove.** A correction layer would be
+      the first place in the pipeline entitled to rewrite a given value, and a rewritten value is
+      trusted by everything downstream while being checked by nothing but its own unit test —
+      the same unfalsifiability that decided #23 against an unread payload. The failure mode is
+      not a wrong entry today; it is that the source CSV and what the model trains on stop being
+      the same thing, silently, and no gate can see the difference.
+
+      **The asymmetry that makes the rule safe rather than merely strict.** Declaring and
+      dropping loses a row and says so in the report. Rewriting keeps a row and says so nowhere
+      the pipeline can check. This project catches bugs by refusing, not by repairing, and the
+      fourth over-ceiling row shows why the instinct to repair is dangerous here:
+      `Ti1.1Cr1Mn1V0.255Fe0.045` is over its ceiling by less than 0.01 and is a **real material
+      at Sahlberg's limit**. Any rule confident enough to correct the Ce-Ni rows is confident
+      enough to corrupt that one.
+
+      If a future re-export of `hydride_data.csv` fixes the typo at source, the row arrives
+      correct and nothing here needs to change — which is the outcome this decision is holding
+      the place for. Reopen only with a source-level fix, or with a card that needs that row
+      specifically and can say why one row is worth the contract.
 
 ## Runnable check
 
@@ -119,3 +147,16 @@ python -m pytest tests/data/test_load.py -q
   happen upstream of the canonical key, which means widening this loader's "normalises nothing"
   contract. #14 drops the row from training and names it; the correction-layer decision is
   recorded here rather than half-made there. (by @assistant)
+
+- 2026-09-12: **Decided: no correction layer.** The question was posed as a design question and
+  resolved as an accounting one. The correction table's entire benefit was a single training row
+  out of 893, because #14's three rows turned out to be the other kind of defect — detectable,
+  not recoverable — and a table can only carry what it can justify. Against one row: making this
+  module the first place in the pipeline entitled to rewrite an input.
+
+  The general shape is the same one #23 hit the same day. A value that is written and then read
+  by nothing that can contradict it is unfalsifiable, whether it is a scaler payload or a
+  corrected formula. This project's mechanism is refusal, not repair, and declare-and-drop is the
+  refusing version of the same knowledge: `MALFORMED_FORMULAE` still records that the intended
+  formula is `Mg0.853Ni0.125La0.022`, so nothing was lost except the temptation to apply it.
+  If a re-export fixes the typo at source, the row simply arrives correct. (by @assistant)

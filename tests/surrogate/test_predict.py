@@ -350,8 +350,12 @@ def test_the_stored_scaler_is_never_applied(store: Path) -> None:
     """`v2` holds a scaler that raises on `transform`, and must answer exactly as `v1` does.
 
     The card's own box is wrong about where the scaler is applied and right about persisting
-    it: the model consumes raw features (card #26), and the applicability domain (#48) is what
-    the stored scaler is for.
+    it: the model consumes raw features (card #26). It named the applicability domain (#48) as
+    what the stored scaler is *for*, and that half has since been retired -- #48 landed as a
+    capacity ceiling reading no scaled matrix, so nothing reads the payload back at inference.
+    What this test measures is unaffected, because it proves a negative: the answer is identical
+    with a scaler that explodes on `transform`. Card #23 decided the payload leaves the next
+    version's contract; until then the trap is what keeps "never applied" honest.
     """
     # Armed first. A trap that quietly failed to survive joblib would make the assertion
     # below pass for the wrong reason, which is the one way this test could be worthless.

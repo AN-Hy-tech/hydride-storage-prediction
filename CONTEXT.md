@@ -169,6 +169,14 @@ An immutable directory holding a model, its correction, its scaler and a manifes
 and never edited**, which is why certifying a version produces a *new* one.
 _Avoid_: "the model", "the checkpoint", "the saved model"
 
+> *State of the term, not part of the definition:* **the scaler is on its way out of this list**
+> (card #23, decided 2026-09-12; removal boxed on #34). `v1` and `v2` carry a `scaler` payload and
+> always will — a version is sealed when written — but nothing reads it back at inference. The
+> justification for keeping it named exactly one consumer, #48's applicability domain, and #48
+> landed as a *capacity* ceiling that reads no scaled matrix. So the next version written holds a
+> model, its correction and a manifest, and this entry changes with it. Until then the sentence is
+> true of every version that exists, which is why it has not already been edited.
+
 **Artifact bundle**:
 An **artifact version plus the screens that judge its answers**, loaded once and frozen —
 `hydms.delivery.predict.ArtifactBundle`, built only by `load_bundle`. A version is a directory on

@@ -151,7 +151,12 @@ def main() -> int:
         print(f"FAIL  freeze violated by {len(problems)} path(s) [{mode}]:\n")
         for problem in problems:
             print(f"  - {problem}")
-        print("\n  The freeze and its allowed paths are declared in docs/FREEZE.md.")
+        print(
+            "\n  The freeze protects these five paths and nothing else, and the reason for "
+            "each\n  is the denied-paths table in docs/FREEZE.md. It is a deny-list: every "
+            "other path\n  in the repository is editable, and DENIED is short on purpose "
+            "(card #72)."
+        )
         return 1
 
     print(f"OK    freeze respected across {len(entries)} changed path(s) [{mode}].")

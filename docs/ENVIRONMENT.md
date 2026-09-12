@@ -75,6 +75,20 @@ conda run -n Project python scripts/spike_feature_provenance.py --check-all-22
 The whole rebuild takes about 7 minutes with a warm package cache and appreciably longer cold;
 `scripts/verify_environment.py` runs stages 1-2 and the import check in one command.
 
+> **It does not currently complete on this machine, and the reason is not fixable by retrying.**
+> Stage 1 dies after ~26 s with `UnavailableInvalidChannel: HTTP 403 FORBIDDEN for channel
+> pkgs/main` — Anaconda refusing `defaults`, re-confirmed 2026-09-12 (`pkgs/main` 403,
+> `conda-forge` 200). This is not an incidental tail: **95 of the 248 conda packages come from
+> `defaults`, including `python` itself (`3.10.13=h966fe2a_0`), `numpy`
+> (`1.26.4=py310h055cbcc_0`) and the whole MKL stack.** So the lock describes the environment
+> that produced the published results and **cannot presently be rebuilt from scratch** by
+> anyone here. Every pinned version — MKL included — does exist on `conda-forge`, so a re-solve
+> against `conda-forge` + `nodefaults` with `blas=*=mkl` is viable, but ~95 builds would change
+> and `mkl_fft`/`mkl_random` have no equivalent there. Because the manifest records versions
+> rather than builds or BLAS, a re-solved env would claim identical provenance while possibly
+> computing differently — which is why the remedy is gated on running AC-1 and AC-2 in a
+> throwaway env first. The options and their costs are the open box on card #1.
+
 **`hydms` itself must never enter the lock files.** Once `pip install -e .` has been run,
 `pip freeze` reports it as `-e git+https://…#egg=hydms`. A regenerated `requirements-lock.txt`
 would carry that line and make the environment depend on cloning itself. Delete it after any

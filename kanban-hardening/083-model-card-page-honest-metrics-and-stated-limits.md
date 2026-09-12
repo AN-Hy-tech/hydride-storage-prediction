@@ -98,6 +98,22 @@ DOE system target, and the published figures inherited as though nothing had cha
       is a defensible derivation but **not a calibration**: nobody can yet say what fraction of
       real predictions that threshold refuses
 
+- [ ] **One validation row carries a physically impossible label, and the limits section has to
+      say so** (added 2026-09-12 by #14's decision). `Ce1Ni4Cr1` is recorded at 4.73 wt%, which
+      is H/M **3.339** against `LaNi5H6`'s 1.0 — no AB5 intermetallic holds that much hydrogen,
+      so the label is a transcription or unit defect rather than an unusual material. It sits in
+      **`val`**, so it feeds early stopping and every validation figure this page reports.
+
+      It is deliberately **not** removed: L3 says a finding on a held-out row is reported and
+      left where it is, and #14 measured that the two sibling rows in `train` are already the two
+      lowest-quality labels of 893 and are dropped there. So the honest statement is not "the
+      data is clean" but "one validation row is known-bad, we can name it, and the rule that
+      forbids touching held-out data is worth more than the row". Say both halves — a limits
+      section that names the defect without naming the reason reads as an oversight.
+
+      The arithmetic and the other two rows are in #14's box; the L4 ceiling screen that catches
+      this class at serve time is #48's. Not an unfreeze condition.
+
 ## Runnable check
 
 ```bash

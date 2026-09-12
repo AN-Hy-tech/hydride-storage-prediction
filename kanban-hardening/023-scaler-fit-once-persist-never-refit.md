@@ -39,25 +39,49 @@ Guard structurally: the loaded scaler should expose `transform` and not `fit`.
       forms of the same property: another batch in between changes nothing, a candidate scales the
       same alone as in a crowd, and the statistics are unmoved by transforming
 
-- [ ] **The persisted scaler has lost its named consumer** (added 2026-09-07 by #48). Two module
-      docstrings justified keeping `FittedScaler` in the artifact bundle by naming exactly one
-      downstream reader: "the distance-based work downstream (the applicability domain, card #48)"
-      (`hydms/surrogate/model.py`) and "the scaler stays in the bundle because the applicability
-      domain (card #48) is distance-based and needs it" (`hydms/surrogate/predict.py`). **#48
-      landed as a capacity ceiling that reads no scaled matrix**, because per-class transfer R2
-      turned out not to correlate with chemical distance in any space measured — including the
-      model's own feature space. Both docstrings are corrected to say so rather than reworded to
-      hide it.
+- [x] **The persisted scaler has lost its named consumer, and the payload leaves the next
+      version's contract** (added 2026-09-07 by #48; decided 2026-09-12). Two module docstrings
+      justified keeping `FittedScaler` in the bundle by naming exactly one downstream reader —
+      the applicability domain, card #48 — and **#48 landed as a capacity ceiling that reads no
+      scaled matrix**, because per-class transfer R2 turned out not to correlate with chemical
+      distance in any space measured, including the model's own feature space.
 
-      Grepped: `scaler_from` and `SCALER_PAYLOAD` are written by `deploy.py` and read back by
-      nothing at inference time. `selection.py` uses a scaler during VIF, but that is a fitted-in-
-      the-moment one, not the persisted payload. **So the question this card owes is whether the
-      bundle should still carry it.** Three things bear on the answer and none of them is obvious:
-      #49's ElMD works on compositions rather than on the feature matrix, so it is not the missing
-      reader; a payload that nothing reads is a payload nothing can catch being wrong; and
-      `artifacts/v2` is already sealed with it, so this is a decision about the *next* version's
-      contract, never a rewrite of that one. Do not resolve it by deleting the payload quietly —
-      the manifest and `tests/artifacts/` both name it
+      **The decision: the next version's payload set drops `SCALER_PAYLOAD`. `v1` and `v2` keep
+      it, because a version is sealed when it is written.** The removal is boxed on #34, which
+      writes the next one.
+
+      What decided it was not the missing reader but `deploy.py`'s own stated invariant.
+      `DeployedFit.payloads` documents the rule the payload set is built on — the three keys are
+      "each declared by the module that reads it back, **so this mapping cannot name a key
+      nothing loads**". That is the property that keeps the set self-justifying rather than
+      accumulating, and `SCALER_PAYLOAD` is now the counter-example to it. Restoring the
+      invariant admits exactly two moves: find a reader, or drop the key. No reader exists, and
+      none is forecast — #48 *measured* that distance in the model's feature space does not order
+      transfer failure, so that consumer is not coming back; #49's ElMD reads compositions, not
+      the feature matrix. So the key goes, and the invariant is a rule again rather than a
+      description of two cases out of three.
+
+      The counter-argument, and why it does not carry: a persisted scaler is insurance against a
+      future refit-on-candidates, which memo 4.3 names a *silent correctness bug*. But that risk
+      only exists for a consumer that scales, and the measurement above says there is none. An
+      unread payload buys no insurance and costs a live claim — "fit on train only" — that no
+      test on a real artifact can falsify, because the one test that touches a deployed scaler
+      (`test_the_stored_scaler_is_never_applied`) asserts it is *not* used and runs against a
+      fixture store. `/artifacts/` is gitignored, so nothing in CI reads the deployed payload at
+      all.
+
+      `fit_scaler`, `FittedScaler` and `scaler_from` all stay: `TRAIN` is imported by
+      `hydms.screens.domain`, `selection.py` fits one in the moment for VIF, and the refusal
+      behaviour is what makes "never refit" enforceable if a consumer ever does appear. What
+      changes is one line of `DeployedFit.payloads`, and it changes on #34.
+
+      **Four live sentences rested on the retired reason and have been corrected** (the two
+      module docstrings were fixed by #48's own session; these were not): `deploy.py`'s payload
+      invariant, `tests/surrogate/test_predict.py`'s `test_the_stored_scaler_is_never_applied`
+      docstring, and two passages in `kanban-hardening/README.md`. #76's box list carried the
+      same false consumer and is corrected there. `CONTEXT.md`'s **Artifact version** entry still
+      reads "a model, its correction, its scaler and a manifest" — true of `v1`/`v2` and boxed on
+      #34 to change with the payload.
 
 ## Runnable check
 
@@ -132,3 +156,18 @@ python -m pytest tests/surrogate/test_scaler.py -q
   jarvis cells are empty for six features. The test fixture finds the refused rows by asking
   `computability` once per **element** rather than once per row — a hole is a (feature, element)
   pair, so fifty-odd verdicts answer for all 1,279. That trade stays #24 and #25'. (by @assistant)
+
+- 2026-09-12: **Decided: the payload leaves the next version's contract.** The reasoning that
+  mattered is reusable. A payload set kept honest by the rule "every key has a declared reader"
+  fails *silently* when a reader is retired, because the key stays, the docstring stays, and the
+  tests — which construct their own bundles — keep passing. Nothing goes red. The only thing that
+  caught it was #48's session noticing its own consequence, and even that session corrected two
+  docstrings and missed four more sentences. **When a justification is retired, the grep is the
+  work**; correcting the module that lost its reason is the easy half. See
+  [[when-a-finding-removes-a-reason-grep-for-what-rested-on-it]] in spirit: two of the four hits
+  here were load-bearing claims (`deploy.py`'s invariant, #76's box), not prose.
+
+  The decision itself turned on a stated invariant rather than on taste, which is why it was
+  quick. `DeployedFit.payloads` had already written down the rule the payload set exists to obey.
+  Once the rule is in the code, a violation of it is a fact, and the remedy is bounded — find a
+  reader or drop the key. Preferences did not have to be argued. (by @assistant)

@@ -122,7 +122,12 @@ LABEL_QUALITY = "label-quality"
 #: the row it has already been keyed and split as essentially pure magnesium. A correction
 #: layer has to sit above :mod:`hydms.data.load`, whose stated contract is that it normalises
 #: nothing, and moving that line is a deliberate decision rather than a repair made in
-#: passing. Boxed on #9. Until then the row is dropped from training and named in the report.
+#: passing. **Card #9 decided against it on 2026-09-12**: the loader normalises nothing, full
+#: stop, so the row is dropped from training and named in the report, and this text is where
+#: the reading survives. The whole benefit of correcting would have been this one row; the cost
+#: would have been the first place in the pipeline entitled to rewrite a value it was given,
+#: checked by nothing downstream. If a re-export fixes the typo at source, the row simply
+#: arrives correct.
 MALFORMED_FORMULAE: Mapping[str, str] = {
     "Mg0853Ni0.125La0.022": (
         "a missing decimal point: the amount reads 853, so the atomic fractions are Mg 0.9998, "

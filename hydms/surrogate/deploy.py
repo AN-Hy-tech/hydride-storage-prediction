@@ -122,7 +122,19 @@ class DeployedFit:
         The three names are :data:`~hydms.surrogate.model.MODEL_PAYLOAD`,
         :data:`~hydms.surrogate.conformal.CONFORMAL_PAYLOAD` and
         :data:`~hydms.surrogate.scaler.SCALER_PAYLOAD` -- each declared by the module that
-        reads it back, so this mapping cannot name a key nothing loads.
+        reads it back.
+
+        **That rule is what this mapping is for, and one of the three currently breaks it.**
+        The intent was that a key cannot appear here unless some module loads it, so the
+        payload set justifies itself rather than accumulating. ``SCALER_PAYLOAD`` no longer
+        satisfies it: :func:`~hydms.surrogate.scaler.scaler_from` is declared and tested, but
+        no production call site reaches it -- the model consumes raw features (card #26) and
+        #48 landed as a capacity ceiling that reads no scaled matrix. Card #23 decided the
+        restoration is to **drop the key from the next version's payload set**, not to go
+        looking for a reader: #48 measured that distance in the model's own feature space does
+        not order transfer failure, and #49's ElMD reads compositions, so the consumer this
+        payload was kept for is not coming back. ``v1`` and ``v2`` keep it, because a version
+        is sealed when it is written. The removal is boxed on #34, which writes the next one.
         """
         return {
             MODEL_PAYLOAD: self.model,

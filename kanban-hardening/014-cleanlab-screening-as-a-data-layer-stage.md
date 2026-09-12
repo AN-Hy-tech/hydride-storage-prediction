@@ -95,7 +95,8 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       upstream, so by the time screening sees the row it has already been keyed and split as
       essentially pure magnesium. A correction layer must sit above `hydms/data/load.py`, whose
       stated contract is that it normalises nothing, and moving that line is a decision rather
-      than a repair made in passing. **Boxed on #9.** `MALFORMED_FORMULAE` declares the string and
+      than a repair made in passing. **#9 decided against it on 2026-09-12** — the loader
+      normalises nothing, and the row stays dropped-and-named rather than corrected. `MALFORMED_FORMULAE` declares the string and
       the reason; a test asserts the string is still in the file, because a declaration about a
       row that no longer exists is a decision nothing enforces
 - [x] **Reweighting is declined, with a reason.** The card allows "drop or reweight". The only
@@ -119,10 +120,10 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       raw form; there is now no object in this module a caller could reach one through, which
       is stronger than a rule saying not to use it
 
-- [ ] **Three curated rows are physically impossible, and #48 named them by arithmetic rather
-      than by a label model** (added 2026-09-07). A composition's hydrogen capacity is bounded by
-      `H/M_max * 1.008 / mean atomic mass`, and under the most generous defensible H/M these three
-      exceed their own bound:
+- [x] **Three curated rows are physically impossible, and the stage already removes the two it
+      is allowed to touch** (added 2026-09-07 by #48; decided 2026-09-12). A composition's
+      hydrogen capacity is bounded by `H/M_max * 1.008 / mean atomic mass`, and under the most
+      generous defensible H/M these three exceed their own bound:
 
       | formula | class | split | reported wt% | implied H/M |
       |---|---|---|---|---|
@@ -131,13 +132,52 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       | `Ce1Ni4Cr1` | AB5 | val | 4.73 | **3.339** |
 
       `LaNi5H6` is H/M **1.0**. No AB5 intermetallic holds three and a half hydrogens per metal
-      atom, so these are transcription or unit defects rather than unusual materials. They are not
-      removed here by this card's author: whether CleanLab already flags them, and whether a
-      physical-plausibility filter belongs in the data layer at all or stays a screen at L4, is
-      this card's decision. What is settled is that `hydms.screens.domain.capacity_ceiling` can
-      name them for free, and that `tests/screens/test_applicability.py` asserts the set of four
-      over-ceiling rows exactly — so removing or fixing one of them will fail that test, which is
-      the intended way for this to surface
+      atom, so these are transcription or unit defects rather than unusual materials. Two of the
+      three cite the same paper (`10.1016/j.jallcom.2006.05.013`).
+
+      **The decision: no physical-plausibility filter in the data layer. The ceiling stays an L4
+      screen.** What settled it was measuring the premise instead of implementing the box.
+      Running this stage's real path over the 893 training rows:
+
+      | formula | kind | label quality | rank |
+      |---|---|---|---|
+      | `Ce1Ni3Cr2` | `label-quality` | 3.07e-08 | **1 of 893** |
+      | `Ce1Ni4Zr1` | `label-quality` | 3.42e-08 | **2 of 893** |
+      | `Ti1.1Cr1Mn1V0.255Fe0.045` | `label-quality` | 4.26e-04 | 11 of 893 |
+
+      **CleanLab already removes both**, and ranks them the two least plausible labels in the
+      training set — knowing nothing about hydrogen, mass, or the ceiling. So a declared
+      ceiling-based drop would change nothing for the two rows it could legally act on, and for
+      the third it would *break* this stage's contract: `Ce1Ni4Cr1` is in `val`, and a finding
+      on a held-out row is reported with `removed=False` and left where it is. Acting on it is
+      the mirror image of L3, which is the leak this whole phase exists to remove.
+
+      Two things worth keeping, neither of which becomes a rule:
+
+      - **The independent agreement is evidence, not a reason to merge the two mechanisms.** The
+        ceiling is arithmetic over element masses at L4; CleanLab is a cross-fitted judgement at
+        L1. They reached the same two rows by unrelated routes. Collapsing them into one check
+        would cost that corroboration and would make the data layer import from L4, inverting
+        the layering the board is cut along.
+      - **The quality score preserves the distinction the ceiling test encodes.** The fourth
+        over-ceiling row, `Ti1.1Cr1Mn1V0.255Fe0.045`, is Sahlberg's limit to within a rounding —
+        a real material, over by less than 0.01 — and it scores four orders of magnitude higher
+        than the two defects and ranks 11th rather than 1st or 2nd. That is the screening
+        docstring's own counter-caution holding up: a flagged row is often a correct measurement
+        the features cannot express. **Do not turn 3e-08 into a threshold.** It is an
+        observation about this data at this seed, and nothing in the code reads it.
+
+      `tests/screens/test_applicability.py` still asserts the set of four over-ceiling rows
+      exactly, and still should: it is measuring the **curated record**, which is unchanged.
+      Screening marks and drops per fit; it does not edit the curated file.
+
+- [ ] **An impossible label sits in `val` and is not removable** (raised 2026-09-12, boxed on
+      #83). `Ce1Ni4Cr1` at 4.73 wt% is H/M 3.339, and it is in the validation split, so it feeds
+      early stopping and every validation figure this project reports. L3 forbids touching it,
+      and that is the right rule — but a number computed partly against an impossible label is a
+      stated limit, not a clean metric. It belongs in the model card's limits section rather than
+      in a silent removal. **Boxed on #83**; this card carries no further action. Not an unfreeze
+      condition.
 
 ## Runnable check
 
@@ -213,3 +253,17 @@ conda run --no-capture-output -n Project python -m pytest tests/leaks/test_l3_l1
   would arrive after the row had already been keyed and split as pure magnesium. Dropped and
   named instead, with the correction-layer decision boxed on #9 rather than half-made here.
   (by @assistant)
+
+- 2026-09-12: **The box asked for a filter; the measurement said one already exists.** The card
+  posed its own question well — "whether CleanLab already flags them" — and answering it first
+  cost one run and removed the entire implementation. CleanLab ranks the two impossible training
+  rows **1st and 2nd of 893** on label quality, with no notion of hydrogen, mass, or a ceiling.
+
+  Two things worth keeping. First, the *third* row is the one that teaches the rule: it is in
+  `val`, so the correct action is none, and a filter built for the two train rows would have been
+  reached for the third by whoever wrote it next — which is L3 in reverse. A finding's split is
+  part of the finding. Second, the fourth over-ceiling row is a **real material** at the physical
+  limit and CleanLab flags it too, four orders of magnitude higher and eight ranks later. The
+  quality score happened to preserve a distinction the arithmetic makes explicitly. That is
+  corroboration between two unrelated mechanisms, and it is worth more than either alone — which
+  is the argument against collapsing them into one check, quite apart from the layering. (by @assistant)

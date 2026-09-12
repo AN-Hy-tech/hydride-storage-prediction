@@ -293,7 +293,7 @@ the same module as L3 (card #71).
       target-conditioned (L12) and choosing a policy is #26's. Two rows are dropped from training,
       both decided here: the byte-identical duplicate (found with `duplicated`, not by row number)
       and `Mg0853Ni0.125La0.022`, whose correction is unambiguous but must be applied upstream of
-      the canonical key — boxed on #9. **L3 and L10 are wired and green.** The CleanLab call itself
+      the canonical key — #9 decided against a correction layer (2026-09-12); the row is dropped and named. **L3 and L10 are wired and green.** The CleanLab call itself
       is `hydms.data.screening.label_issues` — added by #24, which supplies the matrix, but living
       here because *which rows are label-suspect* is this card's to own. It returns two of
       CleanLab's four columns: `predicted_label` is `CleanLab.py:90`'s leak in raw form and there is
@@ -1180,15 +1180,19 @@ python scripts/check_freeze.py --base origin/main
 # NOT one of the cheap checks: this rebuilds a throwaway conda env from both lock files,
 # roughly 8 GB and 15-20 minutes. Run it by hand after touching an environment file, never
 # in a routine pass. As of 2026-09-03 it fails at stage 1 on this machine with an HTTP 403
-# from repo.anaconda.com/pkgs/main -- boxed on card #1.
+# from repo.anaconda.com/pkgs/main; re-probed 2026-09-12 and the 403 is permanent, not an
+# outage. `python` and `numpy` themselves come from the blocked `defaults` channel (95 of 248
+# conda packages do), so this command cannot pass here until the lock is re-solved. The three
+# remedies and their costs are the open box on card #1 -- do not start a re-solve unasked.
 python scripts/verify_environment.py
 
 # Suite. TWO numbers live here and they are different commands; do not compare them. The FULL run
 # below was last measured at **1229 passed, 0 skipped on 2026-09-07 (24 min 58 s)** on a quiet
 # machine — up from 1117 on 2026-09-06 by cards #73, #74 and #75 — and it PREDATES #48, #49 and
 # #90, so read it as a floor rather than as today's count. The FAST LANE (`-m "not slow"`, which
-# deselects the four `@pytest.mark.slow` tests) reported **1308 passed / 4 deselected of 1312
-# collected** after #90 on 2026-09-07; that is the figure the recent handoffs quote. A handoff that
+# deselects the four `@pytest.mark.slow` tests) reported **1371 passed / 4 deselected of 1375
+# collected on 2026-09-12 (14 min 9 s)** — up from 1308/1312 after #90 on 2026-09-07. That is the
+# figure the recent handoffs quote. A handoff that
 # states one of these must say which. Anything red is a real failure. Do NOT pass -q: pyproject already sets
 # it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
 # is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
