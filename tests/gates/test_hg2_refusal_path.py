@@ -346,6 +346,37 @@ def test_a_refusal_that_stops_naming_the_range_is_caught(monkeypatch, served: Co
     assert "never names" in result.message
 
 
+def test_a_sentence_that_only_echoes_the_formula_does_not_count_as_naming(
+    monkeypatch, served: Config
+) -> None:
+    """Every ``names`` string is a substring of its own probe's formula, so the check has to
+    read the sentence with the caller's input struck out.
+
+    ``'Xx'`` is in ``'Xx2'``; ``'Rn'`` and ``'Xe'`` are in ``'Xe1Rn1'``. A refusal that quoted
+    the composition it was handed and explained nothing therefore satisfied all three naming
+    assertions, and this gate reported PASSED with 9/9 codes. Found by QA on this card. It is
+    the defect one field over from
+    :func:`test_a_refusal_that_stops_naming_the_range_is_caught`, and the worse half of it:
+    there the stand-in sentence came from a neighbouring rule, here it is the input itself.
+    """
+    from hydms.descriptors.featurize import FeaturisationError
+
+    real = _delivery.featurize
+
+    def _echo(formulas, temperatures, *args, **kwargs):
+        try:
+            return real(formulas, temperatures, *args, **kwargs)
+        except FeaturisationError:
+            raise FeaturisationError(f"{next(iter(formulas))}: cannot predict") from None
+
+    monkeypatch.setattr(_delivery, "featurize", _echo)
+
+    result = GATE.check(served)
+
+    assert result.status is Status.FAILED, result.message
+    assert "nowhere but inside the echo" in result.message
+
+
 # --------------------------------------------------------------------------------------
 # The escape it walks through, pinned so it cannot widen
 # --------------------------------------------------------------------------------------

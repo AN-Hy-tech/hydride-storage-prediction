@@ -541,12 +541,28 @@ def _run(probe: Probe, bundle: Any, cfg: Config) -> Answered:
         for field in ("capacity", "interval"):
             if field in payload:
                 found.append(f"its serialised refusal carries a {field!r}")
+        # The sentence with the caller's own input struck out. `names` asks whether the
+        # refusal says *what it is about*, and every sentence on this path quotes the formula
+        # it was handed -- so `'Xx' in 'Xx2'`, and `'Rn'` and `'Xe'` in `'Xe1Rn1'`, are
+        # satisfied by the echo alone with nothing explained. Staged: replacing the
+        # featuriser's sentence with f"{formula}: cannot predict" left this gate PASSED on all
+        # three naming probes. It is the `names_the_window` defect below, one field over -- a
+        # true string standing in for the reason that was asked (#49) -- and it is the worse
+        # half, because the stand-in is the caller's own input rather than a neighbouring rule.
+        said = explanation.replace(probe.formula, " ")
         for wanted in probe.names:
-            if wanted not in explanation:
-                found.append(
-                    f"its sentence never names {wanted!r}, which is what the refusal is "
-                    f"about: {explanation[:160]}"
-                )
+            if wanted in said:
+                continue
+            # Two different failures, and saying the wrong one is the defect this card
+            # already boxed once: a guard whose message names a cause it did not observe.
+            found.append(
+                f"its sentence names {wanted!r} nowhere but inside the echo of "
+                f"{probe.formula!r}, so it repeats the input rather than saying what the "
+                f"refusal is about: {explanation[:160]}"
+                if wanted in explanation
+                else f"its sentence never names {wanted!r}, which is what the refusal is "
+                f"about: {explanation[:160]}"
+            )
         if probe.names_the_window:
             # The *window's own* sentence, not the composed explanation. Temperature is also a
             # model input, so the applicability screen rejects the same candidate with a note

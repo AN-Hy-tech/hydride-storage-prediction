@@ -148,6 +148,24 @@ no training alloy" tells them what to do next.
       that goes through `predict_capacity()` so the typed-formula sentence is on a diff line too, or
       say per row which entry point reaches it — but do not let the page keep claiming both
 
+- [x] **Every `names` assertion was satisfied by the echo of the caller's own formula**
+      (added 2026-09-12 by this card's QA pass). The three naming probes check that the refusal
+      *says what it is about* by testing a substring of the composed explanation — and every one
+      of those substrings is also a substring of the probe's own formula: `'Xx'` is in `'Xx2'`
+      and in `'LaNi5Xx2'`; `'Rn'` and `'Xe'` are in `'Xe1Rn1'`. Every sentence on this path
+      quotes the composition it was handed, so the assertion could not fail for any refusal that
+      echoed its input.
+
+      Staged: replacing the featuriser's sentence with `f"{formula}: cannot predict"` — a refusal
+      that names nothing and explains nothing — left this gate reporting **PASSED, 9/9 codes, 0
+      bare numbers**. That is the card's own `names_the_window` defect one field over, and the
+      worse half of it: there a true sentence from a *neighbouring rule* stood in for the one
+      that was asked, here the stand-in is the caller's own input, which every refusal repeats by
+      construction. The check now strikes the probe's formula out of the explanation before
+      asking whether the reason is named, and
+      `test_a_sentence_that_only_echoes_the_formula_does_not_count_as_naming` stages it red —
+      4 findings over 11 probes, one per naming assertion.
+
 ## Runnable check
 
 ```bash
@@ -249,3 +267,38 @@ conda run -n Project python -m hydms.gates run HG-2
   sentence for `LaNi5Xx2` on its own diff line. A parse failure is refused before any feature is
   reached, which is why that sentence can be printed with no artifact on disk — pinned by a test
   that featurises it under two different contracts. ruff and mypy clean. (by @assistant)
+
+- 2026-09-12: **QA pass. The gate was green for a reason that did not hold — its three "naming"
+  checks could not fail.**
+
+  Re-verified first, all against the deployed `v2`: `run HG-2` **PASSED in 2.48 s** (9/9 codes,
+  3 exits, 11 probes — 3 answered, 8 refused); `tests/gates/test_hg2_refusal_path.py` and
+  `tests/delivery` **133 passed in 13.9 s**; ruff and mypy clean; `check_board.py` OK over 92
+  cards and `check_freeze.py` OK over 291 changed paths.
+
+  Then the finding. Dumping every probe's verdict showed the three `indeterminate` probes come
+  back with **zero screen verdicts** — `featurize` raises before any screen is reached, which
+  this card already knew and documented for `unreadable-formula`. So their sentence is the
+  featuriser's alone, and the only thing asserting it says anything is `probe.names`, a substring
+  test on the composed explanation. Every one of those substrings is also inside the probe's own
+  formula. Measuring that rather than reasoning about it: with the featuriser's sentence replaced
+  by a bare `"Xx2: cannot predict"`, the gate still reported **PASSED, 9/9 codes**.
+
+  The repair this card made for `names_the_window` — read the verdict of the screen that *owns*
+  the code, not the joined string — could not be applied here, because for these three probes no
+  screen owns anything; the featuriser does, and it is not a screen. So the check strikes the
+  probe's formula out of the sentence and asks what is left. `'Xx2'` removed from *"'Xx2' names
+  'Xx', which is not a chemical element"* still leaves `'Xx'`; removed from *"Xx2: cannot
+  predict"* it does not. Staged red both ways.
+
+  **The pattern is the card's own, for the third time.** #49 shipped a sentence written for a
+  different defect; #77 found the window check reading a neighbour's sentence; this is the same
+  shape with the input standing in for the reason. A string assertion that cannot name *who
+  wrote the string* is the recurring hole, and it is worth stating plainly: on this path, a check
+  that a sentence contains a symbol is nearly vacuous, because the sentence quotes the formula
+  and the symbol is in the formula.
+
+  Nothing about the delivery path changed and no number moved: `v2` genuinely does name the
+  blocking elements today (`Blocking element(s): Rn, Xe`). What changed is that it now has to
+  keep doing so. 20 tests in the gate file, up from 19. (by @assistant)
+
