@@ -18,42 +18,61 @@ tags: [ph, l3]
 three layers away and read `gh run list` before claiming anything about CI. The unfreeze condition
 is fixed and stays fixed.
 
-**It is `High` because the branch is red in CI until it is fixed**, and a red branch is how the
-next real failure gets ignored.
+**It is `High` because it is one keyword away and it silently corrupts a published document.**
 
 ## Why this exists
 
 `tests/surrogate/test_comparison.py::test_the_published_document_is_the_one_this_code_generates`
-**fails on the CI runner and passes on the maintainer's machine.** The same inputs produce
-different bytes in the two places, which means `reports/feature_selection/` is not reproducible and
-the byte-identity test cannot mean what it says.
+**failed once on CI and has passed since**, with no change to `comparison.py`, its inputs, or its
+test in between. That makes it intermittent rather than environmental, and an intermittent
+byte-identity failure on a *published* document is worse than a reproducible one: it means the
+document committed in this repository may not be the document the code produces.
 
-CI has been red on this since at least **run `34709161104`** (#34's push, 2026-09-12T17:45Z;
-1 failed, 1442 passed, 9 skipped in 452 s). The local fast lane on the same tree is **1461 passed,
-0 failed** — so this is not flakiness and not a timeout, it is a genuine platform difference.
+**The cause is identified exactly. The trigger is not.**
 
-**The whole difference is two adjacent rows swapping places:**
+The cause is `hydms/surrogate/comparison.py:703`:
+
+```python
+charged = self.cost[self.cost["rows_blocked"] > 0].sort_values(
+    "rows_blocked", ascending=False
+)
+```
+
+`sort_values` defaults to `kind="quicksort"`, which pandas documents as **not stable**. The failing
+diff is two adjacent rows swapping and nothing else:
 
 ```
 + | avg_polzbl_divi_atom_mass     | 1 | Eu |
 - | dev_atom_mass_mult_therm_cond | 1 | Eu |
 ```
 
-Both rows carry **count `1` and element `Eu`**. The sort key is therefore a **tie**, and the order
-falls through to whatever order the frame was already in — which is not guaranteed to be the same
-under a different pandas version or platform.
+Both carry `rows_blocked == 1` and the same blocking element, so the sort key is a **tie** and an
+unstable sort is free to return them in either order. Nothing downstream re-imposes an order.
+
+**What was ruled out, so nobody repeats it:**
+
+| Hypothesis | Checked | Result |
+|---|---|---|
+| Resolved versions differ (the usual cause) | `Successfully installed` on both runs | **identical** — numpy 1.26.4, pandas 2.3.3, scikit-learn 1.7.2, scipy 1.15.3 |
+| Platform (Linux runner vs Windows) | the same test passes on both | **not platform** — it passed on the runner twice after failing once |
+| `PYTHONHASHSEED` randomisation | 8 seeds locally | **all passed** |
+| Random test ordering | `pytest-randomly` / `xdist` in the config | **neither is installed** |
+| Something in #80/#85 | `git log c070988..HEAD -- reports/ hydms/surrogate/comparison.py` | **empty** — untouched |
+
+So the tie is real and the sort is genuinely unstable; what decided it differently on one run is
+still unknown. **Fix the tie anyway** — an unstable sort over a tied key is a defect whether or not
+its trigger has been named, and naming the trigger is not worth a CI round trip per attempt when
+the fix is one keyword.
 
 **This is the generated-document pattern working, not failing.** The byte-identity test caught a
-real nondeterminism that nothing else was testing for, exactly as #49's emit caught ElMD's
-hash-ordered `_fuse` building its composition dict from `set(mol1) | set(mol2)`. The lesson is the
-same one and it is worth restating here because the tempting fix is the wrong one: **do not loosen
-the comparison, and do not sort the output after the fact.** Find the tie and break it.
+real nondeterminism nothing else was testing for, the same way #49's emit caught ElMD's
+hash-ordered `_fuse`. Do not loosen the comparison and do not post-sort the rendered rows.
 
 ## Done when
 
-- [ ] The tie is broken **in the sort that produces the table**, not by post-sorting the rendered
-      rows. The feature name is the obvious second key and is already the row's identity, so the
-      order becomes a property of the data rather than of the reader
+- [ ] `comparison.py:703` sorts **stably** — `kind="stable"` preserves `declared.names` order for
+      tied rows, which is already a deterministic order — or takes an explicit second key. Not by
+      post-sorting the rendered rows
 - [ ] Every other sort in `hydms/surrogate/comparison.py` is checked for the same defect. One tie
       found by accident usually means the others were never specified either — the question is
       "can two rows share this key?", not "has this one ever moved?"
@@ -76,8 +95,13 @@ gh run list --branch feat/phase-h-emergency-hardening --limit 3
 
 ## Narrative
 
-- 2026-09-12: Found by #80 while checking whether its own push had gone green. It had not, and the
-  red predated it by an hour. Filed rather than fixed in place: #25 owns
+- 2026-09-12: Found by #80 while checking whether its own push had gone green. **The first filing
+  of this card was wrong about the axis** and is corrected above: it said the test "fails on the
+  runner and passes on the maintainer's machine", which read as a platform difference. The next two
+  runs passed on that same runner with identical resolved versions, so it is **intermittent**, and
+  the cause is an unstable `sort_values` over a tied key rather than anything about the
+  environment. The evidence table records what was ruled out so the next session does not re-walk
+  it. Filed rather than fixed in place: #25 owns
   `reports/feature_selection/` and is `done`, and #26 is `done` behind it, so reopening #25 would
   have made `check_board.py` fail on a blocker that is no longer done — the board is right to
   refuse that, and a `done` card carrying an unticked box would have been the same lie in a quieter

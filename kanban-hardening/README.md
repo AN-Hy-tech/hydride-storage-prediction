@@ -22,12 +22,15 @@
 > into: `docs/adr/README.md` **reserves `0001`–`0005`** for its five and explains why #85 took
 > `0006` instead of the next free number. #36's later candidates take `0007` onward.
 >
-> **#97 is new and is `High`: the branch is red in CI, and has been since #34's push.**
-> `test_comparison.py`'s byte-identity test fails on the runner and passes locally — two rows with
-> the same sort key (`1 | Eu`) swap places, so `reports/feature_selection/` is not reproducible
-> across platforms. It is **not** an unfreeze condition and it is **not** #80's or #85's doing, but
-> a red branch is how the next real failure gets ignored. Do not loosen the comparison; break the
-> tie.
+> **CI is green on the branch head** (run `34711343772`: 1462 passed, 0 failed, 12 m 46 s; gates
+> 3 passed / 0 failed / 6 skipped). **#97 is new and is `High` anyway.**
+> `test_comparison.py`'s byte-identity test failed **once** and has passed since, with nothing
+> touching `comparison.py` or its inputs — so it is *intermittent*, not environmental. Cause found:
+> `comparison.py:703` calls `sort_values` with pandas' default `kind="quicksort"`, which is
+> documented as **not stable**, and the two swapped rows tie at `rows_blocked == 1`. The card
+> records what was ruled out (versions identical, not platform, not hash seed, no random ordering)
+> so nobody re-walks it. Not an unfreeze condition; one keyword to fix. Do not loosen the
+> comparison.
 >
 > **#81, #91** are startable in parallel; **#94**, **#95**, **#96** and **#97** are open and none
 > is an unfreeze condition. **#7** still owes a portable artifact — `artifacts/` is gitignored, so `v3`
@@ -912,10 +915,17 @@ unfreeze condition. **#36** now has a directory and a convention to land into. #
 startable; #94, #95, #96 are open and none is an unfreeze condition.
 
 **One thing this card did not cause and did not fix.** Before claiming the push was green I ran
-`gh run list`, and the branch was **already red**: `test_comparison.py`'s byte-identity test fails
-on the runner and passes here, because two rows share a sort key and swap. Filed as **#97**
-(`High`, not an unfreeze condition). It could not go on #25 as a box — #25 is `done` and #26 is
-`done` behind it, so reopening it makes `check_board.py` fail on a blocker that is no longer done.
+`gh run list` and found the branch red on `test_comparison.py`'s byte-identity test. **The first
+reading of that was wrong and is corrected on #97:** it looked like a platform difference, and it
+is not — the same runner passed it twice afterwards on identical resolved versions. It is
+*intermittent*, and the cause is `comparison.py:703` sorting with pandas' default unstable
+quicksort over rows that tie at `rows_blocked == 1`. Filed as **#97** (`High`, not an unfreeze
+condition, one keyword to fix). It could not go on #25 as a box — #25 is `done` and #26 is `done`
+behind it, so reopening it makes `check_board.py` fail on a blocker that is no longer done.
+
+**CI is green on the branch head**, and the `#80`/`#85` push run shows `cancelled` only because the
+`#97` push superseded it — `cancel-in-progress` disguises a supersede as a failure-looking status,
+which this board has been caught by before.
 
 **Verification.** `tests/delivery` **179 passed** (up from 160); `tests/delivery` +
 `tests/screens` **334 passed**. Fast lane `pytest -m "not slow" --cov`: **1461 passed, 4
