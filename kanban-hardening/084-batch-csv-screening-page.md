@@ -54,6 +54,19 @@ was built to prevent, one export away.
       token is `NaN`: `df.to_csv(na_rep="NaN")` is a real export and this is the file it produces.
       Do **not** solve it by refusing the string; that refuses a real material
 
+- [ ] **A CSV of thousands cannot go through `POST /v1/predict/batch`, and the fix is not a
+      cleverer page** (added 2026-09-12 by #78). Measured on the deployed `v2`: one served
+      prediction costs **66–78 ms** and splits 13 ms featurise / 22 ms surrogate / 34 ms screens.
+      There is no hot spot, and none of it is *work* — it is per-call pandas overhead on a one-row
+      frame, paid three times per candidate — so the cost is **linear in the rows with nothing
+      amortised**, and #78's limit of 256 rows (~19 s) is what that arithmetic permits at the
+      transport. A 2,000-row upload is ~2.5 minutes of HTTP request. Decide here how this page
+      screens a real file, and the honest options are a batched call in the **library** (one
+      featurise, one surrogate call, one `apply_screens` pass over N rows, which is what the
+      screens were built for — see `hydms.screens.protocol`'s "called once per batch") or chunked
+      requests with visible progress. **Not** a bigger `max_batch_rows`: the limit is a timeout
+      budget, not a preference
+
 ## Runnable check
 
 ```bash

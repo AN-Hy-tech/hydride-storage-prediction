@@ -591,6 +591,11 @@ def test_nothing_of_the_machinery_is_reachable_from_a_bundle(bundle: ArtifactBun
         "confidence_level",
         "feature_names",
         "lower_head",
+        # Card #78 added it: the manifest is a *record* about the version — when it was
+        # fitted, from which sha, what a gate established — and `GET /v1/model` reports it.
+        # It passes the two checks below like every other member, which is the point: it
+        # hands out facts and nothing that could be refitted or predicted from.
+        "manifest",
         "median_head",
         "reference_digests",
         "screens",

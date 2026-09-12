@@ -21,7 +21,20 @@ is a type that cannot represent a bare number.
     caught where it raises and comes back as a refusal carrying the parse error's own
     sentence. Card #76.
 
-Still to come: ``api/`` (#78) and the Streamlit pages that are HTTP clients of it (#82-#84).
+``modelcard.py``
+    What the deployment can honestly say about itself — the version, when it was fitted, what
+    has been certified about it, and the ranges its screens enforce — assembled from the live
+    bundle rather than from a document. ``GET /v1/model`` serialises it and #83's page renders
+    it. Card #78.
+
+``api/``
+    The HTTP boundary: ``POST /v1/predict``, ``POST /v1/predict/batch``, ``GET /v1/health``,
+    ``GET /v1/model``. A transport with no ML logic in it, holding one bundle for the life of
+    the process. **Not imported here** — ``import hydms.delivery`` must not require FastAPI,
+    because the library is what a notebook and the batch path use. Card #78.
+
+Still to come: the Streamlit pages, which are HTTP clients of ``api/`` rather than in-process
+callers of this package (#82-#84).
 
 No candidate is published without both its distance to the nearest known alloy and its
 prediction interval width (AC-7) — which is why

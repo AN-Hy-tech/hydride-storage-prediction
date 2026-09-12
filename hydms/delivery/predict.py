@@ -235,6 +235,24 @@ class ArtifactBundle:
     _formula_column: str = field(repr=False)
     _heads: tuple[str, str, str] = field(repr=False)
     _digests: tuple[tuple[str, str], ...] = field(repr=False)
+    _manifest: Any = field(default=None, repr=False)
+
+    @property
+    def manifest(self) -> Any:
+        """This version's manifest, or ``None`` when the bundle was not loaded from a store.
+
+        Everything a served answer needs comes from the objects above; this is for everything
+        a served answer must be *reported* with -- the training date, the git sha, the gate
+        run -- which :func:`~hydms.delivery.modelcard.model_card` turns into ``GET /v1/model``.
+        It is read once by :func:`load_bundle` and never again: a manifest re-read per request
+        is a file the operator can change under a running service without the version moving.
+
+        ``None`` is honest rather than defensive. :func:`bundle_from` is handed a surrogate
+        and no store, so it has nothing to read, and the model card reports the absence as an
+        absence instead of guessing -- an unknown training date must never render as a blank
+        that reads like "not applicable".
+        """
+        return self._manifest
 
     @property
     def reference_digests(self) -> dict[str, str]:
@@ -355,6 +373,7 @@ def load_bundle(
     number. A screen aimed elsewhere does not fail: it answers ``admitted`` because the rule
     did not run, which is the silent weakening this whole phase exists to remove.
     """
+    from hydms import artifacts
     from hydms.surrogate.predict import load_surrogate
 
     default = screens is None and cfg is None
@@ -369,7 +388,18 @@ def load_bundle(
         if cached is not None:
             return cached
 
-    bundle = bundle_from(surrogate, screens=screens, cfg=config)
+    # The manifest the surrogate was checked against, read again here rather than threaded
+    # down through `load_surrogate`: it is a small JSON file, it is read once per assembled
+    # bundle because the bundle is memoised, and the alternative is a parameter on L3 that
+    # exists only to carry a reporting concern up to L6.
+    bundle = bundle_from(
+        surrogate,
+        screens=screens,
+        cfg=config,
+        manifest=artifacts.read_manifest(
+            artifacts.version_dir(surrogate.version, store=root)
+        ),
+    )
     if default:
         _BUNDLES[(str(root), surrogate.version)] = bundle
     return bundle
@@ -380,6 +410,7 @@ def bundle_from(
     *,
     screens: Sequence[Screen] | None = None,
     cfg: Config | None = None,
+    manifest: Any = None,
 ) -> ArtifactBundle:
     """Everything in :func:`load_bundle` below the version lookup, over a surrogate you hold.
 
@@ -389,6 +420,11 @@ def bundle_from(
             :func:`~hydms.delivery.contract.delivery_screens`; the same deployment decision
             :func:`load_bundle` documents.
         cfg: Loaded configuration. Defaults to one read here and shared by every screen.
+        manifest: The version's :class:`~hydms.artifacts.manifest.Manifest`, if the caller
+            holds one. Reported by ``GET /v1/model`` and read by nothing on the prediction
+            path, so a caller that has no manifest -- a gate scoring a candidate version --
+            leaves it ``None`` and gets a bundle that predicts identically and reports the
+            absence. See :attr:`ArtifactBundle.manifest`.
 
     Returns:
         An :class:`ArtifactBundle`. **Never memoised** -- the cache is keyed by
@@ -448,6 +484,7 @@ def bundle_from(
         _digests=tuple(
             digest for digest in map(_digest, running) if digest is not None
         ),
+        _manifest=manifest,
     )
 
 

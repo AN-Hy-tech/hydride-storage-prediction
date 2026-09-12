@@ -62,6 +62,19 @@ see the HTTP hop as pointless overhead and remove it.
       There is a fourth the card did not ask for and the ADR should carry: **the library writes
       nothing.** `predict_capacity()` is pure, which is the seam #91 depends on
 
+- [ ] **Record #78's two decisions, both forced by something outside it** (added 2026-09-12 by
+      #78). **(a) A refusal and an invalid request share HTTP 422.** Not chosen: the runbook's
+      acceptance check fixes a refusal at 422 and #78's own card fixes a malformed request there,
+      and neither source could be bent, so the distinction moved into the body — `refused` versus
+      `error`, sharing no key, with `answer_from()` refusing the second. State it, because the next
+      person will read one 422 handling two things as sloppiness rather than as the resolution of a
+      conflict between two authorities. **(b) The transport declares less than it can.** Pydantic
+      could enforce a non-empty formula and a finite temperature; it must not, because
+      `PredictionRequest` already does and two owners of one rule is how the sentence a caller is
+      shown comes apart from the sentence the library would have given. The transport declares only
+      what it alone can see — JSON types, unknown fields — which is the same "one owner per rule"
+      argument as the seam itself, one level down
+
 ## Runnable check
 
 ```bash
