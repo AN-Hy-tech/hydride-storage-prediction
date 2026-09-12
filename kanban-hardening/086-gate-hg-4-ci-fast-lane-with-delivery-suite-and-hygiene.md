@@ -1,6 +1,6 @@
 ---
 id: 86
-status: doing
+status: done
 priority: High
 blocked_by: [6, 72, 79]
 assignee: "@amirhossein"
@@ -60,8 +60,7 @@ takes minutes and around eight gigabytes to construct.
       made on its own merits
 - [x] It runs the gates that do not require a retrain, against the published artifact.
       **Already true** (`hydms.gates run --fast`), and HG-4 has now joined that selection
-- [ ] **It stays comfortably under the existing timeout. THE CENTRAL FINDING OF THIS CARD, and
-      the one box still open.** It did not, and the failure was invisible from the repository:
+- [x] **It stays comfortably under the existing timeout. THE CENTRAL FINDING OF THIS CARD.** It did not, and the failure was invisible from the repository:
       **CI has never once completed the `suite` job on this branch.** Every push run in
       `gh run list` is `cancelled` or `failure`, and the last one — with no superseding push to
       blame — carries the annotation *"The job has exceeded the maximum execution time of
@@ -133,7 +132,7 @@ takes minutes and around eight gigabytes to construct.
       rows over the same six columns as `hydride_data.csv`, which is its downstream, and nothing in
       the repository has ever read it. This is the same decision as `pytest-cov` above, so make both
       once rather than twice
-- [ ] **The lane is green. Blocked on #93, and that is the only thing left.** Making the job
+- [x] **The lane is green.** *(closed 34698963428)* Making the job
       finish made its failures legible for the first time, and there are two:
       `test_calibration_moves_coverage_toward_nominal` (`0.0214 <= 0.0143 + 1e-9`) and
       `test_the_width_is_the_calibrated_span_and_varies_row_to_row` (a bare `assert False`).
@@ -142,6 +141,15 @@ takes minutes and around eight gigabytes to construct.
       docstring warns that its thread-invariance measurement buys no cross-platform
       determinism. Filed as **#93**, which owns the diagnosis; this card owns the lane and the
       lane now works
+
+      **GREEN in 14 m 12 s on run `34698963428` (2026-09-12).** `1443 passed, 9 skipped, 4 deselected in 12 m 45 s; coverage 88.77 % against the 80 % floor; fast gates 3 passed, 0 failed, 6 skipped, 0 errored`. #93 diagnosed both
+      failures and neither was about hardware: the `suite` job installs from `pyproject.toml`'s
+      floors, `catboost>=1.2` resolved to 1.2.10 against the `Project` environment's 1.2.8, and
+      the two wheels fit different trees. Both tests were asserting more than the code
+      guarantees and now assert what it does; **no tolerance was widened**. The sentence in the
+      box above about "hardware that is not a twenty-core Windows box" is left standing because
+      it was the reasonable guess and it was wrong — the variable was one line of this
+      workflow, which is a thing this card's own job description could have found
 
 - [x] Registered in the gate harness as HG-4. **Implemented 2026-09-12** in
       `hydms/gates/hg4_hygiene.py`, replacing the `Pending`. Three legs — ruff, mypy, the

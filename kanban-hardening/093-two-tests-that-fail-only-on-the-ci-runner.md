@@ -1,6 +1,6 @@
 ---
 id: 93
-status: doing
+status: done
 priority: High
 blocked_by: []
 assignee: "@amirhossein"
@@ -75,12 +75,13 @@ and only one of them is a tolerance change.
       | trees | 7 | 9 | — |
       | widths, wt% | 1.2297, 0.1671, 0.1573 | 1.3731404613150833, −0.09442177798242923, −0.02975993899460505 | 1.373140, −0.094422, −0.029760 |
 
-      The runner also carried scikit-learn 1.7.2 and pandas 2.3.3 against 1.6.1 and 2.3.1 here;
-      the venv carried all three bumps, so CatBoost is the suspect by role rather than by
-      elimination. It does not change the conclusion: **nothing here is a property of Linux, of a
-      two-core runner or of an instruction set.** AC-1's docstring is right that its
-      thread-invariance measurement buys no cross-machine determinism, and it was the wrong
-      suspect for this
+      The runner also carried scikit-learn 1.7.2 and pandas 2.3.3 against 1.6.1 and 2.3.1 here,
+      so the venv was run again with **those two restored to the `Project` versions and CatBoost
+      left at 1.2.10**: raw coverage 0.7857142857142857, nine trees, a crossed band — the runner's
+      numbers, unchanged. **The cause is `catboost>=1.2` and nothing else.** Which also means
+      nothing here is a property of Linux, of a two-core runner or of an instruction set: AC-1's
+      docstring is right that its thread-invariance measurement buys no cross-machine determinism,
+      and it was simply the wrong suspect
 - [x] **Do not simply widen the tolerance to green the lane.** No tolerance was widened, and
       `1e-09` was never the question. The first assertion compared a **constant to a variable**.
       Calibrated coverage on the calibration rows is `ceil((n + 1) * level) / n` =
@@ -119,7 +120,12 @@ and only one of them is a tolerance change.
       that the width *is* the calibrated span and is not one constant, and a new deterministic
       sibling, `test_a_crossed_band_reaches_the_caller_unclipped`, pins the sign behaviour on the
       assembly step where no fit can move it
-- [ ] The CI fast lane is green, so **#86's last box can be ticked**
+- [x] The CI fast lane is green, so **#86's last box can be ticked**. **Run `34698963428`,
+      2026-09-12: hygiene green in 13 s, `suite` green in 14 m 12 s** — `1443 passed, 9 skipped,
+      4 deselected in 12 m 45 s`, coverage **88.77 %** against the 80 % floor, fast gates
+      `3 passed, 0 failed, 6 skipped, 0 errored`. The two failures are gone and the pass count
+      rose by three: the two restated tests plus
+      `test_a_crossed_band_reaches_the_caller_unclipped`. #86 is closed
 
 ## Runnable check
 
@@ -131,13 +137,22 @@ conda run -n Project python -m pytest tests/surrogate/test_conformal.py tests/su
 Neither failure needs a runner to reproduce any more, and that is the cheap part of this card to
 keep. A venv on the versions CI resolves reproduces both on Windows:
 
-```bash
-conda run -n Project python -m venv /tmp/ci-versions
-/tmp/ci-versions/Scripts/python -m pip install "catboost==1.2.10" "scikit-learn==1.7.2" \
-    "pandas==2.3.3" "numpy==1.26.4" "scipy==1.15.3" "mapie==1.5.0" "joblib==1.6.0" PyYAML pytest
-/tmp/ci-versions/Scripts/python -m pip install --no-deps -e .
-/tmp/ci-versions/Scripts/python -m pytest tests/surrogate/test_conformal.py tests/surrogate/test_predict.py
+```powershell
+# PowerShell, because that is the shell conda reaches `Project` from on this machine.
+$V = "$env:TEMP\ci-versions"
+conda run -n Project python -m venv $V
+& "$V\Scripts\python.exe" -m pip install --timeout 300 `
+    "catboost==1.2.10" "scikit-learn==1.7.2" "pandas==2.3.3" "numpy==1.26.4" `
+    "scipy==1.15.3" "mapie==1.5.0" "joblib==1.6.0" "PyYAML>=6.0" pytest
+& "$V\Scripts\python.exe" -m pip install --no-deps -e .   # hydms itself, without re-resolving
+& "$V\Scripts\python.exe" -m pytest tests/surrogate/test_conformal.py tests/surrogate/test_predict.py
 ```
+
+`--no-deps` on the last install is load-bearing: without it pip re-resolves `pyproject.toml` and
+puts the floors straight back, which is the one thing being held fixed. The venv has no `optuna`
+and no `statsmodels` and pip says so on the way past -- harmless here, because neither is on the
+path these two files exercise. The CatBoost wheel is large enough that PyPI times out at pip's
+default, hence `--timeout`.
 
 The resolved versions come from the run log: `gh run view <id> --log | grep "Successfully installed"`.
 
@@ -195,3 +210,9 @@ The resolved versions come from the run log: `gh run view <id> --log | grep "Suc
   graph therefore held shut the one card that could open it, while `check_board.py` refused to let
   it move to `doing` at all. See [[blocked-by-is-the-graph-runbook-arrows-are-prose]]: the edge to
   audit is the one the card's own Done-when cannot justify. (by @assistant)
+
+- 2026-09-12: **Closed against run `34698963428`.** Both tests were also run locally under the
+  CI-resolved versions before the push — 61 passed in the venv at CatBoost 1.2.10 — so the green
+  run confirmed a result rather than producing one. That is the shape this card should leave
+  behind: the round trip is for *confirmation*, and a diagnosis that can only be made on the
+  runner is a diagnosis that has not been made yet. (by @assistant)

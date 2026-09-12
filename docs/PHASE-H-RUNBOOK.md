@@ -1155,7 +1155,9 @@ single prediction path and HG-3 covers the UI too.
       `requirements-lock.txt`, and `catboost>=1.2` resolved to **1.2.10** against the `Project`
       environment's **1.2.8**. A venv on the resolved versions reproduces both failures **on the
       maintainer's own Windows box**, to every digit the runner printed, so neither failure needs
-      a CI round trip to see. Both tests were asserting more than the code guarantees:
+      a CI round trip to see. Isolated by elimination: with scikit-learn and pandas restored to
+      the `Project` versions and CatBoost left at 1.2.10, the runner's numbers are unchanged, so
+      **the cause is `catboost>=1.2` alone**. Both tests were asserting more than the code guarantees:
       `test_calibration_moves_coverage_toward_nominal` compared a constant — calibrated coverage
       on the calibration rows is the conformal rank over n, `46/56`, identical on every
       configuration — against the *raw* coverage, which is the fitted half and moved 49/56 →

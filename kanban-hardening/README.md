@@ -4,20 +4,17 @@
 
 > ## ▶ Next action — as of 2026-09-12
 >
-> **#93 is diagnosed and its fix is pushed; the next act is to read the run.** The two CI-only
-> failures were **not** a cross-platform CatBoost fit. `suite` installs from `pyproject.toml`'s
-> floors, `catboost>=1.2` resolved to **1.2.10** against the `Project` environment's **1.2.8**, and
-> a venv on the resolved versions reproduces both failures **on the maintainer's Windows box** to
-> every digit the runner printed. Both tests asserted more than the code guarantees and now assert
-> what it does; no tolerance was widened. **When the `suite` job is green: tick #86's last box and
-> close it, and close #93** — which unblocks **#34** → promotion → unfreeze.
+> **#86 and #93 are closed and the lane is green — `34698963428`, hygiene 13 s, `suite` 14 m 12 s,
+> 1443 passed / 9 skipped / 4 deselected, coverage 88.77 %.** That was the last thing holding
+> **#34**, whose other six blockers were already `done`. **#34 is the next card**: train and publish
+> the deployed artifact version — the unfreeze condition's second bullet. It is a **multi-hour fit
+> and the maintainer runs those**: build it, verify at sentinel budget, and hand over one command.
 >
-> **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no
-> push checks any more, and now also owes installing from `requirements-lock.txt` — a floor-resolved
-> retrain is not a retrain of the published pipeline. **#94** is new, from #93: a crossed band
-> raises where it should refuse.
+> **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no push
+> checks any more, and now also owes installing from `requirements-lock.txt`. **#94** is new, from
+> #93: a crossed band raises where it should refuse.
 >
-> Detail: [#93](093-two-tests-that-fail-only-on-the-ci-runner.md), [#86](086-gate-hg-4-ci-fast-lane-with-delivery-suite-and-hygiene.md),
+> Detail: [#34](034-train-and-publish-the-deployed-artifact-version.md),
 > [#94](094-a-crossed-band-raises-where-it-should-refuse.md), and the latest handoff at the foot of
 > this file.
 >
@@ -814,7 +811,101 @@ and their authority is over intent, not over facts.
 
 ---
 
-### Handoff -- 2026-09-12 (latest) - #86 is written but NOT closed; the lane works and #93 is why it is still red
+### Handoff -- 2026-09-12 (latest) - #93 closed, #86 closed, the lane is green; #34 is yours
+
+**The two CI-only failures were not what the card that filed them guessed, and the difference
+matters more than the fix.** #93's "Why this exists" reasons from AC-1's thread-invariance
+docstring to Linux, a different BLAS and a two-core runner. Every link in that chain is plausible.
+None of them was the variable. The `suite` job runs
+
+```
+pip install -e ".[dev,uq,novelty,api]"
+```
+
+which resolves **`pyproject.toml`'s floors** — not `requirements-lock.txt`, not `Project`.
+`catboost>=1.2` resolved to **1.2.10**; `Project` holds **1.2.8**. A throwaway venv on the resolved
+versions, **on the maintainer's own Windows box**, reproduces both failures to every digit the
+runner printed; restoring scikit-learn and pandas to the `Project` versions and leaving CatBoost at
+1.2.10 leaves them unchanged. **The cause is one wheel.**
+
+The practical consequence for whoever hits the next CI-only red: `gh run view <id> --log | grep
+"Successfully installed"` costs one command, and a venv on those versions turns a thirteen-minute
+round trip into seconds. #93's *Runnable check* now carries the recipe. Do not start from `uname`.
+
+**Neither test was fixed by choosing a tolerance, and `1e-09` was never the question.**
+
+*`test_calibration_moves_coverage_toward_nominal`* compared a **constant to a variable**.
+Calibrated coverage on the calibration rows is `ceil((n + 1) * level) / n` = **46/56 =
+0.8214285714285714**, identical on all three installations to every digit, because split CQR takes
+the correction to be the k-th smallest conformity score and exactly k of n rows then sit inside the
+widened band. It knows nothing about the fit. The **raw** coverage is the fitted half and moved
+49/56 → 44/56. So the old assertion was really "CatBoost's uncalibrated heads are worse than the
+conformal overshoot" — and **conformal prediction never promises coverage nearer nominal, only
+coverage ≥ nominal**. On a finite calibration set the guaranteed value overshoots by up to
+`(1 + level) / n`, so a *better* uncalibrated model pushes the calibrated number further away and
+the test must fail. The runner failed it by fitting a better model. It now asserts the rank
+identity, the `>= nominal` guarantee and the overshoot bound — three theorems — and is renamed
+`test_calibration_pins_coverage_at_the_conformal_rank`.
+
+*`test_the_width_is_the_calibrated_span_and_varies_row_to_row`* asserted
+`(frame[INTERVAL_WIDTH] > 0.0).all()` and **contradicted a decision this repository had already
+made and measured**. `quantile_metrics` counts `crossings` because "MultiQuantile fits the heads
+jointly but does not constrain them to be monotone … measured at **23 % of rows** on a small fit"
+(`model.py:1291`), and `conformal.py`'s header states that **CQR's widening cannot repair a
+crossing**. Two of its three candidates — `Ti1Fe1`, `Mg2Ni1` — are outside the fixture's La–Ni
+training family, and on the runner they came back at **−0.094422** and **−0.029760** wt%. The test
+was asserting that three extrapolation candidates all dodge a 23 %-likely event; it passed here at
+roughly coin-flip odds. The sign claim is gone, the test is
+`test_the_width_is_the_calibrated_span_and_is_not_one_constant`, and a deterministic sibling,
+`test_a_crossed_band_reaches_the_caller_unclipped`, pins the behaviour on the assembly step where
+no fit can move it. **AC-3 inherits nothing to weaken** — it measures coverage on the *test* split,
+which is generalisation; this was only ever arithmetic on the calibration rows.
+
+Both tests now build a `measured` string — coverages, counts, the rank, the correction, the raw
+crossings, the widths and the heads — so the next red reports its numbers instead of `assert False`.
+
+**Two things were filed rather than fixed here.**
+
+**#94** (new, `backlog`, *not an unfreeze condition*): a crossed band leaves the surrogate as a
+negative width by design, and `hydms.delivery.contract.Interval` then raises `ContractError` on
+`upper < lower`. `hydms/delivery/predict.py` never mentions crossing, so that is a **loud failure,
+not a refusal carrying a reason code** — the one shape of answer this project has decided it does
+not give. A batch screen loses the batch on one bad row; the API returns 500. The card's first box
+is *measure before adding a reason code*: the candidates that crossed are exactly the ones #48 and
+#49 should already refuse, and a code no request can reach is the defect #90's reachability check
+exists to find. #77, #90 and #48 are all `done`, which is why it is a card and not a box.
+
+**A box on #7**: the slow lane must install from `requirements-lock.txt`. #7 already said it is the
+only lane that rebuilds the pinned environment, on the grounds that nothing otherwise proves
+`Project` still recreates. This is the sharper reason — **a floor-resolved retrain is not a retrain
+of the published pipeline**, and promoting a version fitted by a wheel nobody pinned puts a silently
+different model behind `current`. The fast lane installing from floors stays correct and
+deliberate; what it owes is to *say* which versions it resolved.
+
+**A graph edge was removed.** #93 carried `blocked_by: [86]`, which pointed the wrong way: #86
+*found* this card, which is not the same as this card needing anything from #86, and #86's own last
+box says "Blocked on #93". `check_board.py` therefore refused to let #93 move to `doing` at all,
+while the only card that could open #86 sat behind it. Audit an edge against the card's own
+*Done-when*, not against the prose that created it.
+
+**Where the board stands.** #86 and #93 are `done` against run **`34698963428`** — hygiene green
+in 13 s, `suite` green in **14 m 12 s**: `1443 passed, 9 skipped, 4 deselected in 12 m 45 s`,
+coverage **88.77 %** against the 80 % floor, fast gates `3 passed, 0 failed, 6 skipped, 0 errored`.
+The same selection on the maintainer's machine is `1452 passed, 4 deselected in 12 m 13 s` — the
+nine-test gap is the nine that skip on the runner, which is what #86 measured and why a percentage
+in a progress bar cannot identify a test. #34 — train and
+publish the deployed artifact version — is the next unblocked card and it is the unfreeze
+condition's second bullet; it is a **multi-hour fit and the maintainer runs those**, so build and
+verify at sentinel budget and hand over one command. #80, #81, #85, #89 and #91 are startable in
+parallel. Ask the board rather than trusting this paragraph:
+
+```bash
+bash ../.claude/skills/kanban-ai/scripts/show_blocked.sh .
+```
+
+---
+
+### Handoff -- 2026-09-12 (earlier) - #86 is written but NOT closed; the lane works and #93 is why it is still red
 
 **#86 is `doing` with one box open, and the box is the point of the card.** Everything else in it
 is done: the HG-4 gate is implemented and registered, `--cov` and `-m "not slow"` are in the

@@ -86,7 +86,9 @@ one-line change, not a retrain.
       **1.2.8**, and the two fit different trees: on the same fixture the raw interval coverage
       moved from 49/56 to 44/56, the tree count from 7 to 9, and two of three probe candidates
       went from an ordinary band to a **crossed** one. #93 reproduced every runner digit in a
-      Windows venv built on the resolved versions, so this is the wheel and not the platform.
+      Windows venv built on the resolved versions, and then isolated it: with scikit-learn and
+      pandas restored to the `Project` versions and CatBoost left at 1.2.10 the numbers did not
+      move, so the cause is **`catboost>=1.2` alone** and it is the wheel, not the platform.
 
       The consequence for this card is direct: **a retrain that installs from floors is not a
       retrain of the published pipeline.** The box above already says this lane is the only one
