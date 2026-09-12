@@ -121,16 +121,25 @@ Fixed now, before results are seen, so it cannot be softened later. All four mus
       promoted version exists on the maintainer's machine and nowhere else, so a fresh clone has
       no model and `predict()` refuses there. That is card #7's to fix and it does not reopen this
       bullet, which asks for a promoted version and not for a portable one.
-- [ ] **`docs/API.md` published** — card #80.
+- [x] **`docs/API.md` published** — card #80, **done 2026-09-12**. Every endpoint with a real
+      request and a real response, what the interval is and is not, all nine reason codes with
+      what a caller should do about each, the trained ranges, and the material-versus-system
+      caveat. *It is **generated**, not written:* `python -m hydms.delivery.apidoc --emit`, with
+      a test asserting the committed bytes are what the code produces. The examples are real
+      exchanges captured against **`v3`** and carry that version on the page, because
+      `--probe` needs an artifact and `--emit` must not — the same gitignored-path trap this
+      file's own caveat above describes. Card #85's ADR landed with it at
+      `docs/adr/0006-the-delivery-seam.md`, which #80's last box required.
 - [ ] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
 
 When all four hold: set `freeze: lifted` in this file's frontmatter, record the closing date below,
 and the PA/PB board resumes.
 
-**Two of four hold as of 2026-09-12**, and the two that remain are ordinary work with no blocker
-between them and a keyboard: `docs/API.md` is #80, unblocked since #79 closed, and the Chapter 1
-revision is #37, which waits on #89 now that #34 is done. Nothing left in this condition needs a
-fit, a decision, or a run of the pipeline.
+**Three of four hold as of 2026-09-12.** The one that remains is the Chapter 1 revision, **#37**,
+which waits on **#89** (`docs/REPORT-RECONCILIATION.md`) — and #89 has been unblocked since
+2026-09-11, so the whole of what stands between this phase and its close is two documents with no
+blocker between them and a keyboard. Nothing left in this condition needs a fit, a decision, or a
+run of the pipeline.
 
 **Closed:** _(not yet)_
 

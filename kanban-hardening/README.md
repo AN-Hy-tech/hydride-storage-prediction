@@ -2,36 +2,35 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-12 (evening)
+> ## ▶ Next action — as of 2026-09-12 (late evening)
 >
-> **#34 is `done`: the artifact is promoted and `current` points at `v3`.** The maintainer ran
-> `promote --waive AC-5 --waive AC-7 --waive AC-8` at **17:37:26Z**; it certified `v2` with
-> **9 passed, 0 failed, 3 skipped, 0 errored in 175.56 s**, wrote `v3` carrying the gate report,
-> and moved the pointer. `v2` stays on disk as the record of the fit — a manifest is sealed when
-> written, so the report could not be added to it.
->
-> **Two of the four unfreeze conditions now hold** (`docs/FREEZE.md`), and the other two are
-> ordinary work with nothing between them and a keyboard:
+> **#80 and #85 are `done`. `docs/API.md` is published and `docs/adr/` exists.** S6 is closed —
+> #80 was its last card — and **three of the four unfreeze conditions now hold**.
 >
 > | Condition | State |
 > |---|---|
 > | Every gate green | **met** — 9 passed, the 3 skips are the frozen AC-5/AC-7/AC-8 |
 > | An artifact version promoted | **met** — `current` → `v3`, 2026-09-12T17:37:26Z |
-> | `docs/API.md` published | **#80**, unblocked, S6's last card |
-> | The Chapter 1 revision | **#37**, now waiting on **#89 alone** |
+> | `docs/API.md` published | **met** — #80, generated, examples captured against `v3` |
+> | The Chapter 1 revision | **#37**, waiting on **#89 alone** |
 >
-> **So the opening move is #80 or #89**, and #89 unblocks #37 and #83 as well as itself.
-> **#36** (the five ADRs) is also unblocked by this close. **#81, #85, #91** are startable in
-> parallel; **#94** and **#95** are open and are *not* unfreeze conditions.
+> **So the opening move is #89** — `docs/REPORT-RECONCILIATION.md`, unblocked since 2026-09-11.
+> It is the only thing standing between this phase and its close, because #37 is written from it
+> and #37 is the last unfreeze condition. #83 wants it too.
 >
-> **#7** owes the four slow tests no push checks any more, installing from
-> `requirements-lock.txt`, and — new today — dropping `SCALER_PAYLOAD`, because `promote` copies
-> payloads and only a fit can change the set. **#96** is new: `calibrate --report` is both an
-> output directory and an input path, and redirecting it silently fits CatBoost's defaults.
+> **#36** (the five ADRs) is unblocked and now has a directory and a numbering convention to land
+> into: `docs/adr/README.md` **reserves `0001`–`0005`** for its five and explains why #85 took
+> `0006` instead of the next free number. #36's later candidates take `0007` onward.
 >
-> **The one thing this promotion did not do is make the model portable.** `artifacts/` is
-> gitignored, so `v3` is on the maintainer's machine and nowhere else; a fresh clone still has no
-> model and `predict()` refuses there.
+> **#81, #91** are startable in parallel; **#94**, **#95** and **#96** are open and are *not*
+> unfreeze conditions. **#7** still owes a portable artifact — `artifacts/` is gitignored, so `v3`
+> is on the maintainer's machine and nowhere else, and a fresh clone has no model.
+>
+> **One thing to know before touching `docs/API.md`: it is generated.** `python -m
+> hydms.delivery.apidoc --emit` rebuilds it and a test asserts the committed bytes are what the
+> code produces; the prose lives in `hydms/delivery/apidoc.py`. Its examples are real exchanges
+> captured by `--probe`, which is the **only** part that needs a promoted artifact — so after a
+> new fit, re-probe, or the page keeps describing `v3` while saying so on its own face.
 >
 > **This block is a pointer with a date on it, not a source.** It is the one place on this board
 > that restates state, which means it is the one place that can silently go stale — the cards and
@@ -212,7 +211,7 @@ in an OPEN maintainer decision that needs an answer before anyone re-solves the 
 ~~#79 is `done` … #86 (HG-4) is now the last unfinished blocker on #34~~ — both closed on
 2026-09-12.
 
-**Handoff, 2026-09-12 (latest) — #79 is `done`; HG-3 is green, and #86 is the last gate #34 waits
+**Handoff, 2026-09-12 (superseded) — #79 is `done`; HG-3 is green, and #86 is the last gate #34 waits
 on.** This is the live handoff; the three below it are history in the order they happened.
 
 **What landed, and one thing that had not.** `hydms/gates/hg3_transport_parity.py` replaces the
@@ -832,7 +831,89 @@ and their authority is over intent, not over facts.
 
 ---
 
-### Handoff -- 2026-09-12 (latest) - the artifact is promoted; the unfreeze condition is half met and the rest is ordinary work
+### Handoff -- 2026-09-12 (latest) - #80 and #85 are done; S6 is closed and three of four unfreeze conditions hold
+
+**Start here.** Ask the board, not this block:
+
+```bash
+bash ../.claude/skills/kanban-ai/scripts/show_blocked.sh .
+```
+
+**What landed.** `docs/API.md` (#80) and `docs/adr/0006-the-delivery-seam.md` (#85), written
+together because #80's last box owes ADRs to `docs/adr/` and #85 is the ADR for the seam #80
+documents. S6 is closed: #80 was its last card.
+
+**The one question #80's card required answering before a word was written** — *how does a caller
+tell a refusal from a genuinely low prediction?* — has a crisp answer, which is why the document
+could be written at all. Three ways: `200` vs `422`, `refused` false vs true, and `capacity`
+**present vs the key not existing**. The third is structural, not conventional: `refused` is a
+property on both answer types rather than a field on either, and a `Refusal` has no field a number
+could occupy. The page leads with `Mg2Ni` at 573 K, refused `high-uncertainty` for a 1.36 wt% band
+against the 1.12 limit — refused for *width*, not for a small number, which is the case a caller
+misreads.
+
+**`docs/API.md` is generated. Do not edit it.** `python -m hydms.delivery.apidoc --emit`; the prose
+lives in `hydms/delivery/apidoc.py` beside the facts, the arrangement `refusals.py` already uses.
+It draws on three sources kept deliberately apart:
+
+| Source | What it supplies | Needs an artifact? |
+|---|---|---|
+| the code, read live | reason-code vocabulary, batch limit, schema strings, element coverage | no |
+| the committed `openapi.json` | the route table, summaries, status codes | no |
+| the committed example fixture | every request and response on the page | **only to refresh it** |
+
+**`--probe` is split from `--emit` because `artifacts/` is gitignored**, and a generator that
+needed a live model would be a check that silently never runs — the trap already found on
+`artifacts/current.json` (#34) and `reports/loco/` (#30). This was **verified, not assumed**: with
+`artifacts/` renamed away, the check still reports the page current and all nine tests still pass.
+The consequence for you: **after a new fit, run `--probe` or the page keeps describing `v3`** — it
+says which version on its own face, so it goes stale visibly rather than silently.
+
+**Reachability is now measured rather than hedged, and it will look like it contradicts the
+gates.** A 50 x 10 sweep through the request door against `v3` reaches **8 of the 9** declared
+codes; only `untrusted-family` is unreachable, structurally, because the API declares exactly two
+fields. HG-2 and HG-3 report `above-physical-ceiling` and `out-of-domain` as *unreached on this
+fit* — which is the honest statement for eleven probes, not a disagreement. `docs/API.md` carries a
+paragraph saying so, and `CONTEXT.md` gained **Reachable** as a term with all three readings, since
+this is now written three ways in three documents a reader will put side by side.
+
+**A box was nearly ticked falsely, and the fix is on the page.** #80 asks the page to state the
+trained ranges *including elements*; the draft had temperature, capacity, feature spans and the
+LOACO table and no elements at all. They are derivable with no artifact from the novelty screen's
+committed reference: **50 elements over 780 canonical compositions, 9 of them in two compositions
+or fewer**. The page states it is **not a bound** — nothing refuses a composition for naming an
+element outside the set, because the novelty screen measures distance instead — since a list on an
+API page otherwise reads as a rule. `CONTEXT.md` gained **Trained range vs Applicability domain**
+for the same reason.
+
+**On the ADR numbering, so nobody re-takes it.** #85's ADR is **`0006`**, not `0001`. #36's
+done-when names `docs/adr/0001..0005-*.md`, so those five are **reserved**; `docs/adr/README.md`
+records the reservation, the reasoning, and #36's own standing decision that the card is not
+renamed — *the ADRs are numbered, not counted*. #36's later candidates take `0007` onward.
+
+**What the ADR argues that its title does not.** "The API owns no ML logic" is the easy direction.
+The same seam means **the library owns no I/O**, and that is where a future reader will push,
+because #91's rejected alternative — the library owning its own prediction record — is a real
+guarantee. The ADR states the cost plainly instead of hiding it: **a script that imports the
+library leaves no record.** It also names three conditions that *would* justify reversing the seam,
+and one that would not (that the HTTP hop looks like overhead — it is the overhead that buys one
+prediction path, and the 66-78 ms is measured).
+
+**Next.** **#89** — `docs/REPORT-RECONCILIATION.md`, unblocked since 2026-09-11, and the only thing
+standing between this phase and its close, since #37 is written from it and #37 is the last
+unfreeze condition. **#36** now has a directory and a convention to land into. #81, #91 are
+startable; #94, #95, #96 are open and none is an unfreeze condition.
+
+**Verification.** `tests/delivery` **179 passed** (up from 160); `tests/delivery` +
+`tests/screens` **334 passed**. Fast lane `pytest -m "not slow" --cov`: **1461 passed, 4
+deselected, 1038 s (17 m 18 s)**, coverage **87.89 %** against the 80 % floor. Gates `run --fast`:
+7 passed / 0 failed / 2 skipped — AC-5 (frozen) and HG-4, which correctly reports that its coverage
+data predates this change. ruff, ruff format and mypy clean. `pyproject.toml` gained `delivery/*.json` to package data, because the module's
+docstring claimed the fixture ships in a wheel and it did not.
+
+---
+
+### Handoff -- 2026-09-12 (earlier) - the artifact is promoted; the unfreeze condition is half met and the rest is ordinary work
 
 **Start here.** Ask the board, not this block:
 
@@ -892,7 +973,7 @@ establish"**, which is `len(outstanding)`; the broken expression would have said
 before believing a card's open box**; a box can outlive its defect, and an open box on a closing
 card is the last moment anyone will check.
 
-### Handoff -- 2026-09-12 (latest) - every reachable gate is green; #34 is one command from done, and that command is the maintainer's
+### Handoff -- 2026-09-12 (superseded) - every reachable gate is green; #34 is one command from done, and that command is the maintainer's
 
 **Start here.** Run this, and nothing else, before planning anything:
 

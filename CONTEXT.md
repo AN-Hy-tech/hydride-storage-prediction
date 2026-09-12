@@ -308,6 +308,43 @@ different reasons: the first goes red when a stage stops connecting to the next,
 fit or a table-writing step is broken.
 _Avoid_: "the smoke test" unqualified — say which, or say "the chain check" / "the cost check"
 
+**Reachable** (a reason code):
+That *some* input can make the delivery path emit this code. It is **three different claims** and
+they have already been written as one: *reachable at all*, *reachable through a given door*, and
+*reached by a particular probe set*. A caller wants the second — "can I receive this by typing a
+formula and a temperature?" — and a gate report states the third, because a dozen probes is what a
+gate can afford. The three can disagree without any of them being wrong.
+_Avoid_: "the code is unreachable" with no door and no measurement behind it
+
+> *State of the term, not part of the definition* (cards #80, #90, 2026-09-12): all three readings
+> are live in this repository right now, in documents a reader will put side by side.
+> `docs/REFUSALS.md` splits by **door** — the *request* door (`predict_capacity`, a typed formula
+> and temperature) against the *frame* door (`apply_screens` over a curated frame, which can also
+> **state** a prediction, a band width and an alloy-class label). HG-2 and HG-3 report their own
+> **probe set**, and currently record `above-physical-ceiling` and `out-of-domain` as *unreached on
+> this fit* — the honest statement for eleven probes. `docs/API.md` reports a **50 x 10 sweep**
+> through the request door and marks both reachable, which is a lower bound on what a caller can
+> meet. Only `untrusted-family` is unreachable in the strong sense at the request door, and that is
+> structural: the API declares exactly two fields, so there is no way to supply the label the rule
+> judges.
+
+**Trained range** vs **Applicability domain**:
+A **trained range** is a numeric span the training rows covered — the 195–773 K window, the capacity
+range, the fourteen feature spans. The **applicability domain** is a judgement about a *candidate
+and its prediction*: the composition's physical capacity ceiling at H/M 3, the cross-family capacity
+level, the family's measured transfer, and the width of the calibrated band. A candidate inside
+every trained range can still be refused, which is why the order is featurise, predict, **then**
+screen — a rule that reads a prediction cannot run before one exists.
+_Avoid_: "in range" to mean "will be answered", and "out of domain" for a bounds violation (that is
+`outside-feature-range`; `out-of-domain` is the cross-family capacity rule)
+
+> **Element coverage is neither.** The corpus contains 50 elements across 780 canonical
+> compositions, and **nothing refuses a composition for naming one outside that set** — the novelty
+> screen measures ElMD *distance* on a chemical scale instead, which is the better rule, since an
+> unseen element near a seen one is better supported than a seen element in an unseen arrangement.
+> `docs/API.md` publishes the list because a caller has nowhere else to find it, and says in as many
+> words that it is not a bound. Reading it as one is the conflation this entry exists to stop.
+
 **Leak**:
 A named, sited way held-out data influenced something before it was scored. Thirteen are inventoried
 with their exact locations in the archival pipeline.

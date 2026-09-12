@@ -173,11 +173,17 @@ exclude = ["Machine_Model*", "tests*", "scripts*"]
 # `python -m hydms.delivery.api.openapi --emit`, and the gate must be answerable in a container
 # that holds an installed wheel and no repository around it. A test asserts the committed bytes
 # are what that command produces.
+# `delivery/apidoc-examples.json` ships for the fifth and last variation. It holds the real
+# request/response exchanges `docs/API.md` publishes, captured against a promoted artifact by
+# `python -m hydms.delivery.apidoc --probe` (card #80). It is package data because `--emit` and
+# its test must run where there is no artifact and no repository — `artifacts/` is gitignored,
+# so a generator that needed a live model would be a check that silently never runs.
 hydms = [
   "descriptors/data/*.csv",
   "config/*.yaml",
   "screens/*.json",
   "pipeline/*.csv",
+  "delivery/*.json",
   "delivery/api/*.json",
 ]
 

@@ -1,0 +1,1813 @@
+{
+  "schema": "hydms.delivery.apidoc/1",
+  "model_version": "v3",
+  "probed_at": "2026-09-12T18:02:06+00:00",
+  "interval": {
+    "confidence_level": 0.8,
+    "basis": "nominal",
+    "unit": "wt%",
+    "space": "capacity"
+  },
+  "trained_ranges": {
+    "temperature": {
+      "low": 195.0,
+      "high": 773.0,
+      "units": "K",
+      "quantity": "the trained temperature range"
+    },
+    "capacity": {
+      "low": 0.1,
+      "high": 7.19,
+      "cross_family_max": 5.19,
+      "sole_family": "Mg",
+      "rows_above": 21,
+      "rows": 893,
+      "units": "wt%"
+    },
+    "feature_span": {
+      "avg_Number_of_unfilled_s_valence_electrons": [
+        0.0,
+        1.9749999999999999
+      ],
+      "avg_is_alkaline": [
+        0.0,
+        1.0
+      ],
+      "avg_valence_d": [
+        0.0,
+        10.0
+      ],
+      "dev_Pauling_Electronegativity": [
+        0.0,
+        0.609416516101605
+      ],
+      "dev_Zunger_radii_sum": [
+        9.809045594502695e-05,
+        1.4000000000000001
+      ],
+      "dev_atom_mass_mult_therm_cond": [
+        0.4255246543628435,
+        16262.856119999999
+      ],
+      "dev_bp_divi_atom_mass": [
+        0.002028683244117375,
+        112.41361240449993
+      ],
+      "dev_gilmor_number_of_valence_electron": [
+        0.0,
+        1.7777777777777777
+      ],
+      "dev_heat_of_vaporization_(kJ/mol)_": [
+        0.08597317902391821,
+        163.46938775510205
+      ],
+      "dev_specific_heat_(J/g_K)_": [
+        0.0,
+        1.678393027951961
+      ],
+      "dev_voro_coord_divi_mol_vol": [
+        3.8076923076979524e-05,
+        0.7772663082194247
+      ],
+      "range_Mendeleev_Number": [
+        1.0,
+        79.0
+      ],
+      "range_specific_heat_(J/g_K)_": [
+        0.0,
+        3.373
+      ],
+      "temperature(K)": [
+        195.0,
+        773.0
+      ]
+    }
+  },
+  "transfer_r2": {
+    "A2B": 0.7264256983699161,
+    "AB": 0.4213597485830526,
+    "AB2": 0.3043198947294199,
+    "AB5": 0.0367803882359358,
+    "HEA": -0.0723346152114305,
+    "LEA": 0.4995436115477851,
+    "MEA": 0.113481910580558,
+    "MIC": 0.2796124679494778,
+    "Mg": -0.338128769644191,
+    "SS": 0.7625638386478973
+  },
+  "gates": {
+    "recorded": true,
+    "unestablished": [
+      [
+        "AC-5",
+        "SKIPPED"
+      ],
+      [
+        "AC-7",
+        "SKIPPED"
+      ],
+      [
+        "AC-8",
+        "SKIPPED"
+      ]
+    ]
+  },
+  "provenance": {
+    "git_sha": "65de4ee934fb7182a23ad6f317ef4a687439ebb9",
+    "git_branch": "feat/phase-h-emergency-hardening",
+    "trained_at": "2026-09-12T17:37:26+00:00",
+    "notes": "certified copy of v2, which was fitted at 4a06011303cfd8c833cb5c82dcd58846157cf2f8 on 2026-09-06T21:31:41+00:00. Payloads are that version's objects; the gate report is this command's run against it. Promoted with 3 criteria waived (AC-5, AC-7, AC-8); the report records each as SKIPPED and the waiver itself is in current.json."
+  },
+  "reachable_over_http": [
+    "above-physical-ceiling",
+    "admitted",
+    "beyond-known-chemistry",
+    "high-uncertainty",
+    "indeterminate",
+    "out-of-domain",
+    "outside-feature-range",
+    "outside-window"
+  ],
+  "reachability_grid": {
+    "formulas": 50,
+    "temperatures": 10
+  },
+  "exchanges": {
+    "health": {
+      "method": "GET",
+      "path": "/v1/health",
+      "request": null,
+      "status": 200,
+      "response": {
+        "status": "ok",
+        "model_version": "v3",
+        "max_batch_rows": 256
+      }
+    },
+    "model-card": {
+      "method": "GET",
+      "path": "/v1/model",
+      "request": null,
+      "status": 200,
+      "response": {
+        "schema": "hydms.delivery.model/1",
+        "version": "v3",
+        "trained_at": "2026-09-12T17:37:26+00:00",
+        "provenance": {
+          "git_sha": "65de4ee934fb7182a23ad6f317ef4a687439ebb9",
+          "git_branch": "feat/phase-h-emergency-hardening",
+          "code_modified": true,
+          "python": "3.10.13",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "seeds": {
+            "pipeline": 42
+          },
+          "packages": {
+            "numpy": "1.26.4",
+            "pandas": "2.3.1",
+            "scipy": "1.15.2",
+            "scikit-learn": "1.6.1",
+            "catboost": "1.2.8",
+            "cleanlab": "2.7.1",
+            "Boruta": "0.4.3",
+            "statsmodels": "0.14.4",
+            "optuna": "4.1.0",
+            "PyYAML": "6.0.2",
+            "joblib": "1.3.2",
+            "mapie": "1.5.0"
+          },
+          "notes": "certified copy of v2, which was fitted at 4a06011303cfd8c833cb5c82dcd58846157cf2f8 on 2026-09-06T21:31:41+00:00. Payloads are that version's objects; the gate report is this command's run against it. Promoted with 3 criteria waived (AC-5, AC-7, AC-8); the report records each as SKIPPED and the waiver itself is in current.json."
+        },
+        "features": [
+          "dev_Zunger_radii_sum",
+          "dev_Pauling_Electronegativity",
+          "avg_valence_d",
+          "dev_atom_mass_mult_therm_cond",
+          "avg_is_alkaline",
+          "dev_bp_divi_atom_mass",
+          "dev_specific_heat_(J/g_K)_",
+          "dev_gilmor_number_of_valence_electron",
+          "range_specific_heat_(J/g_K)_",
+          "range_Mendeleev_Number",
+          "dev_voro_coord_divi_mol_vol",
+          "dev_heat_of_vaporization_(kJ/mol)_",
+          "avg_Number_of_unfilled_s_valence_electrons",
+          "temperature(K)"
+        ],
+        "interval": {
+          "confidence_level": 0.8,
+          "basis": "nominal",
+          "unit": "wt%",
+          "space": "capacity"
+        },
+        "screens": [
+          {
+            "name": "temperature",
+            "codes": [
+              "outside-window",
+              "indeterminate"
+            ],
+            "limits": {
+              "quantity": "the trained temperature range",
+              "column": "temperature(K)",
+              "low": 195.0,
+              "high": 773.0,
+              "units": "K"
+            },
+            "reference_sha256": null
+          },
+          {
+            "name": "domain",
+            "codes": [
+              "out-of-domain",
+              "above-physical-ceiling",
+              "outside-feature-range",
+              "untrusted-family",
+              "high-uncertainty",
+              "indeterminate"
+            ],
+            "limits": {
+              "ceiling": 5.19,
+              "hm_floor": 2.5,
+              "max_interval_width": 1.12
+            },
+            "reference_sha256": "8c359a3cfcc2b1c4f0860d73973a75127af05724d8d49ca6ab0ab0686072d794"
+          },
+          {
+            "name": "novelty",
+            "codes": [
+              "beyond-known-chemistry",
+              "indeterminate"
+            ],
+            "limits": {
+              "column": "Composition",
+              "ceiling": 11.731958762886595
+            },
+            "reference_sha256": "c3440ec0c084a24ef6eb5f4dd68da29b1dce1cba97cf0d99de98c1b774eca60c"
+          }
+        ],
+        "trained_ranges": {
+          "temperature": {
+            "low": 195.0,
+            "high": 773.0,
+            "units": "K",
+            "quantity": "the trained temperature range"
+          },
+          "capacity": {
+            "low": 0.1,
+            "high": 7.19,
+            "cross_family_max": 5.19,
+            "sole_family": "Mg",
+            "rows_above": 21,
+            "rows": 893,
+            "units": "wt%"
+          },
+          "feature_span": {
+            "avg_Number_of_unfilled_s_valence_electrons": [
+              0.0,
+              1.9749999999999999
+            ],
+            "avg_is_alkaline": [
+              0.0,
+              1.0
+            ],
+            "avg_valence_d": [
+              0.0,
+              10.0
+            ],
+            "dev_Pauling_Electronegativity": [
+              0.0,
+              0.609416516101605
+            ],
+            "dev_Zunger_radii_sum": [
+              9.809045594502695e-05,
+              1.4000000000000001
+            ],
+            "dev_atom_mass_mult_therm_cond": [
+              0.4255246543628435,
+              16262.856119999999
+            ],
+            "dev_bp_divi_atom_mass": [
+              0.002028683244117375,
+              112.41361240449993
+            ],
+            "dev_gilmor_number_of_valence_electron": [
+              0.0,
+              1.7777777777777777
+            ],
+            "dev_heat_of_vaporization_(kJ/mol)_": [
+              0.08597317902391821,
+              163.46938775510205
+            ],
+            "dev_specific_heat_(J/g_K)_": [
+              0.0,
+              1.678393027951961
+            ],
+            "dev_voro_coord_divi_mol_vol": [
+              3.8076923076979524e-05,
+              0.7772663082194247
+            ],
+            "range_Mendeleev_Number": [
+              1.0,
+              79.0
+            ],
+            "range_specific_heat_(J/g_K)_": [
+              0.0,
+              3.373
+            ],
+            "temperature(K)": [
+              195.0,
+              773.0
+            ]
+          }
+        },
+        "metrics": {
+          "gates": {
+            "recorded": true,
+            "unestablished": [
+              [
+                "AC-5",
+                "SKIPPED"
+              ],
+              [
+                "AC-7",
+                "SKIPPED"
+              ],
+              [
+                "AC-8",
+                "SKIPPED"
+              ]
+            ]
+          },
+          "transfer_r2": {
+            "A2B": 0.7264256983699161,
+            "AB": 0.4213597485830526,
+            "AB2": 0.3043198947294199,
+            "AB5": 0.0367803882359358,
+            "HEA": -0.0723346152114305,
+            "LEA": 0.4995436115477851,
+            "MEA": 0.113481910580558,
+            "MIC": 0.2796124679494778,
+            "Mg": -0.338128769644191,
+            "SS": 0.7625638386478973
+          },
+          "transfer_protocol": "leave-one-alloy-class-out (card #30), from the applicability screen's committed reference"
+        }
+      }
+    },
+    "predict-baseline": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "LaNi5",
+        "temperature_k": 298.0
+      },
+      "status": 200,
+      "response": {
+        "schema": "hydms.delivery/1",
+        "refused": false,
+        "request": {
+          "formula": "LaNi5",
+          "temperature_k": 298.0
+        },
+        "capacity": 1.4776087361687629,
+        "unit": "wt%",
+        "space": "capacity",
+        "interval": {
+          "lower": 1.2231602663997547,
+          "upper": 1.7467727016980588,
+          "level": 0.8,
+          "width": 0.523612435298304,
+          "unit": "wt%",
+          "space": "capacity"
+        },
+        "domain": {
+          "admitted": true,
+          "code": "admitted",
+          "reason": "inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour.",
+          "screens": [
+            {
+              "screen": "temperature",
+              "passed": true,
+              "code": "admitted",
+              "reason": "inside the trained temperature range 195-773 K"
+            },
+            {
+              "screen": "domain",
+              "passed": true,
+              "code": "admitted",
+              "reason": "inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans"
+            },
+            {
+              "screen": "novelty",
+              "passed": true,
+              "code": "admitted",
+              "reason": "within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour."
+            }
+          ]
+        },
+        "novelty": {
+          "distance": 0.0,
+          "nearest": "La1Ni5",
+          "metric": "ElMD"
+        },
+        "model_version": "v3"
+      }
+    },
+    "predict-too-cold": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "LaNi5",
+        "temperature_k": 100.0
+      },
+      "status": 422,
+      "response": {
+        "schema": "hydms.delivery/1",
+        "refused": true,
+        "request": {
+          "formula": "LaNi5",
+          "temperature_k": 100.0
+        },
+        "code": "outside-window",
+        "explanation": "temperature(K) = 100 K is below the trained temperature range 195-773 K; temperature(K) = 100 is outside the trained span 195 to 773",
+        "model_version": "v3",
+        "screens": [
+          {
+            "screen": "temperature",
+            "passed": false,
+            "code": "outside-window",
+            "reason": "temperature(K) = 100 K is below the trained temperature range 195-773 K"
+          },
+          {
+            "screen": "domain",
+            "passed": false,
+            "code": "outside-feature-range",
+            "reason": "temperature(K) = 100 is outside the trained span 195 to 773"
+          },
+          {
+            "screen": "novelty",
+            "passed": true,
+            "code": "admitted",
+            "reason": "within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour."
+          }
+        ]
+      }
+    },
+    "predict-mg2ni": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "Mg2Ni",
+        "temperature_k": 573.0
+      },
+      "status": 422,
+      "response": {
+        "schema": "hydms.delivery/1",
+        "refused": true,
+        "request": {
+          "formula": "Mg2Ni",
+          "temperature_k": 573.0
+        },
+        "code": "high-uncertainty",
+        "explanation": "the calibrated band is 1.36286 wt% wide, above the 1.12 wt% this project will report",
+        "model_version": "v3",
+        "screens": [
+          {
+            "screen": "temperature",
+            "passed": true,
+            "code": "admitted",
+            "reason": "inside the trained temperature range 195-773 K"
+          },
+          {
+            "screen": "domain",
+            "passed": false,
+            "code": "high-uncertainty",
+            "reason": "the calibrated band is 1.36286 wt% wide, above the 1.12 wt% this project will report"
+          },
+          {
+            "screen": "novelty",
+            "passed": true,
+            "code": "admitted",
+            "reason": "within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour."
+          }
+        ]
+      }
+    },
+    "predict-novel": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "K1Rb1",
+        "temperature_k": 298.0
+      },
+      "status": 422,
+      "response": {
+        "schema": "hydms.delivery/1",
+        "refused": true,
+        "request": {
+          "formula": "K1Rb1",
+          "temperature_k": 298.0
+        },
+        "code": "beyond-known-chemistry",
+        "explanation": "28.75 from the nearest known alloy (Pr2Dy1Ni1) on the ElMD modified-Pettifor scale, past the 11.73 that separates the corpus's loneliest member (Li0.94Pd1) from its own nearest neighbour. This is a statement about chemistry, not about the applicability domain.",
+        "model_version": "v3",
+        "screens": [
+          {
+            "screen": "temperature",
+            "passed": true,
+            "code": "admitted",
+            "reason": "inside the trained temperature range 195-773 K"
+          },
+          {
+            "screen": "domain",
+            "passed": true,
+            "code": "admitted",
+            "reason": "inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans"
+          },
+          {
+            "screen": "novelty",
+            "passed": false,
+            "code": "beyond-known-chemistry",
+            "reason": "28.75 from the nearest known alloy (Pr2Dy1Ni1) on the ElMD modified-Pettifor scale, past the 11.73 that separates the corpus's loneliest member (Li0.94Pd1) from its own nearest neighbour. This is a statement about chemistry, not about the applicability domain."
+          }
+        ]
+      }
+    },
+    "predict-unreadable": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "LaNi5Xx2",
+        "temperature_k": 298.0
+      },
+      "status": 422,
+      "response": {
+        "schema": "hydms.delivery/1",
+        "refused": true,
+        "request": {
+          "formula": "LaNi5Xx2",
+          "temperature_k": 298.0
+        },
+        "code": "indeterminate",
+        "explanation": "1 of 1 formula(e) could not be parsed: ['candidate'] 'LaNi5Xx2' names 'Xx', which is not a chemical element. Nothing was featurised -- a batch that silently returns fewer rows than it was given is how a feature matrix comes to be attached to the wrong compositions.",
+        "model_version": "v3",
+        "screens": []
+      }
+    },
+    "predict-empty-formula": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "  ",
+        "temperature_k": 298.0
+      },
+      "status": 422,
+      "response": {
+        "error": "invalid_request",
+        "message": "the request names a composition or a temperature this system cannot read.",
+        "problems": [
+          {
+            "location": [
+              "body"
+            ],
+            "message": "a request needs a composition; the formula is empty. An empty string is a caller error rather than an unparseable material, and the two must not arrive as the same refusal.",
+            "kind": "contract"
+          }
+        ]
+      }
+    },
+    "predict-unknown-key": {
+      "method": "POST",
+      "path": "/v1/predict",
+      "request": {
+        "formula": "LaNi5",
+        "temperature_k": 298.0,
+        "model_version": "v2"
+      },
+      "status": 422,
+      "response": {
+        "error": "invalid_request",
+        "message": "the request body is not a valid prediction request.",
+        "problems": [
+          {
+            "location": [
+              "body",
+              "model_version"
+            ],
+            "message": "Extra inputs are not permitted",
+            "kind": "extra_forbidden"
+          }
+        ]
+      }
+    },
+    "batch-mixed": {
+      "method": "POST",
+      "path": "/v1/predict/batch",
+      "request": {
+        "candidates": [
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 100.0
+          },
+          {
+            "formula": "TiFe",
+            "temperature_k": 298.0
+          }
+        ]
+      },
+      "status": 200,
+      "response": {
+        "schema": "hydms.delivery/1",
+        "count": 3,
+        "answers": [
+          {
+            "schema": "hydms.delivery/1",
+            "refused": false,
+            "request": {
+              "formula": "LaNi5",
+              "temperature_k": 298.0
+            },
+            "capacity": 1.4776087361687629,
+            "unit": "wt%",
+            "space": "capacity",
+            "interval": {
+              "lower": 1.2231602663997547,
+              "upper": 1.7467727016980588,
+              "level": 0.8,
+              "width": 0.523612435298304,
+              "unit": "wt%",
+              "space": "capacity"
+            },
+            "domain": {
+              "admitted": true,
+              "code": "admitted",
+              "reason": "inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour.",
+              "screens": [
+                {
+                  "screen": "temperature",
+                  "passed": true,
+                  "code": "admitted",
+                  "reason": "inside the trained temperature range 195-773 K"
+                },
+                {
+                  "screen": "domain",
+                  "passed": true,
+                  "code": "admitted",
+                  "reason": "inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans"
+                },
+                {
+                  "screen": "novelty",
+                  "passed": true,
+                  "code": "admitted",
+                  "reason": "within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour."
+                }
+              ]
+            },
+            "novelty": {
+              "distance": 0.0,
+              "nearest": "La1Ni5",
+              "metric": "ElMD"
+            },
+            "model_version": "v3"
+          },
+          {
+            "schema": "hydms.delivery/1",
+            "refused": true,
+            "request": {
+              "formula": "LaNi5",
+              "temperature_k": 100.0
+            },
+            "code": "outside-window",
+            "explanation": "temperature(K) = 100 K is below the trained temperature range 195-773 K; temperature(K) = 100 is outside the trained span 195 to 773",
+            "model_version": "v3",
+            "screens": [
+              {
+                "screen": "temperature",
+                "passed": false,
+                "code": "outside-window",
+                "reason": "temperature(K) = 100 K is below the trained temperature range 195-773 K"
+              },
+              {
+                "screen": "domain",
+                "passed": false,
+                "code": "outside-feature-range",
+                "reason": "temperature(K) = 100 is outside the trained span 195 to 773"
+              },
+              {
+                "screen": "novelty",
+                "passed": true,
+                "code": "admitted",
+                "reason": "within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour."
+              }
+            ]
+          },
+          {
+            "schema": "hydms.delivery/1",
+            "refused": false,
+            "request": {
+              "formula": "TiFe",
+              "temperature_k": 298.0
+            },
+            "capacity": 1.78869632065507,
+            "unit": "wt%",
+            "space": "capacity",
+            "interval": {
+              "lower": 1.4340178718557222,
+              "upper": 2.042951297625749,
+              "level": 0.8,
+              "width": 0.6089334257700267,
+              "unit": "wt%",
+              "space": "capacity"
+            },
+            "domain": {
+              "admitted": true,
+              "code": "admitted",
+              "reason": "inside the trained temperature range 195-773 K; inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans; within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour.",
+              "screens": [
+                {
+                  "screen": "temperature",
+                  "passed": true,
+                  "code": "admitted",
+                  "reason": "inside the trained temperature range 195-773 K"
+                },
+                {
+                  "screen": "domain",
+                  "passed": true,
+                  "code": "admitted",
+                  "reason": "inside the applicability domain: at or below 5.19 wt%, within the composition's physical ceiling and the trained feature spans"
+                },
+                {
+                  "screen": "novelty",
+                  "passed": true,
+                  "code": "admitted",
+                  "reason": "within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour."
+                }
+              ]
+            },
+            "novelty": {
+              "distance": 0.005,
+              "nearest": "Ti0.99Hf0.01Fe1",
+              "metric": "ElMD"
+            },
+            "model_version": "v3"
+          }
+        ]
+      }
+    },
+    "batch-too-large": {
+      "method": "POST",
+      "path": "/v1/predict/batch",
+      "request": {
+        "candidates": [
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          },
+          {
+            "formula": "LaNi5",
+            "temperature_k": 298.0
+          }
+        ]
+      },
+      "status": 422,
+      "response": {
+        "error": "batch_too_large",
+        "message": "this request carries 257 candidates and the limit is 256. Split it: the limit exists because every candidate is featurised, predicted and screened on its own, so a longer list is a slower request rather than a cheaper one.",
+        "problems": [
+          {
+            "location": [
+              "candidates"
+            ],
+            "message": "too many candidates",
+            "kind": "limit"
+          }
+        ]
+      }
+    }
+  }
+}

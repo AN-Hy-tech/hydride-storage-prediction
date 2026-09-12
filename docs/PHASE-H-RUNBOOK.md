@@ -1115,10 +1115,26 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
       `python -m hydms.delivery.api.openapi --emit`, and the comparison needs no artifact: it is the
       half that can go red on a push, and the reason CI now installs the `api` extra. 4.52 s against
       `v2`; 37 tests.
-- [ ] **#80** `docs/API.md`. Use `grill-with-docs`; the interview must answer *"how does a caller tell
-      a refusal from a genuinely low prediction?"* before the doc is written.
+- [x] **#80** `docs/API.md`. **Landed 2026-09-12**, and the interview's required question had a
+      crisp answer: **three ways, the third structural.** `200` vs `422`; `refused` false vs true;
+      and `capacity` **present vs the key not existing at all** — `refused` is a property on both
+      answer types rather than a field on either, so there is no way to spell a bare estimate and
+      no way for a low answer to look like a decline. The page leads with `Mg2Ni` at 573 K, which
+      is refused `high-uncertainty` for a 1.36 wt% band against the 1.12 limit — refused for
+      *width*, not for a small number, which is the case a caller misreads.
+      **The page is generated** (`python -m hydms.delivery.apidoc --emit`; 9 tests assert the
+      committed bytes). Three sources kept apart because they fail differently: the code read live,
+      the **committed OpenAPI document** for the route table (so this page and the contract HG-3
+      guards cannot disagree), and a **committed fixture of real exchanges** for anything needing a
+      fit. `--probe` is separated from `--emit` because `artifacts/` is gitignored and a generator
+      that needed a model would be a check that never runs — **verified by renaming `artifacts/`
+      away**, after which the check still passes and all 9 tests still run.
+      Reachability is **measured, not hedged**: a 50 x 10 sweep through the request door against
+      `v3` reaches 8 of 9 codes, `untrusted-family` being the one it cannot. The page explains why
+      that differs from HG-2/HG-3's "unreached on this fit" without either being wrong — a dozen
+      probes and a 500-request sweep answer different questions.
 
-**Exit check:** `conda run -n Project python -m pytest tests/delivery` (do **not** add `-q`; pyproject already sets it and a second one hides the count; it is **160 passed in 12.9 s** as of 2026-09-12) · HG-2 and HG-3 green. **Both are** — `run --fast` is 7 passed / 0 failed / 2 skipped in 26 s, the two skips being AC-5 (frozen) and HG-4 (#86, unwritten). #80 is the stage's last card.
+**Exit check:** `conda run -n Project python -m pytest tests/delivery` (do **not** add `-q`; pyproject already sets it and a second one hides the count; it is **179 passed in 11.7 s** as of 2026-09-12, up from 160 by #80's nineteen) · HG-2 and HG-3 green. **Both are** — `run --fast` is 7 passed / 0 failed / 2 skipped in 37 s, the two skips being AC-5 (frozen) and HG-4, whose coverage data predates the change and says so. **S6 is closed: #80 was the stage's last card.**
 
 ---
 
@@ -1156,7 +1172,21 @@ single prediction path and HG-3 covers the UI too.
       the honest numbers it sets beside the published ones, and both are `done`. It is the one piece
       of S8 that can be written today, and two later cards want it: #83's model card links to it and
       #37 is written from it.
-- [ ] **#85** ADR — the delivery seam and why the API owns no ML logic.
+- [x] **#85** ADR — the delivery seam and why the API owns no ML logic. **Landed 2026-09-12**
+      with #80, as `docs/adr/0006-the-delivery-seam.md`. It argues **both** directions: the API
+      owns no ML logic, *and* the library owns no I/O — and the second is the one a future reader
+      will push on, because #91's rejected alternative (the library owning its own prediction
+      record) is a real guarantee. The cost is stated plainly rather than hidden: **a script that
+      imports the library leaves no record.**
+      It carries the five decisions #76 and #78 owed it, each with the argument that forces it:
+      the assembly order (screen-before-featurise does not exist — the domain screen reads a
+      prediction); novelty in `delivery_screens()` (the cost was already paid by `pyproject.toml`
+      and the GPL); one cache or two; 422 shared between a refusal and an invalid request (two
+      authorities, neither bendable, so the split moved into the body); and the transport
+      declaring less than it can (one owner per rule, one level down).
+      **It is `0006`, not `0001`:** `0001`–`0005` are reserved for #36's five, whose done-when
+      names that glob. `docs/adr/README.md` records the reservation and #36's standing decision
+      that the card is not renamed.
 - [~] **#86 (HG-4)** Extend the CI fast lane with the delivery suite, the freeze check, and
       ruff / mypy / coverage. **Gate written and CI wired 2026-09-12; one box open.** It found
       that **CI has never completed the `suite` job on this branch** — every push run is
