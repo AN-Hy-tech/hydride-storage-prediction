@@ -22,8 +22,15 @@
 > into: `docs/adr/README.md` **reserves `0001`–`0005`** for its five and explains why #85 took
 > `0006` instead of the next free number. #36's later candidates take `0007` onward.
 >
-> **#81, #91** are startable in parallel; **#94**, **#95** and **#96** are open and are *not*
-> unfreeze conditions. **#7** still owes a portable artifact — `artifacts/` is gitignored, so `v3`
+> **#97 is new and is `High`: the branch is red in CI, and has been since #34's push.**
+> `test_comparison.py`'s byte-identity test fails on the runner and passes locally — two rows with
+> the same sort key (`1 | Eu`) swap places, so `reports/feature_selection/` is not reproducible
+> across platforms. It is **not** an unfreeze condition and it is **not** #80's or #85's doing, but
+> a red branch is how the next real failure gets ignored. Do not loosen the comparison; break the
+> tie.
+>
+> **#81, #91** are startable in parallel; **#94**, **#95**, **#96** and **#97** are open and none
+> is an unfreeze condition. **#7** still owes a portable artifact — `artifacts/` is gitignored, so `v3`
 > is on the maintainer's machine and nowhere else, and a fresh clone has no model.
 >
 > **One thing to know before touching `docs/API.md`: it is generated.** `python -m
@@ -903,6 +910,12 @@ prediction path, and the 66-78 ms is measured).
 standing between this phase and its close, since #37 is written from it and #37 is the last
 unfreeze condition. **#36** now has a directory and a convention to land into. #81, #91 are
 startable; #94, #95, #96 are open and none is an unfreeze condition.
+
+**One thing this card did not cause and did not fix.** Before claiming the push was green I ran
+`gh run list`, and the branch was **already red**: `test_comparison.py`'s byte-identity test fails
+on the runner and passes here, because two rows share a sort key and swap. Filed as **#97**
+(`High`, not an unfreeze condition). It could not go on #25 as a box — #25 is `done` and #26 is
+`done` behind it, so reopening it makes `check_board.py` fail on a blocker that is no longer done.
 
 **Verification.** `tests/delivery` **179 passed** (up from 160); `tests/delivery` +
 `tests/screens` **334 passed**. Fast lane `pytest -m "not slow" --cov`: **1461 passed, 4
