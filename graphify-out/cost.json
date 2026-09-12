@@ -5,8 +5,15 @@
       "input_tokens": 165875,
       "output_tokens": 0,
       "files": 24
+    },
+    {
+      "date": "2026-09-12T05:38:38.924182+00:00",
+      "input_tokens": 98314,
+      "output_tokens": 0,
+      "files": 258,
+      "note": "partial: 5 of 6 semantic chunks landed; chunk 1 (20 router docs) lost to a rate limit and left unstamped for retry. Token figure is chunk 2 only -- the other five agents were killed before returning usage."
     }
   ],
-  "total_input_tokens": 165875,
+  "total_input_tokens": 264189,
   "total_output_tokens": 0
 }

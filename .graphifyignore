@@ -1,0 +1,22 @@
+# Scope for the knowledge graph. The corpus is the project, not its tooling.
+#
+# Machine_Model/reports/ -- 122 archival matplotlib figures behind REPORT.md. They are
+# the published forward model's plots; each image costs its own vision subagent and none
+# carries prose the graph can route on. The code that produced them (Machine_Model/src/)
+# is kept: AST extraction is free and needs no LLM.
+Machine_Model/reports/
+
+# .claude/skills/ -- installed skill prose: ask-matt, backend-development, ui-ux-pro-max,
+# and ~30 more. 77k words of generic tooling documentation whose vocabulary this project
+# never uses, and which would dominate community detection. This also drops
+# materials-science-specialist, which IS written for this thesis -- accepted, because
+# CLAUDE.md's authority table puts that skill at row 4 and research/ at row 3, and every
+# fact it holds that survives the memos' corrections is in research/, which is indexed.
+# graphify's ignore parser has no gitignore negation (`!`), so a carve-out for one skill
+# is not expressible here; a literal `!path` line would silently match nothing.
+# The kanban-ai and graphify scripts under .claude are code and stay free.
+.claude/skills/
+
+# Derived or generated, never ground truth.
+graphify-out/
+catboost_info/
