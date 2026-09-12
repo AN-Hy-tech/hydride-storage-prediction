@@ -4,23 +4,25 @@
 
 > ## ▶ Next action — as of 2026-09-12
 >
-> **#86 and #93 are closed and the lane is green — `34698963428`, hygiene 13 s, `suite` 14 m 12 s,
-> 1443 passed / 9 skipped / 4 deselected, coverage 88.77 %.** That was the last thing holding
-> **#34**, whose other six blockers were already `done`. **#34 is the next card**: train and publish
-> the deployed artifact version — the unfreeze condition's second bullet. It is a **multi-hour fit
-> and the maintainer runs those**: build it, verify at sentinel budget, and hand over one command.
+> **The gates are green and #34 is one command from done.** `promote --dry-run` against `v2`
+> returns **9 passed, 0 failed, 3 skipped** in 194 s (2026-09-12) — the first time every reachable
+> criterion has been green at once. The three skips are AC-5, AC-7 and AC-8, all frozen and all
+> exactly the three #34 settled as `--waive`. **No fit is owed**: Step 4's 1 h 41 m is already paid
+> and committed as `model-chosen.csv`, and `artifacts/v2` is the deployed fit built from it.
 >
-> **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no push
-> checks any more, and now also owes installing from `requirements-lock.txt`. Two new cards from
-> #93: **#94**, a crossed band raises where it should refuse; and **#95**, the freeze is unenforced
-> on `main`. PR #7 was green, mergeable and editing the frozen board; it is **closed unmerged as of
-> 2026-09-12**, leaving #6 the only open PR. What #95 still owes is one paragraph in
-> `docs/FREEZE.md`: `main` gets a freeze check only when #6 merges, and the freeze prevents that
-> until it lifts.
+> **The remaining act is the maintainer's**, because it writes the pointer three screens read:
 >
-> Detail: [#34](034-train-and-publish-the-deployed-artifact-version.md),
-> [#94](094-a-crossed-band-raises-where-it-should-refuse.md), and the latest handoff at the foot of
-> this file.
+> ```powershell
+> conda run --no-capture-output -n Project python -m hydms.surrogate.promote --waive AC-5 --waive AC-7 --waive AC-8
+> ```
+>
+> That is the unfreeze condition's second bullet. Its other three are #80 (`docs/API.md`), #37
+> (Chapter 1) and every gate green — which the dry-run now says is true.
+>
+> **#80, #81, #85, #89, #91** are startable in parallel. **#7** owes the four slow tests that no
+> push checks any more, and now also owes installing from `requirements-lock.txt`. Two new cards
+> from #93: **#94**, a crossed band raises where it should refuse; and **#95**, the freeze is
+> unenforced on `main` — PR #7 is closed unmerged, leaving #6 the only open PR.
 >
 > **This block is a pointer with a date on it, not a source.** It is the one place on this board
 > that restates state, which means it is the one place that can silently go stale — the cards and

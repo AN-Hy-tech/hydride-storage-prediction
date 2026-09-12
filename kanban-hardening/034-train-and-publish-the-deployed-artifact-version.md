@@ -93,7 +93,33 @@ that reason.
       which came from which configuration. Read `manifest.json`'s `notes` and `git` fields before
       choosing; a probe run says so in its notes
 - [x] Manifest complete: git SHA, seeds, package versions, feature contract, gate results — all six, in the version `promote` writes; the candidate's manifest has the first five and honestly records `gates: null`
-- [ ] All Phase 1 gates pass and are recorded in the manifest — **5 of 12 pass, 7 are unwritten**; see the open decision below for which of those Phase H can reach and which it cannot
+- [x] All Phase 1 gates pass and are recorded in the manifest. ~~**5 of 12 pass, 7 are
+      unwritten**~~ — **measured 2026-09-12 by `promote --dry-run` against `v2`: 9 passed,
+      0 failed, 3 skipped, 0 errored in 194.48 s.** The three skips are AC-5 (#41, Phase T),
+      AC-7 (#57) and AC-8 (#56, Phase A) — every one of them frozen, and the exact three this
+      card settled as `--waive`. **The four the runbook says must never be waived are all green**:
+      AC-6, HG-2, HG-3 and HG-4, whose owing cards #30, #77, #79 and #86 have since closed. This
+      is the first time every reachable criterion has been green at once.
+
+      | Gate | Measured | Threshold | Card |
+      |---|---|---|---|
+      | AC-1 | 0 | 0 | #32 |
+      | AC-2 | 2.72848e-12 | 1e-09 | #21 |
+      | AC-3 | coverage 0.779528 | nominal 0.8, tolerance 0.05 | #31 |
+      | AC-4 | 0 | 1e-12 | #33 |
+      | AC-6 | LOCO R² 0.2734 vs random-split 0.7459 | both reported | #30 |
+      | HG-1 | 13/13 leaks guarded | 13/13 | #71 |
+      | HG-2 | 9/9 codes, 0 bare numbers | 9/9, 0 | #77 |
+      | HG-3 | 0 differences over 11 probes, 8 rejections | every served value equal | #79 |
+      | HG-4 | ruff clean, mypy clean, coverage 89.66 % | 80 % | #86 |
+
+      Detail worth keeping from the run: AC-1's two fits agree on **every** metric — crossings
+      0.000000, coverage 0.779528, width 0.862991, mae 0.311710, pinball 0.106554, r² 0.707064,
+      rmse 0.542028 — at thread counts 1 and 20, with conformal correction **+0.037355**, 2584
+      trees, best iteration 2583, grown on 701 rows with 172 carved for calibration. AC-3's raw
+      coverage is **0.6575** against the calibrated 0.7795, which is the gap #27 exists to close,
+      measured on rows nothing was fitted or calibrated on. HG-4's 89.66 % is the *local* figure;
+      CI reports 88.77 % because nine tests skip there
 
 - [ ] ~~**The full run is about 3.5 hours and the reason is one corner of the search space (from
       #26).**~~ **MOVED TO #29 (2026-09-05)** — the narrowing decision follows the bill, and #29
@@ -456,3 +482,24 @@ python -m hydms.pipeline run --promote && python -m hydms.gates run --all
   definition of the deployed fit"*. **A grep for the old vocabulary cannot find a question that was
   renamed by being answered.** See [[an-inherited-decision-can-dissolve]].
   (by @assistant)
+
+- 2026-09-12: **The gate run is green and this card is one command from done.**
+  `promote --dry-run` against `v2` (fitted at `4a06011`, 2026-09-06T21:31:41Z, `code_modified:
+  false`, catboost 1.2.8 under the pinned environment) returns **9 passed, 0 failed, 3 skipped**
+  in 194 s. It then refuses, correctly and by design: *"v2 is NOT promotable: 3 of 12 criteria are
+  unestablished — AC-5 SKIPPED (card #41), AC-7 SKIPPED (card #57), AC-8 SKIPPED (card #56).
+  A SKIPPED gate is a criterion nobody checked, and `hydms.artifacts.promote` refuses it for the
+  same reason it refuses a failure. Nothing was written and the promotion pointer did not move."*
+
+  **No fit is owed.** The heavy run this card was long assumed to need was already paid: Step 4's
+  1 h 41 m produced `model-chosen.csv`, which is committed, and `reports/model/` carries its
+  numbers; `artifacts/v2` is the deployed fit built from that configuration in about two minutes.
+  `docs/RUNNING-THE-FIT.md` Step 9.5 says outright that promotion *"fits nothing"* apart from
+  AC-1's two fits, which are the bulk of those 194 seconds. What remains is
+  `promote --waive AC-5 --waive AC-7 --waive AC-8`, the path this card itself settled, which
+  writes a new sealed version carrying the report and points `current` at it.
+
+  Recorded here rather than executed: the promotion is the unfreeze condition's second bullet and
+  writes the pointer three screens read, so it is the maintainer's to run. See
+  [[the-maintainer-runs-the-heavy-fits]] — the rule is about *consequence*, not wall time, and a
+  three-minute command that certifies an artifact is squarely inside it. (by @assistant)
