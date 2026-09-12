@@ -137,9 +137,19 @@ and the PA/PB board resumes.
 
 **Three of four hold as of 2026-09-12.** The one that remains is the Chapter 1 revision, **#37**,
 which waits on **#89** (`docs/REPORT-RECONCILIATION.md`) — and #89 has been unblocked since
-2026-09-11, so the whole of what stands between this phase and its close is two documents with no
-blocker between them and a keyboard. Nothing left in this condition needs a fit, a decision, or a
-run of the pipeline.
+2026-09-11. Nothing left in this condition needs a fit, a decision, or a run of the pipeline.
+
+> **This list is not a plan, and it is not the measure of Phase H.** It says when the *frozen*
+> programme may resume — nothing more. The phase's own objective is stated in §Why above: **a
+> user-facing interface that predicts gravimetric capacity.** That is stage **S7** (#81–#84), it is
+> not any of the four bullets, and the execution order in
+> [PHASE-H-RUNBOOK.md](PHASE-H-RUNBOOK.md) §2 puts it before S8 in a chain — *"S2 and S3 are the
+> only parallelism worth taking. Everything else is a chain."*
+>
+> So "#89 and #37 are all that is left" is true **of this condition** and false of the phase.
+> Reading a short unfreeze list as a to-do list is how the interface this freeze was declared to
+> protect gets treated as optional. Ask the runbook what comes next; ask this file only whether the
+> other board may reopen.
 
 **Closed:** _(not yet)_
 

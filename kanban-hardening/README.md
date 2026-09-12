@@ -14,9 +14,22 @@
 > | `docs/API.md` published | **met** — #80, generated, examples captured against `v3` |
 > | The Chapter 1 revision | **#37**, waiting on **#89 alone** |
 >
-> **So the opening move is #89** — `docs/REPORT-RECONCILIATION.md`, unblocked since 2026-09-11.
-> It is the only thing standing between this phase and its close, because #37 is written from it
-> and #37 is the last unfreeze condition. #83 wants it too.
+> **So the opening move is #81, and #89 runs beside it.** Two different goals, and the first
+> session to read this got them backwards — so they are spelled out separately:
+>
+> | Goal | Path | Why it is not the other one |
+> |---|---|---|
+> | **Deliver Phase H's objective** — a user-facing predictor | **S7: #81 → #82 → #84**, then #83 | `docs/FREEZE.md` §Why: *"The stated objective for this phase is a user-facing interface that predicts gravimetric capacity."* The freeze exists so it can be built on defensible numbers, **not instead of it** |
+> | **Lift the freeze** — let PA/PB resume | **#89 → #37** | The four unfreeze bullets gate the *frozen* board reopening. They are not a to-do list for this phase |
+>
+> **The runbook's execution order puts S7 next**, not S8: `S7 needs S6` (closed by #80) and
+> `S8 needs S7`, and §2 says *"S2 and S3 are the only parallelism worth taking. Everything else is
+> a chain."* **#81** is unblocked (29, 30, 76 all `done`) and is where the interface either does or
+> does not inherit this phase's honesty — five charts each chosen because it makes a false
+> prediction harder to believe.
+>
+> **#89 is genuinely independent** — no shared files, no shared blockers — so it runs beside S7
+> rather than instead of it, and **#83 needs both**, which is where the two paths converge.
 >
 > **#36** (the five ADRs) is unblocked and now has a directory and a numbering convention to land
 > into: `docs/adr/README.md` **reserves `0001`–`0005`** for its five and explains why #85 took
@@ -909,10 +922,19 @@ library leaves no record.** It also names three conditions that *would* justify 
 and one that would not (that the HTTP hop looks like overhead — it is the overhead that buys one
 prediction path, and the 66-78 ms is measured).
 
-**Next.** **#89** — `docs/REPORT-RECONCILIATION.md`, unblocked since 2026-09-11, and the only thing
-standing between this phase and its close, since #37 is written from it and #37 is the last
-unfreeze condition. **#36** now has a directory and a convention to land into. #81, #91 are
-startable; #94, #95, #96 are open and none is an unfreeze condition.
+**Next — and this handoff's first draft got it wrong, which is worth more than the answer.** It
+said *"#89 is the only thing standing between this phase and its close"* and listed the interface
+cards as skippable. Both halves were wrong. **The runbook's execution order puts S7 next**
+(`S7 needs S6`, `S8 needs S7`, *"everything else is a chain"*), and **the interface is the phase's
+stated objective**, not an optional extra — `docs/FREEZE.md` §Why says the freeze exists to stop
+that interface being built on indefensible numbers, which presumes it gets built.
+
+The error was collapsing *"not an unfreeze condition"* into *"not important"*. The unfreeze
+condition gates the **frozen** board reopening; it is not a plan for Phase H.
+
+So: **#81** (S7 entry, unblocked) is the next card, with **#89** beside it since it is independent
+and #83 needs it. **#36** now has a directory and a convention to land into. #91, #94, #95, #96,
+#97 are open; none is an unfreeze condition, and #97 is `High`.
 
 **One thing this card did not cause and did not fix.** Before claiming the push was green I ran
 `gh run list` and found the branch red on `test_comparison.py`'s byte-identity test. **The first
