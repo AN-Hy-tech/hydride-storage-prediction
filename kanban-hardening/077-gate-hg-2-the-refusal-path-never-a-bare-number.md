@@ -300,5 +300,7 @@ conda run -n Project python -m hydms.gates run HG-2
 
   Nothing about the delivery path changed and no number moved: `v2` genuinely does name the
   blocking elements today (`Blocking element(s): Rn, Xe`). What changed is that it now has to
-  keep doing so. 20 tests in the gate file, up from 19. (by @assistant)
+  keep doing so. 20 tests in the gate file, up from 19. Fast lane
+  (`conda run -n Project python -m pytest -m "not slow"`, final tree): **1371 passed, 4 deselected,
+  647.90 s** — the 1370 this card closed on, plus the one test above. (by @assistant)
 

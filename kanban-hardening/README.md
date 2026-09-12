@@ -165,8 +165,40 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **The board is fixed — #77 is `done` and HG-2 is green against the
-real `v2`. Your card is **QA on #77**, and then **#78** (the FastAPI service), which is unblocked.**
+**Next session, in one line.** **#77 is QA'd and stays `done` — HG-2's naming checks could not
+fail and now can; your card is **#78** (the FastAPI service), unblocked, with **#89** and **#92**
+startable beside it.**
+
+**Handoff, 2026-09-12 — QA on #77 found the second instance the last handoff told it to look for.**
+
+The previous handoff's QA item 1 ended: *"Look for a second instance of that shape: any check that
+reads a message without pinning which screen produced it."* There was one, in the same function,
+one field over.
+
+`probe.names` — the card's "naming the parse failure" and "naming the element" made executable —
+tested `wanted in explanation`. Every one of those strings is **also a substring of the probe's own
+formula**: `'Xx'` is in `'Xx2'` and `'LaNi5Xx2'`; `'Rn'` and `'Xe'` are in `'Xe1Rn1'`. Every refusal
+sentence on this path quotes the composition it was handed, so the assertion could not fail for any
+refusal that echoed its input. Measured: with the featuriser's sentence replaced by
+`f"{formula}: cannot predict"`, HG-2 still reported **PASSED, 9/9 codes**.
+
+**The fix is not the one the sibling check used, and that is the interesting part.**
+`names_the_window` was repaired by reading the verdict of the screen that *owns* the code. That
+could not be reused, because dumping every probe's verdict shows the three `indeterminate` probes
+come back with **zero screen verdicts** — `featurize` raises before any screen is reached, which
+#77 already documented for `unreadable-formula`. No screen owns the sentence; the featuriser does,
+and it is not a screen. So the check subtracts the probe's formula from the explanation and asks
+what is left. **When "ask the owner" has no owner, subtract the input.**
+
+Nothing on the delivery path changed and no number moved — `v2` genuinely says
+`Blocking element(s): Rn, Xe` today. What changed is that it now has to keep doing so. HG-2 stays
+green (2.35 s against `v2`), 20 tests in the gate file where there were 19.
+
+**The graph is current again.** Two `--update` runs took it from a 24-file build to **5,369 nodes /
+12,308 edges / 229 communities**, with 0 documents unstamped. A new `.graphifyignore` scopes the
+corpus to the project: it drops `Machine_Model/reports/` (122 archival plots) and `.claude/skills/`
+(77k words of installed tooling prose). Note `graphify-out/manifest.json` is gitignored, so
+incremental state is local to a machine; a fresh clone rebuilds from scratch.
 
 **Handoff, 2026-09-11 — the board's blockers and stages were repaired; QA #77 next.**
 
@@ -505,6 +537,40 @@ contradicts `docs/PHASE-H-RUNBOOK.md` on the phase — the runbook wins. The han
 and their authority is over intent, not over facts.
 
 ---
+
+### Handoff -- 2026-09-12 - #77 is QA'd and stays done; #78 is yours
+
+**What QA established, before what it found.** `hydms.gates run HG-2` **PASSED in 2.35 s** against
+the deployed `v2` — 9/9 codes, 3 exits read from source, 11 probes, 3 answered and 8 refused.
+`pytest tests/gates/test_hg2_refusal_path.py tests/delivery` **133 passed in 13.4 s** (was 132).
+ruff and mypy clean. `check_board.py` OK over 92 cards; `check_freeze.py` OK over 291 changed paths.
+
+**What it found.** Three of the gate's assertions were decoration — see the dated handoff at the
+top of this file for the full account. The short version: `wanted in explanation` where every
+`wanted` is also inside the probe's own formula, and every sentence quotes its formula. Staged red
+by degrading the featuriser's sentence; the gate stayed PASSED. Fixed by striking the input out of
+the sentence first, and pinned by
+`test_a_sentence_that_only_echoes_the_formula_does_not_count_as_naming`.
+
+**A second, smaller one, in my own fix.** The first version of the new failure message said
+"nowhere but inside the echo" even when the string was simply absent — a guard naming a cause it
+had not observed, which is a box #77 already carries about `PredictionRequest.__post_init__`. Split
+into its two real cases before committing. Worth saying because it happened *while writing the fix
+for exactly that defect class*.
+
+**The fast lane.** `conda run -n Project python -m pytest -m "not slow"` — **1371 passed, 4
+deselected, 647.90 s**, run on the final tree after every edit. That is the previous session's 1370
+plus this card's one new test, and the four deselected are the slow tests the lane always defers.
+
+**Your card is #78** (FastAPI service: predict, batch, health and model), unblocked now that #76
+and #77 are `done`. **#89** (REPORT.md reconciliation) and **#92** (the stage line checked rather
+than remembered) are startable beside it and neither is an unfreeze condition.
+
+**One thing to carry into #78.** #77 established that reachability is *per door*, and the API is a
+third door. `untrusted-family` is `NEVER` at the request door because a caller supplies no
+alloy-class label — if #78's batch endpoint accepts a frame with a class column, that changes, and
+`NOT_ALWAYS` in `hydms/gates/hg2_refusal_path.py` is where it has to be said. HG-2 goes red if it
+becomes reachable and nothing says why. That is the gate working, not the gate breaking.
 
 ### Handoff -- 2026-09-11 (later) - #76 is tested and QA'd; #77 is yours
 
