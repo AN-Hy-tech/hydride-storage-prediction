@@ -165,9 +165,84 @@ bash $S/view_board.sh .            # everything by status
 bash $S/list_all_cards.sh .        # id | status | blocked_by | title
 ```
 
-**Next session, in one line.** **#77 is QA'd and stays `done` — HG-2's naming checks could not
-fail and now can; your card is **#78** (the FastAPI service), unblocked, with **#89** and **#92**
-startable beside it.**
+**Next session, in one line.** **Clear the parked findings before you open #78 — there are eight
+unticked boxes on five `done` cards, but only **four** are owed now (#23, then #14 with #9, then
+#1); three are deferred by design and must stay parked, and one is an obligation on a later card.**
+
+**Handoff, 2026-09-12 (later) — the parked findings, triaged. Do these before #78.**
+
+Eight unticked boxes sit on five `done` cards. They are not a backlog that was forgotten — this
+board deliberately parks a finding on the card it belongs to rather than blocking on it. **So
+"clear them all" is the wrong instruction, and three of them say so in their own text.** Read the
+box before you act on it.
+
+**Owed now — four, in this order.**
+
+1. **#23 — should the bundle still carry the persisted scaler?** Start here: it is self-contained
+   and it is a decision, not a build. Two docstrings justified keeping `FittedScaler` in the
+   bundle by naming exactly one downstream reader, the applicability domain — and #48 landed as a
+   *capacity ceiling* that reads no scaled matrix. Grepped: `scaler_from` and `SCALER_PAYLOAD` are
+   written by `deploy.py` and read by nothing at inference. #49's ElMD works on compositions, so
+   it is not the missing reader. **This is a decision about the next version's contract, never a
+   rewrite of `artifacts/v2`, which is sealed with it.** Do not resolve it by deleting the payload
+   quietly — the manifest and `tests/artifacts/` both name it.
+
+2. **#14 and #9's second box are one question — take them together.** Both ask whether the data
+   layer is entitled to change a value it was given. #9 has `Mg0853Ni0.125La0.022`, a missing
+   decimal point (0.853 + 0.125 + 0.022 = 1.000 exactly, so the intent is unambiguous), arriving
+   untouched because the loader's stated contract is that it normalises nothing — but the
+   canonical key, the split and the class join all run *before* screening, so #14 sees it already
+   keyed and split as essentially pure magnesium and can only drop it. #14 has three curated rows
+   whose reported wt% exceeds their own physical ceiling (`Ce1Ni3Cr2` at implied H/M **3.606**,
+   `Ce1Ni4Zr1` **3.807**, `Ce1Ni4Cr1` **3.339**, against `LaNi5H6` at 1.0). Both point at the same
+   unbuilt thing: a declared, cited correction table between `load_*` and `canonical_key`, which
+   would be the first place in the pipeline entitled to change an input.
+
+   **Warning before you touch the data:** `tests/screens/test_applicability.py` asserts the set of
+   four over-ceiling rows *exactly*. Removing or fixing one will fail it. That is the intended way
+   for this to surface, not a break.
+
+3. **#1 — the environment rebuild claim is history, not a check.** `verify_environment.py` fails
+   after 26 s with `UnavailableInvalidChannel: HTTP 403 FORBIDDEN for channel pkgs/main` — Anaconda
+   refusing `defaults`, not a defect in the solve. Either re-verify from a host that can reach it,
+   or re-solve the lock against `conda-forge` with `nodefaults`. Last, because it is the
+   interpreter invariant and the riskiest, and because of the next paragraph.
+
+   **A thing worth knowing before you plan it:** `docs/FREEZE.md` § "Allowed paths" reads as an
+   exhaustive allow-list and does not name `environment.lock.yml`, so this looks forbidden. It is
+   not. `scripts/check_freeze.py` enforces a **deny-list** — `kanban/`, the PRD, `research/`,
+   `REPORT.md`, `Machine_Model/` — and passes everything else. Prose and gate disagree; **boxed on
+   #72**, decide it there rather than inferring from either half.
+
+**Deferred by design — leave these parked. Each states its own reopen condition.**
+
+- **#9, first box (the HyStor spreadsheet has no loader).** Says it outright: *"Reopen this box
+  only if #86 adds the dependency **and** a card needs the four extra rows."* It needs `openpyxl`,
+  which would invalidate the lock, and it is not a fourth independent source — one sheet, 1283
+  rows, the same six columns as `hydride_data.csv`, which it is upstream of. Nothing in the
+  repository reads it.
+- **#30, first box (the LOCO run has no resume, 4.7 h).** *"Accepted as-is for this run."* It is
+  boxed so the **next** protocol that costs hours is built with checkpointing, not so this one is
+  retrofitted.
+- **#30, second box (the run is silent).** Same destination, and the reason is the seam rather
+  than the effort: the fold loop is `hydms.surrogate.validation.nested_scores`, shared with
+  `train`, whose run is already published — adding a print there changes the path behind a
+  committed result. If it is done, it goes with the checkpointing as one change to that loop.
+
+**Not a task — an obligation that travels.**
+
+- **#30, third box (per-class scores carry no interval).** The headline transfer number is a point
+  estimate over ten class folds with no stated uncertainty, and a class with nineteen rows weighs
+  the same as one with two hundred. Nothing to build; it must be *said* wherever the number is
+  published — **#83** (model card), **#37** (Chapter 1), **#89** (reconciliation). The per-class
+  table carries `rows_scored` beside every row precisely so it can be said.
+
+**None of this is an unfreeze condition, and none of it may become one.** If clearing a box turns
+into real work, cut a card and mark it *not an unfreeze condition*, the way #92 is marked.
+
+**Then #78.** It is unblocked (#76 and #77 both `done`), `fastapi 0.115.0` / `uvicorn 0.30.6` /
+`httpx 0.28.1` already import in the `Project` env, and `tests/delivery/test_api.py` does not exist
+yet — the Runnable check names a file you will be creating.
 
 **Handoff, 2026-09-12 — QA on #77 found the second instance the last handoff told it to look for.**
 

@@ -41,6 +41,27 @@ and card #37 are written from.
 - [x] `.github/workflows/integrity.yml` runs the freeze check
 - [x] `CLAUDE.md` and `kanban/README.md` point at the new board
 
+- [ ] **The charter's prose reads as an allow-list; the gate enforces a deny-list, and they do not
+      agree** (added 2026-09-12 by the QA pass on #77). `docs/FREEZE.md` § "Allowed paths" names
+      `hydms/** · tests/** · app/** · kanban-hardening/** · scripts/** · .github/** ·
+      pyproject.toml · CLAUDE.md · README.md · docs/** except the PRD`, which a reader takes as
+      exhaustive. `scripts/check_freeze.py` denies only `DENIED = (kanban/,
+      docs/PRD-inverse-design.md, research/, REPORT.md, Machine_Model/)` and passes everything
+      else.
+
+      So `environment.lock.yml`, `environment.yml`, `requirements-lock.txt`, `CONTEXT.md` and
+      `.graphifyignore` are all editable, and none is named by the prose. This session edited
+      `.graphifyignore` and `CONTEXT.md`-adjacent files and CI was green, which is the gate
+      behaving as written.
+
+      It matters for **card #1**, whose open box proposes re-solving `environment.lock.yml`
+      against `conda-forge`: a session reading only FREEZE.md would conclude that work is
+      forbidden and defer it forever, and a session reading only the script would conclude the
+      charter means nothing. Decide which is authoritative and make the other say so — either
+      widen the prose to describe a deny-list, or give the script the allow-list the prose
+      already claims. Do **not** silently widen `DENIED`: the deny-list is deliberately short so
+      that ordinary hardening work is not gated on editing this file. Not an unfreeze condition.
+
 ## Runnable check
 
 ```bash
