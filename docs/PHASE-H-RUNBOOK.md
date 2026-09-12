@@ -1241,10 +1241,12 @@ single prediction path and HG-3 covers the UI too.
       candidate is a loud failure rather than a refusal carrying a reason code.
 - [ ] **#100** A render test passes alone and fails after the slow tests. Filed by #81,
       2026-09-12; **not an unfreeze condition**, and `High`.
-      `tests/test_figures.py::test_every_figure_renders_in_both_themes` passes on its own (55) and
-      in the fast lane (1526) and fails in a full run, so the trigger is one of the four `slow`
-      tests that sort before it. **CI runs `-m "not slow"` and will never report it.** The
-      traceback was discarded by a truncating pipeline; get it before changing a line.
+      `tests/test_figures.py::test_every_figure_renders_in_both_themes` passes on its own (55),
+      in the fast lane (1526) and beside the four `slow` tests (134) — and fails in a full run.
+      ~~the trigger is one of the four `slow` tests~~ was the filing hypothesis and is **refuted**:
+      both halves are green and only the whole is red. **CI runs `-m "not slow"` and will never
+      report it.** The traceback was discarded by a truncating pipeline and no subset reproduces,
+      so a full 29-minute run redirected to a file is the price of the next step.
 - [ ] **#98** The LOACO run discards its own per-row predictions. Filed by #81, 2026-09-12;
       **not an unfreeze condition**. `hydms/surrogate/train.py:369` writes
       `evaluation.out_of_fold` as a table and `hydms/surrogate/loco.py:595` writes four tables

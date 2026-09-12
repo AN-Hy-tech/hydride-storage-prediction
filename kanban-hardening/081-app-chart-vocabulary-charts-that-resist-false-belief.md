@@ -56,8 +56,10 @@ conda run -n Project python -m pytest tests/test_figures.py -q
 - 2026-09-12: **Done.** `hydms/figures/` is three modules and `tests/test_figures.py` is 55 tests,
   4.4 s, no `slow` marker — **55 passed alone and in the fast lane (`-m "not slow"`: 1526 passed),
   and two of them fail in a full run.** `test_every_figure_renders_in_both_themes` is
-  order-dependent: something in one of the four `slow` tests, all of which sort before this file,
-  breaks the renderer. That is **#100**, filed rather than left as a box here because
+  order-dependent, and the obvious explanation — one of the four `slow` tests, all of which sort
+  before this file — was tested and **refuted**: those four beside the figures tests give 134
+  passed. Both halves of the suite are green and only the whole is red. That is **#100**, filed
+  rather than left as a box here because
   `check_board.py` refuses a `done` card with an unticked one. The five builders and every
   guarantee they carry are unaffected — the failing pair is the smoke test, and the split this
   card is built on is what makes that sentence true rather than hopeful. (by @assistant)

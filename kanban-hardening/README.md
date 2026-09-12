@@ -5,8 +5,9 @@
 > ## ▶ Next action — as of 2026-09-12 (night)
 >
 > **Handoff, one line: #81 landed and S7 is open at #82 — but the full suite is red at
-> `tests/test_figures.py::test_every_figure_renders_in_both_themes`, which passes alone and in the
-> fast lane, so start by reading #100's traceback rather than trusting a green `-m "not slow"`.**
+> `tests/test_figures.py::test_every_figure_renders_in_both_themes`, which passes alone, in the
+> fast lane, and beside the four slow tests, so #100 needs a full 29-minute run redirected to a
+> file before anyone theorises about it again.**
 >
 > **#81 is `done`. S7 has started, and `hydms/figures/` is the vocabulary the rest of it draws
 > with.** Five chart builders over the delivery contract's own types, 55 tests, 4.4 s, none `slow`.
@@ -38,9 +39,11 @@
 >
 > **#91** is startable in parallel; **#94**, **#95**, **#96**, **#97**, **#98**, **#99** and
 > **#100** are open and none is an unfreeze condition. **#100 is `High`** and is why `pytest` with
-> no `-m` is red on this branch: two render smoke tests are order-dependent behind the four `slow`
-> tests. The fast lane — which is what CI runs — is **1526 passed, 13 m 32 s**, so CI will stay
-> green over it. **#97 is `High`** — `comparison.py:703` sorts with
+> no `-m` is red on this branch: two render smoke tests fail only in a full run. The obvious
+> diagnosis — that one of the four `slow` tests is the trigger — was **tested and refuted** (those
+> four plus the figures tests: 134 passed). Both halves of the suite are green and only the whole
+> is red. The fast lane — which is what CI runs — is **1526 passed, 13 m 32 s**, so CI stays green
+> over it. **#97 is `High`** — `comparison.py:703` sorts with
 > pandas' default unstable quicksort over a tied key, which makes a *published* document
 > non-reproducible; one keyword, and do not loosen the comparison. **#7** still owes a portable
 > artifact — `artifacts/` is gitignored, so `v3` is on the maintainer's machine and nowhere else,
