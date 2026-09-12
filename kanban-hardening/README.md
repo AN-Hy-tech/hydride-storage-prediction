@@ -17,6 +17,22 @@
 > Not claimed as a fix. **Do not spend a sixth run looking for the traceback** — spend one only if
 > a run goes red on its own, and redirect it to a file when it does.
 >
+> **CI was red from #81 until this commit, and the lane that was failing is the one this card said
+> passes.** #81's own run was `cancelled` by the next push before reporting, so the first run to
+> *complete* after it went red — on a commit that changed four markdown files and no code. The
+> failing step is the fast lane, which passes on this machine (`pytest -m "not slow" --cov` re-run
+> at that commit: **1527 passed, coverage 89.34 %, exit 0**), so it is a CI-only failure of the kind
+> [../docs/ENVIRONMENT.md](../docs/ENVIRONMENT.md) and #93 already describe — the runner resolves `matplotlib>=3.8` to its own
+> version and has no GUI toolkit where this machine has PyQt5. **The repair turned it green.** One
+> red and one green is evidence, not proof, but it means the pyplot removal fixed something real
+> rather than only removing a mechanism. **The practical lesson: a `cancelled` CI run is not a
+> passing one** — `gh run list` before believing a workflow is fine, and treat a cancel as a gap.
+>
+> **The traceback this card has wanted for three sessions is probably sitting in CI run
+> `34716528657`.** It could not be fetched from this machine — the log endpoints all redirect to a
+> blob host that refuses the connection — but a browser can read it, and it costs minutes rather
+> than another 29-minute run.
+>
 > **Before you quote any suite number, check the machine is yours.** On 2026-09-13 two sessions ran
 > this 29-minute command concurrently without knowing, ~18 minutes overlapping, and one landed a
 > source edit *while the other's run was still going* — producing a green that tested the old test

@@ -25,8 +25,14 @@ a `done` card carrying an unticked box~~ — the same reason #97 was filed rathe
 > history intact — but it is a convention, and six cards plus `kanban-hardening/README.md` state it
 > as a mechanical check. Recorded, with the evidence, as a box on **#68**, which owns the checker.
 
-**It is `High` because a red full suite is the first thing the next session meets, and nothing in
-CI will ever mention it.** The workflow runs `-m "not slow"`, which passes.
+**It is `High` because a red full suite is the first thing the next session meets, and ~~nothing in
+CI will ever mention it~~.** ~~The workflow runs `-m "not slow"`, which passes.~~
+
+> **Correction, 2026-09-13: CI mentioned it on every push, and nobody read the message.** The
+> workflow does run `-m "not slow"` — and that lane was **failing on the runner** from #81 until the
+> repair, while passing on this machine. See the last narrative entry: the fast lane is red in CI on
+> the one completed run before the repair and green on the run after it. "Only in a full run" was a
+> property of this laptop, never of the defect.
 
 ## Why this exists
 
@@ -122,7 +128,18 @@ attaches whatever canvas the output format calls for, so the import list is one 
       until it passes is not a criterion. What would tick it: the next full run that goes red, with
       its output redirected to a file. **The trap this card was filed on is now disarmed** — the
       original traceback was lost to a truncating pipeline, so if a red run ever happens again, the
-      `## Runnable check` above is the command that keeps it
+      `## Runnable check` above is the command that keeps it.
+
+      **2026-09-13: a failing run does exist, and it is not on this machine.** CI run
+      **`34716528657`** — the fast lane, red, 8 m 28 s, on the markdown-only commit `c270b1f`
+      before the repair — is the only recorded failure this card has ever had, and its log still
+      holds whatever pytest printed. It could not be fetched from here: `gh run view --log-failed`,
+      `gh run view --log` and the job-logs API all redirect to
+      `productionresultssa1.blob.core.windows.net`, which refuses the connection from this machine,
+      and the check-run annotations carry only `Process completed with exit code 1`. **A browser
+      can read it.** That is the cheapest remaining route to this box and it costs minutes, not a
+      29-minute run:
+      `https://github.com/AN-Hy-tech/hydride-storage-prediction/actions/runs/34716528657`
 - [x] The **cause** is named in this card's narrative, or — if two full runs disagree — the card
       says plainly that the trigger is unnamed and the repair was made on the defect's shape
       rather than on its trigger. #97 is the precedent for that being an acceptable close.
@@ -266,3 +283,47 @@ conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
   narrow claim: two processes were reading and writing one working tree, that was never on the
   list, and it is now. It is a row to be excluded cheaply, not a suspect with a motive.
   (by @assistant)
+
+- 2026-09-13 (same session, after the commit): **CI has been red since #81, and the repair turned it
+  green. That is the closest thing to a reproduction this card has ever had, and it was never
+  looked at.**
+
+  | push | CI result |
+  |---|---|
+  | #97, the framing correction | success |
+  | **#81 — the chart vocabulary** | **cancelled**, superseded by the next push five minutes later |
+  | #100's refutation — **four markdown files, no code** | **failure**, 8 m 28 s, step `pytest — fast lane, with the coverage floor` |
+  | #100's repair (this commit) | **success** |
+
+  Read that table twice. The commit that went red changed **no code at all**; it was simply the
+  first run to *complete* after #81, because #81's own run was cancelled by it before reporting.
+  So the red belonged to #81 from the start and was invisible for the same reason a cancelled run
+  always is — `cancel-in-progress` renders an unreported result as a supersede rather than as a
+  gap. Meanwhile this card's body says the fast lane **passes**. It does, locally: the exact CI
+  command, `pytest -m "not slow" --cov`, was re-run here at the same commit and gave **1527 passed,
+  4 deselected, coverage 89.34 % against the 80 % floor, exit 0, 14 m 09 s**. It was failing on the
+  runner and passing on this machine, which makes it a **CI-only failure** in the sense
+  a CI-only failure usually means: `pyproject` floors the `figures`
+  extra at `matplotlib>=3.8`, so the runner resolves a version this machine does not have, and
+  the runner has no GUI toolkit where this one has PyQt5 — which is the ambient `qtagg` backend
+  the deleted `matplotlib.use("Agg", force=False)` was negotiating with.
+
+  **What this licenses, and what it does not.** The only functional change between the red commit
+  and the green one is the pyplot and backend removal, so the repair is now credited with fixing
+  something real rather than only with removing a mechanism. But it is **one red and one green**,
+  on a card whose entire subject is a failure that appears and disappears. It is evidence, not
+  proof, and a card that has already been wrong once about set arithmetic should not be confident
+  here either.
+
+  **The correction that matters most is to this card's own framing.** "It fails only in a full run"
+  was never a property of the defect; it was a property of *this machine*. The fast lane — twelve
+  minutes, on every push, with the traceback printed — was going red the whole time in the one
+  environment nobody was reading. Three sessions spent five runs of twenty-nine minutes each
+  hunting a reproduction that CI was producing for free.
+
+  **The traceback was not recoverable from here and that is a tooling limit, not a dead end.**
+  `gh run view --log-failed`, `gh run view --log` and the job-logs API all redirect to
+  `productionresultssa1.blob.core.windows.net`, which refuses the connection from this machine; the
+  check-run annotations carry only `Process completed with exit code 1`. **A browser on the
+  maintainer's machine can read it**, and run `34716528657` is still the only recorded failure this
+  card has. (by @assistant)
