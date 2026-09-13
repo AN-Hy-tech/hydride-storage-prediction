@@ -49,7 +49,7 @@ points at `v3`, and `docs/API.md` is published. The fourth is **#37**, waiting o
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **89** | `REPORT.md` versus the artifacts it cites — the reconciliation table. Until it exists, cite the committed CSVs under `reports/`. Independent of S7, so it runs beside it | 1 d | blocked by #29, #30 (both `done`) — **startable** |
+| **89** | `REPORT.md` versus the artifacts it cites — the reconciliation table. Until it exists, cite the committed CSVs under `reports/`. Independent of S7, so it runs beside it | 1 d | **unblocked** — #29 and #30 are both `done` |
 | **37** | Chapter 1 revision: what exists, what was wrong, what it is now. **The last unfreeze condition** | 1.5 d | blocked by #89 |
 | **36** | The five ADRs. `docs/adr/README.md` reserves `0001`–`0005` for them and records why #85 took `0006` | 1 d | `backlog`, unblocked |
 
@@ -57,7 +57,7 @@ points at `v3`, and `docs/API.md` is published. The fourth is **#37**, waiting o
 
 | # | Finding | Owner | Note |
 |---|---|---|---|
-| **7** | The CI **slow lane**: full retrain, artifact upload, version promotion. Four guarantees currently run on **no push**. Also owes a *portable* artifact — `artifacts/` is gitignored, so `v3` exists on one machine and a fresh clone has no model | blocked by #4, #6 | ten open boxes |
+| **7** | The CI **slow lane**: full retrain, artifact upload, version promotion. Four guarantees currently run on **no push**. Also owes a *portable* artifact — `artifacts/` is gitignored, so `v3` exists on one machine and a fresh clone has no model | **unblocked** — #4 and #6 are both `done` | ten open boxes |
 | **102** | One decision — how a refusal sentence names its offenders — is taken in **22 modules** independently and has drifted into **four** renderings and **two** truncation limits. `docs/REFUSALS.md` is generated from those sentences | 0.5 d | `backlog`, unblocked |
 | **101** | CI: every PR carries two **skipped** checks that shadow the real ones by name; branch protection is **403 on this plan**; the fast lane has ~6 min of headroom against a cap that already killed three pushes | unblocked | filed 2026-09-13 |
 | **95** | The freeze is **unenforced on `main`** — `check_freeze.py` does not exist there. PR #7 edited six frozen cards and was reported green. Closes when PR #6 merges, which is after the freeze lifts | unblocked | #101 supplies the 403 fact its second box needs |
