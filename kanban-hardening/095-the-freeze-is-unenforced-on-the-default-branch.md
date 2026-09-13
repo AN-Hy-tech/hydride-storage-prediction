@@ -56,7 +56,11 @@ enforced everywhere the work happens, and unenforced on the branch the work has 
       freeze check, and that this closes when #6 merges. One paragraph; this is the cheap half and
       the one that matters
 - [ ] **Decide whether anything guards `main` before then.** Options, none of them obviously right:
-      a branch-protection rule requiring a check `main` cannot run; cherry-picking
+      ~~a branch-protection rule requiring a check `main` cannot run~~ — **this option does not
+      exist on this repository**: the protection API answers 403 on this plan, and if the plan ever
+      changed, the `pull_request` event's skipped check runs would satisfy a required check by name
+      anyway. Both measured 2026-09-13; **#101 owns the numbers and the reproducing commands** and
+      this box does not copy them. So the decision is between the remaining two: cherry-picking
       `check_freeze.py` and a minimal workflow onto `main`, which edits the default branch during a
       freeze whose whole point is to stop drive-by edits; or accepting the gap on the grounds that
       exactly one PR targets `main` and it is being closed. **Record the reasoning either way** —
@@ -105,3 +109,7 @@ enforcement this extends
   gap is recorded is a card, and a card is not what a reviewer reads before clicking merge.
   (by @assistant)
 
+- 2026-09-13: #101's CI audit closed the first of this card's three options rather than answering
+  the card: branch protection returns **403** on this plan, so "a branch-protection rule" is not
+  something anyone here can choose. Recorded in the box rather than in a handoff, because the next
+  person to reach this card would otherwise spend the same request finding out. (by @assistant)

@@ -71,6 +71,25 @@ That constraint is what keeps the job under a minute with no install step.
       implementing the rule and correcting seven files' prose, this card is `done`, and Phase H is
       frozen against work that is not in the runbook. **Not an unfreeze condition.**
 
+      **Partly cleared 2026-09-13, by the documentation compaction.** The prose half was taken,
+      because the compaction was rewriting those files anyway and leaving a known-false sentence in
+      a file being rewritten is worse than finding it there. Corrected: `kanban-hardening/README.md`
+      (§ Using the board now states outright that the script does not read checkboxes, and names
+      the eleven boxes), `CLAUDE.md` (a new session anti-pattern), and **#81**, whose narrative gave
+      the rule as its reason for filing #100 — appended as a dated correction rather than edited, per
+      the board's own narrative rule. **#100 had already corrected itself** on 2026-09-13.
+
+      Re-measured against the live board: the claim survives in **no card as a statement about the
+      checker**. #23, #29 and #71 mention unticked boxes only as facts about other cards; #94 and
+      #97 state the *convention* ("a finding nobody is going to see"), which is true. So the
+      original count of six cards was an over-count, and the load-bearing instances were #81 and
+      #100.
+
+      **What is still owed is the other half: nothing enforces the convention.** The index at
+      `docs/PHASE-H-FINDINGS.md` now makes the eleven boxes visible to a reader, which is a
+      mitigation and not a check — it can itself go stale, and nothing tests it. Implementing the
+      rule in `check_board.py` remains unchosen and is still not an unfreeze condition.
+
 ## Runnable check
 
 ```bash

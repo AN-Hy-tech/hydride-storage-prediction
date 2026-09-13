@@ -142,3 +142,12 @@ conda run -n Project python -m pytest tests/test_figures.py -q
   `Interval`, `DomainVerdict`, `Novelty` — so Streamlit stays an HTTP client: it reads a JSON
   answer through `answer_from()` and hands the result to a builder. No chart function loads a
   model, reads an artifact, or touches the surrogate.
+
+- 2026-09-13 (correction, appended not rewritten): the note above gives the wrong *reason* for
+  filing #100. `check_board.py` does **not** refuse a `done` card with an unticked box — it has no
+  checkbox rule at all, and nothing in `scripts/` or `tests/` reads a `- [ ]` (#68). The decision to
+  file #100 as its own card was still right, for the reason #94 gives: an unticked box on a closed
+  card is a finding nobody is going to see. Only the mechanism was imagined. The correction is
+  appended rather than edited in, because a narrative records what a session believed at the time
+  and that is the whole of its value. Open findings are indexed in
+  [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md). (by @assistant)

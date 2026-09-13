@@ -57,8 +57,10 @@ current performance.
 | Document | Owns | Open it when |
 |---|---|---|
 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | The whole proposal: audit findings (§2.2), the enabling fact (§2.3), the claim (§4), user stories S1–S12 (§5), rejected alternatives (§7), risks R1–R7 (§9), acceptance criteria AC-1–AC-8 (§10) | Before any design argument, and whenever a card's *Traces to* names an S or AC |
-| [kanban-hardening/README.md](kanban-hardening/README.md) | The **active** board: the two-directory id space, the stage→card map, the eight gates, how to start | Starting any work at all right now |
-| [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | The current phase end to end: why it exists, the thirteen leaks with their exact sites, the nine stages, the verification | Before touching the pipeline, the surrogate, or the app |
+| [kanban-hardening/README.md](kanban-hardening/README.md) | The **active** board: the `▶ Next action` block, the two-directory id space, the stage→card map, the eight gates, how to start | Starting any work at all right now |
+| [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | The current phase end to end: why it exists, the thirteen leaks with their exact sites, the **live** stages (S7, S8), the gate table, the verification block | Before touching the pipeline, the surrogate, or the app |
+| [docs/PHASE-H-FINDINGS.md](docs/PHASE-H-FINDINGS.md) | **Every open finding in priority order**, P1–P4, as one line and a pointer each — including the ones invisible to every tool here, the unticked boxes on `done` cards | Deciding what to work on, or asking "what is still wrong?" |
+| [docs/archive/](docs/archive/) | The phase's history, verbatim and uncorrected: the full handoff log back to 2026-09-03, and stages S0–S6 in the detail the runbook used to carry | You need *intent* — why a decision went the way it did. **Never** for current state |
 | [docs/FREEZE.md](docs/FREEZE.md) | What is frozen, the denied paths, the unfreeze condition | Before planning work, or when CI rejects a change |
 | [docs/RUNNING-THE-FIT.md](docs/RUNNING-THE-FIT.md) | How to actually execute the training run and the evaluation: the commands, in order, with what each prints, the exit codes, and how to commit the result | Before running `hydms.surrogate.train` or `hydms.surrogate.evaluate` — it is written for an operator, not a reader |
 | [CONTEXT.md](CONTEXT.md) | The project's **vocabulary**, glossary only. A term is in it because conflating it has already cost this project something: the three score readings, `Deployed fit`, `Sentinel subject`, `Probe`, the capacity levels | Before writing a number or a noun into prose somebody outside the room will read |
@@ -80,6 +82,7 @@ current performance.
 | If the task is… | Read first | Use skill |
 |---|---|---|
 | **Anything at all, right now** | [docs/FREEZE.md](docs/FREEZE.md), then [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) | — |
+| **"What is still broken, and what should I take?"** | [docs/PHASE-H-FINDINGS.md](docs/PHASE-H-FINDINGS.md), then the card | `kanban-ai` |
 | Working a ticket | the card, then its *Traces to* section | `kanban-ai` |
 | Board operations (list, move, unblock) | [kanban-hardening/README.md](kanban-hardening/README.md) § Using the board | `kanban-ai` |
 | Training or fitting a model | [docs/PHASE-H-RUNBOOK.md](docs/PHASE-H-RUNBOOK.md) §1 — the leak inventory first | `ml-model-training`, but see the caveat below |
@@ -214,6 +217,11 @@ bash $S/list_all_cards.sh kanban-hardening/   # id | status | blocked_by | title
   JSONs and the smoke fixture are each rebuilt by an `--emit` flag, and a test asserts the committed
   bytes are what the code produces. Change the code and regenerate; an edit there fails the suite
   and, worse, is the exact drift those files exist to prevent.
+- Believing `scripts/check_board.py` rejects a `done` card with an unticked box. **It does not** —
+  it reads frontmatter and links, never a `- [ ]` (#68, 2026-09-13). The convention is real and
+  worth keeping, but it is enforced by readers, which is why
+  [docs/PHASE-H-FINDINGS.md](docs/PHASE-H-FINDINGS.md) exists. Two cards were filed on the belief
+  that the checker would catch it.
 - Landing a card without grepping [CONTEXT.md](CONTEXT.md) for its number. The glossary's *"State
   of the term"* blocks name cards by id, and **nothing reads that file** — no test, no gate, no
   `--emit`. When the card closes, the tense stays wrong and no diff goes red. Closing #76 left
