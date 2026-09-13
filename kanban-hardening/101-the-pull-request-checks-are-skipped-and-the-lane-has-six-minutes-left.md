@@ -79,9 +79,16 @@ start and end timestamps from the jobs API:
 | `34711343772` | 12 m 49 s | 15 m 15 s |
 | `34698963428` | 12 m 47 s | 14 m 10 s |
 | `34696231293` | 12 m 44 s | (failed on tests, not time) |
+| `34750116081` *(2026-09-13)* | **13 m 07 s** | 13 m 30 s |
 
-Stable — ±20 s across seven runs, no upward trend. Against `timeout-minutes: 20` that is **roughly
+Stable — ±20 s across the seven 2026-09-12 runs. Against `timeout-minutes: 20` that is **roughly
 six minutes, or 30 %, of headroom**, at about 0.53 s per test over 1,440 tests.
+
+The eighth row is the day after, on a markdown-only change, and it is the **highest of the eight** —
+but only 8 s above the previous maximum, so read it as the top of the noise band and **not** as a
+trend. It is recorded because the point of this finding is that the band's *ceiling* is what meets
+the cap, and one number is not a slope: the next session to measure should add a row rather than
+re-derive the table.
 
 What makes it worth a number rather than a shrug is the history. The same margin closed silently
 once already: the `suite` job timed out on **every push** for an unknown stretch before card #86,
