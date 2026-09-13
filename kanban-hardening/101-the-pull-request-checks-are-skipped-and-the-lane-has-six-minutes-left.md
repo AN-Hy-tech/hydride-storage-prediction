@@ -114,7 +114,11 @@ the next reader does not re-audit it. See [[a-workflow-that-passes-locally-may-n
       currently reports suite growth at all
 - [ ] **Whichever is chosen, the `cancelled`-means-timeout trap is named once in the workflow.**
       One comment beside `concurrency:`. It has cost this project a real audit already and the
-      file does not mention it
+      file does not mention it. **And name its automation-facing twin**: `gh run watch <id>
+      --exit-status` returns **exit 0 on a cancelled run** — measured 2026-09-13, when this card's
+      own filing commit was superseded by the next push and the watcher reported success while the
+      `suite` job had been killed mid-`pytest`. Anything that gates on that exit code reads a
+      cancel as a pass, which is the same mistake as reading the Actions tab for red
 
 ## Runnable check
 
