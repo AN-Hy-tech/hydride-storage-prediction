@@ -164,3 +164,13 @@ the 20-minute cap and the `-m "not slow"` split were decided, and neither is reo
   once and publish a second, later, empty result under the same name". Deliberately filed rather
   than fixed, because all three findings end in a decision with a cost — a trigger removed, a cap
   raised, a hazard accepted — and none of them is currently failing. (by @assistant)
+
+- 2026-09-24 (later): **`34750680910` is read, and the cause was #97.** The job-logs endpoint
+  now returns the log to this machine (`gh api repos/AN-Hy-tech/hydride-storage-prediction/actions/jobs/103706571947/logs`),
+  so no browser was needed. The failure is #97's sort tie in `test_comparison.py`, the same test
+  and the same swapped pair as `34709161104` and `34716528657`. **Every red run on this branch
+  is now accounted for:** `34692889910` (mypy stubs, #86), `34696231293` and `34697694205` (#93's
+  two tests), and the three #97 runs. So "fits but does not prove that #97 was the cause" above
+  is now proven. For this card: a red on a markdown-only commit is not a mystery until its log
+  has been read, and the log can be read from here. Its eighth-row timing is unaffected: that run
+  died on a test at 8 m, not on the cap. (by @assistant)

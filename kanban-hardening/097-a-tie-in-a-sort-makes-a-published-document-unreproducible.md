@@ -127,3 +127,14 @@ gh run list --branch feat/phase-h-emergency-hardening --limit 3
   `success`, pytest step 13 m 10 s — read from `gh run list` and the jobs API, not from a local run.
   The run before it, `34750680910` on `f7e4fc8`, had gone **red on tests** on a markdown-only
   commit; recorded on #101, cause unread. (by @assistant)
+
+- 2026-09-24 (later, same day): **The cause of `34750680910` is read, and it was this card.**
+  `gh api repos/AN-Hy-tech/hydride-storage-prediction/actions/jobs/<job>/logs` returns the whole
+  job log to this machine today (it redirected to a refusing blob host on 2026-09-13). The one
+  failure is `tests/surrogate/test_comparison.py::test_the_published_document_is_the_one_this_code_generates`,
+  with `avg_polzbl_divi_atom_mass` and `dev_atom_mass_mult_therm_cond` (both `| 1 | Eu |`) swapped.
+  That is this card's tie. **It went red three times on the runner before anyone knew:**
+  `34709161104` (`c070988`), `34716528657` (`c270b1f`) and `34750680910` (`f7e4fc8`), each on the
+  same test with the same pair, and it passed on the runs between them. So the "hypothesis, not a
+  finding" above now has three observations: an unstable sort, on a runner, deciding a document
+  intermittently. (by @assistant)

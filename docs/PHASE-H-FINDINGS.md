@@ -36,20 +36,20 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **82** | `app/main.py` as an **HTTP client** of the service, handing each `PredictionResult` to a `hydms.figures` builder. Must not acquire a matplotlib call of its own | 1 d | `backlog`, **unblocked — this is the opening move** |
+| **82** | `app/main.py` as an **HTTP client**. **5 of 9 boxes done 2026-09-24**: client + page model in `hydms/delivery/{client,page}.py`, 24 tests over a real socket. Open: **Streamlit is not in `Project`** and an unpinned install breaks the `fastapi`/`starlette` pin (a lock decision, the maintainer's), so `app/main.py` has never run. **Neighbours with measured capacities and the sweep's support counts are not served**, and each needs an API contract change | 0.5 d + a lock decision | `doing` |
 | **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | blocked by #82 |
 | **98** | `loco.py:595` writes four tables but not `evaluation.out_of_fold`, so LOACO leaves ten class averages and no scored rows — and `parity()` refuses fewer than two readings. **#83's parity panel cannot be built from committed evidence.** Needs a LOACO run, which is the maintainer's | 0.5 d + a run | `backlog`, unblocked |
-| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit | 1.5 d | blocked by #29, #30, #82, #89 |
+| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | blocked by #82 |
 
 ## P3 — blocks the unfreeze
 
 The unfreeze condition is four bullets and **three already hold**: the gates are green, `current`
-points at `v3`, and `docs/API.md` is published. The fourth is **#37**, waiting on **#89 alone**.
+points at `v3`, and `docs/API.md` is published. The fourth is **#37**, and since #89 closed on
+2026-09-24 **nothing blocks it**.
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **89** | `REPORT.md` versus the artifacts it cites — the reconciliation table. Until it exists, cite the committed CSVs under `reports/`. Independent of S7, so it runs beside it | 1 d | **unblocked** — #29 and #30 are both `done` |
-| **37** | Chapter 1 revision: what exists, what was wrong, what it is now. **The last unfreeze condition** | 1.5 d | blocked by #89 |
+| **37** | Chapter 1 revision: what exists, what was wrong, what it is now. **The last unfreeze condition.** Written *from* [REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md), which has twelve rows where the card expected eight | 1.5 d | **unblocked** — #89 `done` 2026-09-24 |
 | **36** | The five ADRs. `docs/adr/README.md` reserves `0001`–`0005` for them and records why #85 took `0006` | 1 d | `backlog`, unblocked |
 
 ## P4 — accepted debt, named owner
@@ -58,9 +58,9 @@ points at `v3`, and `docs/API.md` is published. The fourth is **#37**, waiting o
 |---|---|---|---|
 | **7** | The CI **slow lane**: full retrain, artifact upload, version promotion. Four guarantees currently run on **no push**. Also owes a *portable* artifact — `artifacts/` is gitignored, so `v3` exists on one machine and a fresh clone has no model | **unblocked** — #4 and #6 are both `done` | ten open boxes |
 | **102** | One decision — how a refusal sentence names its offenders — is taken in **22 modules** independently and has drifted into **four** renderings and **two** truncation limits. `docs/REFUSALS.md` is generated from those sentences | 0.5 d | `backlog`, unblocked |
-| **101** | CI: every PR carries two **skipped** checks that shadow the real ones by name; branch protection is **403 on this plan**; the fast lane has ~6 min of headroom against a cap that already killed three pushes. **`f7e4fc8` went red on tests on a markdown-only commit and nobody saw it for eleven days** — log unread, run `34750680910` | unblocked | filed 2026-09-13 |
+| **101** | CI: every PR carries two **skipped** checks that shadow the real ones by name; branch protection is **403 on this plan**; the fast lane has ~6 min of headroom against a cap that already killed three pushes. `f7e4fc8`'s red run **was #97's sort tie**, read 2026-09-24 from the job-logs API (no browser needed). Every red run on the branch is now accounted for | unblocked | filed 2026-09-13 |
 | **95** | The freeze is **unenforced on `main`** — `check_freeze.py` does not exist there. PR #7 edited six frozen cards and was reported green. Closes when PR #6 merges, which is after the freeze lifts | unblocked | #101 supplies the 403 fact its second box needs |
-| **100** | A render test passes alone and fails after the slow tests. The mechanism is removed (`figures/render.py` no longer touches `pyplot` or a global backend); **five full runs since are green, so no traceback exists** and the card's second box stays unticked on purpose | `doing` | do not spend a sixth run on it |
+| **100** | A render test passes alone and fails after the slow tests. The mechanism is removed (`figures/render.py` no longer touches `pyplot` or a global backend); **five full runs since are green, so no traceback exists** and the card's second box stays unticked on purpose. **Corrected 2026-09-24: it has never failed on CI either.** Run `34716528657`, the traceback it was waiting on, was #97's tie | `doing` | do not spend a sixth run on it |
 | **92** | The stage line and the stage map are checked, not remembered. Nothing currently reads either | unblocked | six boxes |
 | **91** | The prediction record, and replay as its consumer | blocked by #76, #78 (both `done`) — startable | eight boxes |
 | **1** | Two boxes, both open: the conda lock **cannot be re-solved** (the `defaults` channel is 403 and supplies 95 of 248 packages, `python` and `numpy` among them) — three remedies, and the choice is **the maintainer's, do not start one unasked**. And `matplotlib` is installed **twice** in `Project`, with the export naming the version that is not running | maintainer | boxes on a `done` card |

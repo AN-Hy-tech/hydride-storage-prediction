@@ -334,3 +334,20 @@ conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
   check-run annotations carry only `Process completed with exit code 1`. **A browser on the
   maintainer's machine can read it**, and run `34716528657` is still the only recorded failure this
   card has. (by @assistant)
+
+- 2026-09-24: **Correction: this card has never failed on CI, and the 2026-09-13 entries above
+  say it did.** The log of run `34716528657` is readable from this machine now
+  (`gh api .../actions/jobs/103614691893/logs`), and its one failure is
+  `tests/surrogate/test_comparison.py::test_the_published_document_is_the_one_this_code_generates`,
+  which is **#97's** sort tie, not `test_every_figure_renders_in_both_themes`. Every red run on the
+  branch has been read. They are #86's missing mypy stubs, #93's two tests, and #97's tie three
+  times. **None is a render test.** So three claims made on 2026-09-13 fall:
+  "CI mentioned it on every push" (it did not), "the fast lane was failing on the runner from #81
+  until the repair" (it was failing on #97, intermittently), and in `kanban-hardening/README.md`,
+  "the repair turned it green … the pyplot removal fixed something real" (the green was #97's tie
+  going the right way). **What stands:** the local full-run failure was real, the second box is
+  still unticked, and the repair is still a good change on the defect's shape. **What changes:**
+  there is no traceback anywhere, the "cheapest remaining route" in the box above does not lead to
+  one, and "only in a full run" is again the only thing known about the trigger.
+  Not reworded above: a narrative records what a session believed, and the correction is appended.
+  (by @assistant)

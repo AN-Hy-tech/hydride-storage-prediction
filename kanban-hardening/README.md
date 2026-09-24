@@ -2,22 +2,47 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-24
+> ## ▶ Next action — as of 2026-09-24 (evening)
 >
-> **Handoff, one line: #97 is done and CI is green on `411c721`; start #82 (`app/main.py`, HTTP
-> client + `hydms.figures`, no matplotlib of its own), run #89 beside it, and open CI run
-> `34750680910` in a browser once to learn why a markdown-only commit went red.**
+> **Handoff, one line: #89 is `done`, so #37 is unblocked and is the last unfreeze condition.
+> #82 is `doing` with its guarantees landed, and waits on two things that are not the page: a
+> Streamlit pin (the maintainer's, because it fights the lock) and two API additions.**
 >
-> **#97 is `done` and the opening move is still #82.** The P1 index ranks by blast radius and #97
-> was the one `High` there: `comparison.py:703` now sorts `kind="stable"`, the regenerated document
-> is byte-identical, every other ordering call in `hydms/` was checked (it was the only one), and
-> CI run `35990733980` is green. Beside #82, **#89** is still the path to the unfreeze.
+> **#89 closed as a generated page:
+> [../docs/REPORT-RECONCILIATION.md](../docs/REPORT-RECONCILIATION.md).** It lists twelve
+> disagreements, not eight, because the audit's "eight" were never written down and had to be
+> re-measured. Every quotation is tested to occur in `REPORT.md` verbatim, and every refuting value
+> is read from its CSV at emit time. The headline: **two committed CSVs describe two different
+> ensembles** (0.939/0.892 in one, 0.377/0.376 in the other), and the report quoted one of them.
+> **Cite this page, not `REPORT.md`, for any published number.**
 >
-> **The 2026-09-13 claim below that CI is green was wrong for eleven days.** The run on `f7e4fc8`
-> — a markdown-only commit — went **red on tests** in the fast lane and nobody looked. The log
-> cannot be fetched from this machine; open run `34750680910` in a browser. Recorded on #101.
+> **#82 landed its guarantees and not its script.** What the page shows is decided in
+> `hydms/delivery/page.py`, and it talks to the service through `hydms/delivery/client.py`
+> (stdlib `urllib`). Both are tested against uvicorn on a real socket (24 tests), so the fast lane
+> checks them. `app/main.py` is a thin Streamlit layer that **has never run**. Streamlit is not in
+> `Project`, and `pip install streamlit` would move `starlette` 0.38.6 → 1.7.0, past what the
+> locked `fastapi` 0.115.0 accepts (`<0.39`), and `protobuf` 3.20 → 7. **Choosing a pin is a lock
+> decision and the maintainer's.** Two boxes also need the *service* to grow: the k nearest
+> alloys with measured capacities (no route serves them), and per-bin temperature support for the
+> sweep (`GET /v1/model` has only `rows` / `rows_above`). Each is an API contract change:
+> `openapi.json`, `docs/API.md --probe`, HG-3.
 >
-> *Below is the 2026-09-13 block, still accurate except where the paragraph above supersedes it.*
+> **Next, in order of what it unblocks:** **#37**, the Chapter 1 revision (the last unfreeze
+> bullet; it needs no fit and no decision). Then the two API additions for #82, which also serve
+> #83's neighbours chart. Then the streamlit pin, once the maintainer picks one.
+>
+> **Every red CI run on this branch has now been read, and the 2026-09-13 block below is wrong
+> about CI.** The job-logs API returns logs to this machine today:
+> `gh api repos/AN-Hy-tech/hydride-storage-prediction/actions/jobs/<job-id>/logs`. There were six
+> reds. One was #86's missing mypy stubs, two were #93's tests, and three (`34709161104`,
+> `34716528657`, `34750680910`) were **#97's sort tie**, now fixed. **None was #100's render test.**
+> So the paragraphs below saying "CI was red from #81", "the pyplot removal fixed something real",
+> and that the #100 traceback "is probably sitting in CI run `34716528657`" are superseded.
+> Corrected on #100, #101 and #97.
+>
+> *Below: the 2026-09-24 morning block, then the 2026-09-13 block. Both are superseded where the block above says so.*
+>
+> **(2026-09-24 morning)** Handoff, one line: #97 is done and CI is green on `411c721`; start #82, run #89 beside it, and open CI run `34750680910` in a browser once to learn why a markdown-only commit went red.
 >
 > **The documentation set was compacted today and nothing about the work changed.** This file went
 > from **3,925 lines to ~310** and the runbook from **1,511 to 497**; everything removed is in
