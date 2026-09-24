@@ -4,8 +4,10 @@
 
 > ## ▶ Next action — as of 2026-09-24 (close of day)
 >
-> **Handoff, one line: #37 is `done` and all four unfreeze bullets hold, but the freeze is held by
-> the maintainer's decision until S7 is finished. Next is #82's two API additions.**
+> **Handoff, one line: #37 is `done` and the freeze is held by the maintainer until S7 is finished,
+> so start #82's two API contract changes (a nearest-measured-alloys route, and per-bin temperature
+> support on `GET /v1/model`; each needs `openapi.json`, `docs/API.md --probe` against v3, and
+> HG-3), then ask the maintainer for the Streamlit pin.**
 >
 > **The order the maintainer set:** (1) #82: the nearest-alloys route and per-bin temperature
 > support, then the Streamlit pin (the maintainer's lock decision). (2) #98's code, then its
