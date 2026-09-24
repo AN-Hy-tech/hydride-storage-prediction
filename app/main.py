@@ -17,8 +17,18 @@ from __future__ import annotations
 import os
 
 import streamlit as st
-from hydms.delivery.client import DEFAULT_URL, ServiceClient, ServiceUnreachable
-from hydms.delivery.page import ANSWERED, REFUSED, UNREACHABLE, prediction_view, unreachable_view
+from hydms.delivery.client import DEFAULT_URL, InvalidRequest, ServiceClient, ServiceUnreachable
+from hydms.delivery.page import (
+    ANSWERED,
+    REFUSED,
+    UNREACHABLE,
+    PageError,
+    neighbours_figure,
+    prediction_view,
+    sweep_requests,
+    sweep_view,
+    unreachable_view,
+)
 from hydms.figures.render import render
 
 st.set_page_config(page_title="HydMS -- hydrogen capacity", layout="centered")
@@ -47,11 +57,24 @@ with st.form("predict"):
         value=298.0,
         step=25.0,
     )
+    sweep = st.checkbox(
+        "Also sweep the whole trained temperature range",
+        help="One prediction every 25 K, drawn over the training rows behind each part of it.",
+    )
     asked = st.form_submit_button("Predict")
 
+
+def draw(figure) -> None:
+    theme = "dark" if st.get_option("theme.base") == "dark" else "light"
+    st.pyplot(render(figure, theme=theme))
+    st.caption(figure.caption)
+
+
 if asked:
+    outcome = None
     try:
-        view = prediction_view(client.predict(formula, float(kelvin)), card=card)
+        outcome = client.predict(formula, float(kelvin))
+        view = prediction_view(outcome, card=card)
     except ServiceUnreachable as error:
         view = unreachable_view(error)
 
@@ -65,9 +88,7 @@ if asked:
         st.write(sentence)
 
     if view.figure is not None:
-        theme = "dark" if st.get_option("theme.base") == "dark" else "light"
-        st.pyplot(render(view.figure, theme=theme))
-        st.caption(view.figure.caption)
+        draw(view.figure)
 
     if view.verdicts:
         st.subheader("Why it was answered" if view.kind == ANSWERED else "Why it was refused")
@@ -77,3 +98,43 @@ if asked:
 
     if view.version is not None:
         st.caption(f"Answered by artifact version `{view.version}`.")
+
+    if view.kind == ANSWERED:
+        st.subheader("The nearest known alloys, as measured")
+        try:
+            near = client.neighbours(formula)
+            if isinstance(near, InvalidRequest):
+                st.warning(near.message)
+            else:
+                draw(neighbours_figure(outcome, near))
+                st.table(
+                    [
+                        {
+                            "alloy": alloy.formula,
+                            "distance": f"{alloy.distance:.3f}",
+                            "measured (K: wt%)": ", ".join(
+                                f"{row.temperature_k:g}: {row.capacity:g}" for row in alloy.measured
+                            ),
+                            "class": alloy.measured[0].alloy_class,
+                        }
+                        for alloy in near.neighbours
+                    ]
+                )
+        except (ServiceUnreachable, PageError) as error:
+            st.error(str(error))
+
+    if sweep and view.kind in (ANSWERED, REFUSED):
+        st.subheader("Across the trained temperature range")
+        try:
+            answers = client.predict_many(sweep_requests(formula, card))
+            if isinstance(answers, InvalidRequest):
+                st.warning(answers.message)
+            else:
+                swept = sweep_view(answers, card=card)
+                st.write(swept.headline)
+                if swept.figure is not None:
+                    draw(swept.figure)
+                for temperature, code in swept.refused:
+                    st.markdown(f"- {temperature:g} K: refused (`{code}`)")
+        except (ServiceUnreachable, PageError) as error:
+            st.error(str(error))

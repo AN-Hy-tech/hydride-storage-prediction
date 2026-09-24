@@ -161,6 +161,12 @@ _Avoid_: "error" for a refusal, "refused" for a malformed request, and reading t
 > **The client keeps it too** (card #82, 2026-09-24). `hydms.delivery.client` returns an
 > `InvalidRequest` (not a `Refusal`) for a 422 carrying `error`, and the prediction page words it
 > as "No material was judged". Both are tested over a real socket in `tests/delivery/test_app.py`.
+>
+> **A lookup has only the second kind** (card #82, 2026-09-24 night). `GET /v1/neighbours` judges
+> no material, so it has no refusal: a blank formula, an unreadable one or a `k` out of range is a
+> 422 carrying `error`, and an unreadable formula carries the novelty screen's own sentence — the
+> one `POST /v1/predict` *refuses* the same string with. Same words, different kind, because one
+> route judged a material and the other did not.
 
 **Lower confidence bound**:
 The bottom of the calibrated interval, and **the ranking signal**. Ranking on the mean is what lets

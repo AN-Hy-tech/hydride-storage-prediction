@@ -20,6 +20,11 @@ reason: a guarantee that lives in an optional dependency is a guarantee nobody c
   absence of warnings.
 * The artifact version answering is on every view that has one.
 * An unreachable service is a view of its own, which says so and shows nothing else.
+* The nearest known alloys are drawn with what was **measured** on them
+  (:func:`neighbours_figure`, from ``GET /v1/neighbours``), never with a prediction for them.
+* The temperature sweep is drawn over the training rows behind each part of it
+  (:func:`sweep_view`, over :func:`support_from` the served model card), and a temperature the
+  service refused is a listed gap, never a point on the curve.
 
 **The reference the band is drawn against is the deployment's, not the package's.** The
 prediction band anchors its axis to the trained capacity range, and
@@ -33,7 +38,7 @@ Card #82.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,22 +46,38 @@ from hydms.delivery.client import InvalidRequest
 from hydms.delivery.contract import (
     UNIT,
     Answer,
+    PredictionRequest,
     PredictionResult,
     Refusal,
     ScreenVerdict,
 )
-from hydms.figures import Figure, prediction_band
+from hydms.delivery.neighbours import Neighbourhood
+from hydms.figures import (
+    Figure,
+    Neighbour,
+    TemperatureSupport,
+    nearest_neighbours,
+    prediction_band,
+    temperature_sweep,
+)
 from hydms.screens.domain import DomainReference
 
 __all__ = [
     "ANSWERED",
     "INVALID_REQUEST",
     "REFUSED",
+    "SWEEP_STEP_K",
     "UNREACHABLE",
     "PageView",
+    "SweepView",
     "VerdictRow",
+    "neighbours_figure",
     "prediction_view",
     "reference_from",
+    "support_from",
+    "sweep_requests",
+    "sweep_temperatures",
+    "sweep_view",
     "unreachable_view",
 ]
 
@@ -65,6 +86,11 @@ ANSWERED = "answered"
 REFUSED = "refused"
 INVALID_REQUEST = "invalid-request"
 UNREACHABLE = "unreachable"
+
+#: Kelvin between two points of the temperature sweep. 25 K puts 25 points across the served
+#: 195-773 K window -- one batch request, well under the batch limit -- and resolves the curve
+#: finer than the 50 K support bins beneath it, so no bin is represented by a single point.
+SWEEP_STEP_K = 25.0
 
 
 class PageError(ValueError):
@@ -236,4 +262,180 @@ def unreachable_view(error: BaseException) -> PageView:
             "No estimate below is stale or cached: there is none."
         ),
         detail=(str(error),),
+    )
+
+
+# --------------------------------------------------------------------------------------
+# The nearest known alloys, and the temperature sweep (the two boxes the service now serves)
+# --------------------------------------------------------------------------------------
+
+
+def neighbours_figure(result: PredictionResult, neighbourhood: Neighbourhood) -> Figure:
+    """The nearest known alloys, with what was measured on them, beside the prediction.
+
+    One dot per neighbour: the row measured **closest to the asked temperature**, because a
+    capacity measured at 600 K is not comparable with a prediction at 298 K and the chart
+    caption says which temperatures were used. The whole of each neighbour's measurements is on
+    the :class:`~hydms.delivery.neighbours.Neighbourhood` for a table beside it.
+
+    Raises:
+        PageError: the neighbourhood is of another formula, or was served by another artifact
+            version -- a service restarted between the two requests. Drawing them together would
+            put two deployments' statements on one axis.
+    """
+    if neighbourhood.formula != result.request.formula:
+        raise PageError(
+            f"the neighbours are of {neighbourhood.formula!r} and the answer is about "
+            f"{result.request.formula!r}; one chart cannot carry both."
+        )
+    if neighbourhood.model_version != result.model_version:
+        raise PageError(
+            f"the answer came from artifact {result.model_version} and the neighbours from "
+            f"{neighbourhood.model_version}: the service changed version between the two "
+            f"requests. Ask again."
+        )
+    kelvin = result.request.temperature_k
+    return nearest_neighbours(
+        result,
+        [
+            Neighbour(
+                formula=alloy.formula,
+                distance=alloy.distance,
+                capacity=(row := alloy.closest_to(kelvin)).capacity,
+                temperature_k=row.temperature_k,
+                alloy_class=row.alloy_class,
+            )
+            for alloy in neighbourhood.neighbours
+        ],
+        novelty_ceiling=neighbourhood.novelty_ceiling,
+    )
+
+
+def support_from(card: Mapping[str, Any]) -> TemperatureSupport:
+    """The training rows per temperature bin, as the answering deployment reports them.
+
+    Raises:
+        PageError: the card carries no support. The sweep will not be drawn over a histogram
+            the page made up or remembered: that is the "39 rows above 500 K" constant
+            :class:`~hydms.figures.TemperatureSupport` was written to retire.
+    """
+    support = (card.get("trained_ranges") or {}).get("temperature_support")
+    if not isinstance(support, Mapping) or not support.get("counts"):
+        raise PageError(
+            f"model card {card.get('version')!r} does not report how many training rows sit "
+            f"at each temperature, so a sweep would have nothing honest beneath it."
+        )
+    return TemperatureSupport(
+        edges=tuple(float(edge) for edge in support["edges"]),
+        counts=tuple(int(count) for count in support["counts"]),
+        source=str(support.get("source") or "training rows per temperature bin"),
+    )
+
+
+def sweep_temperatures(card: Mapping[str, Any], *, step: float = SWEEP_STEP_K) -> tuple[float, ...]:
+    """Temperatures across the served trained window, ``step`` apart, both ends included.
+
+    Read from the card rather than typed, so a deployment with a different window sweeps its
+    own; every one of them is inside the window, so the ``temperature`` screen admits each.
+    """
+    window = (card.get("trained_ranges") or {}).get("temperature")
+    if not isinstance(window, Mapping) or "low" not in window or "high" not in window:
+        raise PageError(
+            f"model card {card.get('version')!r} does not state its temperature window."
+        )
+    if step <= 0:
+        raise PageError(f"a sweep step of {step:g} K never reaches the other end of the window.")
+    low, high = float(window["low"]), float(window["high"])
+    points = [low]
+    while points[-1] + step < high:
+        points.append(points[-1] + step)
+    if points[-1] != high:
+        points.append(high)
+    return tuple(points)
+
+
+def sweep_requests(formula: str, card: Mapping[str, Any]) -> list[PredictionRequest]:
+    """One request per :func:`sweep_temperatures` point, for ``ServiceClient.predict_many``.
+
+    Here rather than in the script so the script builds no contract object of its own: it
+    imports the client, this module and the renderer, and nothing else.
+    """
+    return [
+        PredictionRequest(formula=formula, temperature_k=kelvin)
+        for kelvin in sweep_temperatures(card)
+    ]
+
+
+@dataclass(frozen=True)
+class SweepView:
+    """One composition across the trained window: the curve where it was answered, and where not.
+
+    Attributes:
+        headline: What the sweep shows, in one sentence.
+        figure: The sweep over its support, or ``None`` when no temperature was answered -- a
+            curve through no points is not a finding.
+        refused: ``(temperature, code)`` for every temperature the service declined. Listed,
+            never interpolated across: a gap in the curve is where the model would not answer,
+            and a line drawn through it would answer for it.
+        version: The artifact version that answered, or ``None`` where nothing did.
+    """
+
+    headline: str
+    figure: Figure | None
+    refused: tuple[tuple[float, str], ...]
+    version: str | None
+
+
+def sweep_view(answers: Sequence[Answer], *, card: Mapping[str, Any]) -> SweepView:
+    """The temperature sweep for one composition, from ``predict_many``'s answers.
+
+    Raises:
+        PageError: the answers are of more than one composition, or come from more than one
+            artifact version, or the card carries no support.
+    """
+    if not answers:
+        raise PageError("a sweep of no temperatures shows nothing.")
+    formulas = {answer.request.formula for answer in answers}
+    versions = {answer.model_version for answer in answers if answer.model_version is not None}
+    if len(formulas) != 1:
+        raise PageError(f"a sweep is one composition and was given {sorted(formulas)}.")
+    if len(versions) > 1:
+        raise PageError(
+            f"the sweep was answered by {sorted(versions)}: the service changed version "
+            f"part-way through. Ask again."
+        )
+    formula = next(iter(formulas))
+    version = next(iter(versions)) if versions else None
+    answered = [answer for answer in answers if isinstance(answer, PredictionResult)]
+    refused = tuple(
+        sorted(
+            (answer.request.temperature_k, answer.code)
+            for answer in answers
+            if isinstance(answer, Refusal)
+        )
+    )
+    support = support_from(card)
+    if not answered:
+        return SweepView(
+            headline=(
+                f"No temperature in the trained window was answered for {formula}: the "
+                f"service declined every one, so there is no curve to draw."
+            ),
+            figure=None,
+            refused=refused,
+            version=version,
+        )
+    if refused:
+        headline = (
+            f"{formula} across the trained window: answered at {len(answered)} of "
+            f"{len(answers)} temperatures. The curve is drawn only where the service answered; "
+            f"the {len(refused)} refused temperature(s) are listed, not filled in."
+        )
+    else:
+        headline = f"{formula} across the trained window, every temperature answered."
+    return SweepView(
+        headline=headline,
+        figure=temperature_sweep(answered, support=support),
+        refused=refused,
+        version=version,
     )

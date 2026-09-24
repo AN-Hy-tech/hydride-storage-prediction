@@ -104,6 +104,7 @@ __all__ = [
     "Refusal",
     "ScreenVerdict",
     "answer_from",
+    "check_formula",
     "delivery_screens",
     "reason_codes",
     "resolve",
@@ -160,6 +161,34 @@ def _finite(value: object, what: str) -> float:
             f"and an infinite bound is not an interval."
         )
     return number
+
+
+def check_formula(formula: object) -> str:
+    """The formula a request names, or the caller error that it is not one.
+
+    The rule every door that takes a composition shares -- ``POST /v1/predict`` through
+    :class:`PredictionRequest`, and ``GET /v1/neighbours`` (card #82) directly, since a lookup
+    has no temperature to build a request around. One function, so the two routes cannot tell a
+    caller two different things about the same empty string.
+
+    Raises:
+        ContractError: the formula is not a string, or is blank. Whether it *parses* is not
+            asked here: that is the pipeline's answer, and part of what a caller is told.
+    """
+    if not isinstance(formula, str):
+        raise ContractError(
+            f"formula must be a string, not {type(formula).__name__}. A part "
+            f"number or an identifier arriving where a composition belongs is a caller "
+            f"error about the type of the field, not a material this project cannot "
+            f"read."
+        )
+    if not formula.strip():
+        raise ContractError(
+            "a request needs a composition; the formula is empty. An empty string is a "
+            "caller error rather than an unparseable material, and the two must not "
+            "arrive as the same refusal."
+        )
+    return formula
 
 
 def _sentence(value: object, what: str) -> str:
@@ -329,19 +358,7 @@ class PredictionRequest:
         # column of part numbers reaches here and #78 and #84 would both hand a user the
         # wrong explanation of what they did wrong. The temperature field below already
         # distinguishes its two arms; this is that asymmetry closed (card #77, from #76's QA).
-        if not isinstance(self.formula, str):
-            raise ContractError(
-                f"formula must be a string, not {type(self.formula).__name__}. A part "
-                f"number or an identifier arriving where a composition belongs is a caller "
-                f"error about the type of the field, not a material this project cannot "
-                f"read."
-            )
-        if not self.formula.strip():
-            raise ContractError(
-                "a request needs a composition; the formula is empty. An empty string is a "
-                "caller error rather than an unparseable material, and the two must not "
-                "arrive as the same refusal."
-            )
+        check_formula(self.formula)
         object.__setattr__(
             self, "temperature_k", _finite(self.temperature_k, "temperature_k")
         )

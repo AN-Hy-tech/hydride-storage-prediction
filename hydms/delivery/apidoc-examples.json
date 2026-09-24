@@ -1,7 +1,7 @@
 {
   "schema": "hydms.delivery.apidoc/1",
   "model_version": "v3",
-  "probed_at": "2026-09-12T18:02:06+00:00",
+  "probed_at": "2026-09-24T16:47:46+00:00",
   "interval": {
     "confidence_level": 0.8,
     "basis": "nominal",
@@ -81,6 +81,42 @@
         195.0,
         773.0
       ]
+    },
+    "temperature_support": {
+      "edges": [
+        150.0,
+        200.0,
+        250.0,
+        300.0,
+        350.0,
+        400.0,
+        450.0,
+        500.0,
+        550.0,
+        600.0,
+        650.0,
+        700.0,
+        750.0,
+        800.0
+      ],
+      "counts": [
+        1,
+        21,
+        366,
+        277,
+        50,
+        28,
+        20,
+        16,
+        85,
+        23,
+        5,
+        0,
+        1
+      ],
+      "rows": 893,
+      "units": "K",
+      "source": "training rows per temperature bin"
     }
   },
   "transfer_r2": {
@@ -133,6 +169,100 @@
     "temperatures": 10
   },
   "exchanges": {
+    "neighbours-baseline": {
+      "method": "GET",
+      "path": "/v1/neighbours",
+      "query": {
+        "formula": "LaNi5",
+        "k": 3
+      },
+      "request": null,
+      "status": 200,
+      "response": {
+        "schema": "hydms.delivery.neighbours/1",
+        "formula": "LaNi5",
+        "model_version": "v3",
+        "basis": "measured",
+        "unit": "wt%",
+        "metric": "ElMD",
+        "scale": "mod_petti",
+        "novelty_ceiling": 11.731958762886595,
+        "reference_sha256": "8a17314204f3b7cdc8897c4beb3efa598d2e18ae6fb29fb0ac0d9346f6d57096",
+        "neighbours": [
+          {
+            "formula": "La1Ni5",
+            "distance": 0.0,
+            "measured": [
+              {
+                "temperature_k": 195.0,
+                "capacity": 1.5,
+                "alloy_class": "AB5"
+              },
+              {
+                "temperature_k": 218.0,
+                "capacity": 1.5,
+                "alloy_class": "AB5"
+              },
+              {
+                "temperature_k": 233.0,
+                "capacity": 1.8,
+                "alloy_class": "AB5"
+              }
+            ]
+          },
+          {
+            "formula": "La0.9Ce0.1Ni5",
+            "distance": 0.016666666666666666,
+            "measured": [
+              {
+                "temperature_k": 373.0,
+                "capacity": 1.4,
+                "alloy_class": "AB5"
+              },
+              {
+                "temperature_k": 373.0,
+                "capacity": 1.4,
+                "alloy_class": "AB5"
+              }
+            ]
+          },
+          {
+            "formula": "La1Ni4.9Mn0.1",
+            "distance": 0.04999999999999982,
+            "measured": [
+              {
+                "temperature_k": 308.0,
+                "capacity": 1.4,
+                "alloy_class": "AB5"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "neighbours-unreadable": {
+      "method": "GET",
+      "path": "/v1/neighbours",
+      "query": {
+        "formula": "LaNi5Xx2"
+      },
+      "request": null,
+      "status": 422,
+      "response": {
+        "error": "invalid_request",
+        "message": "the formula is not a composition this system can place on the ElMD scale.",
+        "problems": [
+          {
+            "location": [
+              "query",
+              "formula"
+            ],
+            "message": "'LaNi5Xx2' names 'Xx', which is not a chemical element. ElMD does not raise on it -- it drops the symbols it cannot read and measures whatever is left, if anything -- so it is refused here rather than answered as some other alloy.",
+            "kind": "composition"
+          }
+        ]
+      }
+    },
     "health": {
       "method": "GET",
       "path": "/v1/health",
@@ -231,7 +361,7 @@
               "hm_floor": 2.5,
               "max_interval_width": 1.12
             },
-            "reference_sha256": "8c359a3cfcc2b1c4f0860d73973a75127af05724d8d49ca6ab0ab0686072d794"
+            "reference_sha256": "df42f9889c155a6042285f23022e574da71869e5a64e55cde2638d71fdb410a2"
           },
           {
             "name": "novelty",
@@ -243,7 +373,7 @@
               "column": "Composition",
               "ceiling": 11.731958762886595
             },
-            "reference_sha256": "c3440ec0c084a24ef6eb5f4dd68da29b1dce1cba97cf0d99de98c1b774eca60c"
+            "reference_sha256": "8a17314204f3b7cdc8897c4beb3efa598d2e18ae6fb29fb0ac0d9346f6d57096"
           }
         ],
         "trained_ranges": {
@@ -319,6 +449,42 @@
               195.0,
               773.0
             ]
+          },
+          "temperature_support": {
+            "edges": [
+              150.0,
+              200.0,
+              250.0,
+              300.0,
+              350.0,
+              400.0,
+              450.0,
+              500.0,
+              550.0,
+              600.0,
+              650.0,
+              700.0,
+              750.0,
+              800.0
+            ],
+            "counts": [
+              1,
+              21,
+              366,
+              277,
+              50,
+              28,
+              20,
+              16,
+              85,
+              23,
+              5,
+              0,
+              1
+            ],
+            "rows": 893,
+            "units": "K",
+            "source": "training rows per temperature bin"
           }
         },
         "metrics": {

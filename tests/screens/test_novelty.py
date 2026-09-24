@@ -44,11 +44,13 @@ from hydms.screens.novelty import (  # noqa: E402
     PETTI_SLOTS,
     REFERENCE_FILE,
     ElementMoversDistance,
+    Measurement,
     NoveltyReference,
     _vector,
     distances,
     emit,
     main,
+    nearest_known,
     novelty_screen,
     vectors,
 )
@@ -588,9 +590,101 @@ def test_the_committed_reference_is_what_emit_measures() -> None:
     """The shape #30 used for ``loco.md``: a published file is generated, and asserted so.
 
     **Not marked slow, and it was measured before being left unmarked**: it re-measures from
-    the curated data in **1.19 s**. Marking it would have put the only guard on a committed
+    the curated data in **1.19 s** as first measured, and **5.3 s** re-measured on 2026-09-24
+    (card #82) -- 2.6 s of it is ``capacity_matrix`` alone, so most of the rise predates #82's
+    measurements, which add about 0.4 s of class labelling. Marking it would have put the only guard on a committed
     file behind the lane CI deselects -- and this assertion has already earned its place, since
     it is what caught ElMD normalising a multi-element composition differently in two
     processes. See ``vectors``.
     """
     assert REFERENCE_FILE.read_text(encoding="utf-8") == emit().to_json()
+
+
+# --------------------------------------------------------------------------------------
+# The measurements and the k nearest (card #82)
+# --------------------------------------------------------------------------------------
+
+
+def test_every_training_row_is_filed_under_exactly_one_known_composition() -> None:
+    """893 rows over 780 compositions: the applicability reference's rows, counted again."""
+    from hydms.screens.domain import DomainReference
+
+    reference = NoveltyReference.packaged()
+
+    assert len(reference.measurements) == len(reference.formulas)
+    assert all(reference.measurements)
+    assert sum(len(rows) for rows in reference.measurements) == DomainReference.packaged().rows
+    for rows in reference.measurements:
+        assert [row.temperature_k for row in rows] == sorted(row.temperature_k for row in rows)
+
+
+def test_the_first_of_the_k_nearest_is_the_screens_own_nearest() -> None:
+    """The page shows both; if they named different alloys the page would contradict itself."""
+    reference = NoveltyReference.packaged()
+    probes = [*CORPUS, "La0.8Ce0.2Ni5", "K1Rb1", "Ti0.5V0.25Cr0.25", "Pr1Co5"]
+    matrix, _ = vectors(probes)
+    distance, nearest = distances(matrix, reference.petti)
+
+    for position, formula in enumerate(probes):
+        found, measured, cause = nearest_known(formula, reference, 5)
+        assert cause == ""
+        assert int(found[0]) == int(nearest[position]), formula
+        assert float(measured[0]) == pytest.approx(float(distance[position]), abs=1e-12)
+        assert list(measured) == sorted(measured)
+
+
+def test_ties_are_broken_by_formula_order_not_by_the_sort() -> None:
+    """Twenty spellings of one composition tie exactly; wider than sixteen, so an unstable
+    sort would have room to reorder them, and the screen's first-minimum would then disagree
+    with the first neighbour."""
+    spellings = [f"La{n}Ni{5 * n}" for n in range(1, 21)]
+    reference = _reference([*spellings, "Mg2Ni"])
+
+    found, measured, _ = nearest_known("Mg2Ni", reference, 21)
+    order = [reference.formulas[int(at)] for at in found]
+    assert order[0] == "Mg2Ni"
+    assert len(set(measured[1:].tolist())) == 1, "the spellings must tie exactly"
+    assert order[1:] == sorted(spellings)
+
+    found, _, _ = nearest_known("LaNi5", reference, 3)
+    matrix, _ = vectors(["LaNi5"])
+    _, nearest = distances(matrix, reference.petti)
+    assert int(found[0]) == int(nearest[0])
+    assert reference.formulas[int(found[0])] == sorted(spellings)[0]
+
+
+def test_an_unreadable_formula_has_no_neighbours_and_says_why() -> None:
+    found, measured, cause = nearest_known("LaNi5Xx2", NoveltyReference.packaged(), 5)
+
+    assert len(found) == len(measured) == 0
+    assert "'Xx'" in cause
+
+
+def test_asking_for_no_neighbours_is_an_error() -> None:
+    with pytest.raises(ScreenError, match="at least one"):
+        nearest_known("LaNi5", _reference(), 0)
+
+
+def test_measurements_round_trip_and_a_partly_recorded_file_is_refused() -> None:
+    rows = {
+        formula: [Measurement(temperature_k=298.0 + at, capacity=1.0, alloy_class="AB5")]
+        for at, formula in enumerate(CORPUS)
+    }
+    reference = NoveltyReference.measured(CORPUS, rows)
+    again = NoveltyReference.from_json(reference.to_json())
+    assert again.measurements == reference.measurements
+
+    payload = json.loads(reference.to_json())
+    del payload["compositions"][0]["measured"]
+    with pytest.raises(ScreenError, match="written by hand"):
+        NoveltyReference.from_json(json.dumps(payload))
+
+
+def test_a_composition_without_a_measurement_is_refused_at_measurement() -> None:
+    rows = {formula: [Measurement(298.0, 1.0, "AB5")] for formula in CORPUS[1:]}
+    with pytest.raises(ScreenError, match="no measurements were given"):
+        NoveltyReference.measured(CORPUS, rows)
+
+
+def test_a_reference_without_measurements_serialises_without_them() -> None:
+    assert "measured" not in json.loads(_reference().to_json())["compositions"][0]

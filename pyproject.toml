@@ -110,7 +110,15 @@ figures = ["matplotlib>=3.8"]
 
 # Streamlit screening and Pareto-front pages. It draws what `hydms.figures` describes, so it
 # takes the figures extra with it rather than leaving a page to discover the gap at runtime.
-app = ["hydms[figures]", "streamlit>=1.30"]
+#
+# Both bounds are measured, against the lock (card #82, 2026-09-24). The ceiling: 1.57.0 is
+# the first release to require `starlette>=0.40`, and the locked `fastapi` 0.115.0 accepts only
+# `starlette<0.39` -- an unbounded install resolved 1.64.0 and moved starlette to 1.7.0 and
+# protobuf to 7.x. The floor: below 1.40.0 streamlit caps `pillow<11` (and `tenacity<9` below
+# 1.39), and the lock holds pillow 11.0.0 and tenacity 9.0.0. Inside the range nothing locked
+# moves: 1.56.0, the version in requirements-lock.txt, installs six new packages and changes
+# none. Widening either bound is a lock decision; see docs/ENVIRONMENT.md.
+app = ["hydms[figures]", "streamlit>=1.40,<1.57"]
 
 # CBFV is the featuriser being *replaced*, kept only so the parity gate can diff against it.
 # It is unlicensed (all rights reserved by default), which is precisely why the descriptor

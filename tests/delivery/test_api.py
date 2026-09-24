@@ -57,6 +57,12 @@ from hydms.delivery.contract import (  # noqa: E402
     answer_from,
 )
 from hydms.delivery.modelcard import SCHEMA as MODEL_SCHEMA  # noqa: E402
+from hydms.delivery.neighbours import (  # noqa: E402
+    DEFAULT_K,
+    MAX_K,
+    Neighbourhood,
+    nearest_measured,
+)
 from hydms.delivery.predict import (  # noqa: E402
     ArtifactBundle,
     DeliveryError,
@@ -610,10 +616,10 @@ def test_no_handler_reaches_into_the_bundles_machinery(repo_root: Path) -> None:
         node.name: node
         for node in ast.walk(ast.parse(source))
         if isinstance(node, ast.FunctionDef)
-        and node.name in {"predict", "predict_batch", "health", "model"}
+        and node.name in {"predict", "predict_batch", "health", "model", "neighbours"}
     }
 
-    assert set(handlers) == {"predict", "predict_batch", "health", "model"}
+    assert set(handlers) == {"predict", "predict_batch", "health", "model", "neighbours"}
     for name, handler in handlers.items():
         private = sorted(
             {
@@ -652,6 +658,11 @@ def test_the_declared_response_models_carry_every_key_the_contract_writes(
     assert _fields(schemas.NoveltyBody) == set(answered["novelty"])
     assert _fields(schemas.ScreenVerdictBody) == set(refused["screens"][0])
 
+    looked_up = nearest_measured(KNOWN, bundle=bundle).to_dict()
+    assert _fields(schemas.NeighbourhoodBody) == set(looked_up)
+    assert _fields(schemas.KnownAlloyBody) == set(looked_up["neighbours"][0])
+    assert _fields(schemas.MeasuredBody) == set(looked_up["neighbours"][0]["measured"][0])
+
 
 def test_a_field_the_transport_does_not_declare_is_loud_rather_than_dropped(
     client: TestClient, monkeypatch
@@ -675,20 +686,157 @@ def test_a_field_the_transport_does_not_declare_is_loud_rather_than_dropped(
 
 
 # --------------------------------------------------------------------------------------
+# GET /v1/neighbours -- a lookup, not a prediction (card #82)
+# --------------------------------------------------------------------------------------
+
+
+def _near(client: TestClient, **query: object):
+    return client.get("/v1/neighbours", params=query)
+
+
+def test_the_neighbours_are_the_librarys_to_the_value(
+    client: TestClient, bundle: ArtifactBundle
+) -> None:
+    """Transport parity for the new route, the same claim HG-3 makes for predictions."""
+    response = _near(client, formula=KNOWN, k=7)
+
+    assert response.status_code == 200
+    assert response.json() == nearest_measured(KNOWN, 7, bundle=bundle).to_dict()
+    assert Neighbourhood.from_dict(response.json()) == nearest_measured(KNOWN, 7, bundle=bundle)
+
+
+def test_the_first_neighbour_is_the_nearest_a_prediction_names(client: TestClient) -> None:
+    """The page shows both; they are one measurement read twice, so they must agree."""
+    checked = 0
+    for formula in (KNOWN, "La0.8Ce0.2Ni5", "TiFe", FAR):
+        answer = _ask(client, formula, WARM).json()
+        if answer["refused"]:
+            continue
+        first = _near(client, formula=formula).json()["neighbours"][0]
+        assert first["formula"] == answer["novelty"]["nearest"], formula
+        assert first["distance"] == pytest.approx(answer["novelty"]["distance"], abs=1e-12)
+        checked += 1
+    assert checked >= 2, "too few admitted probes to compare anything"
+
+
+def test_a_neighbourhood_carries_measurements_and_no_field_a_prediction_could_occupy(
+    client: TestClient, bundle: ArtifactBundle
+) -> None:
+    payload = _near(client, formula=KNOWN).json()
+
+    assert payload["basis"] == "measured"
+    assert payload["model_version"] == bundle.version
+    assert len(payload["neighbours"]) == DEFAULT_K
+    assert not {"capacity", "interval", "refused", "domain"} & set(payload)
+    distances = [alloy["distance"] for alloy in payload["neighbours"]]
+    assert distances == sorted(distances)
+    assert all(alloy["measured"] for alloy in payload["neighbours"])
+
+
+def test_every_measured_row_served_is_a_training_row_of_that_composition(
+    client: TestClient,
+) -> None:
+    """Measured, never estimated: each row is read back against the committed reference."""
+    from hydms.screens.novelty import NoveltyReference
+
+    reference = NoveltyReference.packaged()
+    rows_of = dict(zip(reference.formulas, reference.measurements, strict=True))
+    for alloy in _near(client, formula="Mg2Ni", k=MAX_K).json()["neighbours"]:
+        recorded = [row.to_dict() for row in rows_of[alloy["formula"]]]
+        assert alloy["measured"] == recorded, alloy["formula"]
+
+
+def test_the_neighbours_name_the_reference_the_model_card_reports(client: TestClient) -> None:
+    screens = {entry["name"]: entry for entry in client.get("/v1/model").json()["screens"]}
+    payload = _near(client, formula=KNOWN).json()
+
+    assert payload["reference_sha256"] == screens["novelty"]["reference_sha256"]
+    assert payload["novelty_ceiling"] == pytest.approx(screens["novelty"]["limits"]["ceiling"])
+
+
+@pytest.mark.parametrize(
+    ("query", "says"),
+    [
+        ({}, "not a valid neighbours request"),
+        ({"formula": "   "}, "names no composition"),
+        ({"formula": KNOWN, "k": 0}, "not a valid neighbours request"),
+        ({"formula": KNOWN, "k": MAX_K + 1}, "not a valid neighbours request"),
+        ({"formula": KNOWN, "k": "five"}, "not a valid neighbours request"),
+    ],
+)
+def test_a_malformed_query_is_an_invalid_request_never_a_refusal(
+    client: TestClient, query: dict, says: str
+) -> None:
+    response = _near(client, **query)
+    body = response.json()
+
+    assert response.status_code == 422
+    assert body["error"] == "invalid_request"
+    assert "refused" not in body
+    assert says in body["message"]
+    assert all(problem["location"][0] == "query" for problem in body["problems"])
+
+
+def test_an_unreadable_formula_is_rejected_with_the_parsers_own_sentence(
+    client: TestClient,
+) -> None:
+    """The sentence a prediction for the same string is refused with, not a new one."""
+    response = _near(client, formula="LaNi5Xx2")
+    body = response.json()
+
+    assert response.status_code == 422
+    assert body["error"] == "invalid_request"
+    assert body["problems"][0]["kind"] == "composition"
+    assert "'Xx'" in body["problems"][0]["message"]
+    assert "'Xx'" in _ask(client, "LaNi5Xx2", WARM).json()["explanation"]
+
+
+def test_the_largest_k_is_served_and_the_default_is_documented(client: TestClient) -> None:
+    assert len(_near(client, formula=KNOWN, k=MAX_K).json()["neighbours"]) == MAX_K
+    route = client.get("/openapi.json").json()["paths"]["/v1/neighbours"]["get"]
+    parameters = {entry["name"]: entry for entry in route["parameters"]}
+
+    assert parameters["k"]["schema"]["default"] == DEFAULT_K
+    assert parameters["k"]["schema"]["maximum"] == MAX_K
+    assert parameters["formula"]["required"] is True
+
+
+def test_the_model_card_serves_the_temperature_support_behind_a_sweep(
+    client: TestClient,
+) -> None:
+    """Per-bin counts, over the same rows as the capacity range: the second #82 addition."""
+    ranges = client.get("/v1/model").json()["trained_ranges"]
+    support = ranges["temperature_support"]
+
+    assert len(support["edges"]) == len(support["counts"]) + 1
+    assert support["rows"] == sum(support["counts"]) == ranges["capacity"]["rows"]
+    assert support["units"] == "K"
+    assert support["edges"][0] <= ranges["temperature"]["low"]
+    assert support["edges"][-1] >= ranges["temperature"]["high"]
+
+
+# --------------------------------------------------------------------------------------
 # The published document
 # --------------------------------------------------------------------------------------
 
 
-def test_the_openapi_document_declares_the_four_routes_and_their_refusals(
+def test_the_openapi_document_declares_the_five_routes_and_their_refusals(
     client: TestClient,
 ) -> None:
     """#79 snapshots this; here it only has to exist and name what a caller must handle."""
     document = client.get("/openapi.json").json()
     paths = document["paths"]
 
-    assert set(paths) == {"/v1/predict", "/v1/predict/batch", "/v1/health", "/v1/model"}
+    assert set(paths) == {
+        "/v1/predict",
+        "/v1/predict/batch",
+        "/v1/health",
+        "/v1/model",
+        "/v1/neighbours",
+    }
     assert "422" in paths["/v1/predict"]["post"]["responses"]
     assert "422" in paths["/v1/predict/batch"]["post"]["responses"]
+    assert "422" in paths["/v1/neighbours"]["get"]["responses"]
     assert json.dumps(document), "the document must serialise; #79 writes it to disk"
 
 

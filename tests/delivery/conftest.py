@@ -12,6 +12,10 @@ built. A module that uses ``store`` does its own ``importorskip`` first.
 
 from __future__ import annotations
 
+import socket
+import threading
+import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -124,3 +128,45 @@ def store(tmp_path_factory) -> Path:
     )
     artifacts.promote("v1", store=directory)
     return directory
+
+
+def _free_socket() -> socket.socket:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", 0))
+    return sock
+
+
+@pytest.fixture(scope="module")
+def service(store: Path) -> Iterator[Any]:
+    """The fixture deployment, served by uvicorn on a loopback port for this module.
+
+    Here rather than in ``test_app.py`` since ``test_app_script.py`` drives the Streamlit script
+    against the same kind of server: two copies of a socket fixture are two to keep alive.
+    """
+    pytest.importorskip("fastapi", reason="the `api` extra: pip install -e '.[api]'")
+    pytest.importorskip("uvicorn", reason="the `api` extra serves the app over a real socket")
+    import uvicorn
+    from hydms.delivery.api import create_app
+    from hydms.delivery.client import ServiceClient
+    from hydms.delivery.predict import clear_cache, load_bundle
+
+    clear_cache()
+    app = create_app(resolve=lambda: load_bundle(store=store))
+    sock = _free_socket()
+    port = sock.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(app, log_level="warning", lifespan="on"))
+    thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]}, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 60.0
+    while not server.started:
+        if not thread.is_alive() or time.monotonic() > deadline:
+            raise RuntimeError("the fixture service did not start")
+        time.sleep(0.05)
+    try:
+        yield ServiceClient(f"http://127.0.0.1:{port}")
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10.0)
+        sock.close()
+        clear_cache()

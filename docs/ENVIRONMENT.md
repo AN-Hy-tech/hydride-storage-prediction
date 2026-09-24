@@ -50,7 +50,7 @@ single-file `conda env create` provably cannot rebuild this environment, for the
 |---|---|---|
 | `environment.yml` | 248 conda packages, exact versions, no build strings | 1 — different OS or architecture |
 | `environment.lock.yml` | 248 conda packages with build strings — the resolved solve | 1 — same platform |
-| `requirements-lock.txt` | 212 pip packages, exact versions | 2 — both cases |
+| `requirements-lock.txt` | 218 pip packages, exact versions | 2 — both cases |
 
 All have the machine-local `prefix:` line stripped; it records wherever the exporting machine
 happened to keep its envs, and conda ignores it on create.
@@ -93,6 +93,30 @@ The whole rebuild takes about 7 minutes with a warm package cache and appreciabl
 `pip freeze` reports it as `-e git+https://…#egg=hydms`. A regenerated `requirements-lock.txt`
 would carry that line and make the environment depend on cloning itself. Delete it after any
 regeneration.
+
+## The Streamlit pin (card #82, 2026-09-24)
+
+`streamlit==1.56.0` is in `requirements-lock.txt`, with the five packages it brings that
+`Project` did not have: `altair==6.2.2`, `narwhals==2.26.0`, `pydeck==0.9.3`, `toml==0.10.2`,
+`watchdog==6.0.0`. They were **added by hand**, which this page otherwise discourages, because the
+closure was measured rather than guessed: `pip install --dry-run --report` for `streamlit==1.56.0`
+listed those six to install and **no installed package to change**. A regenerated lock would
+carry them anyway.
+
+Why that version, from each release's declared dependencies screened against the lock:
+
+| Streamlit | Conflicts with the lock |
+|---|---|
+| 1.30–1.38 | `pillow<11` (lock: 11.0.0), `tenacity<9` (lock: 9.0.0) |
+| 1.39 | `pillow<11` |
+| **1.40–1.56** | **none** |
+| 1.57–1.60 | `starlette>=0.40` — the locked `fastapi` 0.115.0 needs `starlette<0.39` |
+| 1.61–1.64 | the above, and `protobuf>=5.26.1` (lock: 3.20.3) |
+
+So the `app` extra in `pyproject.toml` is `streamlit>=1.40,<1.57`, and the lock holds the newest
+release inside it. **Moving past 1.56 means moving `fastapi`/`starlette`**, which is the service's
+contract (card #79 snapshots the OpenAPI document FastAPI generates) — a decision for its own card,
+not a side effect of upgrading the page.
 
 ## Why two stages
 

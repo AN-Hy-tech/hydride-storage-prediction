@@ -141,6 +141,16 @@ SECTIONS: tuple[tuple[str, str], ...] = (
         "model-card",
         "The deployment's own description of itself: ranges, screens, and what has been certified.",
     ),
+    (
+        "neighbours-baseline",
+        "The known alloys nearest a composition, with what was **measured** on them. A lookup, "
+        "not a prediction: no interval, because nothing was estimated.",
+    ),
+    (
+        "neighbours-unreadable",
+        "A formula that is not a composition: an invalid request, with the same sentence a "
+        "prediction for it is refused with.",
+    ),
 )
 
 #: How many candidates of an over-long batch request the page prints before eliding the rest.
@@ -366,6 +376,17 @@ def _ranges_table(ranges: Mapping[str, Any]) -> list[str]:
             f"{capacity['units']}** — above it the corpus holds {capacity['rows_above']} row(s) "
             f"and they are all `{capacity['sole_family']}` | the `domain` screen |"
         )
+    support = ranges.get("temperature_support")
+    if support:
+        edges, counts = support["edges"], support["counts"]
+        bins = ", ".join(
+            f"{low:g}-{high:g}: {count}"
+            for low, high, count in zip(edges, edges[1:], counts, strict=False)
+        )
+        lines.append(
+            f"| Training rows per temperature bin ({support['units']}) | {bins} "
+            f"— {support['rows']} rows | nothing refuses on it; the page draws a sweep over it |"
+        )
     span = ranges.get("feature_span", {})
     if span:
         lines.append(
@@ -506,6 +527,10 @@ def document(captured: Mapping[str, Any] | None = None) -> str:
         exchange = exchanges[label]
         write(f"### `{exchange['method']} {exchange['path']}` — {blurb}")
         write("")
+        if exchange.get("query"):
+            query = "&".join(f"{key}={value}" for key, value in exchange["query"].items())
+            write(f"Query: `?{query}`")
+            write("")
         if exchange.get("request") is not None:
             write("Request:")
             write("")
@@ -874,7 +899,13 @@ def probe(out: TextIO | None = None) -> Path:
     from hydms.delivery.predict import load_bundle
 
     stream = out if out is not None else sys.stdout
+    queries: dict[str, dict[str, Any]] = {
+        "neighbours-baseline": {"formula": BASELINE[0], "k": 3},
+        "neighbours-unreadable": {"formula": "LaNi5Xx2"},
+    }
     requests: dict[str, tuple[str, str, Any]] = {
+        "neighbours-baseline": ("GET", f"{PREFIX}/neighbours", None),
+        "neighbours-unreadable": ("GET", f"{PREFIX}/neighbours", None),
         "health": ("GET", f"{PREFIX}/health", None),
         "model-card": ("GET", f"{PREFIX}/model", None),
         "predict-baseline": (
@@ -934,10 +965,14 @@ def probe(out: TextIO | None = None) -> Path:
     exchanges: dict[str, Any] = {}
     with TestClient(application) as client:
         for label, (method, path, body) in requests.items():
-            response = client.get(path) if method == "GET" else client.post(path, json=body)
+            query = queries.get(label)
+            response = (
+                client.get(path, params=query) if method == "GET" else client.post(path, json=body)
+            )
             exchanges[label] = {
                 "method": method,
                 "path": path,
+                **({"query": query} if query else {}),
                 "request": body,
                 "status": response.status_code,
                 "response": response.json(),

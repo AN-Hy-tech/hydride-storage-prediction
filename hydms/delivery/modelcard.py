@@ -86,6 +86,10 @@ _CAPACITY_FACTS = (
 )
 
 
+#: What the temperature support counts, in the words a chart caption prints.
+_SUPPORT_SOURCE = "training rows per temperature bin"
+
+
 def _limits(screen: Any) -> dict[str, Any]:
     """Every threshold this screen names, under the screen's own name for it."""
     found: dict[str, Any] = {}
@@ -151,6 +155,19 @@ def _trained_ranges(screens: tuple[Any, ...]) -> dict[str, Any]:
         if span is not None:
             ranges["feature_span"] = {
                 str(name): [float(bounds[0]), float(bounds[1])] for name, bounds in span.items()
+            }
+        counts = tuple(getattr(reference, "temperature_counts", ()) or ())
+        if counts:
+            # Per-bin, not the `low`/`high` of the temperature entry above: a sweep across the
+            # window is only as good as the rows behind each part of it, and 250-350 K holds
+            # most of them while 650-800 K holds six (card #82). Omitted rather than emptied
+            # when the reference measured none -- an empty histogram reads as "no rows".
+            ranges["temperature_support"] = {
+                "edges": [float(edge) for edge in reference.temperature_edges],
+                "counts": [int(count) for count in counts],
+                "rows": int(sum(counts)),
+                "units": "K",
+                "source": _SUPPORT_SOURCE,
             }
     return ranges
 

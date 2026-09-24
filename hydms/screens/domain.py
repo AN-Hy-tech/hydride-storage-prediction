@@ -136,6 +136,7 @@ import json
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 from typing import TextIO
 
@@ -224,6 +225,15 @@ _PRECEDENCE: tuple[str, ...] = (
 #: Molar mass of atomic hydrogen, g/mol. The only constant in the ceiling that is not a
 #: table lookup.
 HYDROGEN_MASS = 1.008
+
+#: Width of one temperature-support bin, kelvin. The support is a histogram of the training
+#: rows' temperatures, served on ``GET /v1/model`` so a client can draw the rows behind each
+#: part of a temperature sweep (card #82). 50 K because the corpus's resolution is coarser than
+#: that nowhere it matters: 366 of the 893 training rows sit in 250-300 K and the next nine
+#: bins thin to single digits by 650 K, and a finer bin would split that tail into bars of one.
+#: The edges are aligned to multiples of it, so a bin reads as "300 to 350 K" rather than
+#: "345 to 395 K".
+SUPPORT_BIN_K = 50.0
 
 #: The richest known binary hydride stoichiometry of each element, as H atoms per metal atom.
 #:
@@ -374,6 +384,12 @@ class DomainReference:
         feature_span: Feature name -> ``(min, max)`` over the training rows.
         transfer: Alloy class -> its leave-one-class-out R2, from
             ``reports/loco/loco-per-class.csv``.
+        temperature_edges: Bin edges, kelvin, ascending, one more than there are counts. Empty
+            when no support was measured -- a reference built for a test, or read from a file
+            written before card #82 needed it -- and then the model card omits the support
+            rather than reporting an empty histogram, which would read as "no rows anywhere".
+        temperature_counts: Training rows per bin: half-open, the last one closed. They sum
+            to ``rows``, because it is the same rows counted a second way.
     """
 
     rows: int
@@ -384,10 +400,35 @@ class DomainReference:
     rows_above: int
     feature_span: Mapping[str, tuple[float, float]]
     transfer: Mapping[str, float]
+    temperature_edges: tuple[float, ...] = ()
+    temperature_counts: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        edges = tuple(float(edge) for edge in self.temperature_edges)
+        counts = tuple(int(count) for count in self.temperature_counts)
+        object.__setattr__(self, "temperature_edges", edges)
+        object.__setattr__(self, "temperature_counts", counts)
+        if not edges and not counts:
+            return
+        if len(edges) != len(counts) + 1 or not counts:
+            raise ScreenError(
+                f"the temperature support has {len(edges)} edge(s) around {len(counts)} "
+                f"bin(s); a bin is bounded on both sides."
+            )
+        if any(later <= earlier for earlier, later in pairwise(edges)):
+            raise ScreenError(f"the temperature support edges are not ascending: {edges}.")
+        if any(count < 0 for count in counts):
+            raise ScreenError("a temperature support bin holds a negative number of rows.")
+        if sum(counts) != self.rows:
+            raise ScreenError(
+                f"the temperature support counts {sum(counts)} row(s) and the reference was "
+                f"measured over {self.rows}. It is the same rows counted by temperature, so a "
+                f"difference means one of the two was measured on something else."
+            )
 
     def to_json(self) -> str:
         """The committed form: sorted keys, two-space indent, one trailing newline."""
-        payload = {
+        payload: dict[str, object] = {
             "rows": self.rows,
             "trained_min": self.trained_min,
             "trained_max": self.trained_max,
@@ -397,6 +438,11 @@ class DomainReference:
             "feature_span": {name: list(bounds) for name, bounds in self.feature_span.items()},
             "transfer": dict(self.transfer),
         }
+        if self.temperature_counts:
+            payload["temperature_support"] = {
+                "edges": list(self.temperature_edges),
+                "counts": list(self.temperature_counts),
+            }
         return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
     @classmethod
@@ -415,6 +461,9 @@ class DomainReference:
         )
         if missing:
             raise ScreenError(f"the domain reference is missing {', '.join(missing)}.")
+        support = payload.get("temperature_support") or {}
+        if not isinstance(support, dict):
+            raise ScreenError("the domain reference's temperature_support is not an object.")
         return cls(
             rows=int(payload["rows"]),
             trained_min=float(payload["trained_min"]),
@@ -427,6 +476,8 @@ class DomainReference:
                 for name, (low, high) in payload["feature_span"].items()
             },
             transfer={str(name): float(value) for name, value in payload["transfer"].items()},
+            temperature_edges=tuple(float(edge) for edge in support.get("edges", ())),
+            temperature_counts=tuple(int(count) for count in support.get("counts", ())),
         )
 
     @classmethod
@@ -450,6 +501,8 @@ class DomainReference:
         target: str,
         features: Sequence[str],
         transfer: Mapping[str, float],
+        temperature: str | None = None,
+        temperature_edges: Sequence[float] = (),
     ) -> DomainReference:
         """Derive one from the training rows. See :func:`emit` for the caller that does.
 
@@ -457,7 +510,30 @@ class DomainReference:
         excluded -- i.e. the highest level every *other* family reaches. That is the level at
         which cross-family evidence stops, computed rather than typed, so a change in the
         curated data moves it instead of silently invalidating a constant.
+
+        ``temperature`` names the column to count into ``temperature_edges``; give both or
+        neither. A row outside the edges is an error rather than a row left uncounted, since the
+        support would then sum to less than ``rows`` and the sweep would under-report the
+        evidence at exactly the end of the range where it is thinnest.
         """
+        if (temperature is None) != (not temperature_edges):
+            raise ScreenError(
+                "the temperature support needs both the column to count and the edges to count "
+                "it into; one without the other measures nothing."
+            )
+        counts: tuple[int, ...] = ()
+        if temperature is not None:
+            edges = np.asarray([float(edge) for edge in temperature_edges], dtype=float)
+            kelvin = training[temperature].astype(float).to_numpy()
+            outside = (kelvin < edges[0]) | (kelvin > edges[-1])
+            if outside.any():
+                raise ScreenError(
+                    f"{int(outside.sum())} training row(s) lie outside the support edges "
+                    f"{edges[0]:g} to {edges[-1]:g} K; widen the edges rather than drop them."
+                )
+            # `np.histogram` is half-open with the last bin closed -- the convention
+            # `TemperatureSupport.measured` states, so the two cannot disagree on an edge.
+            counts = tuple(int(n) for n in np.histogram(kelvin, bins=edges)[0])
         capacity = training[target].astype(float)
         if capacity.empty:
             raise ScreenError("the domain reference needs training rows; none were given.")
@@ -487,6 +563,8 @@ class DomainReference:
                 if name in training.columns
             },
             transfer=dict(transfer),
+            temperature_edges=tuple(float(edge) for edge in temperature_edges),
+            temperature_counts=counts,
         )
 
 
@@ -826,6 +904,21 @@ def transfer_table(cfg: Config | None = None) -> dict[str, float]:
     return {str(row.alloy_class): float(row.r2) for row in table.itertuples()}
 
 
+def support_edges(low_k: float, high_k: float, width: float = SUPPORT_BIN_K) -> tuple[float, ...]:
+    """Bin edges covering ``[low_k, high_k]``, aligned to multiples of ``width``.
+
+    Read from the *configured* temperature window rather than from the training rows, so the
+    histogram spans exactly the range the ``temperature`` screen admits: an empty end bin is then
+    a finding about the data, where edges fitted to the rows could never show one.
+    """
+    if width <= 0 or high_k <= low_k:
+        raise ScreenError(f"no support bins fit {low_k:g} to {high_k:g} K at width {width:g}.")
+    start = float(np.floor(low_k / width) * width)
+    stop = float(np.ceil(high_k / width) * width)
+    count = round((stop - start) / width)
+    return tuple(start + width * step for step in range(count + 1))
+
+
 def emit(cfg: Config | None = None) -> DomainReference:
     """Measure the reference from the curated data. The slow half of this module.
 
@@ -847,6 +940,10 @@ def emit(cfg: Config | None = None) -> DomainReference:
         target=config.columns.target,
         features=settings.features,
         transfer=transfer_table(config),
+        temperature=config.columns.temperature,
+        temperature_edges=support_edges(
+            config.domain.temperature_min_k, config.domain.temperature_max_k
+        ),
     )
 
 
@@ -876,7 +973,8 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         f"transfer is "
         f"{_number(reference.transfer.get(reference.sole_family, float('nan')))}.\n"
         f"{len(reference.feature_span)} feature span(s), "
-        f"{len(reference.transfer)} class transfer(s).",
+        f"{len(reference.transfer)} class transfer(s), "
+        f"{len(reference.temperature_counts)} temperature support bin(s).",
         file=stream,
     )
     return 0

@@ -162,8 +162,12 @@ single prediction path and HG-3 covers the UI too.
       `hydms/delivery/page.py` (what the page shows), tested against uvicorn on a real socket.
       `app/main.py` is a thin Streamlit layer and **has never run**: Streamlit is not in `Project`,
       and an unpinned install would move `starlette` past what `fastapi` 0.115 accepts. That is a
-      lock decision for the maintainer. Neighbours and the sweep's support counts are **not
-      served**, so those two boxes need an API contract change first.
+      lock decision for the maintainer. The two API additions **landed 2026-09-24 night**:
+      `GET /v1/neighbours` (the k nearest known alloys with every row measured on them — a
+      lookup, not a prediction) and `trained_ranges.temperature_support` on `GET /v1/model`
+      (training rows per 50 K bin). Both are read from the committed screen references, not the
+      artifact, so `v3` serves them unchanged; `openapi.json` and `docs/API.md` are regenerated.
+      **The one open box is the Streamlit pin**, then running the script.
 - [ ] **#83** `app/pages/` model card. **Must carry two things** or the UI recreates the problem it was
       built to fix: the material-vs-system caveat from PRD §4.4 (comparing a material wt% to a DOE
       system target is a two-step overstatement), and a link to `docs/REPORT-RECONCILIATION.md` so the

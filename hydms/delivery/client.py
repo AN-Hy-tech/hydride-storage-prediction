@@ -29,7 +29,12 @@ A ``500``, a body that is not JSON, or a ``200`` that :func:`answer_from` cannot
 :class:`ServiceError`. There is no fallback that renders "something": a page that shows a
 half-read payload is how a dropped interval becomes a bare number on screen.
 
-It uses :mod:`urllib` rather than an HTTP library. The client makes four kinds of request, all
+**The neighbours lookup is a fifth call and not a fifth outcome.** ``GET /v1/neighbours``
+returns a :class:`~hydms.delivery.neighbours.Neighbourhood` -- measured rows, no prediction -- or
+the same :class:`InvalidRequest` a malformed prediction gets. It has no refusal, because nothing
+is judged.
+
+It uses :mod:`urllib` rather than an HTTP library. The client makes five kinds of request, all
 JSON, all to one host; a dependency would buy nothing it needs, and the `app` extra -- which
 CI does not install -- would then be the only thing that made this module importable.
 
@@ -40,6 +45,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -51,6 +57,7 @@ from hydms.delivery.contract import (
     PredictionRequest,
     answer_from,
 )
+from hydms.delivery.neighbours import Neighbourhood
 
 __all__ = [
     "DEFAULT_URL",
@@ -204,6 +211,30 @@ class ServiceClient:
         body = {"formula": formula, "temperature_k": temperature_k}
         status, payload = self._exchange("POST", "/predict", body)
         return self._outcome(status, payload, f"POST {PREFIX}/predict")
+
+    def neighbours(self, formula: str, k: int | None = None) -> Neighbourhood | InvalidRequest:
+        """``GET /v1/neighbours``: the known alloys nearest ``formula``, with measured capacities.
+
+        Args:
+            formula: The composition, as typed.
+            k: How many. ``None`` takes the service's default rather than restating it here.
+        """
+        query: dict[str, object] = {"formula": formula}
+        if k is not None:
+            query["k"] = int(k)
+        path = f"/neighbours?{urllib.parse.urlencode(query)}"
+        where = f"GET {PREFIX}/neighbours"
+        status, payload = self._exchange("GET", path)
+        if not isinstance(payload, Mapping):
+            raise ServiceError(f"{where} answered {status} with a JSON {type(payload).__name__}.")
+        if status == 422 and "error" in payload:
+            return _invalid_request(payload)
+        if status != 200:
+            raise ServiceError(f"{where} answered {status}; the route answers 200 or 422.")
+        try:
+            return Neighbourhood.from_dict(payload)
+        except ContractError as error:
+            raise ServiceError(f"{where} answered a body outside the contract: {error}") from error
 
     def predict_many(
         self, requests: Iterable[PredictionRequest], *, batch_rows: int | None = None

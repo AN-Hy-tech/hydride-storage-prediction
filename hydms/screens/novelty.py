@@ -154,9 +154,11 @@ __all__ = [
     "PETTI_SLOTS",
     "REFERENCE_FILE",
     "ElementMoversDistance",
+    "Measurement",
     "NoveltyReference",
     "distances",
     "emit",
+    "nearest_known",
     "novelty_screen",
     "vectors",
 ]
@@ -408,9 +410,73 @@ def distances(
     return distance, index
 
 
+def nearest_known(
+    formula: str, reference: NoveltyReference, k: int
+) -> tuple[NDArray[np.intp], NDArray[np.float64], str]:
+    """The ``k`` known compositions closest to one formula, nearest first.
+
+    The same metric, the same vectors and the same reference the screen judges with, so the
+    first position returned is the ``nearest`` the screen writes on a verdict row: :func:`distances`
+    takes the *first* minimum and a stable sort keeps the lowest position first among ties. That
+    agreement is what lets a page show "the nearest known alloy" and the k nearest beside it
+    without the two naming different alloys.
+
+    Ties are broken by position, which is formula order, because :meth:`NoveltyReference.measured`
+    sorts the formulas. Explicit rather than incidental: a default quicksort orders equal keys
+    arbitrarily past sixteen of them, and two compositions at the same distance is common --
+    every spelling-variant pair is one.
+
+    Returns:
+        ``(positions, distance, cause)``. ``cause`` is empty when the formula is a composition;
+        otherwise it is :func:`vectors`' sentence saying why not, and both arrays are empty --
+        a formula that cannot be read has no neighbours, not distant ones.
+    """
+    from scipy.spatial.distance import cdist
+
+    if k < 1:
+        raise ScreenError(f"asked for {k} neighbour(s); the nearest is at least one.")
+    matrix, unreadable = vectors([formula])
+    if unreadable:
+        return np.empty(0, dtype=np.intp), np.empty(0, dtype=np.float64), unreadable[0]
+    pairwise = cdist(
+        np.cumsum(matrix, axis=1), np.cumsum(reference.petti, axis=1), "cityblock"
+    )[0]
+    order = np.argsort(pairwise, kind="stable")[:k]
+    return order.astype(np.intp), pairwise[order], ""
+
+
 # --------------------------------------------------------------------------------------
 # The measured reference
 # --------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Measurement:
+    """One training row of a known composition: what was measured, where, and on which family.
+
+    A measurement, never a prediction -- it is what the nearest-alloys route (card #82) serves
+    beside a prediction so a reader can compare the two, and a predicted number here would make
+    that comparison circular.
+    """
+
+    temperature_k: float
+    capacity: float
+    alloy_class: str
+
+    def __post_init__(self) -> None:
+        for name in ("temperature_k", "capacity"):
+            value = float(getattr(self, name))
+            if not np.isfinite(value):
+                raise ScreenError(f"a measurement's {name} is {value}; it must be finite.")
+            object.__setattr__(self, name, value)
+        object.__setattr__(self, "alloy_class", str(self.alloy_class))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "temperature_k": self.temperature_k,
+            "capacity": self.capacity,
+            "alloy_class": self.alloy_class,
+        }
 
 
 @dataclass(frozen=True)
@@ -430,6 +496,10 @@ class NoveltyReference:
             :data:`BEYOND_KNOWN_CHEMISTRY`.
         loneliest: The composition that sets ``ceiling``, and ``loneliest_nearest`` is what
             it is that far from. Named because a bound held up by one row should say so.
+        measurements: Per composition, aligned with ``formulas``, every training row measured
+            on it -- every row whose canonical key is that composition's, whichever spelling
+            it was recorded under -- sorted by temperature. Empty when not recorded, which the
+            screen does not need and the nearest-alloys route refuses to serve from.
     """
 
     formulas: tuple[str, ...]
@@ -437,10 +507,25 @@ class NoveltyReference:
     ceiling: float
     loneliest: str
     loneliest_nearest: str
+    measurements: tuple[tuple[Measurement, ...], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.formulas:
             raise ScreenError("a novelty reference with no known compositions refuses nothing.")
+        measurements = tuple(tuple(rows) for rows in self.measurements)
+        object.__setattr__(self, "measurements", measurements)
+        if measurements:
+            if len(measurements) != len(self.formulas):
+                raise ScreenError(
+                    f"the reference has {len(self.formulas)} formula(s) and measurements for "
+                    f"{len(measurements)}; they describe the same compositions."
+                )
+            empty = [self.formulas[at] for at, rows in enumerate(measurements) if not rows]
+            if empty:
+                raise ScreenError(
+                    f"{_named(empty)} carry no measurement. Every known composition is known "
+                    f"because a training row measured it."
+                )
         if self.petti.shape != (len(self.formulas), PETTI_SLOTS):
             raise ScreenError(
                 f"the reference has {len(self.formulas)} formula(s) and a "
@@ -482,6 +567,11 @@ class NoveltyReference:
                         str(slot): float(self.petti[position, slot])
                         for slot in np.flatnonzero(self.petti[position])
                     },
+                    **(
+                        {"measured": [row.to_dict() for row in self.measurements[position]]}
+                        if self.measurements
+                        else {}
+                    ),
                 }
                 for position, formula in enumerate(self.formulas)
             ],
@@ -511,9 +601,33 @@ class NoveltyReference:
         entries = payload["compositions"]
         matrix = np.zeros((len(entries), PETTI_SLOTS), dtype=np.float64)
         formulas = []
+        recorded = sum("measured" in entry for entry in entries)
+        if recorded not in (0, len(entries)):
+            raise ScreenError(
+                f"the novelty reference records measurements for {recorded} of its "
+                f"{len(entries)} compositions; a partly recorded file is one written by hand."
+            )
+        measurements: list[tuple[Measurement, ...]] = []
         for position, entry in enumerate(entries):
             formula = str(entry["formula"])
             formulas.append(formula)
+            if recorded:
+                try:
+                    measurements.append(
+                        tuple(
+                            Measurement(
+                                temperature_k=float(row["temperature_k"]),
+                                capacity=float(row["capacity"]),
+                                alloy_class=str(row["alloy_class"]),
+                            )
+                            for row in entry["measured"]
+                        )
+                    )
+                except (KeyError, TypeError, ValueError) as error:
+                    raise ScreenError(
+                        f"the novelty reference's measurements for {formula!r} are not "
+                        f"temperature_k, capacity and alloy_class: {error!r}."
+                    ) from error
             # Read rather than trusted. A slot outside the scale is an `IndexError` and a
             # *negative* one is worse -- numpy wraps it onto the far end of the Pettifor
             # ordering, so a hand-edited or older-format file would quietly relabel an
@@ -553,6 +667,7 @@ class NoveltyReference:
             ceiling=ceiling,
             loneliest=str(payload["loneliest"]),
             loneliest_nearest=str(payload.get("loneliest_nearest", "")),
+            measurements=tuple(measurements),
         )
 
     @classmethod
@@ -568,13 +683,35 @@ class NoveltyReference:
         return cls.from_json(text)
 
     @classmethod
-    def measured(cls, formulas: Sequence[str]) -> NoveltyReference:
+    def measured(
+        cls,
+        formulas: Sequence[str],
+        measurements: Mapping[str, Sequence[Measurement]] | None = None,
+    ) -> NoveltyReference:
         """Derive one from a set of known formulas. See :func:`emit` for the real caller.
 
         ``ceiling`` is the maximum over compositions of the distance to the nearest *other*
         composition -- computed here rather than typed, so new data moves it.
+
+        ``measurements`` maps each formula to its training rows; given, it must cover every
+        formula. Each composition's rows are stored sorted by temperature, capacity and class,
+        so the file does not depend on the order the rows arrived in.
         """
         ordered = tuple(sorted(dict.fromkeys(str(formula) for formula in formulas)))
+        recorded: tuple[tuple[Measurement, ...], ...] = ()
+        if measurements is not None:
+            absent = [formula for formula in ordered if not measurements.get(formula)]
+            if absent:
+                raise ScreenError(f"no measurements were given for {_named(absent)}.")
+            recorded = tuple(
+                tuple(
+                    sorted(
+                        measurements[formula],
+                        key=lambda row: (row.temperature_k, row.capacity, row.alloy_class),
+                    )
+                )
+                for formula in ordered
+            )
         if len(ordered) < 2:
             raise ScreenError(
                 f"the novelty ceiling is the widest gap *between* known compositions and "
@@ -597,6 +734,7 @@ class NoveltyReference:
             ceiling=float(separation[worst]),
             loneliest=ordered[worst],
             loneliest_nearest=ordered[int(nearest[worst])],
+            measurements=recorded,
         )
 
 
@@ -749,7 +887,7 @@ def emit(cfg: Config | None = None) -> NoveltyReference:
     spellings are one material -- called rather than re-derived, because #87 owns that identity
     and ``Ce1Mg12``/``Mg12Ce1`` is the reason it exists.
     """
-    from hydms.data.canonical import group_keys
+    from hydms.data.canonical import alloy_classes, group_keys
     from hydms.surrogate.model import ModelSettings, capacity_matrix
     from hydms.surrogate.scaler import TRAIN
 
@@ -767,7 +905,22 @@ def emit(cfg: Config | None = None) -> NoveltyReference:
         .first()
         .to_dict()
     )
-    return NoveltyReference.measured(sorted(chosen.values()))
+    # Every training row, filed under its composition's chosen spelling. The class is read
+    # through `alloy_classes`, the reconciled label the applicability reference also uses, so
+    # the two committed references cannot name one row's family differently.
+    classes = alloy_classes(training)
+    measured: dict[str, list[Measurement]] = {}
+    for key, kelvin, capacity, family in zip(
+        keys.to_numpy(),
+        training[config.columns.temperature].astype(float).to_numpy(),
+        training[config.columns.target].astype(float).to_numpy(),
+        classes.astype(str).to_numpy(),
+        strict=True,
+    ):
+        measured.setdefault(chosen[key], []).append(
+            Measurement(temperature_k=kelvin, capacity=capacity, alloy_class=family)
+        )
+    return NoveltyReference.measured(sorted(chosen.values()), measured)
 
 
 def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:

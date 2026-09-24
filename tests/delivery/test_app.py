@@ -17,9 +17,9 @@ import ast
 import json
 import socket
 import threading
-import time
-from collections.abc import Iterator
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -44,18 +44,28 @@ from hydms.delivery.contract import (  # noqa: E402
     PredictionResult,
     Refusal,
 )
+from hydms.delivery.neighbours import (  # noqa: E402
+    DEFAULT_K,
+    Neighbourhood,
+    nearest_measured,
+)
 from hydms.delivery.page import (  # noqa: E402
     ANSWERED,
     INVALID_REQUEST,
     REFUSED,
+    SWEEP_STEP_K,
     UNREACHABLE,
     PageError,
     PageView,
+    neighbours_figure,
     prediction_view,
     reference_from,
+    support_from,
+    sweep_temperatures,
+    sweep_view,
     unreachable_view,
 )
-from hydms.delivery.predict import clear_cache, load_bundle, predict_capacity  # noqa: E402
+from hydms.delivery.predict import load_bundle, predict_capacity  # noqa: E402
 from hydms.figures import Figure  # noqa: E402
 
 #: The same pair ``test_api.py`` uses, for the reasons it gives: the fixture fit answers the
@@ -74,33 +84,6 @@ def _free_socket() -> socket.socket:
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("127.0.0.1", 0))
     return sock
-
-
-@pytest.fixture(scope="module")
-def service(store: Path) -> Iterator[ServiceClient]:
-    """The fixture deployment, served by uvicorn on a loopback port for this module."""
-    import uvicorn
-    from hydms.delivery.api import create_app
-
-    clear_cache()
-    app = create_app(resolve=lambda: load_bundle(store=store))
-    sock = _free_socket()
-    port = sock.getsockname()[1]
-    server = uvicorn.Server(uvicorn.Config(app, log_level="warning", lifespan="on"))
-    thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]}, daemon=True)
-    thread.start()
-    deadline = time.monotonic() + 60.0
-    while not server.started:
-        if not thread.is_alive() or time.monotonic() > deadline:
-            raise RuntimeError("the fixture service did not start")
-        time.sleep(0.05)
-    try:
-        yield ServiceClient(f"http://127.0.0.1:{port}")
-    finally:
-        server.should_exit = True
-        thread.join(timeout=10.0)
-        sock.close()
-        clear_cache()
 
 
 @pytest.fixture(scope="module")
@@ -342,6 +325,120 @@ def test_a_card_without_the_trained_range_is_refused_rather_than_defaulted(card:
 
     with pytest.raises(PageError, match="trained capacity range"):
         reference_from(stripped)
+
+
+# --------------------------------------------------------------------------------------
+# The nearest known alloys and the temperature sweep -- the two boxes the service now serves
+# --------------------------------------------------------------------------------------
+
+
+def test_the_neighbours_over_the_wire_are_the_librarys(service: ServiceClient, store: Path) -> None:
+    served = service.neighbours(KNOWN, k=4)
+
+    assert isinstance(served, Neighbourhood)
+    assert served == nearest_measured(KNOWN, 4, bundle=load_bundle(store=store))
+
+
+def test_the_service_default_k_is_used_when_the_client_names_none(service: ServiceClient) -> None:
+    served = service.neighbours(KNOWN)
+
+    assert isinstance(served, Neighbourhood)
+    assert len(served.neighbours) == DEFAULT_K
+
+
+def test_a_bad_neighbours_query_is_an_invalid_request_not_an_error(service: ServiceClient) -> None:
+    """urllib raises on the 422; the client reads it, as it does for a prediction."""
+    for outcome in (service.neighbours("  "), service.neighbours("LaNi5Xx2"), service.neighbours(KNOWN, k=0)):
+        assert isinstance(outcome, InvalidRequest)
+        assert outcome.problems
+
+
+def test_the_neighbours_chart_draws_measurements_nearest_the_asked_temperature(
+    service: ServiceClient,
+) -> None:
+    result = service.predict(KNOWN, WARM)
+    neighbourhood = service.neighbours(KNOWN)
+    assert isinstance(result, PredictionResult) and isinstance(neighbourhood, Neighbourhood)
+
+    figure = neighbours_figure(result, neighbourhood)
+
+    assert figure.name == "nearest-neighbours"
+    known = figure.panels[0].series[0]
+    expected = [alloy.closest_to(WARM) for alloy in neighbourhood.neighbours]
+    assert list(known.y) == [row.capacity for row in expected]
+    assert figure.caption.startswith(f"Nearest known alloy {result.novelty.nearest}")
+
+
+def test_neighbours_of_another_formula_or_version_are_not_drawn_with_an_answer(
+    service: ServiceClient,
+) -> None:
+    result = service.predict(KNOWN, WARM)
+    other = service.neighbours("TiFe")
+    assert isinstance(result, PredictionResult) and isinstance(other, Neighbourhood)
+
+    with pytest.raises(PageError, match="one chart cannot carry both"):
+        neighbours_figure(result, other)
+    moved = replace(service.neighbours(KNOWN), model_version="v999")
+    with pytest.raises(PageError, match="changed version"):
+        neighbours_figure(result, moved)
+
+
+def test_the_sweep_is_drawn_over_the_served_support(service: ServiceClient, card: dict) -> None:
+    temperatures = sweep_temperatures(card)
+    answers = service.predict_many(PredictionRequest(KNOWN, kelvin) for kelvin in temperatures)
+    assert not isinstance(answers, InvalidRequest)
+
+    view = sweep_view(answers, card=card)
+
+    assert isinstance(view.figure, Figure)
+    assert view.figure.name == "temperature-sweep"
+    bars = view.figure.panels[1].series[0]
+    assert list(bars.y) == [float(n) for n in card["trained_ranges"]["temperature_support"]["counts"]]
+    assert view.version == card["version"]
+    answered = sum(isinstance(answer, PredictionResult) for answer in answers)
+    assert len(view.figure.panels[0].series[0].x) == answered
+    assert len(view.refused) == len(answers) - answered
+
+
+def test_sweep_temperatures_span_the_served_window_inclusive(card: dict) -> None:
+    window = card["trained_ranges"]["temperature"]
+    points = sweep_temperatures(card)
+
+    assert points[0] == window["low"] and points[-1] == window["high"]
+    assert all(b - a <= SWEEP_STEP_K for a, b in pairwise(points))
+    assert len(points) <= 256, "one batch request"
+
+
+def test_a_refused_temperature_is_a_listed_gap_never_a_point_on_the_curve(
+    service: ServiceClient, card: dict
+) -> None:
+    answers = service.predict_many(
+        [PredictionRequest(KNOWN, WARM), PredictionRequest(KNOWN, HOT), PredictionRequest(KNOWN, 350.0)]
+    )
+    assert not isinstance(answers, InvalidRequest)
+
+    view = sweep_view(answers, card=card)
+
+    assert view.refused == ((HOT, "outside-window"),)
+    assert HOT not in view.figure.panels[0].series[0].x
+    assert "listed, not filled in" in view.headline
+
+
+def test_a_sweep_with_nothing_answered_has_no_curve(service: ServiceClient, card: dict) -> None:
+    answers = service.predict_many([PredictionRequest(KNOWN, HOT), PredictionRequest(KNOWN, 1100.0)])
+    assert not isinstance(answers, InvalidRequest)
+
+    view = sweep_view(answers, card=card)
+
+    assert view.figure is None
+    assert len(view.refused) == 2
+
+
+def test_a_card_without_the_support_is_refused_rather_than_remembered(card: dict) -> None:
+    ranges = {key: value for key, value in card["trained_ranges"].items() if key != "temperature_support"}
+
+    with pytest.raises(PageError, match="how many training rows"):
+        support_from({**card, "trained_ranges": ranges})
 
 
 # --------------------------------------------------------------------------------------

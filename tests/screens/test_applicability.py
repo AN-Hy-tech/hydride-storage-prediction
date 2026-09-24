@@ -18,6 +18,8 @@ rather than about the code, and they exist so the decision cannot be quietly und
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 pytest.importorskip("pandas", reason="the screen layer is pandas frames end to end")
@@ -34,12 +36,15 @@ from hydms.screens.domain import (  # noqa: E402
     OUT_OF_DOMAIN,
     OUTSIDE_FEATURE_RANGE,
     REFERENCE_FILE,
+    SUPPORT_BIN_K,
     TRANSFER_COLUMN,
     UNTRUSTED_FAMILY,
     ApplicabilityDomain,
     DomainReference,
     applicability_domain,
     capacity_ceiling,
+    emit,
+    support_edges,
 )
 from hydms.screens.protocol import (  # noqa: E402
     ADMITTED,
@@ -520,3 +525,86 @@ def test_an_empty_batch_is_judged_without_special_casing(
     assert len(verdict) == 0
     assert list(verdict.columns)[:3] == ["passed", "code", "reason"]
     assert CEILING_COLUMN in verdict.columns
+
+
+# --------------------------------------------------------------------------------------
+# The temperature support (card #82)
+# --------------------------------------------------------------------------------------
+
+
+def test_the_committed_support_counts_every_training_row_across_the_configured_window() -> None:
+    """The histogram ``GET /v1/model`` serves, so a sweep can say how many rows back it."""
+    reference = DomainReference.packaged()
+    config = load_config()
+
+    assert sum(reference.temperature_counts) == reference.rows == 893
+    assert len(reference.temperature_edges) == len(reference.temperature_counts) + 1
+    assert reference.temperature_edges[0] <= config.domain.temperature_min_k
+    assert reference.temperature_edges[-1] >= config.domain.temperature_max_k
+    assert all(edge % SUPPORT_BIN_K == 0 for edge in reference.temperature_edges)
+
+
+def test_the_committed_reference_is_what_emit_measures() -> None:
+    """The module docstring has claimed this since #48 and no test checked it until #82.
+
+    Not marked slow: it re-measures from the curated data in a few seconds, the same budget
+    ``test_novelty.py``'s twin was measured at, and a committed file whose only guard is in the
+    lane CI deselects has no guard.
+    """
+    assert REFERENCE_FILE.read_text(encoding="utf-8") == emit().to_json()
+
+
+def test_support_edges_are_aligned_and_cover_the_window() -> None:
+    assert support_edges(195.0, 773.0) == tuple(float(k) for k in range(150, 801, 50))
+    assert support_edges(200.0, 300.0) == (200.0, 250.0, 300.0)
+    with pytest.raises(ScreenError, match="no support bins"):
+        support_edges(300.0, 300.0)
+
+
+def test_the_support_is_counted_half_open_with_the_last_bin_closed() -> None:
+    """The convention `TemperatureSupport.measured` states, so the served bars match a redraw."""
+    training = pd.DataFrame(
+        {"y": [1.0, 2.0, 3.0, 4.0], "T": [200.0, 250.0, 260.0, 300.0], FEATURE: [0.0] * 4}
+    )
+    classes = pd.Series(["A", "B", "A", "B"], index=training.index)
+    reference = DomainReference.measured(
+        training, classes, target="y", features=[FEATURE], transfer={},
+        temperature="T", temperature_edges=(200.0, 250.0, 300.0),
+    )
+
+    assert reference.temperature_counts == (1, 3)
+    assert DomainReference.from_json(reference.to_json()) == reference
+
+
+def test_a_row_outside_the_support_edges_is_an_error_not_a_row_left_uncounted() -> None:
+    training = pd.DataFrame({"y": [1.0, 2.0], "T": [200.0, 900.0], FEATURE: [0.0, 1.0]})
+    classes = pd.Series(["A", "B"], index=training.index)
+    with pytest.raises(ScreenError, match="outside the support edges"):
+        DomainReference.measured(
+            training, classes, target="y", features=[FEATURE], transfer={},
+            temperature="T", temperature_edges=(150.0, 200.0, 250.0),
+        )
+
+
+def test_edges_without_a_column_measure_nothing_and_say_so() -> None:
+    training = pd.DataFrame({"y": [1.0, 2.0], FEATURE: [0.0, 1.0]})
+    classes = pd.Series(["A", "B"], index=training.index)
+    with pytest.raises(ScreenError, match="both the column"):
+        DomainReference.measured(
+            training, classes, target="y", features=[FEATURE], transfer={},
+            temperature_edges=(150.0, 200.0),
+        )
+
+
+def test_a_support_that_counts_different_rows_is_refused() -> None:
+    """Same rows counted twice; a mismatch means one count was of something else."""
+    payload = json.loads(DomainReference.packaged().to_json())
+    payload["temperature_support"]["counts"][0] += 1
+    with pytest.raises(ScreenError, match="counts 894 row"):
+        DomainReference.from_json(json.dumps(payload))
+
+
+def test_a_reference_without_a_support_serialises_without_one() -> None:
+    """Absent is omitted, never written as an empty histogram that reads as 'no rows'."""
+    assert "temperature_support" not in json.loads(REFERENCE.to_json())
+    assert DomainReference.from_json(REFERENCE.to_json()).temperature_counts == ()

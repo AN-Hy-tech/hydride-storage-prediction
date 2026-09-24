@@ -45,6 +45,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from hydms.delivery.contract import SCHEMA, SPACE, UNIT
+from hydms.delivery.neighbours import SCHEMA as NEIGHBOURS_SCHEMA
 
 __all__ = [
     "Answer",
@@ -54,6 +55,9 @@ __all__ = [
     "Declined",
     "Health",
     "InvalidRequest",
+    "KnownAlloyBody",
+    "MeasuredBody",
+    "NeighbourhoodBody",
     "PredictionResultBody",
     "Problem",
     "RefusalBody",
@@ -213,6 +217,54 @@ class Health(_Payload):
     max_batch_rows: int = Field(
         description="The most candidates POST /v1/predict/batch will accept in one request."
     )
+
+
+class MeasuredBody(_Payload):
+    """One training row as it was recorded. No interval, because nothing was estimated."""
+
+    temperature_k: float
+    capacity: float
+    alloy_class: str
+
+
+class KnownAlloyBody(_Payload):
+    """A training composition near the one asked about, with every row measured on it."""
+
+    formula: str
+    distance: float = Field(
+        description=(
+            "ElMD on the modified-Pettifor scale. 0 means it is the composition asked about."
+        )
+    )
+    measured: list[MeasuredBody] = Field(
+        description="Every training row, ascending in temperature."
+    )
+
+
+class NeighbourhoodBody(_Payload):
+    """The known alloys nearest a composition. A lookup, not a prediction, and shaped so."""
+
+    neighbours_schema: str = Field(default=NEIGHBOURS_SCHEMA, alias="schema")
+    formula: str
+    model_version: str
+    basis: Literal["measured"] = Field(
+        default="measured",
+        description="Every capacity here is a recorded training row, never an estimate.",
+    )
+    unit: str = UNIT
+    metric: str
+    scale: str
+    novelty_ceiling: float = Field(
+        description=(
+            "The distance past which POST /v1/predict refuses as beyond-known-chemistry."
+        )
+    )
+    reference_sha256: str | None = Field(
+        description=(
+            "The novelty reference the neighbours were read from, as GET /v1/model reports it."
+        )
+    )
+    neighbours: list[KnownAlloyBody] = Field(description="Nearest first.")
 
 
 # --------------------------------------------------------------------------------------

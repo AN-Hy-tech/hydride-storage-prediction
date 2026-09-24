@@ -221,6 +221,136 @@
         "title": "InvalidRequest",
         "type": "object"
       },
+      "KnownAlloyBody": {
+        "additionalProperties": false,
+        "description": "A training composition near the one asked about, with every row measured on it.",
+        "properties": {
+          "distance": {
+            "description": "ElMD on the modified-Pettifor scale. 0 means it is the composition asked about.",
+            "title": "Distance",
+            "type": "number"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "measured": {
+            "description": "Every training row, ascending in temperature.",
+            "items": {
+              "$ref": "#/components/schemas/MeasuredBody"
+            },
+            "title": "Measured",
+            "type": "array"
+          }
+        },
+        "required": [
+          "formula",
+          "distance",
+          "measured"
+        ],
+        "title": "KnownAlloyBody",
+        "type": "object"
+      },
+      "MeasuredBody": {
+        "additionalProperties": false,
+        "description": "One training row as it was recorded. No interval, because nothing was estimated.",
+        "properties": {
+          "alloy_class": {
+            "title": "Alloy Class",
+            "type": "string"
+          },
+          "capacity": {
+            "title": "Capacity",
+            "type": "number"
+          },
+          "temperature_k": {
+            "title": "Temperature K",
+            "type": "number"
+          }
+        },
+        "required": [
+          "temperature_k",
+          "capacity",
+          "alloy_class"
+        ],
+        "title": "MeasuredBody",
+        "type": "object"
+      },
+      "NeighbourhoodBody": {
+        "additionalProperties": false,
+        "description": "The known alloys nearest a composition. A lookup, not a prediction, and shaped so.",
+        "properties": {
+          "basis": {
+            "const": "measured",
+            "default": "measured",
+            "description": "Every capacity here is a recorded training row, never an estimate.",
+            "title": "Basis",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "neighbours": {
+            "description": "Nearest first.",
+            "items": {
+              "$ref": "#/components/schemas/KnownAlloyBody"
+            },
+            "title": "Neighbours",
+            "type": "array"
+          },
+          "novelty_ceiling": {
+            "description": "The distance past which POST /v1/predict refuses as beyond-known-chemistry.",
+            "title": "Novelty Ceiling",
+            "type": "number"
+          },
+          "reference_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The novelty reference the neighbours were read from, as GET /v1/model reports it.",
+            "title": "Reference Sha256"
+          },
+          "scale": {
+            "title": "Scale",
+            "type": "string"
+          },
+          "schema": {
+            "default": "hydms.delivery.neighbours/1",
+            "title": "Schema",
+            "type": "string"
+          },
+          "unit": {
+            "default": "wt%",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "formula",
+          "model_version",
+          "metric",
+          "scale",
+          "novelty_ceiling",
+          "reference_sha256",
+          "neighbours"
+        ],
+        "title": "NeighbourhoodBody",
+        "type": "object"
+      },
       "NoveltyBody": {
         "additionalProperties": false,
         "description": "How far this composition is from the nearest alloy the model was trained on.",
@@ -545,6 +675,64 @@
           }
         },
         "summary": "The model card: version, training date, what has been certified, and ranges"
+      }
+    },
+    "/v1/neighbours": {
+      "get": {
+        "operationId": "neighbours_v1_neighbours_get",
+        "parameters": [
+          {
+            "description": "The composition, as written.",
+            "in": "query",
+            "name": "formula",
+            "required": true,
+            "schema": {
+              "description": "The composition, as written.",
+              "examples": [
+                "LaNi5"
+              ],
+              "title": "Formula",
+              "type": "string"
+            }
+          },
+          {
+            "description": "How many neighbours, nearest first.",
+            "in": "query",
+            "name": "k",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "How many neighbours, nearest first.",
+              "maximum": 25,
+              "minimum": 1,
+              "title": "K",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighbourhoodBody"
+                }
+              }
+            },
+            "description": "The k training compositions nearest the formula on the ElMD scale, nearest first, each with every row measured on it. **Measured values, not predictions**: there is no interval because nothing was estimated. The first neighbour is the `novelty.nearest` a prediction for the same formula names."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "The query was rejected: no formula, a blank one, one that is not a composition, or `k` out of range. Never a refusal: nothing was judged."
+          }
+        },
+        "summary": "The known alloys nearest a composition, with their measured capacities"
       }
     },
     "/v1/predict": {

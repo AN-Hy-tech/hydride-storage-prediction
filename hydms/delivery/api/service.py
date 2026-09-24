@@ -1,9 +1,12 @@
 """The HTTP boundary: transport, validation, error shape, and which version answered.
 
-Four routes, and not one of them computes anything. ``POST /v1/predict`` builds the contract's
+Five routes, and not one of them computes anything. ``POST /v1/predict`` builds the contract's
 own request type, hands it to :func:`~hydms.delivery.predict.predict_capacity`, and serialises
 what comes back; ``POST /v1/predict/batch`` does that in a loop; ``GET /v1/health`` reports the
-loaded version; ``GET /v1/model`` returns :func:`~hydms.delivery.modelcard.model_card`. A
+loaded version; ``GET /v1/model`` returns :func:`~hydms.delivery.modelcard.model_card`; and
+``GET /v1/neighbours`` returns :func:`~hydms.delivery.neighbours.nearest_measured` -- the known
+alloys nearest a composition, with what was *measured* on them, which is a lookup and not a
+prediction (card #82). A
 handler that reached into the model would be the shallow design stage S6 exists to avoid, and
 it is how the app and the API start disagreeing -- so ``tests/delivery/test_api.py`` parses
 every module in this package and fails on an import of the surrogate, the descriptors, the
@@ -54,12 +57,13 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, FastAPI, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from hydms.delivery.contract import SCHEMA, ContractError, PredictionRequest
 from hydms.delivery.modelcard import model_card
+from hydms.delivery.neighbours import DEFAULT_K, MAX_K, UnreadableFormula, nearest_measured
 from hydms.delivery.predict import ArtifactBundle, DeliveryError, load_bundle, predict_capacity
 
 from .schemas import (
@@ -70,6 +74,7 @@ from .schemas import (
     Declined,
     Health,
     InvalidRequest,
+    NeighbourhoodBody,
     Problem,
     model_card_schema,
 )
@@ -216,6 +221,12 @@ def _validation_handler(request: Request, error: Exception) -> Response:
     met first.
     """
     assert isinstance(error, RequestValidationError)
+    # The only route with a query string is the neighbours lookup, and a sentence calling its
+    # query "a prediction request" would describe the caller's mistake with the wrong noun.
+    if any(entry["loc"] and entry["loc"][0] == "query" for entry in error.errors()):
+        message = "the query is not a valid neighbours request."
+    else:
+        message = "the request body is not a valid prediction request."
     problems = [
         Problem(
             location=[part if isinstance(part, int) else str(part) for part in entry["loc"]],
@@ -224,7 +235,7 @@ def _validation_handler(request: Request, error: Exception) -> Response:
         )
         for entry in error.errors()
     ]
-    return _invalid("the request body is not a valid prediction request.", problems)
+    return _invalid(message, problems)
 
 
 # --------------------------------------------------------------------------------------
@@ -359,6 +370,54 @@ def _router(max_batch_rows: int) -> APIRouter:
     )
     def model(bundle: Bundle) -> Any:
         return model_card(bundle)
+
+    @router.get(
+        "/neighbours",
+        response_model=NeighbourhoodBody,
+        summary="The known alloys nearest a composition, with their measured capacities",
+        responses={
+            200: {
+                "description": (
+                    "The k training compositions nearest the formula on the ElMD scale, nearest "
+                    "first, each with every row measured on it. **Measured values, not "
+                    "predictions**: there is no interval because nothing was estimated. The "
+                    "first neighbour is the `novelty.nearest` a prediction for the same "
+                    "formula names."
+                )
+            },
+            422: {
+                "model": InvalidRequest,
+                "description": (
+                    "The query was rejected: no formula, a blank one, one that is not a "
+                    "composition, or `k` out of range. Never a refusal: nothing was judged."
+                ),
+            },
+        },
+    )
+    def neighbours(
+        bundle: Bundle,
+        formula: Annotated[
+            str, Query(description="The composition, as written.", examples=["LaNi5"])
+        ],
+        k: Annotated[
+            int, Query(ge=1, le=MAX_K, description="How many neighbours, nearest first.")
+        ] = DEFAULT_K,
+    ) -> Any:
+        try:
+            found = nearest_measured(formula, k, bundle=bundle)
+        except ContractError as error:
+            return _invalid(
+                "the query names no composition to look up.",
+                [_contract_problem(error, ["query", "formula"])],
+            )
+        except UnreadableFormula as error:
+            # The novelty screen's own sentence, so the lookup and a prediction for the same
+            # string say the same thing about why it is not a composition.
+            return _invalid(
+                "the formula is not a composition this system can place on the ElMD scale.",
+                [Problem(location=["query", "formula"], message=str(error), kind="composition")],
+            )
+        return found.to_dict()
 
     return router
 

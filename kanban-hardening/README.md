@@ -2,7 +2,30 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-24 (close of day)
+> ## ▶ Next action — as of 2026-09-24 (night)
+>
+> **Handoff, one line: #82's two API additions and its Streamlit pin have landed; the card
+> closes when the maintainer runs `app/main.py` once against `v3` (the commands are in #82's
+> last box), then it is (2) #98.**
+>
+> **What landed.** `GET /v1/neighbours?formula=…&k=…` serves the k nearest known alloys with
+> every training row measured on them. It is a lookup, not a prediction: `"basis": "measured"`,
+> no interval, and a bad query is an *invalid request*, never a refusal. `GET /v1/model` now
+> carries `trained_ranges.temperature_support`: training rows per 50 K bin, the same 893 rows as
+> the capacity range. Both come from the committed screen references (`novelty-reference.json`,
+> `domain-reference.json`), not the artifact, so `v3` serves them unchanged. `openapi.json` gained
+> 94 pointers, all additions. `docs/API.md` was re-probed against `v3`: every earlier exchange is
+> byte-identical, and the model card's two reference digests moved. The page model draws both
+> (`page.neighbours_figure`, `page.sweep_view`). **Streamlit is pinned at 1.56.0** (`app` extra
+> `>=1.40,<1.57`). 1.57 is the first release that needs `starlette>=0.40`, and installing 1.56.0
+> changes no locked package. The screen is in `docs/ENVIRONMENT.md`.
+>
+> **The order the maintainer set is unchanged past step 1:** (2) #98's code, then its ~4.7 h
+> LOACO run. (3) #83 and #84, which #82 unblocks. (4) Triage, then lift.
+>
+> *Below: the 2026-09-24 close-of-day block, superseded on #82.*
+>
+> **(2026-09-24 close of day)**
 >
 > **Handoff, one line: #37 is `done` and the freeze is held by the maintainer until S7 is finished,
 > so start #82's two API contract changes (a nearest-measured-alloys route, and per-bin temperature
