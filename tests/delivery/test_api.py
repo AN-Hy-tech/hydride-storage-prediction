@@ -29,7 +29,6 @@ import ast
 import json
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 pytest.importorskip("pandas", reason="the delivery path is pandas frames end to end")
@@ -41,10 +40,8 @@ pytest.importorskip(
     reason="the `novelty` extra; it is on the prediction path -- see pyproject.toml",
 )
 
-import pandas as pd  # noqa: E402
 from fastapi.exceptions import ResponseValidationError  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
-from hydms import artifacts  # noqa: E402
 from hydms.delivery import api as api_package  # noqa: E402
 from hydms.delivery.api import (  # noqa: E402
     MAX_BATCH_ROWS,
@@ -67,24 +64,6 @@ from hydms.delivery.predict import (  # noqa: E402
     load_bundle,
     predict_capacity,
 )
-from hydms.descriptors.contract import PASSTHROUGH, FeatureContract  # noqa: E402
-from hydms.descriptors.featurize import featurize  # noqa: E402
-from hydms.gates._core import GateReport, GateResult  # noqa: E402
-from hydms.surrogate.conformal import (  # noqa: E402
-    CONFORMAL_PAYLOAD,
-    calibration_slice,
-    fit_conformal,
-)
-from hydms.surrogate.model import MODEL_PAYLOAD, ModelSettings, column_names  # noqa: E402
-from hydms.surrogate.scaler import SCALER_PAYLOAD, fit_scaler  # noqa: E402
-
-TARGET = "H2_W% (max)"
-FORMULA = "Composition"
-TEMPERATURE = PASSTHROUGH
-QUANTILES = (0.1, 0.5, 0.9)
-HEADS = column_names(QUANTILES)
-CHEAP = {"iterations": 80, "depth": 4, "learning_rate": 0.3}
-FEATURES = ("avg_valence_d", "dev_Pauling_Electronegativity", TEMPERATURE)
 
 #: A composition the fixture fit answers, and one it refuses for being a long way from any
 #: alloy it knows. Both are #76's, chosen there for reasons this file inherits rather than
@@ -95,97 +74,6 @@ WARM = 298.0
 #: Outside the configured temperature window, so the *screens* refuse it -- a different door
 #: from a formula that will not parse, and the pair is what makes "distinguishable" testable.
 HOT = 1000.0
-
-
-def _alloys() -> list[str]:
-    """Forty AB5-family compositions near the corpus ElMD knows. See #76's fixture."""
-    out: list[str] = []
-    for cobalt in (0.0, 0.5, 1.0, 1.5, 2.0):
-        for cerium in (0.0, 0.1, 0.2, 0.3):
-            for nickel in (4.5, 5.0):
-                lanthanum = 1.0 - cerium
-                terms = [f"La{lanthanum:g}"]
-                if cerium:
-                    terms.append(f"Ce{cerium:g}")
-                terms.append(f"Ni{nickel - cobalt:g}")
-                if cobalt:
-                    terms.append(f"Co{cobalt:g}")
-                out.append("".join(terms))
-    return out
-
-
-def _frame(rows: int = 400) -> pd.DataFrame:
-    """The fixture corpus, featurised for real. A small target keeps answers under the ceiling."""
-    rng = np.random.default_rng(7)
-    alloys = _alloys()
-    labels = pd.Index([f"row-{i}" for i in range(rows)])
-    formulas = pd.Series([alloys[i % len(alloys)] for i in range(rows)], index=labels)
-    kelvin = rng.uniform(250.0, 600.0, size=rows)
-    features = featurize(formulas, kelvin, contract=FeatureContract.from_names(FEATURES))
-    target = (
-        0.20 * features["avg_valence_d"]
-        + 0.0005 * features[TEMPERATURE]
-        + rng.normal(scale=0.08, size=rows)
-        + 0.45
-    )
-    return features.assign(**{FORMULA: formulas, TARGET: target})
-
-
-@pytest.fixture(scope="module")
-def store(tmp_path_factory) -> Path:
-    """One promoted, gate-recorded version -- so `load_bundle` itself is the door under test."""
-    pytest.importorskip("catboost", reason="the model behind predict() is CatBoost's")
-    pytest.importorskip("mapie", reason="the band is MAPIE-calibrated; `pip install -e .[uq]`")
-    from hydms.surrogate.model import fit_quantile_model
-
-    frame = _frame()
-    settings = ModelSettings(
-        quantiles=QUANTILES,
-        early_stopping_rounds=5,
-        optuna_trials=1,
-        stopping_folds=5,
-        seed=42,
-        features=FEATURES,
-        screen_labels=False,
-        target=TARGET,
-        temperature=TEMPERATURE,
-    )
-    train = list(frame.index[:280])
-    val = list(frame.index[280:330])
-    test = list(frame.index[330:])
-    fitting, calibrating = calibration_slice(frame, train, settings=settings)
-    model = fit_quantile_model(
-        frame,
-        train=fitting,
-        eval_on=val,
-        scored_on=test,
-        where="final fit",
-        params=CHEAP,
-        settings=settings,
-    )
-    conformal = fit_conformal(frame, model, calibrate_on=calibrating)
-    split = pd.Series("train", index=frame.index)
-    split.loc[val] = "val"
-    split.loc[test] = "test"
-    scaler = fit_scaler(frame.loc[:, list(FEATURES)], split)
-
-    directory = tmp_path_factory.mktemp("artifacts")
-    artifacts.save(
-        {MODEL_PAYLOAD: model, CONFORMAL_PAYLOAD: conformal, SCALER_PAYLOAD: scaler},
-        contract=FeatureContract.from_names(model.feature_names),
-        gates=GateReport(
-            results=tuple(
-                GateResult.ok(name, "established") for name in ("AC-2", "AC-3", "AC-4")
-            ),
-            selection="--all",
-            strict=False,
-            started_at="2026-09-12T00:00:00+00:00",
-            duration_s=0.0,
-        ),
-        store=directory,
-    )
-    artifacts.promote("v1", store=directory)
-    return directory
 
 
 @pytest.fixture(autouse=True)

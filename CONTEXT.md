@@ -156,6 +156,10 @@ _Avoid_: "error" for a refusal, "refused" for a malformed request, and reading t
 > no `error`, and rebuild through the same function into an object equal to the library's. So the
 > one-key split is executable rather than a convention — and the failure it exists to catch, a
 > client reading a rejected request as an answer, is the one that would otherwise be silent.
+>
+> **The client keeps it too** (card #82, 2026-09-24). `hydms.delivery.client` returns an
+> `InvalidRequest` (not a `Refusal`) for a 422 carrying `error`, and the prediction page words it
+> as "No material was judged". Both are tested over a real socket in `tests/delivery/test_app.py`.
 
 **Lower confidence bound**:
 The bottom of the calibrated interval, and **the ranking signal**. Ranking on the mean is what lets
