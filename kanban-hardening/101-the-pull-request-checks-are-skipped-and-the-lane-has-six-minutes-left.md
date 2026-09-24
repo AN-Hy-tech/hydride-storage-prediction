@@ -80,6 +80,8 @@ start and end timestamps from the jobs API:
 | `34698963428` | 12 m 47 s | 14 m 10 s |
 | `34696231293` | 12 m 44 s | (failed on tests, not time) |
 | `34750116081` *(2026-09-13)* | **13 m 07 s** | 13 m 30 s |
+| `34750680910` *(2026-09-13, `f7e4fc8`)* | 8 m 00 s | **failed on tests, not time** — a markdown-only commit; log unreachable from this machine |
+| `35990733980` *(2026-09-24, #97)* | **13 m 10 s** | 14 m 46 s |
 
 Stable — ±20 s across the seven 2026-09-12 runs. Against `timeout-minutes: 20` that is **roughly
 six minutes, or 30 %, of headroom**, at about 0.53 s per test over 1,440 tests.
@@ -89,6 +91,13 @@ but only 8 s above the previous maximum, so read it as the top of the noise band
 trend. It is recorded because the point of this finding is that the band's *ceiling* is what meets
 the cap, and one number is not a slope: the next session to measure should add a row rather than
 re-derive the table.
+
+**2026-09-24, two more rows.** The #97 run is
+the new maximum, 3 s above the last — the ceiling is creeping, still inside noise. The other row
+matters more: **`f7e4fc8` went red on tests** on a markdown-only commit, eight minutes in, and went
+unnoticed for eleven days because the board said CI was green. It is the second intermittent red in
+this lane after #97's own; #97 is now fixed and the next run is green, which fits but does not prove
+that #97 was the cause. The log is readable in a browser: run `34750680910`. (by @assistant)
 
 What makes it worth a number rather than a shrug is the history. The same margin closed silently
 once already: the `suite` job timed out on **every push** for an unknown stretch before card #86,

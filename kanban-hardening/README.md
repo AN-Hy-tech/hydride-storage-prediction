@@ -4,11 +4,18 @@
 
 > ## ▶ Next action — as of 2026-09-24
 >
-> **#97 landed ahead of #82, and the opening move is still #82.** The P1 index ranks by blast
-> radius, and #97 was the one `High` there: `comparison.py:703` now sorts `kind="stable"`, the
-> regenerated document is byte-identical to the committed one, and every other ordering call in
-> `hydms/` was checked — it was the only one. It stays `doing` for one box: **green on the runner**,
-> read from `gh run list`. Beside #82, **#89** is still the path to the unfreeze.
+> **Handoff, one line: #97 is done and CI is green on `411c721`; start #82 (`app/main.py`, HTTP
+> client + `hydms.figures`, no matplotlib of its own), run #89 beside it, and open CI run
+> `34750680910` in a browser once to learn why a markdown-only commit went red.**
+>
+> **#97 is `done` and the opening move is still #82.** The P1 index ranks by blast radius and #97
+> was the one `High` there: `comparison.py:703` now sorts `kind="stable"`, the regenerated document
+> is byte-identical, every other ordering call in `hydms/` was checked (it was the only one), and
+> CI run `35990733980` is green. Beside #82, **#89** is still the path to the unfreeze.
+>
+> **The 2026-09-13 claim below that CI is green was wrong for eleven days.** The run on `f7e4fc8`
+> — a markdown-only commit — went **red on tests** in the fast lane and nobody looked. The log
+> cannot be fetched from this machine; open run `34750680910` in a browser. Recorded on #101.
 >
 > *Below is the 2026-09-13 block, still accurate except where the paragraph above supersedes it.*
 >

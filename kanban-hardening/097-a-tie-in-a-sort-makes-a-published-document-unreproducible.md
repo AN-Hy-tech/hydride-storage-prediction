@@ -1,6 +1,6 @@
 ---
 id: 97
-status: doing
+status: done
 priority: High
 blocked_by: []
 assignee: "@amirhossein"
@@ -79,7 +79,7 @@ hash-ordered `_fuse`. Do not loosen the comparison and do not post-sort the rend
 - [x] The document is regenerated and the new bytes committed, with the diff read rather than
       rubber-stamped: a row order that changes is fine, a *number* that changes is a different
       finding and belongs on its own card
-- [ ] **Green on the runner**, confirmed by `gh run list` and not by a local run. A local pass is
+- [x] **Green on the runner**, confirmed by `gh run list` and not by a local run. A local pass is
       what this defect already had
 
 ## Runnable check
@@ -123,3 +123,7 @@ gh run list --branch feat/phase-h-emergency-hardening --limit 3
   AVX-512 routine when the CPU has it, and hosted runners do not all share a CPU — which would fit
   "same versions, same runner label, different answer". Not verified; not worth a CI round trip,
   because the fix does not depend on it. (by @assistant)
+- 2026-09-24: **Closed. Green on the runner:** run `35990733980` on `411c721`, both jobs
+  `success`, pytest step 13 m 10 s — read from `gh run list` and the jobs API, not from a local run.
+  The run before it, `34750680910` on `f7e4fc8`, had gone **red on tests** on a markdown-only
+  commit; recorded on #101, cause unread. (by @assistant)
