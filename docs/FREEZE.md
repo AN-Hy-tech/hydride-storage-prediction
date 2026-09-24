@@ -140,6 +140,11 @@ It waited on **#89**, and #89 closed on 2026-09-24:
 [REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md) exists, so **#37 is unblocked**. Nothing left
 in this condition needs a fit, a decision, or a run of the pipeline.
 
+**#37 was drafted on 2026-09-24** ([chapter1-revision.md](chapter1-revision.md)), and the bullet
+above stays unticked. The card has one box open: three of the draft's numbers (the artifact score
+and the test coverage) trace only to the gitignored `artifacts/`, and the card requires every claim
+to trace to a report file. The fix needs no fit. It changes neither this condition nor its wording.
+
 > **This list is not a plan, and it is not the measure of Phase H.** It says when the *frozen*
 > programme may resume — nothing more. The phase's own objective is stated in §Why above: **a
 > user-facing interface that predicts gravimetric capacity.** That is stage **S7** (#81–#84), it is

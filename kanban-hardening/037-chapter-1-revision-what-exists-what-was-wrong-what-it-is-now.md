@@ -1,6 +1,6 @@
 ---
 id: 37
-status: backlog
+status: doing
 priority: High
 blocked_by: [25, 29, 30, 34, 89]
 assignee: "@amirhossein"
@@ -32,13 +32,24 @@ stronger than one that does not.
 
 ## Done when
 
-- [ ] Draft chapter section in `docs/chapter1-revision.md`
-- [ ] Side-by-side table: published number, corrected number, which leak explains the change
-- [ ] Leave-one-class-out R2 reported beside random-split R2 with the Beltrame reference
-- [ ] Old-22 vs new-N feature comparison included
+- [x] Draft chapter section in `docs/chapter1-revision.md`
+- [x] Side-by-side table: published number, corrected number, which leak explains the change
+- [x] Leave-one-class-out R2 reported beside random-split R2 with the Beltrame reference
+- [x] Old-22 vs new-N feature comparison included
 - [ ] Every claim traceable to a report file produced by the pipeline, not to memory
+      **Open, and left open on purpose (2026-09-24).** Every number in the draft traces to a
+      committed file except three, marked † in the chapter: the **artifact score** (R² 0.7071,
+      RMSE 0.5420, MAE 0.3117 on 254 test rows, gate AC-1) and the **test coverage** (0.7795,
+      width 0.8630 wt%, gate AC-3). Both live only in `artifacts/v3/manifest.json` and
+      `artifacts/gate-results.json`, and `artifacts/` is gitignored, so a fresh clone cannot check
+      them. The chapter says so on its face rather than hiding it. Publishing a committed report of
+      them is already a box on **#83**, but #83 is blocked behind #82's Streamlit pin, which would
+      tie the last unfreeze bullet to a lock decision it has nothing to do with. **OPEN decision
+      for the maintainer:** move that box off #83 onto a small card of its own (write the AC-1/AC-3
+      metrics to a committed `reports/model/` table, a few minutes, no fit), then tick this one.
+      Do not tick it by rewording the criterion
 
-- [ ] **A limitations-and-future-work section, and the measurement that makes it specific**
+- [x] **A limitations-and-future-work section, and the measurement that makes it specific**
       (added 2026-09-06, after the LOCO run and a domain review with the maintainer). The chapter
       already owes the transfer number beside the random-split one. What it should also carry is
       **why** the worst fold is as bad as it is, because the answer is partly arithmetic and that
@@ -117,3 +128,19 @@ test -f docs/chapter1-revision.md
   every "what was wrong" claim, so writing the chapter first would mean deriving those eight
   disagreements a second time, by hand, in prose nothing checks. The runbook's "#37 is unblocked on
   everything but #34" is corrected with this edge. (by @assistant)
+
+- **2026-09-24: drafted, `doing` on one box.** `docs/chapter1-revision.md` is written from
+  committed evidence only: `REPORT-RECONCILIATION.md` (#89) for what was wrong, the runbook's
+  leak inventory, `reports/model/`, `reports/loco/` and `reports/feature_selection/`. Three things
+  learned writing it. **(1) The old-22-vs-new-N box needed no run.** #25 had already committed
+  the comparison, so the feared selection run was never owed. **(2) The Mg range arithmetic in
+  the limitations box reproduces exactly from committed files:** `model-out-of-fold.csv` joined
+  to `alloy_class_table(load_hydride_data())` gives 96 Mg rows, median 3.80 vs 1.60, max 7.19 vs
+  5.19, 21 above the non-Mg max, 43 above its 99th percentile (3.90), and the ten class counts
+  match `loco-per-class.csv`, so the join is the one LOCO folded on. The chapter cites the
+  recipe. **(3) Two tables committed under `reports/model/` are easy to misquote as the
+  artifact score.** `conformal-coverage.csv` reports R² 0.8255 and coverage 0.8081, but over the
+  172 *calibration* rows, which a conformal correction is fitted on. The artifact score is
+  0.7071 on 254 *test* rows and is committed nowhere, hence the open box above. The draft is the
+  author's to revise: it is thesis prose, and the voice and the chapter numbering (1.R.x) are
+  placeholders. (by @assistant)

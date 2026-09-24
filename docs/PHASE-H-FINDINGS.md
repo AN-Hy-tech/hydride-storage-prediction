@@ -44,12 +44,12 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 ## P3 — blocks the unfreeze
 
 The unfreeze condition is four bullets and **three already hold**: the gates are green, `current`
-points at `v3`, and `docs/API.md` is published. The fourth is **#37**, and since #89 closed on
-2026-09-24 **nothing blocks it**.
+points at `v3`, and `docs/API.md` is published. The fourth is **#37**, **drafted 2026-09-24** with
+one box open.
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **37** | Chapter 1 revision: what exists, what was wrong, what it is now. **The last unfreeze condition.** Written *from* [REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md), which has twelve rows where the card expected eight | 1.5 d | **unblocked** — #89 `done` 2026-09-24 |
+| **37** | Chapter 1 revision. **Drafted 2026-09-24:** [chapter1-revision.md](chapter1-revision.md), five of six boxes ticked. **Open:** three numbers, the artifact score (R² 0.7071 on 254 test rows) and the test coverage (0.7795), trace only to the gitignored `artifacts/v3/manifest.json`. Committing them is a box on #83, which is stuck behind #82's Streamlit pin. **OPEN decision:** move that box to a small card of its own (no fit, minutes), then tick #37's. Also owed: the author's read of the prose | 0.25 d + a decision | `doing` |
 | **36** | The five ADRs. `docs/adr/README.md` reserves `0001`–`0005` for them and records why #85 took `0006` | 1 d | `backlog`, unblocked |
 
 ## P4 — accepted debt, named owner

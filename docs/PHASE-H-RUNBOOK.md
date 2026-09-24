@@ -268,6 +268,10 @@ single prediction path and HG-3 covers the UI too.
       correction of +0.030990 instead of +0.037355 on 2026-09-07 and was discarded.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
+- [~] **#37 drafted 2026-09-24** as [chapter1-revision.md](chapter1-revision.md): `doing`, one box
+      open. The artifact score (R² 0.7071) and the test coverage (0.7795) are quoted from the
+      gitignored `artifacts/v3/manifest.json` and marked † in the chapter. A committed report of
+      them is owed (currently a box on #83, which is blocked by #82). **#36 is still `backlog`.**
 - [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~
       ~~**#37 waits on #34 *and* #89**~~ (edge added 2026-09-11). **#34 closed 2026-09-12, so #37
       waits on #89 alone, and #36 is unblocked outright.** The #89 edge stands and is the load-

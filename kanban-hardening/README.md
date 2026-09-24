@@ -2,9 +2,31 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-24 (evening)
+> ## ▶ Next action — as of 2026-09-24 (night)
 >
-> **Handoff, one line: #89 is `done`, so #37 is unblocked and is the last unfreeze condition.
+> **Handoff, one line: #37 is drafted ([../docs/chapter1-revision.md](../docs/chapter1-revision.md))
+> and `doing` on one box: three numbers trace only to the gitignored `artifacts/`. Committing them
+> is a few minutes and no fit. The only question is which card owns it.**
+>
+> **What is open on #37, exactly.** The draft cites committed files for everything except the
+> **artifact score** (R² 0.7071, RMSE 0.5420, MAE 0.3117 on 254 test rows, gate AC-1) and the
+> **test coverage** (0.7795, width 0.8630 wt%, gate AC-3). Those live in
+> `artifacts/v3/manifest.json` and are marked † in the chapter. Publishing them is already a box on
+> **#83**, but #83 is blocked behind #82's Streamlit pin. That would chain the last unfreeze bullet
+> to a lock decision it has nothing to do with. **OPEN, the maintainer's call:** file a small card
+> that writes the AC-1/AC-3 metrics to a committed `reports/model/` table, move #83's box to it,
+> then tick #37's box 5. Do **not** tick it by rewording the criterion. The author also owes the
+> prose a read: it is thesis text, and the `1.R.x` numbering is a placeholder.
+>
+> **Watch for:** `reports/model/conformal-coverage.csv` reports R² 0.8255 and coverage 0.8081. Those
+> are over the 172 **calibration** rows, not the test rows. They are not the artifact score.
+>
+> **After that, unchanged from the block below:** the two API additions for #82, then the Streamlit
+> pin once the maintainer picks one.
+>
+> *Below: the 2026-09-24 evening block, superseded on #37.*
+>
+> **(2026-09-24 evening) Handoff, one line: #89 is `done`, so #37 is unblocked and is the last unfreeze condition.
 > #82 is `doing` with its guarantees landed, and waits on two things that are not the page: a
 > Streamlit pin (the maintainer's, because it fights the lock) and two API additions.**
 >
