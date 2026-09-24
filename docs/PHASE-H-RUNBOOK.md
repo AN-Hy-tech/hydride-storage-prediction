@@ -243,19 +243,20 @@ single prediction path and HG-3 covers the UI too.
       condition**. `hydms.delivery.contract.Interval` raises `ContractError` on `upper < lower`
       and nothing between the surrogate and that boundary looks at the sign, so a crossed
       candidate is a loud failure rather than a refusal carrying a reason code.
-- [ ] **#100** A render test passes alone and fails after the slow tests — **intermittent, and the
-      renderer no longer has the state it would need to be order-dependent.** Four full-length
-      runs after the filing are green (134, 1530, 1530 again, and **1531 in 26 m 45 s post-repair
-      on a quiet machine**), so no traceback exists and none can be manufactured. `hydms/figures/render.py` no longer chooses a
-      backend or imports `pyplot`, and a subprocess test holds it that way. The card stays `doing`
-      on one box — the traceback — which only a future red run can tick. Filed by #81,
-      2026-09-12; **not an unfreeze condition**, and `High`.
-      `tests/test_figures.py::test_every_figure_renders_in_both_themes` passes on its own (55),
-      in the fast lane (1526) and beside the four `slow` tests (134) — and fails in a full run.
-      ~~the trigger is one of the four `slow` tests~~ was the filing hypothesis and is **refuted**:
-      both halves are green and only the whole is red. **CI runs `-m "not slow"` and will never
-      report it.** The traceback was discarded by a truncating pipeline and no subset reproduces,
-      so a full 29-minute run redirected to a file is the price of the next step.
+- [ ] **#100** A render test passes alone and fails after the slow tests. **Still `doing` on
+      its traceback box, by the maintainer's ruling of 2026-09-25: it stays open until a session
+      fixes the failure.** The failure was seen once, in a local
+      full run, and never again. Five full-length runs since are green, and CI never ran it red:
+      run `34716528657` was #97's tie. So no traceback exists and none can be manufactured. What
+      was done instead: `hydms/figures/render.py` no longer chooses a backend or imports `pyplot`
+      (a subprocess test holds it that way), and the evidence can no longer be lost. **Every
+      pytest session that ends red now writes `reports/test-failures/<start>-pid<N>.txt`**
+      (gitignored). It holds each failure's traceback and captured output, the other Python
+      processes alive at the run's start and end, and the source files modified while it ran.
+      `FailureRecorder` in `tests/conftest.py`, six tests in `tests/test_failure_record.py`. A
+      next session runs the full suite; a record naming `test_every_figure_renders_in_both_themes`
+      is the traceback the fix starts from. Filed by #81,
+      2026-09-12; **not an unfreeze condition**.
 - [ ] **#98** The LOACO run discards its own per-row predictions. Filed by #81, 2026-09-12;
       **not an unfreeze condition**. `hydms/surrogate/train.py:369` writes
       `evaluation.out_of_fold` as a table and `hydms/surrogate/loco.py:595` writes four tables
@@ -384,6 +385,10 @@ python scripts/verify_environment.py
 # and print Get-Date either side of the command, so an mtime inside that window tells you the run is
 # not a measurement. Contention costs only a minute or two of wall time here (26 m 45 s quiet against
 # 28 m 24 s contended), so the number that misleads you is the PASS, not the duration.
+# A RED RUN WRITES ITS OWN RECORD (card #100, 2026-09-25): reports/test-failures/<start>-pid<N>.txt,
+# named in the terminal summary. It holds every traceback and captured output, and the two answers
+# the paragraph above asks for: the other python.exe processes alive at the start and end, and the
+# files modified mid-run. Read it before re-running anything. A green run writes nothing there.
 # Anything red is a real failure. Do NOT pass -q: pyproject already sets
 # it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
 # is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO

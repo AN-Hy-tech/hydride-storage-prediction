@@ -140,6 +140,27 @@ attaches whatever canvas the output format calls for, so the import list is one 
       can read it.** That is the cheapest remaining route to this box and it costs minutes, not a
       29-minute run:
       `https://github.com/AN-Hy-tech/hydride-storage-prediction/actions/runs/34716528657`
+
+      **2026-09-25: still unticked, and the card stays `doing` on it** — the maintainer's ruling:
+      it stays open until a session actually fixes the failure. What *could* be done this session
+      was the part that lost the first
+      traceback: it was only ever on a terminal, and a pipe kept its last 15 lines. Since the
+      box below, **every pytest session that ends red writes its tracebacks to
+      `reports/test-failures/`** — however it was launched and whatever it was piped through — so
+      the next red run ticks this box without anyone having remembered the runnable check
+- [x] **A red run cannot lose its traceback again.** Added 2026-09-25, when the box above was the
+      only one left and could not move. `FailureRecorder` in `tests/conftest.py` is registered for
+      every session. When the session has any failed test or collection error it writes one file,
+      `reports/test-failures/<start>-pid<N>.txt` (gitignored), holding every failure's traceback
+      and captured output. It also records the two things this card could only check by hand
+      afterwards: **the other Python processes alive at the start and at the end** of the run, and
+      **the files under `hydms/`, `tests/`, `app/`, `scripts/` and `kanban-hardening/` modified
+      while it ran**. A green run writes nothing. `tests/test_failure_record.py` covers it with six
+      inner pytest sessions run through `pytester`, and each of its four behavioural assertions was
+      checked by breaking the code it guards (collection errors, the mtime window, the
+      registration, the captured output). All four went red. One limit is stated in the docstring
+      rather than hidden: the traceback is the one pytest built for the report, so it has the run's
+      own `--tb` style. That is `long` by default, and it was the default on #81's lost run.
 - [x] The **cause** is named in this card's narrative, or — if two full runs disagree — the card
       says plainly that the trigger is unnamed and the repair was made on the defect's shape
       rather than on its trigger. #97 is the precedent for that being an acceptable close.
@@ -178,6 +199,9 @@ attaches whatever canvas the output format calls for, so the import list is one 
 # The only command known to produce it. ~29 min. Redirect; never pipe through a truncating filter.
 conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
 ```
+
+Since 2026-09-25 the redirect is a second copy rather than the only one: a session that ends red
+also writes `reports/test-failures/<start>-pid<N>.txt`, and its terminal summary names the file.
 
 ## Traces to
 
@@ -351,3 +375,38 @@ conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
   one, and "only in a full run" is again the only thing known about the trigger.
   Not reworded above: a narrative records what a session believed, and the correction is appended.
   (by @assistant)
+
+- 2026-09-25: **The traceback box is still unticked and the card stays `doing`, but the one thing
+  that could still move has moved.** On this card the defect was never the hard part. The loss was: the one
+  failing run's evidence existed only on a terminal, and a `Select-Object -Last 15` threw it away.
+  Every later run was redirected to a file by hand, because the runnable check said so and the
+  sessions reading it had just been burned. A convention that a tired session can forget is not a
+  guarantee. So the suite now keeps the evidence itself: `FailureRecorder` (in `tests/conftest.py`)
+  writes a file under `reports/test-failures/` for every session that ends red, and a green
+  session writes nothing.
+
+  **The record carries the card's own ruled-out table, not just the traceback.** Its last row, "is
+  another process running the suite at the same time", was never checked while it mattered and
+  could not be checked afterwards. The record lists every other Python process alive at the run's
+  start and end, and every file under the watched trees whose mtime falls inside the run. On the
+  first real record, written by this card's own red test during development, that section named
+  the maintainer's `uvicorn` from #82 (idle, started 01:21). That is the kind of neighbour the
+  2026-09-13 sessions had no way to see.
+
+  **Two things were wrong on the first draft, and both were found by testing the test.** The
+  docstring claimed the record is `long` style "even under `--tb=no`". pytest builds the report at
+  the run's own style, so `--tb=no` records a stub. The claim was withdrawn, and the test was
+  re-aimed at the default style, which is the one #81's lost run used. Then a mutation that dropped
+  the captured-output section **still passed**: the marker the inner test printed was a literal
+  that also appears in the traceback's *source listing*, so the assertion matched the code, not the
+  output. The printed value is now computed. After that, all four mutations went red. It is the
+  refusal-wording trap again, in a test harness: before asking whether a text contains something,
+  remove every other route by which it could get there.
+
+  **Why it is still `doing`.** This session proposed closing it `done` around the unticked box,
+  since the box waits on an event and not on work. **The maintainer ruled otherwise:** it stays
+  `doing` until a session fixes the failure itself. The box is not reworded. So the next session
+  spends the full run this card has been avoiding: `pytest` with no `-m`, on a quiet machine. If
+  it goes red, the traceback is in `reports/test-failures/` and the fix starts there. The fast lane
+  over this commit is **1646 passed, 4 deselected, 38 m 43 s**, with only the maintainer's idle
+  `uvicorn` alive, nothing modified mid-run and no record written. (by @assistant)

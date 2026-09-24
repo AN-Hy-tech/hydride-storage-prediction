@@ -158,6 +158,12 @@ ruff check hydms/ tests/ scripts/
 mypy
 ```
 
+> **A red run keeps its own evidence.** Any pytest session that ends with a failure or a
+> collection error writes `reports/test-failures/<start>-pid<N>.txt` (gitignored) and names it in
+> the terminal summary. The file holds every traceback and captured output, the other Python
+> processes alive at the start and end, and the files modified mid-run. So the tracebacks survive
+> a pipe that keeps only the last few lines. A green run writes nothing. Card #100.
+
 > **The lint versions are pinned exactly in CI, and must match this machine.**
 > `.github/workflows/ci.yml` installs `ruff==0.8.4` and `mypy==1.13.0`, not the `dev` extra's
 > floors. On a floor, the fast lane's first run installed a newer ruff, which raised SIM905,

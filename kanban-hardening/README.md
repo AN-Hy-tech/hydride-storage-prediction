@@ -2,7 +2,15 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25
+> ## ▶ Next action — as of 2026-09-25 (after the #100 session)
+>
+> **Handoff, one line: #100 stays `doing` (maintainer's ruling) — run the full `pytest` (no `-m`) on
+> a quiet machine, and if it goes red, fix the render test from the traceback now saved in
+> `reports/test-failures/`; otherwise go on to (2) #98.**
+>
+> *Below: the earlier 2026-09-25 block, written when #82 closed. Its pointer to #98 still holds.*
+>
+> **(2026-09-25, #82)**
 >
 > **Handoff, one line: #82 is `done` — the Streamlit page ran end to end under `Project` — so
 > (2) #98's code is next, then its ~4.7 h LOACO run, which the maintainer runs; #83 and #84 are
