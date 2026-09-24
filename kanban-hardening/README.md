@@ -2,7 +2,25 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-24 (night)
+> ## ▶ Next action — as of 2026-09-25
+>
+> **Handoff, one line: #82 is `done` — the Streamlit page ran end to end under `Project` — so
+> (2) #98's code is next, then its ~4.7 h LOACO run, which the maintainer runs; #83 and #84 are
+> unblocked behind it.**
+>
+> **How #82 closed.** Streamlit 1.56.0 is installed in `Project` and nothing locked moved.
+> `tests/delivery/test_app_script.py` drives the real `app/main.py` through Streamlit's `AppTest`
+> against a live service: 40 passed with `test_app.py`, 0 skipped, on Python 3.10.13. **Two
+> things to know.** CI does not install the `app` extra, so that file runs only where the pin is
+> installed. And **any command you hand over names `Project`'s `python.exe` in full**: a bare
+> `PY` is the Windows `py` launcher (Python 3.13), which is where the first install went.
+>
+> **#84 is unblocked outright.** #83 is unblocked, but its parity panel still needs #98's
+> out-of-fold rows. That is why the maintainer's order puts #98 first.
+>
+> *Below: the 2026-09-24 night block, superseded on #82.*
+>
+> **(2026-09-24 night)**
 >
 > **Handoff, one line: #82's two API additions and its Streamlit pin have landed; the card
 > closes when the maintainer runs `app/main.py` once against `v3` (the commands are in #82's

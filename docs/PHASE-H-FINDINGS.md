@@ -36,10 +36,9 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **82** | `app/main.py` as an **HTTP client**. **The two API additions landed 2026-09-24 night**: `GET /v1/neighbours` (k nearest known alloys, every measured row) and `trained_ranges.temperature_support` on `GET /v1/model`; page model draws both. **Streamlit pinned the same night** at `1.56.0` (`app` extra `>=1.40,<1.57`; 1.57 is the first to need `starlette>=0.40`), six new packages, nothing locked moved — see `docs/ENVIRONMENT.md`. Open: the script's first real run | 0.1 d | `doing` |
-| **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | blocked by #82 |
+| **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | `backlog`, unblocked (#82 `done` 2026-09-25) |
 | **98** | `loco.py:595` writes four tables but not `evaluation.out_of_fold`, so LOACO leaves ten class averages and no scored rows — and `parity()` refuses fewer than two readings. **#83's parity panel cannot be built from committed evidence.** Needs a LOACO run, which is the maintainer's | 0.5 d + a run | `backlog`, unblocked |
-| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | blocked by #82 |
+| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `backlog`, unblocked (#82 `done` 2026-09-25); its parity panel still waits on #98 |
 
 ## P3 — blocks the unfreeze
 

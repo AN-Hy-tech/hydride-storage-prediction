@@ -157,7 +157,9 @@ single prediction path and HG-3 covers the UI too.
       Put in the renderer, each would have been a guarantee that runs only where a plotting library
       is installed. matplotlib is a new `figures` extra, already in both lock files, and **CI
       installs it**.
-- [ ] **#82** `app/main.py` — formula + temperature → capacity. **`doing` since 2026-09-24.**
+- [x] **#82** `app/main.py` — formula + temperature → capacity. **Done 2026-09-25.** The script ran
+      under `Project` through Streamlit's `AppTest` (`tests/delivery/test_app_script.py`, 40 passed
+      with `test_app.py`, 0 skipped); Streamlit 1.56.0 is installed and pinned. History below.
       The guarantees are in `hydms/delivery/client.py` (HTTP, stdlib `urllib`) and
       `hydms/delivery/page.py` (what the page shows), tested against uvicorn on a real socket.
       `app/main.py` is a thin Streamlit layer and **has never run**: Streamlit is not in `Project`,

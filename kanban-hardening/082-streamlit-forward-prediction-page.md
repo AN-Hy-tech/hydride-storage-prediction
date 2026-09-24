@@ -1,6 +1,6 @@
 ---
 id: 82
-status: doing
+status: done
 priority: High
 blocked_by: [78, 81]
 assignee: "@amirhossein"
@@ -24,11 +24,13 @@ also means the app cannot accidentally acquire its own featurisation or its own 
 
 ## Done when
 
-- [ ] `app/main.py` takes a formula and a temperature and calls the API over HTTP. **Written,
-      never executed** -- Streamlit is not installed in `Project` (the box below). The call path it
-      uses, `hydms.delivery.client.ServiceClient`, is tested against a uvicorn server on a real
-      loopback socket, and the script's imports are held to that client, the page model and
-      `hydms.figures.render` by an AST test. Tick when the script has run
+- [x] `app/main.py` takes a formula and a temperature and calls the API over HTTP. **Ran
+      2026-09-25** under `Project` (Python 3.10.13, Streamlit 1.56.0): `test_app_script.py` drives
+      the real script through Streamlit's `AppTest` against a uvicorn service on a loopback socket
+      -- load, an answer with neighbours and sweep, a refusal, an invalid request, an unreachable
+      service -- 6 passed, beside `test_app.py`'s 34 (40 passed, 0 skipped). The call path is
+      `hydms.delivery.client.ServiceClient`, and the script's imports are held to that client, the
+      page model and `hydms.figures.render` by an AST test
 - [x] The result shows the estimate **inside** its interval, using the #81 prediction band.
       `hydms.delivery.page.prediction_view`: the headline is written from the estimate and both
       bounds together, and the figure is `prediction_band`, drawn against the *served* model
@@ -60,7 +62,7 @@ also means the app cannot accidentally acquire its own featurisation or its own 
 - [x] The app degrades honestly when the API is unreachable, and says so. `ServiceUnreachable` is
       raised, never swallowed; `unreachable_view` says the service is not answering, that no
       estimate is stale or cached, and carries no version, figure or verdict
-- [ ] **Streamlit is pinned; it is not yet installed in `Project`.** Pinned 2026-09-24 at
+- [x] **Streamlit is pinned and installed in `Project`** (2026-09-25). Pinned 2026-09-24 at
       `1.56.0` (`app` extra `>=1.40,<1.57`, and in `requirements-lock.txt` with its five new
       dependencies). 1.57.0 is the first release to need `starlette>=0.40`, which the locked
       `fastapi` 0.115.0 excludes; 1.40.0 is the first that accepts the locked `pillow` 11. A
@@ -132,3 +134,16 @@ conda run -n Project python -m pytest tests/delivery/test_app.py tests/delivery/
   `GET /v1/neighbours` and `POST /v1/predict` reject a blank formula with one sentence. What is
   left is the box above this card has always had: the Streamlit pin, then running the script.
   (by @assistant)
+
+- 2026-09-25: **Done.** Streamlit 1.56.0 and its five dependencies installed into `Project`
+  (`--no-deps`; `starlette` 0.38.6, `fastapi` 0.115.0 and `protobuf` 3.20.3 unmoved, checked by
+  import after the install). The closing check: 40 passed, 0 skipped, on Python 3.10.13. **The
+  first attempt went to the wrong interpreter, and every step of it looked like it worked.** The
+  handed-over command set `PY=` on one line and used `$PY` on the next. Run without the
+  assignment, a bare `PY` is the Windows `py` launcher, so pip installed into Python 3.13's user
+  site, pytest ran on 3.13 and skipped both files (no pandas), and `conda run ... streamlit` found
+  3.13's `streamlit.exe` on PATH. The command now names `Project`'s `python.exe` on every line and
+  runs tools with `-m`. **What is still not checked:** CI does not install the `app` extra, so
+  `test_app_script.py` runs only on a machine with the pin. The page's promises are all in
+  `test_app.py`, which the fast lane runs; the script's glue is the part CI cannot see. #83 and
+  #84 are unblocked. (by @assistant)
