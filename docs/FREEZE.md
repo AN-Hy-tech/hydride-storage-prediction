@@ -130,7 +130,9 @@ Fixed now, before results are seen, so it cannot be softened later. All four mus
       `--probe` needs an artifact and `--emit` must not — the same gitignored-path trap this
       file's own caveat above describes. Card #85's ADR landed with it at
       `docs/adr/0006-the-delivery-seam.md`, which #80's last box required.
-- [ ] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
+- [x] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
+      **Met 2026-09-24:** [chapter1-revision.md](chapter1-revision.md), accepted by the author.
+      Its last box was closed by #103, which committed the artifact score.
 
 When all four hold: set `freeze: lifted` in this file's frontmatter, record the closing date below,
 and the PA/PB board resumes.
@@ -157,7 +159,15 @@ to trace to a report file. The fix needs no fit. It changes neither this conditi
 > protect gets treated as optional. Ask the runbook what comes next; ask this file only whether the
 > other board may reopen.
 
-**Closed:** _(not yet)_
+**All four hold as of 2026-09-24, and the freeze is held anyway, by the maintainer's decision.**
+Meeting the condition *permits* lifting; it does not require it. The maintainer chose to keep
+`freeze: in-force` until the interface (S7: #82, #83, #84) is finished and the open findings on
+the hardening board have been triaged. The reason is the paragraph above: the interface is the
+phase's objective, and reopening the inverse-design board now would split the effort. This is
+not a new condition. The list above is unchanged and nothing is added to it. When the
+maintainer decides to lift, the mechanical act is what the list says.
+
+**Closed:** _(not yet — held by decision, 2026-09-24)_
 
 ---
 

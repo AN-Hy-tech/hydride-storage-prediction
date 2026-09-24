@@ -268,8 +268,8 @@ single prediction path and HG-3 covers the UI too.
       correction of +0.030990 instead of +0.037355 on 2026-09-07 and was discarded.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
-- [~] **#37 drafted 2026-09-24** as [chapter1-revision.md](chapter1-revision.md): `doing`, every
-      box ticked, waiting on the author's read. The artifact score (R² 0.7071) and the test
+- [x] **#37 done 2026-09-24** as [chapter1-revision.md](chapter1-revision.md), accepted by the
+      author. The artifact score (R² 0.7071) and the test
       coverage (0.7795) were committed by **#103** in `reports/model/artifact-score.csv`,
       generated from the sealed gate record (`python -m hydms.evidence.artifact_score --probe
       --emit` after any promotion). **#36 is still `backlog`.**
@@ -280,7 +280,8 @@ single prediction path and HG-3 covers the UI too.
       writing the chapter first would mean re-deriving those eight disagreements by hand, in prose
       nothing checks.
 - [ ] Lift the freeze: set `freeze: lifted` in [FREEZE.md](FREEZE.md), record the closing date, and the
-      PA/PB board resumes.
+      PA/PB board resumes. **All four conditions hold since 2026-09-24 (#37 `done`), and the
+      maintainer is holding the freeze until S7 is finished.** See FREEZE.md §Unfreeze condition.
 
 ---
 

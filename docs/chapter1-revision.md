@@ -1,6 +1,6 @@
 # Chapter 1 revision: what exists, what was wrong, what it is now
 
-> **Draft for the author's review, card #37, 2026-09-24.** Written from committed evidence only.
+> **Card #37, drafted and accepted by the author 2026-09-24.** Written from committed evidence only.
 > Every number carries its source in the text or in the evidence table at the end. Terms follow `CONTEXT.md`. In particular, the
 > three kinds of R² (*procedure*, *artifact* and *transfer* score) are never quoted in place of one
 > another.

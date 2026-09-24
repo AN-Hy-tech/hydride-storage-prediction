@@ -2,7 +2,22 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-24 (late night)
+> ## ▶ Next action — as of 2026-09-24 (close of day)
+>
+> **Handoff, one line: #37 is `done` and all four unfreeze bullets hold, but the freeze is held by
+> the maintainer's decision until S7 is finished. Next is #82's two API additions.**
+>
+> **The order the maintainer set:** (1) #82: the nearest-alloys route and per-bin temperature
+> support, then the Streamlit pin (the maintainer's lock decision). (2) #98's code, then its
+> ~4.7 h LOACO run, which the maintainer runs. (3) #83 and #84. (4) Triage the remaining findings
+> (#91, #92, #94–#96, #99–#102, #36, #7) as must fix, carry over, or drop, then lift. **After
+> Phase H,** the maintainer wants to work on the width of the uncertainty band and re-test the
+> Miedema descriptors (#37's future-work list, items 1 onward). That is a new artifact version,
+> v4, reported beside v3 and never in its place.
+>
+> *Below: the 2026-09-24 late-night block, superseded on #37.*
+>
+> **(2026-09-24 late night)**
 >
 > **Handoff, one line: #37 has every box ticked and waits only on the author's read of
 > [../docs/chapter1-revision.md](../docs/chapter1-revision.md). After that, #37 → `done`, lift the

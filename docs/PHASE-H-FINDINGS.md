@@ -43,13 +43,16 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 
 ## P3 — blocks the unfreeze
 
-The unfreeze condition is four bullets and **three already hold**: the gates are green, `current`
-points at `v3`, and `docs/API.md` is published. The fourth is **#37**, **drafted 2026-09-24** with
-every box ticked, and it waits only on the author's read.
+**Empty since 2026-09-24.** All four unfreeze bullets hold: the gates are green, `current` points
+at `v3`, `docs/API.md` is published, and **#37** is `done` (the author accepted the Chapter 1
+revision, and #103 committed the artifact score it cites). **The freeze is held by the maintainer's
+decision** until S7 (#82–#84) is finished and the findings on this page have been triaged. See
+[FREEZE.md](FREEZE.md) §Unfreeze condition.
+
+Still open in S8, and not an unfreeze condition:
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **37** | Chapter 1 revision. **Drafted 2026-09-24:** [chapter1-revision.md](chapter1-revision.md), six of six boxes ticked. The artifact score (R² 0.7071) and the test coverage (0.7795) were committed by **#103** (the maintainer chose a card of its own) in `reports/model/artifact-score.csv`, and the chapter's † markers are gone. **Owed:** the author's read of the prose, then `done` and the unfreeze | the author's read | `doing` |
 | **36** | The five ADRs. `docs/adr/README.md` reserves `0001`–`0005` for them and records why #85 took `0006` | 1 d | `backlog`, unblocked |
 
 ## P4 — accepted debt, named owner

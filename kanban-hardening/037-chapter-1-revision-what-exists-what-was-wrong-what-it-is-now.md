@@ -1,6 +1,6 @@
 ---
 id: 37
-status: doing
+status: done
 priority: High
 blocked_by: [25, 29, 30, 34, 89, 103]
 assignee: "@amirhossein"
@@ -141,3 +141,8 @@ test -f docs/chapter1-revision.md
   0.7071 on 254 *test* rows and is committed nowhere, hence the open box above. The draft is the
   author's to revise: it is thesis prose, and the voice and the chapter numbering (1.R.x) are
   placeholders. (by @assistant)
+- 2026-09-24: **`done`. The author read the revision and accepted it as it stands**, `1.R.x`
+  numbering included. #103 closed box 5 without rewording it: the artifact score now traces to
+  the committed `reports/model/artifact-score.csv`. This ticks the fourth unfreeze bullet. **The
+  freeze is not lifted.** The maintainer chose to hold it until the interface (S7) is finished;
+  see `docs/FREEZE.md`. (by @assistant)
