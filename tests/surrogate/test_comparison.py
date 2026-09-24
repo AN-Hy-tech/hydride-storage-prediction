@@ -17,6 +17,7 @@ suite normally cannot defend. Three things are checkable and all three are check
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -170,6 +171,26 @@ def test_the_published_document_is_the_one_this_code_generates(
     fresh clone reproduces the same bytes.
     """
     assert (published / DOCUMENT).read_text(encoding="utf-8") == comparison.to_markdown()
+
+
+def test_rows_tied_on_cost_are_published_in_contract_order(comparison: Comparison) -> None:
+    """Card #97: a tie on ``rows_blocked`` must not decide the published row order.
+
+    The real table ties only six rows, and numpy sorts a run that short by insertion, which
+    happens to be stable -- so the byte-identity test above passes here and failed once on a
+    runner. Twenty-one tied rows is past the insertion cutoff, and the default quicksort was
+    measured reordering exactly this shape on this machine.
+    """
+    cost = comparison.cost.copy()
+    cost.loc[cost.index != comparison.costliest, "rows_blocked"] = 1
+    tied = [name for name in cost.index if name != comparison.costliest]
+
+    document = replace(comparison, cost=cost).to_markdown()
+    section = document.split("## Computability", 1)[1].split("\n## ", 1)[0]
+    rows = [line.split("|")[1].strip() for line in section.splitlines() if line.startswith("| ")]
+    published = [name for name in rows if name in tied]
+
+    assert published == tied
 
 
 def test_the_document_states_the_reading_it_published(comparison: Comparison) -> None:

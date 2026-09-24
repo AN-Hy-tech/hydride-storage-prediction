@@ -27,7 +27,7 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **97** | `comparison.py:703` sorts a tied key with pandas' default **unstable** quicksort, so a *published* document is not reproducible run-to-run. One keyword. **Do not loosen the comparison instead** | 0.25 d | `backlog`, **High**, unblocked |
+| **97** | `comparison.py:703` sorted a tied key with pandas' default **unstable** quicksort. **Fixed 2026-09-24** with `kind="stable"`; the regenerated document is byte-identical, and a new test widens the tie until the old sort goes red. The only such sort in `hydms/` | done / runner | `doing` until `gh run list` is green, its last box |
 | **99** | *"Only 39 test rows sit above 500 K"* is `REPORT.md`'s count over the archival 247-row test split. Measured now: **130 of 893**. Three production docstrings and two tests still carry the old number | 0.25 d | `backlog`, unblocked |
 | **68** | `scripts/check_board.py` has **no done-card checkbox rule** and the prose said it did. **Prose half cleared 2026-09-13** — board README, `CLAUDE.md` and #81 corrected; the surviving claim count was two, not six. **Still owed:** nothing enforces the convention, and this index is a mitigation, not a check | done / 0.25 d left | box on a `done` card |
 | **96** | `--report` on `surrogate.calibrate` is both an output *and* an input path: redirecting it silently falls back to CatBoost defaults, and `--save` then persists that as a `deployed fit`. It has produced a wrong conformal correction once already | 0.25 d | `backlog`, unblocked |

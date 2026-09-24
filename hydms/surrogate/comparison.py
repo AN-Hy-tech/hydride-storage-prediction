@@ -700,8 +700,11 @@ therefore quoted here as *published*, never as reproduced.
 """
 
     def _computability(self) -> str:
+        # Stable, because the key ties: every feature Eu1Ni5 blocks is charged one row, and the
+        # default quicksort may order those differently run to run (#97). A stable sort keeps
+        # the contract order ``cost`` was built in, so the published bytes are the same.
         charged = self.cost[self.cost["rows_blocked"] > 0].sort_values(
-            "rows_blocked", ascending=False
+            "rows_blocked", ascending=False, kind="stable"
         )
         worst = charged.index[0]
         rest = charged.iloc[1:]

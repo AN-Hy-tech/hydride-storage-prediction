@@ -2,7 +2,15 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-13
+> ## ▶ Next action — as of 2026-09-24
+>
+> **#97 landed ahead of #82, and the opening move is still #82.** The P1 index ranks by blast
+> radius, and #97 was the one `High` there: `comparison.py:703` now sorts `kind="stable"`, the
+> regenerated document is byte-identical to the committed one, and every other ordering call in
+> `hydms/` was checked — it was the only one. It stays `doing` for one box: **green on the runner**,
+> read from `gh run list`. Beside #82, **#89** is still the path to the unfreeze.
+>
+> *Below is the 2026-09-13 block, still accurate except where the paragraph above supersedes it.*
 >
 > **The documentation set was compacted today and nothing about the work changed.** This file went
 > from **3,925 lines to ~310** and the runbook from **1,511 to 497**; everything removed is in
@@ -76,12 +84,10 @@
 > **#36** (the five ADRs) is unblocked and has a directory to land into: `docs/adr/README.md`
 > reserves `0001`–`0005` for its five and records why #85 took `0006`.
 >
-> **#91** is startable in parallel; **#94**, **#95**, **#96**, **#97**, **#98** and **#99** are
+> **#91** is startable in parallel; **#94**, **#95**, **#96**, **#98** and **#99** are
 > open and none is an unfreeze condition. **#100 is no longer the thing blocking a believable full
 > run** — `pytest` with no `-m` is **1531 passed, 26 m 45 s** as of 2026-09-13; see the top of this
-> block for why it is still `doing`. **#97 is `High`** — `comparison.py:703` sorts with
-> pandas' default unstable quicksort over a tied key, which makes a *published* document
-> non-reproducible; one keyword, and do not loosen the comparison. **#7** still owes a portable
+> block for why it is still `doing`. **#7** still owes a portable
 > artifact — `artifacts/` is gitignored, so `v3` is on the maintainer's machine and nowhere else,
 > and a fresh clone has no model.
 >

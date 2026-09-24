@@ -1,6 +1,6 @@
 ---
 id: 97
-status: backlog
+status: doing
 priority: High
 blocked_by: []
 assignee: "@amirhossein"
@@ -70,13 +70,13 @@ hash-ordered `_fuse`. Do not loosen the comparison and do not post-sort the rend
 
 ## Done when
 
-- [ ] `comparison.py:703` sorts **stably** — `kind="stable"` preserves `declared.names` order for
+- [x] `comparison.py:703` sorts **stably** — `kind="stable"` preserves `declared.names` order for
       tied rows, which is already a deterministic order — or takes an explicit second key. Not by
       post-sorting the rendered rows
-- [ ] Every other sort in `hydms/surrogate/comparison.py` is checked for the same defect. One tie
+- [x] Every other sort in `hydms/surrogate/comparison.py` is checked for the same defect. One tie
       found by accident usually means the others were never specified either — the question is
       "can two rows share this key?", not "has this one ever moved?"
-- [ ] The document is regenerated and the new bytes committed, with the diff read rather than
+- [x] The document is regenerated and the new bytes committed, with the diff read rather than
       rubber-stamped: a row order that changes is fine, a *number* that changes is a different
       finding and belongs on its own card
 - [ ] **Green on the runner**, confirmed by `gh run list` and not by a local run. A local pass is
@@ -106,3 +106,20 @@ gh run list --branch feat/phase-h-emergency-hardening --limit 3
   have made `check_board.py` fail on a blocker that is no longer done — the board is right to
   refuse that, and a `done` card carrying an unticked box would have been the same lie in a quieter
   form. (by @assistant)
+- 2026-09-24: **Fixed with `kind="stable"`, and the regenerated document is byte-identical to
+  the committed one** — the committed row order already *was* contract order, so no row moved and
+  no number changed; there is no new document to commit. Every ordering call in `hydms/` was
+  checked, not only this file's: `selection.py:737` already breaks ties with a second key,
+  `smoke.py:336` is already `kind="stable"`, `protocol.py:307` sorts on `(_row, _screen)` which
+  cannot tie, `novelty.py:765` can only tie on identical strings so `.first()` is the same either
+  way, and `idxmax`/`idxmin` return the first occurrence. **This was the only one.**
+  **Why the byte-identity test could not catch it reliably, measured:** numpy sorts a run shorter
+  than ~16 by insertion, which is stable, and the real table ties only six rows — so on this
+  machine the old code always produced the committed bytes. A 22-row series with 21 ties *was*
+  reordered by the default sort on this machine, which has **no AVX-512**, so a long tie reorders
+  on any CPU. `test_rows_tied_on_cost_are_published_in_contract_order` widens the tie to 21 rows
+  and was confirmed **red with the keyword removed, green with it**. **The trigger on the runner
+  is a hypothesis, not a finding:** numpy ≥ 1.25 dispatches `argsort(kind="quicksort")` to an
+  AVX-512 routine when the CPU has it, and hosted runners do not all share a CPU — which would fit
+  "same versions, same runner label, different answer". Not verified; not worth a CI round trip,
+  because the fix does not depend on it. (by @assistant)
