@@ -69,16 +69,19 @@ also means the app cannot accidentally acquire its own featurisation or its own 
       passes:
 
       ```bash
-      PY=/c/Users/Asus/miniconda3/envs/Project/python.exe
-      $PY -m pip install --no-deps streamlit==1.56.0 altair==6.2.2 narwhals==2.26.0           pydeck==0.9.3 toml==0.10.2 watchdog==6.0.0
-      $PY -m pytest tests/delivery/test_app_script.py -v -p no:cacheprovider   # AppTest, no browser
+      # Git Bash, repo root. Full paths on purpose: a bare `PY`/`py` is the Windows launcher,
+      # which runs the machine's Python 3.13 (it did, 2026-09-25, and installed there instead).
+      /c/Users/Asus/miniconda3/envs/Project/python.exe -m pip install --no-deps streamlit==1.56.0 altair==6.2.2 narwhals==2.26.0 pydeck==0.9.3 toml==0.10.2 watchdog==6.0.0
+      /c/Users/Asus/miniconda3/envs/Project/python.exe -m pytest tests/delivery/test_app.py tests/delivery/test_app_script.py -v -p no:cacheprovider
       ```
 
       `tests/delivery/test_app_script.py` drives the real `app/main.py` through Streamlit's
       `AppTest` against a uvicorn service: load, an answer with neighbours and sweep, a refusal,
       an invalid request, an unreachable service. It skips wherever Streamlit is absent, so CI
       (which does not install the `app` extra) never runs it. The S7 exit check by eye is then
-      `uvicorn hydms.delivery.api:app --port 8000` and `streamlit run app/main.py`
+      `…/envs/Project/python.exe -m uvicorn hydms.delivery.api:app --port 8000` and
+      `…/envs/Project/python.exe -m streamlit run app/main.py` -- `-m`, so the interpreter
+      decides which Streamlit runs, not whichever `streamlit.exe` is first on PATH
 
 ## Runnable check
 
