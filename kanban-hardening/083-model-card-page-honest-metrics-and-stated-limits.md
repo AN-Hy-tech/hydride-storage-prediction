@@ -2,7 +2,7 @@
 id: 83
 status: backlog
 priority: High
-blocked_by: [29, 30, 82, 89]
+blocked_by: [29, 30, 82, 89, 103]
 assignee: "@amirhossein"
 tags: [ph, l6, S6, R4]
 ---
@@ -62,10 +62,12 @@ DOE system target, and the published figures inherited as though nothing had cha
       [0.6889, 0.7985] wt% out-of-fold over five models (`reports/model/evaluation.md`). **The
       deployed model** — one model, scored once on 254 held-out `test` rows — scores R² **0.7071**,
       RMSE 0.5420, MAE 0.3117. That second figure is computed by gate AC-1 as a side effect of
-      proving reproducibility and **is currently published nowhere**: it lives in the gate's message
-      and in the gitignored `artifacts/gate-results.json`. `evaluation.md` promises it in its own
-      words ("the artifact reading … is a claim about *a model*, and it arrives with card #34"), so
-      this card is where the promise is kept. Report it beside 0.7481 with the reason they differ:
+      proving reproducibility. **Publishing it moved to #103 on 2026-09-24** (the maintainer's call,
+      so #37 would not wait on #82's Streamlit pin). It is committed in
+      `reports/model/artifact-score.csv`, generated from the sealed gate record. This page reads it
+      from there and owes only the *showing*. `evaluation.md` promises it in its own words ("the
+      artifact reading … is a claim about *a model*, and it arrives with card #34"), and #103 kept
+      the publishing half of that promise. Report it beside 0.7481 with the reason they differ:
       the deployed model grows on **701** rows where each CV fold was cut from 893
 
 - [ ] **The near-ambient temperature bin is the weakest and the table already says so** (raised

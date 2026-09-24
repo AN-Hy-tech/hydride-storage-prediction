@@ -2,7 +2,7 @@
 id: 37
 status: doing
 priority: High
-blocked_by: [25, 29, 30, 34, 89]
+blocked_by: [25, 29, 30, 34, 89, 103]
 assignee: "@amirhossein"
 tags: [p1, l7, S6, S7, R4]
 ---
@@ -36,18 +36,15 @@ stronger than one that does not.
 - [x] Side-by-side table: published number, corrected number, which leak explains the change
 - [x] Leave-one-class-out R2 reported beside random-split R2 with the Beltrame reference
 - [x] Old-22 vs new-N feature comparison included
-- [ ] Every claim traceable to a report file produced by the pipeline, not to memory
-      **Open, and left open on purpose (2026-09-24).** Every number in the draft traces to a
-      committed file except three, marked † in the chapter: the **artifact score** (R² 0.7071,
-      RMSE 0.5420, MAE 0.3117 on 254 test rows, gate AC-1) and the **test coverage** (0.7795,
-      width 0.8630 wt%, gate AC-3). Both live only in `artifacts/v3/manifest.json` and
-      `artifacts/gate-results.json`, and `artifacts/` is gitignored, so a fresh clone cannot check
-      them. The chapter says so on its face rather than hiding it. Publishing a committed report of
-      them is already a box on **#83**, but #83 is blocked behind #82's Streamlit pin, which would
-      tie the last unfreeze bullet to a lock decision it has nothing to do with. **OPEN decision
-      for the maintainer:** move that box off #83 onto a small card of its own (write the AC-1/AC-3
-      metrics to a committed `reports/model/` table, a few minutes, no fit), then tick this one.
-      Do not tick it by rewording the criterion
+- [x] Every claim traceable to a report file produced by the pipeline, not to memory
+      **Ticked 2026-09-24 by #103, criterion unchanged.** The three numbers that were marked † (the
+      artifact score R² 0.7071 / RMSE 0.5420 / MAE 0.3117 from gate AC-1, and the test coverage
+      0.7795 / width 0.8630 wt% from gate AC-3) now trace to the committed
+      `reports/model/artifact-score.csv`. That table is generated from
+      `reports/model/artifact-gates.json`, a verbatim copy of the gate records in the promoted
+      `v3` manifest, stamped with the manifest's SHA-256. The chapter's † markers are gone. Still
+      true and still stated in §1.R.8: the *model* is gitignored, so a clone can check the recorded
+      numbers but cannot re-score them (card #7)
 
 - [x] **A limitations-and-future-work section, and the measurement that makes it specific**
       (added 2026-09-06, after the LOCO run and a domain review with the maintainer). The chapter

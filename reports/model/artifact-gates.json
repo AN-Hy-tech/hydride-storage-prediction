@@ -1,0 +1,28 @@
+{
+  "schema": "hydms.artifact-gates/1",
+  "version": "v3",
+  "manifest_sha256": "ae913ab03045a2661b22e6610920b400fcfb2107d65debee77b3fb1aa2909673",
+  "manifest_created_at": "2026-09-12T17:37:26+00:00",
+  "gate_run_started_at": "2026-09-12T17:34:30+00:00",
+  "notes": "certified copy of v2, which was fitted at 4a06011303cfd8c833cb5c82dcd58846157cf2f8 on 2026-09-06T21:31:41+00:00. Payloads are that version's objects; the gate report is this command's run against it. Promoted with 3 criteria waived (AC-5, AC-7, AC-8); the report records each as SKIPPED and the waiver itself is in current.json.",
+  "gates": [
+    {
+      "name": "AC-1",
+      "status": "PASSED",
+      "passed": true,
+      "measured": 0.0,
+      "threshold": 0.0,
+      "message": "every metric is identical across the two runs: crossings 0.000000, interval_coverage 0.779528, interval_width 0.862991, mae 0.311710, pinball 0.106554, r2 0.707064, rmse 0.542028; conformal correction +0.037355; 2584 trees, best iteration 2583, grown on 701 row(s) with 172 carved for calibration. Compared on the metrics table and the fit's own record, never on model bytes, which may legitimately differ. Two runs of hydms.surrogate.deploy.deployed_fit at seed 42, configuration from model-chosen.csv:outer-0, scored on 254 row(s) of 'test'. The runs differ in thread count -- 1 against 20 -- which card #32 measured to be a free strengthening: this fit is thread-invariant, so `thread_count` stays out of model.FIXED and this gate varies it instead of pinning it. Seeded: card #13's split, the CleanLab screen, the calibration carve, the early-stopping slice and CatBoost's own sampling. Not established here: the hyperparameter search that chose the configuration, which costs 1 h 41 m and is read from disk rather than repeated.",
+      "duration_s": 149.1596
+    },
+    {
+      "name": "AC-3",
+      "status": "PASSED",
+      "passed": true,
+      "measured": 0.7795275590551181,
+      "threshold": 0.8,
+      "message": "coverage is 0.7795 against a nominal 0.8, off by 0.0205 of an allowed 0.05. v2 (the newest version on disk; nothing is promoted yet), 254 held-out row(s) in 'test'. Calibrated: coverage 0.7795, mean width 0.8630 wt%. Raw (the same heads, correction not applied): coverage 0.6575, mean width 0.6485 wt% -- the gap card #27 exists to close, measured here on rows nothing was fitted or calibrated on. Binomial standard error at this n and this nominal: 0.0251, so the 0.05 tolerance is about two of them.",
+      "duration_s": 0.4685
+    }
+  ]
+}

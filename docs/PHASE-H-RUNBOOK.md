@@ -268,10 +268,11 @@ single prediction path and HG-3 covers the UI too.
       correction of +0.030990 instead of +0.037355 on 2026-09-07 and was discarded.
 - [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
       in it because conflating them has already cost this project something.
-- [~] **#37 drafted 2026-09-24** as [chapter1-revision.md](chapter1-revision.md): `doing`, one box
-      open. The artifact score (R² 0.7071) and the test coverage (0.7795) are quoted from the
-      gitignored `artifacts/v3/manifest.json` and marked † in the chapter. A committed report of
-      them is owed (currently a box on #83, which is blocked by #82). **#36 is still `backlog`.**
+- [~] **#37 drafted 2026-09-24** as [chapter1-revision.md](chapter1-revision.md): `doing`, every
+      box ticked, waiting on the author's read. The artifact score (R² 0.7071) and the test
+      coverage (0.7795) were committed by **#103** in `reports/model/artifact-score.csv`,
+      generated from the sealed gate record (`python -m hydms.evidence.artifact_score --probe
+      --emit` after any promotion). **#36 is still `backlog`.**
 - [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~
       ~~**#37 waits on #34 *and* #89**~~ (edge added 2026-09-11). **#34 closed 2026-09-12, so #37
       waits on #89 alone, and #36 is unblocked outright.** The #89 edge stands and is the load-
@@ -507,7 +508,8 @@ each is boxed on a card, and none is a defect in what was built):
   `deploy.deployed_fit`, with HG-1 reporting 13/13 throughout. `docs/QA-PROTOCOL.md` §5 now carries
   the rule; the mechanical check is deferred with its reason, because every available proxy is
   weaker than the structural fix that landed (one module both callers call).
-- **Two measured results are published nowhere.** The deployed model's own held-out score, computed
+- **Two measured results are published nowhere.** *(The first was published by #103 on 2026-09-24,
+  in `reports/model/artifact-score.csv`.)* The deployed model's own held-out score, computed
   by AC-1 as a side effect, and the near-ambient temperature bin's near-zero R² in
   `evaluation-subgroups.csv`. Both are boxed on #83. The pattern is worth naming because this phase
   exists because of it: **a number that only a gate message or an uncommitted file has ever held is

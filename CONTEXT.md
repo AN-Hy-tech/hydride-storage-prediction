@@ -25,7 +25,8 @@ _Avoid_: "the R²", "the model's score", "test score", "CV score"
 
 **Artifact score**:
 How well **one specific promoted model** performs on rows it has never seen. One model, one held-out
-split, one number, tied to an artifact version.
+split, one number, tied to an artifact version. The promoted version's is committed in
+`reports/model/artifact-score.csv`, generated from its sealed gate record (#103).
 _Avoid_: "the R²", "the final score", "the real score"
 
 **Transfer score**:

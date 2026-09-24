@@ -1,9 +1,7 @@
 # Chapter 1 revision: what exists, what was wrong, what it is now
 
 > **Draft for the author's review, card #37, 2026-09-24.** Written from committed evidence only.
-> Every number carries its source in the text or in the evidence table at the end. Two numbers are
-> marked **†**: they describe the deployed model and are recorded only in its artifact manifest,
-> which this repository does not commit (see §1.R.8). Terms follow `CONTEXT.md`. In particular, the
+> Every number carries its source in the text or in the evidence table at the end. Terms follow `CONTEXT.md`. In particular, the
 > three kinds of R² (*procedure*, *artifact* and *transfer* score) are never quoted in place of one
 > another.
 
@@ -145,10 +143,10 @@ names the leaks that stood between the two figures.
 | Quantity | As published | Now | Why they differ |
 |---|---|---|---|
 | R², the modelling procedure | Ensemble validation **0.939** (CI 0.898–0.961) | Procedure score **0.748** [0.689, 0.799], out-of-fold over five group-aware outer folds | L2 (members chosen on the scoring set), L4–L7 (no nesting, early stopping on the scored fold, selection before CV, no grouping). The published CI inherits the same contradiction as its point estimate |
-| R², one model on held-out rows | Ensemble test **0.892** | Artifact score **0.707** on 254 held-out test rows **†** | L1 (test chose the stopping iteration), L6, L8 (materials straddling the split). The committed `stacking_results.csv` records **0.376** for the ensemble, so the published figure is not the pipeline's own either |
-| MAE, one model on held-out rows (wt%) | **0.223** | **0.312** **†** (RMSE 0.542) | As above |
+| R², one model on held-out rows | Ensemble test **0.892** | Artifact score **0.707** on 254 held-out test rows | L1 (test chose the stopping iteration), L6, L8 (materials straddling the split). The committed `stacking_results.csv` records **0.376** for the ensemble, so the published figure is not the pipeline's own either |
+| MAE, one model on held-out rows (wt%) | **0.223** | **0.312** (RMSE 0.542) | As above |
 | R², an alloy family never trained on | Not measured (L13 made it impossible) | Transfer score **0.273**, macro over 10 families | Not a correction: a new measurement (§1.R.5) |
-| Interval coverage, nominal 80 % | No interval | **0.780** on the test rows, mean width 0.863 wt% **†** | New. Without the conformal correction the same quantile heads cover 0.658 |
+| Interval coverage, nominal 80 % | No interval | **0.780** on the test rows, mean width 0.863 wt% | New. Without the conformal correction the same quantile heads cover 0.658 |
 | Features | 22 | 14 | L6. See §1.R.6 |
 | Distinct materials | 1,149 | 1,115 (1,149 formula strings) | Both correct; they count different things. Grouping uses the 1,115 |
 | Elements | 54 | 55 | Counted from every parsed composition |
@@ -256,7 +254,7 @@ a physical explanation for the label noise CleanLab flags.
 zero, and this is the regime a practical storage material must operate in.
 
 **The interval is wide relative to the signal.** At 80 % coverage the calibrated band averages
-0.863 wt% **†**, about ±0.43 wt%. The model discriminates between families far better than between
+0.863 wt%, about ±0.43 wt%. The model discriminates between families far better than between
 small composition changes within one. For a screening tool that feeds an optimiser, that is usable
 if it is stated. It is not precision.
 
@@ -303,11 +301,12 @@ change set is fixed first, the acceptance rule is written before the run, and th
 
 ## 1.R.8 Evidence
 
-Every number in this section comes from a file the pipeline produced. The **†** rows are the
-exception: they were produced by gate AC-1 and AC-3 on the promoted version `v3`, and are stored in
-`artifacts/v3/manifest.json`, which is gitignored like all of `artifacts/`. A fresh clone cannot
-verify them until a committed report of the artifact score exists (card #83 owes it; card #7 owes a
-portable artifact).
+Every number in this section comes from a committed file the pipeline produced. The artifact score
+and the test coverage were measured by gates AC-1 and AC-3 on the promoted version `v3`. They are
+copied verbatim from its sealed manifest into `reports/model/artifact-gates.json`, which records the
+manifest's SHA-256, and tabulated in `reports/model/artifact-score.csv` (card #103). The model
+itself is still gitignored, so a fresh clone can check the recorded numbers but cannot re-score the
+model (card #7 owes a portable artifact).
 
 | Claim | Source |
 |---|---|
@@ -318,8 +317,8 @@ portable artifact).
 | Split 893 / 131 / 255 over 780 / 111 / 224 compositions | card #13; `tests/data/test_splits.py` |
 | Procedure score 0.748 [0.689, 0.799]; MAE 0.333; per-fold range; temperature bins | `reports/model/evaluation.md`, `evaluation-metrics.csv`, `evaluation-subgroups.csv` |
 | Conformal correction +0.0374 (log1p), 172 calibration rows, 80 % nominal | `reports/model/conformal.csv` |
-| **†** Artifact score R² 0.7071, RMSE 0.5420, MAE 0.3117 on 254 test rows | gate AC-1, `artifacts/v3/manifest.json` |
-| **†** Coverage 0.7795 (raw 0.6575), mean width 0.8630 wt% | gate AC-3, `artifacts/v3/manifest.json`, `artifacts/gate-results.json` |
+| Artifact score R² 0.7071, RMSE 0.5420, MAE 0.3117 on 254 test rows | gate AC-1; `reports/model/artifact-score.csv` (from `artifact-gates.json`, generated, byte-checked) |
+| Coverage 0.7795 (raw 0.6575), mean width 0.8630 wt% | gate AC-3; `reports/model/artifact-score.csv` |
 | Transfer score 0.273 macro, 0.215 weighted; per-family table; random-split 0.746 | `reports/loco/loco.md`, `loco-summary.csv`, `loco-per-class.csv` |
 | 22 → 14 features, 266-row Gordy cost, fold stability | `reports/feature_selection/old_vs_new.md` and its CSVs |
 | Gadolinium placeholder, 18 rows | card #83; `reports/feature_selection/old_vs_new.md` |

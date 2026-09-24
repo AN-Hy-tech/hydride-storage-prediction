@@ -2,7 +2,24 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-24 (night)
+> ## ▶ Next action — as of 2026-09-24 (late night)
+>
+> **Handoff, one line: #37 has every box ticked and waits only on the author's read of
+> [../docs/chapter1-revision.md](../docs/chapter1-revision.md). After that, #37 → `done`, lift the
+> freeze per [../docs/FREEZE.md](../docs/FREEZE.md), then the two API additions for #82.**
+>
+> **#103 is `done`**, filed by the maintainer's decision. It is a card of its own, not #83's box
+> and not #37's. `hydms/evidence/artifact_score.py` copies the AC-1/AC-3 records out of the sealed
+> `v3` manifest into `reports/model/artifact-gates.json` (`--probe`, which needs `artifacts/`) and
+> tabulates them in `reports/model/artifact-score.csv` (`--emit`, byte-checked in CI). It
+> **re-scores nothing**, because AC-3 is the only reader of the test split. It refuses unless AC-1's
+> refit coverage matches AC-3's stored-model coverage. #83's box now only *shows* the number. The
+> chapter's † markers are gone. **After any future promotion, run `--probe --emit`**; a local-only
+> test goes red until you do.
+>
+> *Below: the 2026-09-24 night block, superseded on #37.*
+>
+> **(2026-09-24 night)**
 >
 > **Handoff, one line: #37 is drafted ([../docs/chapter1-revision.md](../docs/chapter1-revision.md))
 > and `doing` on one box: three numbers trace only to the gitignored `artifacts/`. Committing them
