@@ -135,9 +135,10 @@ Fixed now, before results are seen, so it cannot be softened later. All four mus
 When all four hold: set `freeze: lifted` in this file's frontmatter, record the closing date below,
 and the PA/PB board resumes.
 
-**Three of four hold as of 2026-09-12.** The one that remains is the Chapter 1 revision, **#37**,
-which waits on **#89** (`docs/REPORT-RECONCILIATION.md`) — and #89 has been unblocked since
-2026-09-11. Nothing left in this condition needs a fit, a decision, or a run of the pipeline.
+**Three of four hold as of 2026-09-12.** The one that remains is the Chapter 1 revision, **#37**.
+It waited on **#89**, and #89 closed on 2026-09-24:
+[REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md) exists, so **#37 is unblocked**. Nothing left
+in this condition needs a fit, a decision, or a run of the pipeline.
 
 > **This list is not a plan, and it is not the measure of Phase H.** It says when the *frozen*
 > programme may resume — nothing more. The phase's own objective is stated in §Why above: **a

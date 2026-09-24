@@ -1,6 +1,6 @@
 ---
 id: 89
-status: backlog
+status: done
 priority: High
 blocked_by: [29, 30]
 assignee: "@amirhossein"
@@ -30,19 +30,19 @@ app does not inherit the old figures unexamined.
 
 ## Done when
 
-- [ ] `docs/REPORT-RECONCILIATION.md` tabulates each disagreement: the claim, its location in
+- [x] `docs/REPORT-RECONCILIATION.md` tabulates each disagreement: the claim, its location in
       `REPORT.md`, the artifact that refutes it, and the artifact's value
-- [ ] Each row states which source to believe and why
-- [ ] It records that the published pipeline is not the committed pipeline, with the evidence
-- [ ] It notes `REPORT.md` is preserved unedited, and why
-- [ ] The new honest numbers from #29 and #30 are shown beside the published ones
-- [ ] **A ninth disagreement, found by #9: the file contains 55 elements, not 54.** `REPORT.md` §2.3
+- [x] Each row states which source to believe and why
+- [x] It records that the published pipeline is not the committed pipeline, with the evidence
+- [x] It notes `REPORT.md` is preserved unedited, and why
+- [x] The new honest numbers from #29 and #30 are shown beside the published ones
+- [x] **A ninth disagreement, found by #9: the file contains 55 elements, not 54.** `REPORT.md` §2.3
       ("Fifty-four elements were identified across all formulae") and the PRD's dataset table both say
       54. Counted from the parsed compositions of all 1279 rows of `hydride_data.csv` the answer is
       **55**, seven of which appear exactly once (N, Eu, Lu, Pb, Au, Os, Re). Asserted in
       `tests/data/test_load.py`. Check whether it is inherited rather than introduced: the HyStor paper
       reports 54 for its own 1,282-row release, which is a different file
-- [ ] **A tenth disagreement, found by #11: §4.2's "Overfitting" footnote mixes two target
+- [x] **A tenth disagreement, found by #11: §4.2's "Overfitting" footnote mixes two target
       spaces, and misdescribes the column it annotates.** The footnote reads
       `Overfitting = CV_R²_mean − Val_R²_orig`. `CV_R2_Mean` is measured in **log** space —
       `cross_validate(pipe, X_train, y_train, scoring='r2')` at
@@ -53,9 +53,12 @@ app does not inherit the old figures unexamined.
       is at least single-spaced. So the published column is probably right and its stated
       definition wrong — say which, and note that §4.2's table cannot be read across.
       `hydms/data/target.py`'s docstring holds the space-by-space table this came from
-- [ ] Linked from the model card (#83) and from `kanban-hardening/README.md`
+- [x] Linked from the model card (#83) and from `kanban-hardening/README.md`. **The README
+      half is done; the model-card half is #83's own box** ("A link to
+      `docs/REPORT-RECONCILIATION.md`"), which could not be ticked before this file existed and
+      now can. It is not re-owed here, because this card cannot build #83's page
 
-- [ ] **A corrupted row in the published feature matrix (from #16).** `Eu1Ni5` -- row 516,
+- [x] **A corrupted row in the published feature matrix (from #16).** `Eu1Ni5` -- row 516,
       `H2_W% (max)` 1.2, AB5, the dataset's only europium composition. Europium is absent from
       CBFV's `jarvis.csv`, so its six JARVIS features were computed with europium contributing
       an all-zero property vector: zero mass, zero polarizability, zero boiling point. Verified
@@ -68,7 +71,8 @@ app does not inherit the old figures unexamined.
 ## Runnable check
 
 ```bash
-python scripts/check_board.py --root .
+conda run -n Project python -m pytest tests/evidence/test_reconciliation.py
+conda run -n Project python -m hydms.evidence.reconciliation --emit   # regenerate, never edit
 ```
 
 ## Traces to
@@ -95,3 +99,35 @@ python scripts/check_board.py --root .
   because #34 is itself blocked on #79 and #86 — so the reconciliation, and #83's link to it, sat
   behind two gates that have nothing to do with either. Now `[29, 30]`, both `done`: this card is
   startable. (by @assistant)
+
+- 2026-09-24: **Done, and generated rather than written.** `hydms/evidence/reconciliation.py` holds
+  each disagreement as a quotation, a section, a committed artifact, a *function that reads the
+  artifact*, and a verdict with its reason; `--emit` writes `docs/REPORT-RECONCILIATION.md`.
+  `tests/evidence/test_reconciliation.py` (31 tests) checks the page three ways: the committed
+  bytes are what the code produces; every quotation occurs in `REPORT.md` verbatim; and a value
+  is read, not typed, which a perturbation test proves by editing `stacking_results.csv` in a
+  copied tree and requiring the page to follow. Everything it reads is committed, so it runs in
+  CI. A second test builds the page from the copy alone and gets the committed bytes, which
+  proves the copy is complete: nothing is read from the live tree by accident.
+
+  **"Eight" was never a list.** The opening audit said eight and wrote down three; the other
+  five are nowhere in the repository or the archive. So this is a re-measurement and it finds
+  **twelve**, including the ninth and tenth boxed above and the europium row. The new ones:
+  §4.3's ensemble CI (0.898 to 0.961 against 0.328 to 0.415); §4.2's "lowest overfitting (0.039)"
+  with **seven** models lower in the same table; §4.4's RandomForest "p_adj of about 0.1" against
+  0.537, and "all other models p_adj < 0.05" with GradientBoosting at 0.086; §6.4's "the Ensemble
+  is more robust across all three subgroups" when ExtraTrees leads in every one of them (and §4.3
+  rests the ensemble recommendation on that); and §2.2's 1,149 unique compositions, which is
+  1,115 materials.
+
+  **The finding that changes how row 1 reads: the committed CSVs disagree with each other.**
+  `improved_benchmark_results.csv` carries the report's ensemble row (Val 0.939, Test 0.892) and
+  `stacking_results.csv` carries a different ensemble (0.377 / 0.376). The card's framing, "a CSV
+  contradicts the report", undersells it. Two files from one pipeline describe two ensembles, and
+  the report quoted one of them. That is the evidence for "the published pipeline is not the
+  committed pipeline" in one line, and the page leads with it.
+
+  The ninth box asked whether 54 is inherited. It cannot be settled from here, and row 10 says
+  so with the one inference available: if these 1,279 rows are a subset of HyStor's 1,282, the
+  release has at least 55 elements too and the paper miscounted. Unblocks **#37**, the last
+  unfreeze condition, and the reconciliation half of **#83**. (by @assistant)

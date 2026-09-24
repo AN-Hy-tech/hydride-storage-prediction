@@ -73,6 +73,7 @@ current performance.
 | [docs/REFUSALS.md](docs/REFUSALS.md) | Every sentence the delivery path can produce when it declines to answer — one row per probe, input → code → reason — plus the codes it declares but no request can reach | Before changing a screen's wording or adding a reason code. It is **generated** (`hydms.delivery.refusals --emit`), so regenerate it; never edit it |
 | [docs/API.md](docs/API.md) | The published HTTP contract a client author reads: every route, the answer and refusal bodies, the batch limit, worked examples stamped with the artifact version that produced them | Before calling the service, or changing a route. It is **generated** (`hydms.delivery.apidoc --emit`, examples from `--probe`); never edit it |
 | [docs/QA-PROTOCOL.md](docs/QA-PROTOCOL.md) | What must be tested at each layer, and the lint lane's no-install rule (§6) | Before writing a card's tests, or arguing about what `done` requires |
+| [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md) | Every place `REPORT.md` and a committed CSV disagree, which to believe and why, and the honest numbers beside the published ones. **Generated** (`hydms.evidence.reconciliation --emit`); never edit | Before quoting any REPORT.md number, and before writing Chapter 1 (#37 is written from it) |
 | [REPORT.md](REPORT.md) | Full published methodology and results of the forward model | Writing Chapter 1, or comparing old-vs-new numbers |
 | [Machine_Model/src/](Machine_Model/src/) | The 9-script pipeline that produced REPORT.md | Reading what the old pipeline did — **not** for new code |
 | [graphify-out/GRAPH_REPORT.md](graphify-out/GRAPH_REPORT.md) | God nodes, communities, and surprising cross-document links | Orienting in an unfamiliar corner before reading files |
@@ -202,9 +203,10 @@ bash $S/list_all_cards.sh kanban-hardening/   # id | status | blocked_by | title
 
 - Quoting REPORT.md's scores as current performance. Thirteen leaks, and CSVs committed in this
   repository already contradict the headline numbers; they are expected to move down and that is a
-  reported result, not a failure (risk R4). The evidence table **will be**
-  `docs/REPORT-RECONCILIATION.md`; card #89 owes it and it does not exist yet, so cite the
-  committed CSVs under `reports/` until it does.
+  reported result, not a failure (risk R4). The evidence table is
+  [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md) (#89): every place the report and
+  a committed CSV disagree, with the honest numbers beside the published ones. It is generated
+  (`hydms.evidence.reconciliation --emit`), so it is regenerated, never edited.
 - Working a card on the frozen board, or editing the PRD, `research/`, `REPORT.md` or
   `Machine_Model/` while the freeze holds. CI rejects it; [docs/FREEZE.md](docs/FREEZE.md) says why.
 - Writing a plan into this file. Write a card.
