@@ -87,7 +87,7 @@ import argparse
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -1215,7 +1215,9 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
                     subgroups,
                     sha=git.sha,
                     code_modified=git.code_modified,
-                    dated=datetime.now(timezone.utc),
+                    # Local, with its offset, like the run record's own dates: at
+                    # 01:00 in Tehran the UTC date is still yesterday (card #105).
+                    dated=datetime.now().astimezone(),
                     run_date=read_run_date(source),
                 ),
                 encoding="utf-8",
