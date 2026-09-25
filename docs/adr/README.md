@@ -17,6 +17,7 @@ Format: `NNNN-slug.md`, following `.claude/skills/domain-modeling/ADR-FORMAT.md`
 | 0004 | *reserved* — new `hydms/` package; `Machine_Model/src/` archived rather than rewritten | | #36 |
 | 0005 | *reserved* — pymoo with the element subset fixed per run, over mixed-integer encoding | | #36 |
 | [0006](0006-the-delivery-seam.md) | The delivery seam: the API owns no ML logic, and the library owns no I/O | The one hard-to-reverse decision of the delivery layer | #85 |
+| [0007](0007-evidence-is-served-not-read-by-the-page.md) | Evidence is served, not read by the page | How committed evidence reaches the model-card page, and why it is read once at startup | #83, #105 |
 
 ## Why 0001–0005 are reserved rather than taken
 

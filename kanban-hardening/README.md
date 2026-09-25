@@ -2,7 +2,16 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25 evening (#98 `done`; #104 filed)
+> ## ▶ Next action — as of 2026-09-26 (architecture settled; #105 filed, not started)
+>
+> **Handoff, one line: start #105 (the run record: `hydms/provenance.py`, standard library only)
+> and land it before any full LOACO run. Then #83 (the Evidence Reader, per ADR 0007), then #84
+> (`predict_many`). Every decision is on those three cards. #104's four probes are running, and
+> their diff goes on #104.**
+>
+> *Below: the block from when #98 closed. Superseded on order only: #83 is now blocked by #105.*
+>
+> **(2026-09-25 evening, #98 `done`; #104 filed)**
 >
 > **Handoff, one line: #98 is `done`: the full LOACO run landed and `reports/loco/loco-out-of-fold.csv`
 > is committed. Next, in the maintainer's order, are #83 and #84. The run also filed #104, and
@@ -379,7 +388,7 @@ leave-one-alloy-class-out result — and this line said "both of those" until 20
 blocked by #44 alone, which is right on the substance: an ElMD distance is a property of two
 compositions and reads nothing the surrogate produces. All three are `done`; S5 is closed.
 
-**The next free id is #105** (as of 2026-09-25). Scan both directories for `max(id) + 1` — this
+**The next free id is #106** (as of 2026-09-26). Scan both directories for `max(id) + 1` — this
 line has been stale before (it said #94 while #103 existed), so scan rather than trust it.
 
 ---

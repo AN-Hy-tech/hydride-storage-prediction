@@ -17,6 +17,13 @@ The single most expensive confusion in this project. **Three different R² value
 all correct, and each answers a different question.** Naming them is what stops one being quoted
 for another.
 
+**Score**:
+One number about the model **together with its reading, its interval — or the stated reason it
+has none — and the run that produced it**. The procedure, artifact and transfer scores below are
+the three kinds; a bare figure without the other parts is not a score, it is a number somebody will
+quote for the wrong question.
+_Avoid_: "metric" or "reading" for the whole object *(a reading is one part of a score)*
+
 **Procedure score**:
 How well the *modelling method* performs, estimated out-of-fold across every outer fold. It comes
 from several models, none of which is ever shipped. The published reading is
@@ -35,8 +42,10 @@ reading. A claim about extrapolation, and the only one of the three that speaks 
 _Avoid_: "generalisation", "the LOACO number" *(the protocol is leave-one-class-out; the score is
 the transfer score)*
 
-> **State of the term (2026-09-25):** quote it **with its run date**. Two seeded runs gave macro
-> 0.2734 (2026-09-06) and 0.2559 (2026-09-25; the committed one), with Mg moving −0.338 → −0.508.
+> **State of the term (2026-09-26):** quote it **with its run date** where the run record has one.
+> Neither run so far does, so each is named by its commit: two seeded runs gave macro 0.2734
+> (committed 2026-09-06) and 0.2559 (committed 2026-09-25; the one on disk), with Mg moving
+> −0.338 → −0.508.
 > Until #104 finds the step that varies, one run's transfer score is a single draw from a spread
 > nobody has sized. When #104 closes, rewrite this block.
 
@@ -51,6 +60,18 @@ A number produced deliberately at a reduced budget to find out what a real run w
 result**, whatever it looks like. Every table that can hold one records `probe` so a reader and a
 gate can both tell.
 _Avoid_: "a quick run", "a first pass", "preliminary results"
+
+**Run record**:
+What a run writes about **itself** beside the tables it produced: which protocol, whether it was a
+probe, the seed, the code and packages it ran on, and when it started and finished. It identifies a
+run of the pipeline, never a model — a model is identified by its artifact version.
+_Avoid_: "manifest" *(that is an artifact's)*, "metadata"
+
+**Run date**:
+When the run **started**, as its own run record states. Not the date its tables were committed,
+which can be hours later and on another day. A run whose record predates the field has **no run
+date** — it is stated as not recorded, never inferred from the commit.
+_Avoid_: "commit date" as a synonym, "date of the results"
 
 **As published**:
 A figure from `REPORT.md` or the archival pipeline. It is *history*, not current performance, and

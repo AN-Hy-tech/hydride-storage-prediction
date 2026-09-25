@@ -67,6 +67,17 @@ was built to prevent, one export away.
       requests with visible progress. **Not** a bigger `max_batch_rows`: the limit is a timeout
       budget, not a preference
 
+      **2026-09-26, decided (architecture grilling): the batched call in the library.**
+      `predict_many(requests, bundle)` in `hydms.delivery.predict` becomes the evaluator's
+      primary path, named to match `ServiceClient.predict_many` and the batch route. Then
+      `predict_capacity` is its one-row case. `FeaturisationError` gains the offending row labels
+      **as data**, so a bad formula refuses only its own row with the featuriser's sentence: no
+      pre-parse, which would duplicate the grammar, and no per-row fallback, which would bring
+      back the cost. The route calls `predict_many` once. The limit stays **256** until this card
+      re-measures, then it is set from that number. Acceptance: for every row, `predict_many(xs)[i]`
+      equals `predict_capacity(xs[i])` to 1e-12, and the test includes duplicate formulas in one
+      batch
+
 ## Runnable check
 
 ```bash

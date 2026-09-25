@@ -2,7 +2,7 @@
 id: 83
 status: backlog
 priority: High
-blocked_by: [29, 30, 82, 89, 103]
+blocked_by: [29, 30, 82, 89, 103, 105]
 assignee: "@amirhossein"
 tags: [ph, l6, S6, R4]
 ---
@@ -150,6 +150,33 @@ DOE system target, and the published figures inherited as though nothing had cha
       `temperature_sweep` are #82's; `nearest_neighbours` is shared. A chart this page needs that
       `hydms.figures` does not have is a builder added *there*, with its guards, not a matplotlib
       call added here
+
+- [ ] **The page gets its evidence from the service, through an Evidence Reader** (added
+      2026-09-26; ADR 0007; blocked on #105's run record). A reader in `hydms/evidence/`,
+      standard library only, returns `Score` objects (CONTEXT.md, **Score**): `reading` is
+      `procedure | artifact | transfer`; then the value, the interval **or** the stated reason it
+      has none, and the run record. It reads and never computes. It refuses a probe's tables, and a
+      missing score comes back absent with its reason. The service reads it **once at startup**
+      and serves `GET /v1/evidence` (scores) and `GET /v1/evidence/parity` (scored rows), with an
+      evidence digest in `/health`. `app/main.py` stays at its three allowed imports. Regenerate
+      `docs/API.md` with `apidoc --probe --emit`. The reader maps `evaluation-metrics.csv`'s
+      `reading = out-of-fold` to `procedure` in one place, because the LOACO rows are out-of-fold
+      too
+- [ ] **The transfer score gets a bootstrap interval, computed by `loco --emit` and not by the
+      reader** (added 2026-09-26). The interval resamples canonical groups over the 893 committed
+      LOACO rows, as `evaluate` does, and needs no fit. It writes a table with a byte test and a
+      caveat column: it prices the sampling of materials, **not** run-to-run variation (#104). The
+      artifact score carries no interval, with its reason: it is scored once on the test split,
+      which only AC-3 reads
+- [ ] **Rename `artifact-score.csv`'s `reading` column to `description`** (added 2026-09-26). It
+      holds a sentence ("R² of the median head…"), which is a third meaning of the word, in the file
+      the reader maps into `Score.reading`. Change `hydms.evidence.artifact_score`, regenerate with
+      `--emit`, and update its test
+- [ ] **Move `hydms/evidence/reconciliation.py` onto the reader** (added 2026-09-26). It is exempt
+      from #105's direct-read test until this box is ticked
+- [ ] **OPEN, waiting on #104's diff: does a transfer Score show one run or a spread over repeats?**
+      Until #104 answers, the caption names the run by its commit. The committed run has no
+      **Run date**
 
 ## Runnable check
 
