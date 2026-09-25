@@ -44,7 +44,9 @@ it is arithmetically necessary rather than statistical. A gradient-boosted tree 
 averages of training targets, so it **cannot return a value outside the target range it was
 trained on**. Hold ``Mg`` out and the model loses its only evidence of what high capacity
 looks like; it then predicts the family it has never seen as though it were the families it
-has, which is exactly the R2 of -0.3381 and the interval coverage of 0.1146 that #30 measured.
+has, which is exactly the R2 of -0.5084 and the interval coverage of 0.1354 that #30 measured
+(the 2026-09-25 run; the first, 2026-09-06, measured -0.3381 and 0.1146 -- the seeded run is not
+reproducible run to run, card #104, and every ordering this docstring argues from held in both).
 
 The ceiling, derived
 --------------------
@@ -121,8 +123,8 @@ number #30 measured.
 
 **Uncertainty is reported, never substituted.** :data:`HIGH_UNCERTAINTY` and
 :data:`OUT_OF_DOMAIN` are separate codes because #30 measured them coming apart in both
-directions: ``Mg`` is the worst family *and* has the worst coverage (0.1146), but ``SS`` is the
-**best** family by R2 (0.7626) with the second-worst coverage (0.1644), and ``HEA`` is the
+directions: ``Mg`` is the worst family *and* has the worst coverage (0.1354), but ``SS`` is the
+**best** family by R2 (0.7780) with the second-worst coverage (0.2329), and ``HEA`` is the
 second worst by R2 (-0.0723) with the **best** coverage (0.8824). A candidate can be out of
 family and carry a narrow band, which is the failure this screen exists to catch.
 

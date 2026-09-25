@@ -9,11 +9,11 @@ AC-6 asks for exactly this comparison and asks nothing about the size of the gap
 | Protocol | R2 | What it measures |
 |---|---|---|
 | Random split (`train`) | 0.7459 | interpolation: every family is in the training rows |
-| Leave-one-alloy-class-out | 0.2734 | extrapolation: the family is new |
+| Leave-one-alloy-class-out | 0.2559 | extrapolation: the family is new |
 
-Macro average over 10 estimable class(es) of 10; every family counts once, which is what AC-6 asks. The support-weighted average is 0.2153 -- lower than the macro average by 0.0581 -- because it weights families by how many rows they brought rather than by being families. Neither is wrong; they answer different questions, and only the macro one is about transfer.
+Macro average over 10 estimable class(es) of 10; every family counts once, which is what AC-6 asks. The support-weighted average is 0.1966 -- lower than the macro average by 0.0593 -- because it weights families by how many rows they brought rather than by being families. Neither is wrong; they answer different questions, and only the macro one is about transfer.
 
-Worst family: **Mg** at R2 -0.3381. Best: **SS** at 0.7626.
+Worst family: **Mg** at R2 -0.5084. Best: **SS** at 0.7780.
 
 ## Per class
 
@@ -27,10 +27,10 @@ Read every score against the support beside it. An R2 over 19 held-out rows and 
 | AB5 | 0.0368 | 0.3098 | 143 | 123 | yes |
 | HEA | -0.0723 | 0.2498 | 51 | 47 | yes |
 | LEA | 0.4995 | 0.2397 | 19 | 19 | yes |
-| MEA | 0.1135 | 0.4931 | 76 | 69 | yes |
+| MEA | 0.0933 | 0.5119 | 76 | 69 | yes |
 | MIC | 0.2796 | 0.4692 | 87 | 81 | yes |
-| Mg | -0.3381 | 1.5770 | 96 | 89 | yes |
-| SS | 0.7626 | 0.6421 | 73 | 69 | yes |
+| Mg | -0.5084 | 1.6558 | 96 | 89 | yes |
+| SS | 0.7780 | 0.6187 | 73 | 69 | yes |
 
 ## How to read this
 

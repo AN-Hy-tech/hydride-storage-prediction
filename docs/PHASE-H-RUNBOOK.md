@@ -144,10 +144,9 @@ single prediction path and HG-3 covers the UI too.
       4. **Nearest neighbours** — the k closest training alloys by ElMD with their *measured* capacities.
       5. **Parity plot** *(model card)* — predicted vs measured, with the **LOACO** version beside it
          at the same scale. `parity()` refuses fewer than two readings, so the optimistic panel
-         cannot ship alone — **and the LOACO panel has no data**: `train` writes
-         `evaluation.out_of_fold`, `loco` does not, so `reports/loco/` holds ten class averages and
-         no scored rows. That is **#98**: its code landed 2026-09-25 (`loco` now writes
-         `loco-out-of-fold.csv`), and the file waits on one more full LOACO run, the maintainer's.
+         cannot ship alone. The LOACO panel's rows are `reports/loco/loco-out-of-fold.csv`, 893 of
+         them, committed 2026-09-25 by **#98** (`done`). Caption it with its run date: the seeded
+         LOACO run is not reproducible run to run (**#104**).
 
       **The shape it landed in.** A chart is a *description* before it is an image:
       `hydms/figures/charts.py` builds `Figure` objects and imports no plotting library;
@@ -259,7 +258,7 @@ single prediction path and HG-3 covers the UI too.
       next session runs the full suite; a record naming `test_every_figure_renders_in_both_themes`
       is the traceback the fix starts from. Filed by #81,
       2026-09-12; **not an unfreeze condition**.
-- [ ] **#98** The LOACO run discards its own per-row predictions. Filed by #81, 2026-09-12;
+- [x] **#98** The LOACO run discards its own per-row predictions. Filed by #81, 2026-09-12;
       **not an unfreeze condition**. `hydms/surrogate/train.py:369` writes
       `evaluation.out_of_fold` as a table and `hydms/surrogate/loco.py:595` writes four tables
       without it, so the honest protocol leaves aggregates and the optimistic one leaves 893
@@ -269,8 +268,17 @@ single prediction path and HG-3 covers the UI too.
       without it rather than write a partial record. What remains is the run: the command is on
       the card and in `docs/RUNNING-THE-FIT.md` Step 10; the last one took 4 h 07 m. **The four review fixes the maintainer put before the run
       landed 2026-09-25** (stale file deleted on withholding, exit 1 read as four `wrote` lines
-      and no traceback, a probe's rows refused via `loco-run.csv`, rows counted per class fold),
-      so the run is the maintainer's to start.
+      and no traceback, a probe's rows refused via `loco-run.csv`, rows counted per class fold).
+      **Done 2026-09-25:** the full run took 288.4 min (budget five hours, not four), wrote 893
+      scored rows, and AC-6 passes at macro 0.2559 against 0.7459. **The seeded tables moved**
+      (Mg −0.3381 → −0.5084, MEA, SS; macro 0.2734 → 0.2559; seven families identical), and
+      that is **#104**. The domain reference, `docs/REFUSALS.md`, `docs/REPORT-RECONCILIATION.md`
+      and `docs/API.md` were regenerated from it; no refusal verdict moved.
+- [ ] **#104** The seeded LOACO run is not reproducible run to run. Filed by #98, 2026-09-25;
+      **not an unfreeze condition**. Mg's search chose a different configuration; MEA and SS
+      chose the same one and still scored differently, so both the tuning and the
+      fixed-parameter scoring fit vary. AC-1 covers only the deployed fit. First step: two
+      `--trials 1 --no-screening` probes (~12 min each) diffed, then the same with screening on.
 - [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
       2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
       `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.

@@ -1,7 +1,7 @@
 {
   "schema": "hydms.delivery.apidoc/1",
   "model_version": "v3",
-  "probed_at": "2026-09-24T16:47:46+00:00",
+  "probed_at": "2026-09-25T17:34:33+00:00",
   "interval": {
     "confidence_level": 0.8,
     "basis": "nominal",
@@ -126,10 +126,10 @@
     "AB5": 0.0367803882359358,
     "HEA": -0.0723346152114305,
     "LEA": 0.4995436115477851,
-    "MEA": 0.113481910580558,
+    "MEA": 0.0933445993270706,
     "MIC": 0.2796124679494778,
-    "Mg": -0.338128769644191,
-    "SS": 0.7625638386478973
+    "Mg": -0.5083835349839017,
+    "SS": 0.7780123350831051
   },
   "gates": {
     "recorded": true,
@@ -361,7 +361,7 @@
               "hm_floor": 2.5,
               "max_interval_width": 1.12
             },
-            "reference_sha256": "df42f9889c155a6042285f23022e574da71869e5a64e55cde2638d71fdb410a2"
+            "reference_sha256": "6f5517a6e25825f0efb349b797999d5313ea1b6554d610be400a6f9f8d890b5a"
           },
           {
             "name": "novelty",
@@ -512,10 +512,10 @@
             "AB5": 0.0367803882359358,
             "HEA": -0.0723346152114305,
             "LEA": 0.4995436115477851,
-            "MEA": 0.113481910580558,
+            "MEA": 0.0933445993270706,
             "MIC": 0.2796124679494778,
-            "Mg": -0.338128769644191,
-            "SS": 0.7625638386478973
+            "Mg": -0.5083835349839017,
+            "SS": 0.7780123350831051
           },
           "transfer_protocol": "leave-one-alloy-class-out (card #30), from the applicability screen's committed reference"
         }

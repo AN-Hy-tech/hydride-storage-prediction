@@ -35,6 +35,11 @@ reading. A claim about extrapolation, and the only one of the three that speaks 
 _Avoid_: "generalisation", "the LOACO number" *(the protocol is leave-one-class-out; the score is
 the transfer score)*
 
+> **State of the term (2026-09-25):** quote it **with its run date**. Two seeded runs gave macro
+> 0.2734 (2026-09-06) and 0.2559 (2026-09-25; the committed one), with Mg moving −0.338 → −0.508.
+> Until #104 finds the step that varies, one run's transfer score is a single draw from a spread
+> nobody has sized. When #104 closes, rewrite this block.
+
 > **The gaps between the three are findings in their own right.** A small procedure-to-artifact gap
 > is evidence the procedure is stable. A large procedure-to-transfer gap is the argument for every
 > guard rail in the project. Publishing one number in place of three destroys both statements — and

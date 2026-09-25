@@ -2,9 +2,46 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25 (#98's review fixes landed; the run is the maintainer's)
+> ## ▶ Next action — as of 2026-09-25 evening (#98 `done`; #104 filed)
 >
-> **Handoff, one line: #98's four review fixes are committed and its fixes box is ticked, so the
+> **Handoff, one line: #98 is `done`: the full LOACO run landed and `reports/loco/loco-out-of-fold.csv`
+> is committed. Next, in the maintainer's order, are #83 and #84. The run also filed #104, and
+> whether #104 jumps that queue is OPEN.**
+>
+> **What landed.** The run took 288.4 min (4 h 48 m, so budget five hours). It exited 0 with
+> five `wrote` lines and 893 scored rows. AC-6 passes at macro **0.2559** against the random
+> split's 0.7459. The figures test on the committed rows now **runs** instead of skipping. #83's
+> parity panel has its data, so nothing blocks it but the page itself.
+>
+> **What it found: #104.** The seeded tables did not come back unchanged. Seven families are
+> identical to every digit, and three moved: Mg −0.3381 → **−0.5084**, MEA 0.1135 → 0.0933,
+> SS 0.7626 → 0.7780. The macro average went 0.2734 → 0.2559. Nothing in the fit path changed
+> between the two runs. Mg's search picked a different configuration; MEA and SS picked the
+> *same* one and still scored differently. AC-1 covers only the deployed fit, so no gate could
+> see this. The run was committed as it came back, per #98's box. Every generated consumer was
+> regenerated from it: the domain reference, `docs/REFUSALS.md`, `docs/REPORT-RECONCILIATION.md`,
+> and `docs/API.md` (`--probe` against `v3`, where only the three transfers, the reference digest
+> and the capture time moved). The hand-written text was updated too: the Chapter 1 transfer
+> table, plus a new paragraph stating both runs that **the author owes a read**. **No refusal
+> verdict moved:** Mg and HEA are below `min_transfer_r2` in both runs.
+>
+> **Restart the service** before demonstrating it. The uvicorn process running on port 80
+> loaded the old domain reference, so it still quotes Mg at −0.338.
+>
+> **OPEN, the maintainer's call: does #104 go before #83/#84?** It is P1 by
+> [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md)'s rule, because it makes a published
+> number (the thesis's transfer score) a single draw from a spread nobody has sized. Its first
+> step is cheap: two `loco --trials 1 --no-screening --report <scratch>` probes (~12 min each),
+> diffed, then the same pair with screening on. That fits beside either card and is not a
+> heavy fit. If the fix changes the numbers, the maintainer reruns LOACO and the regeneration
+> chain in `docs/RUNNING-THE-FIT.md` Step 10 follows.
+>
+> **For #83:** caption the LOACO parity panel with its run date. It shows one run's rows, and
+> #104 says a second run gives different ones.
+>
+> *Below: the block from when #98's review fixes landed. Carried out.*
+>
+> **(2026-09-25, #98's review fixes landed)** **Handoff, one line: #98's four review fixes are committed and its fixes box is ticked, so the
 > maintainer starts the full LOACO run with the command in #98's last box (~4 h; the last took
 > 4 h 07 m), then commits `reports/loco/` by name. #84 is startable meanwhile; #83 builds but its
 > parity box waits on the file.**
@@ -342,8 +379,8 @@ leave-one-alloy-class-out result — and this line said "both of those" until 20
 blocked by #44 alone, which is right on the substance: an ElMD distance is a property of two
 compositions and reads nothing the surrogate produces. All three are `done`; S5 is closed.
 
-**The next free id is #94.** Scan both directories for `max(id) + 1` — this line has been stale
-before (it said #92 while #92 existed), so scan rather than trust it.
+**The next free id is #105** (as of 2026-09-25). Scan both directories for `max(id) + 1` — this
+line has been stale before (it said #94 while #103 existed), so scan rather than trust it.
 
 ---
 
@@ -376,7 +413,7 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | **S1** QA foundation | 69, 70, 5, 71 | 2 |
 | **S2** Data layer | 3, 9, 10, 11, 87, 12, 13, 14, 15 | 7 |
 | **S3** Descriptor layer | 16, 17, 18, 19, 20, 21, 22 | 6 |
-| **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34, 97, 98 | 13 |
+| **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34, 97, 98, 104 | 13 |
 | **S5** Guard rails | 44, 48, 49 | 2.5 |
 | **S6** Delivery: contract + API | 75, 76, 77, 78, 79, 80 | 5 |
 | **S7** Delivery: interface | 81, 82, 83, 84 | 3.5 |

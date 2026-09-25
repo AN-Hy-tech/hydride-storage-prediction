@@ -1,6 +1,6 @@
 ---
 id: 98
-status: doing
+status: done
 priority: Normal
 blocked_by: []
 assignee: "@amirhossein"
@@ -85,7 +85,7 @@ hand over one command.
       committed-evidence test must refuse a probe's rows via `loco-run.csv`, and `parity()`'s
       message must drop "only a full run writes". (4) `out_of_fold()` counts per fold, not per
       model. *Landed 2026-09-25; see the Narrative.*
-- [ ] **The full LOACO run is done and `reports/loco/loco-out-of-fold.csv` is committed** — the
+- [x] **The full LOACO run is done and `reports/loco/loco-out-of-fold.csv` is committed** — the
       maintainer's, **after the box above is ticked** (the maintainer's call, 2026-09-25); the
       card stays `doing` until then. From the repository root in PowerShell,
       with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10). **The last one took 4 h 07 m.**
@@ -162,3 +162,22 @@ conda run -n Project python -m pytest tests/surrogate/test_loco.py tests/test_fi
   passed, 1 skipped (the committed-evidence test, until the run); ruff and mypy clean. Fast lane
   (`pytest -m "not slow"`): **1654 passed, 1 skipped, 4 deselected, 38 m 30 s**, exit 0.
   (by @assistant)
+- 2026-09-25: **Done: the maintainer's full run landed, and it filed a finding.** 288.4 min
+  (4 h 48 m — budget five hours, not four), exit 0, five `wrote` lines, no traceback.
+  `loco-out-of-fold.csv` holds **893 rows**, the committed-evidence test now *runs* rather than
+  skips (97 passed, 0 skipped across `test_loco.py`, `test_figures.py`, `test_ac6_loco.py`), and
+  AC-6 passes: macro **0.2559** against the random-split 0.7459.
+  **The seeded tables did not come back unchanged.** Seven families are identical to every digit;
+  Mg −0.3381 → −0.5084, MEA 0.1135 → 0.0933, SS 0.7626 → 0.7780, macro 0.2734 → 0.2559. Mg's
+  search chose a different configuration; MEA and SS chose the *same* one and still scored
+  differently, so both the tuning and the fixed-parameter scoring fit vary run to run. Nothing in
+  the fit path changed between the runs (docstrings and `loco`'s writer only). Per this card's
+  box it was committed as it came back and recorded as an AC-1 finding: **#104**. The cascade was
+  regenerated, not hand-edited: `domain --emit` (Mg, MEA, SS transfers), `refusals --emit`,
+  `reconciliation --emit`, `apidoc --probe --emit` against `v3` (only the three transfers, the
+  domain reference digest and the capture stamp moved; every other exchange byte-identical).
+  Hand-written text updated to the new run: `docs/chapter1-revision.md` (the transfer table plus
+  a paragraph stating both runs), `hydms/screens/domain.py` and `pipeline.yaml` comments. No
+  verdict moved — Mg and HEA are below `min_transfer_r2` in both runs — and every per-family
+  ordering the screen's docstring argues from held. Fast lane after the cascade: **1655 passed,
+  0 skipped, 4 deselected, 38 m 22 s**, exit 0 — the one skip before it was this card's. (by @assistant)

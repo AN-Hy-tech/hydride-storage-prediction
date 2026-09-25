@@ -559,12 +559,24 @@ run to repeat (card #98). **Exit 1 with a traceback is a crash**, not this: Pyth
 code for an uncaught exception, so read the output, not only `$LASTEXITCODE`. Success is exit 0
 with five `wrote` lines.
 
-**Re-running it after it has already been done once (card #98).** The first full run, on
-2026-09-06, took **4 h 07 m** and predates `loco-out-of-fold.csv`, so its scored rows were never
-written. The only way to get them is the same command again. The run is seeded, so the four
-existing tables *should* come back unchanged — `git diff --stat reports/loco/` should show one
-new file and nothing else. If any of the four moved, commit them anyway after `--emit` and say
-so: it is a seed-reproducibility finding (AC-1), not a reason to discard the run.
+**Re-running it (cards #98, #104).** Two full runs exist: 2026-09-06 took **4 h 07 m**, and
+2026-09-25 took **4 h 48 m** (288.4 min) — budget five hours. **They did not agree**, although
+both used seed 42 and the fit path had not changed: seven families came back identical, and Mg,
+MEA and SS moved (macro 0.2734 → 0.2559). That is card #104's to explain. Until it is closed,
+expect `git diff --stat reports/loco/` to show moved tables after any rerun. Commit them anyway
+after `--emit`, and then regenerate what reads them, in this order:
+
+```powershell
+& C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.screens.domain --emit          # transfers into the screen reference
+& C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.delivery.refusals --emit       # docs/REFUSALS.md quotes Mg's transfer
+& C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.evidence.reconciliation --emit # reads loco-summary.csv
+& C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.delivery.apidoc --probe        # needs artifacts/; examples carry the transfers
+& C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.delivery.apidoc --emit
+```
+
+`docs/chapter1-revision.md`'s transfer table is hand-written, and so are the transfer numbers
+quoted in `hydms/screens/domain.py` and `hydms/config/pipeline.yaml` comments. Update them by
+hand. Nothing turns red if you forget.
 
 **What this number is for, and what it is not.** It is the extrapolation figure — how the model
 does on a family it has never seen — and it is **expected to be much worse** than the

@@ -138,6 +138,11 @@ DOE system target, and the published figures inherited as though nothing had cha
       `tests/test_figures.py::test_the_committed_loco_run_keeps_every_scored_row` stops skipping
       and this box can be ticked the moment the page draws both panels from it.
 
+      **2026-09-25, the file is committed (#98 `done`).** `reports/loco/loco-out-of-fold.csv`,
+      893 rows, `probe` false, and the figures test now runs. Nothing now blocks this box but
+      the page. Caption the LOACO panel with its run date: the seeded run is not reproducible
+      run to run (#104), so the panel is *one* run's rows, not a fixed fact.
+
 - [ ] **Every chart on this page comes from `hydms.figures`, none from a local helper** (added
       2026-09-12 by #81). The five builders exist so that this page and #82's cannot draw the
       same quantity two different ways, which is the drift a per-page chart helper always

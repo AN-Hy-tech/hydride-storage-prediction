@@ -187,13 +187,14 @@ domain:
   #
   # It is a REPORT about the band and never a stand-in for the domain verdict. #30 measured
   # the two coming apart in both directions: Mg is the worst family and has the worst
-  # coverage, but SS is the BEST family by R² (0.7626) with the second-worst coverage
-  # (0.1644), and HEA is second worst by R² with the best coverage (0.8824).
+  # coverage, but SS is the BEST family by R² (0.7780) with the second-worst coverage
+  # (0.2329), and HEA is second worst by R² with the best coverage (0.8824).
   max_interval_width_wt_pct: 1.12
 
   # An alloy class whose measured leave-one-class-out R² is below this is UNTRUSTED_FAMILY —
   # the second, independent domain signal, reading the label and nothing else. Zero is not a
   # taste: R² below zero means the model does worse on that family than predicting the mean,
   # which is the point past which "prediction" is the wrong word. Measured (reports/loco/):
-  # Mg -0.3381 and HEA -0.0723 fall below it; the other eight classes do not.
+  # Mg -0.5084 and HEA -0.0723 fall below it; the other eight classes do not (the same two in
+  # both seeded runs, 2026-09-06 and 2026-09-25, though Mg's score moved -- card #104).
   min_transfer_r2: 0.0

@@ -53,7 +53,7 @@ The published rows are quoted for comparison only. The rows marked *now* come fr
 | Published: ensemble, validation set | 0.939 | 0.185 | `REPORT.md` §4.2, `Machine_Model/reports/benchmarked_model/improved_benchmark_results.csv` |
 | Published: ensemble, test set | 0.892 | 0.223 | same |
 | Now: out-of-fold, group-aware nested CV (#29) | 0.748 [0.689, 0.799] | 0.333 [0.305, 0.366] | `reports/model/evaluation-metrics.csv` |
-| Now: leave-one-alloy-class-out, macro over 10 classes (#30) | 0.273 | 0.492 | `reports/loco/loco-summary.csv` |
-| Now: the worst held-out class, Mg | -0.338 | — | same |
+| Now: leave-one-alloy-class-out, macro over 10 classes (#30) | 0.256 | 0.499 | `reports/loco/loco-summary.csv` |
+| Now: the worst held-out class, Mg | -0.508 | — | same |
 
 The drop is the expected result, not a regression (PRD risk R4). The out-of-fold interval is too narrow for the reason `reports/model/evaluation.md` gives; the cross-family row is the one that answers "will this work on a new alloy family", and its answer is: not reliably.

@@ -69,8 +69,8 @@ One row per probe: which door can state it, what was asked, the code the caller 
 | `unreadable-formula` | `request` | `Composition` = LaNi5Xx2 | `indeterminate` | 'LaNi5Xx2' could not be given a physical capacity ceiling -- it does not parse, or it names an element the 'oliynyk' table has no mass for; 'LaNi5Xx2' names 'Xx', which is not a chemical element. ElMD does not raise on it -- it drops the symbols it cannot read and measures whatever is left, if anything -- so it is refused here rather than answered as some other alloy. There is no distance to report, and a screen that cannot judge does not admit. |
 | `unmeasured-class` | `frame` | `Alloy_class` = Perovskite | `indeterminate` | Alloy_class = 'Perovskite' is not one of the 10 classes leave-one-class-out measured, so no transfer estimate exists for it |
 | `above-physical-ceiling` | `frame` | `q0.5` = 4.5 | `above-physical-ceiling` | q0.5 = 4.5 wt% is above the 4.19638 wt% this composition can hold at H/M 3 |
-| `out-of-domain` | `frame` | `Composition` = TiAl; `q0.5` = 6; `Alloy_class` = AB | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.338129 |
-| `untrusted-family` | `frame` | `Composition` = Mg2Ni; `Alloy_class` = Mg | `untrusted-family` | class Mg transfers at R2 -0.338129, below the 0 this project will predict across |
+| `out-of-domain` | `frame` | `Composition` = TiAl; `q0.5` = 6; `Alloy_class` = AB | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.508384 |
+| `untrusted-family` | `frame` | `Composition` = Mg2Ni; `Alloy_class` = Mg | `untrusted-family` | class Mg transfers at R2 -0.508384, below the 0 this project will predict across |
 | `outside-feature-range` | `frame` | `range_Mendeleev_Number` = 95 | `outside-feature-range` | range_Mendeleev_Number = 95 is outside the trained span 1 to 79 |
 | `high-uncertainty` | `frame` | `interval_width` = 1.6 | `high-uncertainty` | the calibrated band is 1.6 wt% wide, above the 1.12 wt% this project will report |
 | `beyond-known-chemistry` | `request` | `Composition` = K1Rb1 | `beyond-known-chemistry` | 28.75 from the nearest known alloy (Pr2Dy1Ni1) on the ElMD modified-Pettifor scale, past the 11.73 that separates the corpus's loneliest member (Li0.94Pd1) from its own nearest neighbour. This is a statement about chemistry, not about the applicability domain. |
@@ -136,10 +136,10 @@ The table above shows what one caller receives. This one shows what each screen 
 | `above-physical-ceiling` | `domain` | no | `above-physical-ceiling` | q0.5 = 4.5 wt% is above the 4.19638 wt% this composition can hold at H/M 3 |
 | `above-physical-ceiling` | `novelty` | yes | `admitted` | within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
 | `out-of-domain` | `temperature` | yes | `admitted` | inside the trained temperature range 195-773 K |
-| `out-of-domain` | `domain` | no | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.338129 |
+| `out-of-domain` | `domain` | no | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.508384 |
 | `out-of-domain` | `novelty` | yes | `admitted` | within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
 | `untrusted-family` | `temperature` | yes | `admitted` | inside the trained temperature range 195-773 K |
-| `untrusted-family` | `domain` | no | `untrusted-family` | class Mg transfers at R2 -0.338129, below the 0 this project will predict across |
+| `untrusted-family` | `domain` | no | `untrusted-family` | class Mg transfers at R2 -0.508384, below the 0 this project will predict across |
 | `untrusted-family` | `novelty` | yes | `admitted` | within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
 | `outside-feature-range` | `temperature` | yes | `admitted` | inside the trained temperature range 195-773 K |
 | `outside-feature-range` | `domain` | no | `outside-feature-range` | range_Mendeleev_Number = 95 is outside the trained span 1 to 79 |

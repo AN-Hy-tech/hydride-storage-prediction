@@ -145,7 +145,7 @@ names the leaks that stood between the two figures.
 | R², the modelling procedure | Ensemble validation **0.939** (CI 0.898–0.961) | Procedure score **0.748** [0.689, 0.799], out-of-fold over five group-aware outer folds | L2 (members chosen on the scoring set), L4–L7 (no nesting, early stopping on the scored fold, selection before CV, no grouping). The published CI inherits the same contradiction as its point estimate |
 | R², one model on held-out rows | Ensemble test **0.892** | Artifact score **0.707** on 254 held-out test rows | L1 (test chose the stopping iteration), L6, L8 (materials straddling the split). The committed `stacking_results.csv` records **0.376** for the ensemble, so the published figure is not the pipeline's own either |
 | MAE, one model on held-out rows (wt%) | **0.223** | **0.312** (RMSE 0.542) | As above |
-| R², an alloy family never trained on | Not measured (L13 made it impossible) | Transfer score **0.273**, macro over 10 families | Not a correction: a new measurement (§1.R.5) |
+| R², an alloy family never trained on | Not measured (L13 made it impossible) | Transfer score **0.256**, macro over 10 families | Not a correction: a new measurement (§1.R.5) |
 | Interval coverage, nominal 80 % | No interval | **0.780** on the test rows, mean width 0.863 wt% | New. Without the conformal correction the same quantile heads cover 0.658 |
 | Features | 22 | 14 | L6. See §1.R.6 |
 | Distinct materials | 1,149 | 1,115 (1,149 formula strings) | Both correct; they count different things. Grouping uses the 1,115 |
@@ -177,26 +177,34 @@ model is tuned and fitted on the other nine with the same nested protocol (`repo
 | Protocol | R² | What it measures |
 |---|---|---|
 | Random group-aware split (per-fold mean, same protocol) | **0.746** | Interpolation |
-| Leave-one-alloy-class-out, macro over 10 families | **0.273** | Extrapolation to a new family |
-| Leave-one-alloy-class-out, weighted by rows | 0.215 | The same, weighted by how many rows each family brought |
+| Leave-one-alloy-class-out, macro over 10 families | **0.256** | Extrapolation to a new family |
+| Leave-one-alloy-class-out, weighted by rows | 0.197 | The same, weighted by how many rows each family brought |
 
 | Family | R² | MAE (wt%) | Rows | Compositions |
 |---|---|---|---|---|
-| SS | 0.763 | 0.642 | 73 | 69 |
+| SS | 0.778 | 0.619 | 73 | 69 |
 | A₂B | 0.726 | 0.315 | 29 | 21 |
 | LEA | 0.500 | 0.240 | 19 | 19 |
 | AB | 0.421 | 0.303 | 59 | 55 |
 | AB₂ | 0.304 | 0.321 | 260 | 207 |
 | MIC | 0.280 | 0.469 | 87 | 81 |
-| MEA | 0.114 | 0.493 | 76 | 69 |
+| MEA | 0.093 | 0.512 | 76 | 69 |
 | AB₅ | 0.037 | 0.310 | 143 | 123 |
 | HEA | −0.072 | 0.250 | 51 | 47 |
-| Mg | −0.338 | 1.577 | 96 | 89 |
+| Mg | −0.508 | 1.656 | 96 | 89 |
 
 **The result reproduces the literature's warning on this dataset.** The model does not transfer
 reliably to an unseen family. Four families score an R² at or below 0.12, and two below zero, i.e.
 worse than predicting the held-out family's own mean. Small families (LEA, 19 rows; A₂B, 29) give
 scores with wide sampling error and should be read with their row counts.
+
+**The transfer score also moves between runs with the same seed, and the table above is the second
+run.** The protocol was run twice with seed 42 (2026-09-06 and 2026-09-25). Seven of the ten
+family scores came back identical. Three moved: MEA 0.113 → 0.093, SS 0.763 → 0.778, and Mg
+−0.338 → −0.508. The macro average moved 0.273 → 0.256. Neither run is the right one: the
+difference is run-to-run variation the fixed seed does not remove, and its source has not been
+isolated yet (card #104). The ordering of the families, and every claim above that depends on it,
+is the same in both runs.
 
 This is why the delivered model refuses rather than guesses outside its domain. The per-family
 transfer score feeds one of the domain screens, and inverse-design candidates are to be ranked by
@@ -319,7 +327,7 @@ model (card #7 owes a portable artifact).
 | Conformal correction +0.0374 (log1p), 172 calibration rows, 80 % nominal | `reports/model/conformal.csv` |
 | Artifact score R² 0.7071, RMSE 0.5420, MAE 0.3117 on 254 test rows | gate AC-1; `reports/model/artifact-score.csv` (from `artifact-gates.json`, generated, byte-checked) |
 | Coverage 0.7795 (raw 0.6575), mean width 0.8630 wt% | gate AC-3; `reports/model/artifact-score.csv` |
-| Transfer score 0.273 macro, 0.215 weighted; per-family table; random-split 0.746 | `reports/loco/loco.md`, `loco-summary.csv`, `loco-per-class.csv` |
+| Transfer score 0.256 macro, 0.197 weighted; per-family table; random-split 0.746 | `reports/loco/loco.md`, `loco-summary.csv`, `loco-per-class.csv` |
 | 22 → 14 features, 266-row Gordy cost, fold stability | `reports/feature_selection/old_vs_new.md` and its CSVs |
 | Gadolinium placeholder, 18 rows | card #83; `reports/feature_selection/old_vs_new.md` |
 | Mg arithmetic (3.80 / 1.60 median, 7.19 / 5.19 max, 21 and 43 rows) | recomputed on 2026-09-24 from `reports/model/model-out-of-fold.csv` (target, canonical key) joined to `hydms.data.canonical.alloy_class_table(load_hydride_data())`; the class counts match `loco-per-class.csv` exactly |
