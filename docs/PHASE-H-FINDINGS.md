@@ -32,14 +32,13 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 | **68** | `scripts/check_board.py` has **no done-card checkbox rule** and the prose said it did. **Prose half cleared 2026-09-13** — board README, `CLAUDE.md` and #81 corrected; the surviving claim count was two, not six. **Still owed:** nothing enforces the convention, and this index is a mitigation, not a check | done / 0.25 d left | box on a `done` card |
 | **96** | `--report` on `surrogate.calibrate` is both an output *and* an input path: redirecting it silently falls back to CatBoost defaults, and `--save` then persists that as a `deployed fit`. It has produced a wrong conformal correction once already | 0.25 d | `backlog`, unblocked |
 | **94** | A crossed band raises where it should refuse — a measured-23 %-likely crossing is passed through unclipped by design, and the delivery path's answer to it is an exception rather than a refusal | 0.25 d | `backlog`, unblocked |
-| **105** | **No run record says which run wrote a table, or when.** `probe` is parsed three ways, and `domain.transfer_table` does not check it at all, so `domain --emit` after a stray probe would put probe transfer scores into the served reference. No record carries a run date, which #83's caption needs. Must land before the next full LOACO run | 1 d | `todo`, unblocked; blocks #83 |
 
 ## P2 — blocks the objective (a user-facing predictor)
 
 | # | Finding | Cost | State |
 |---|---|---|---|
 | **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | `backlog`, unblocked (#82 `done` 2026-09-25) |
-| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `backlog`, **blocked by #105** (2026-09-26: the Evidence Reader and ADR 0007 need its run record); its parity panel's file is committed (#98 `done` 2026-09-25) |
+| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `backlog`, **unblocked** (#105 `done` 2026-09-26: the run record exists, read it through `hydms.provenance`); its parity panel's file is committed (#98 `done` 2026-09-25) |
 
 ## P3 — blocks the unfreeze
 
@@ -60,6 +59,7 @@ Still open in S8, and not an unfreeze condition:
 | # | Finding | Owner | Note |
 |---|---|---|---|
 | **7** | The CI **slow lane**: full retrain, artifact upload, version promotion. Four guarantees currently run on **no push**. Also owes a *portable* artifact — `artifacts/` is gitignored, so `v3` exists on one machine and a fresh clone has no model | **unblocked** — #4 and #6 are both `done` | ten open boxes |
+| **106** | `select` writes no run record, and `--emit-comparison` dates the selection run from a **file's mtime** when its stamp is absent (`comparison._written_on`). Split from #105's last box. Not what the published `old_vs_new.md` reads today (its stamp exists) | 0.5 d | `todo`, unblocked |
 | **102** | One decision — how a refusal sentence names its offenders — is taken in **22 modules** independently and has drifted into **four** renderings and **two** truncation limits. `docs/REFUSALS.md` is generated from those sentences | 0.5 d | `backlog`, unblocked |
 | **101** | CI: every PR carries two **skipped** checks that shadow the real ones by name; branch protection is **403 on this plan**; the fast lane has ~6 min of headroom against a cap that already killed three pushes. `f7e4fc8`'s red run **was #97's sort tie**, read 2026-09-24 from the job-logs API (no browser needed). Every red run on the branch is now accounted for | unblocked | filed 2026-09-13 |
 | **95** | The freeze is **unenforced on `main`** — `check_freeze.py` does not exist there. PR #7 edited six frozen cards and was reported green. Closes when PR #6 merges, which is after the freeze lifts | unblocked | #101 supplies the 403 fact its second box needs |

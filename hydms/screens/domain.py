@@ -145,6 +145,7 @@ from typing import TextIO
 import numpy as np
 import pandas as pd
 
+from hydms import provenance
 from hydms.config import Config
 from hydms.config import load as load_config
 from hydms.screens.protocol import (
@@ -890,15 +891,28 @@ def transfer_table(cfg: Config | None = None) -> dict[str, float]:
 
     Read, never recomputed -- the protocol behind these numbers costs four hours and
     :mod:`hydms.gates.ac6_leave_one_class_out` reads the same file for the same reason.
+
+    **And only if the run record says they are a result** (card #105). A ``loco --trials 1``
+    without ``--report`` writes the same file into ``reports/loco/``; before this check a
+    following ``--emit`` put the probe's transfer scores into the *served* reference, and only
+    AC-6 -- a different module -- went red. The rule is :func:`hydms.provenance.result`'s, not
+    a second parse of ``probe`` here.
     """
     config = cfg if cfg is not None else load_config()
-    path = config.paths.reports / "loco" / "loco-per-class.csv"
+    directory = config.paths.reports / "loco"
+    path = directory / "loco-per-class.csv"
     if not path.exists():
         raise ScreenError(
             f"no leave-one-class-out table at {path}. The transfer signal is #30's "
             f"measurement; run `python -m hydms.surrogate.loco` or restore the committed "
             f"tables."
         )
+    try:
+        provenance.result(directory / provenance.LOCO_RECORD)
+    except provenance.NotAResult as error:
+        raise ScreenError(
+            f"the transfer table beside it is not a result, so it will not be served: {error}"
+        ) from error
     table = pd.read_csv(path)
     for column in ("alloy_class", "r2"):
         if column not in table.columns:
@@ -933,6 +947,9 @@ def emit(cfg: Config | None = None) -> DomainReference:
     from hydms.surrogate.scaler import TRAIN
 
     config = cfg if cfg is not None else load_config()
+    # First, before the featurisation: a probe's transfer table is refused in a second, not
+    # after the matrix has been built.
+    transfer = transfer_table(config)
     settings = ModelSettings.from_config(config)
     frame, split = capacity_matrix(config, settings=settings)
     training = frame.loc[split == TRAIN]
@@ -941,7 +958,7 @@ def emit(cfg: Config | None = None) -> DomainReference:
         alloy_classes(training),
         target=config.columns.target,
         features=settings.features,
-        transfer=transfer_table(config),
+        transfer=transfer,
         temperature=config.columns.temperature,
         temperature_edges=support_edges(
             config.domain.temperature_min_k, config.domain.temperature_max_k
@@ -963,7 +980,12 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    reference = emit() if args.emit else DomainReference.packaged()
+    try:
+        reference = emit() if args.emit else DomainReference.packaged()
+    except ScreenError as error:
+        # Refused, and the committed reference is left exactly as it was.
+        print(f"refused: {error}", file=sys.stderr)
+        return 2
     if args.emit:
         REFERENCE_FILE.write_text(reference.to_json(), encoding="utf-8")
         print(f"wrote {REFERENCE_FILE}", file=stream)

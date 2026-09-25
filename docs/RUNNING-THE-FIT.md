@@ -389,17 +389,20 @@ $files = @(
     "reports/model/conformal.csv"
     "reports/model/conformal-coverage.csv"
     "reports/model/conformal-rows.csv"
+    "reports/model/conformal-run.csv"
     "reports/model/model-shap.csv"
     "reports/model/model-pdp.csv"
     "reports/model/evaluation-metrics.csv"
     "reports/model/evaluation-subgroups.csv"
+    "reports/model/evaluation-run.csv"
     "reports/model/evaluation.md"
 )
 git add $files
 ```
 
-**If you skipped Step 4**, stage only what Steps 5 and 6 rewrote — the `conformal*` trio, the two
-explainability tables, and the three evaluation files. Leave Step 4's tables alone: they are the
+**If you skipped Step 4**, stage only what Steps 5 and 6 rewrote — the four `conformal*` files
+(three tables and `conformal-run.csv`), the two explainability tables, and the four evaluation
+files (two tables, `evaluation-run.csv` and `evaluation.md`). Leave Step 4's tables alone: they are the
 committed record of the run that produced them, and re-staging identical bytes is noise while
 re-staging *different* bytes means you re-ran something you meant to skip.
 
@@ -617,7 +620,7 @@ Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model
 | `model-chosen.csv` | The hyperparameters each fold's search settled on |
 | `model-fits.csv` | Every fit: which rows it grew on, stopped on, was scored on, and how long it took. This is what `--budget` reads next time |
 | `model-out-of-fold.csv` | **One row per training row**: the truth and what the model that had *not* seen it predicted. Everything in Step 6 is computed from this |
-| `model-run.csv` | One row saying whether this was a full run or a probe. Step 6 reads it and refuses to publish a document that does not say |
+| `model-run.csv` | The **run record**: one row saying whether this was a full run or a probe, and (since card #105) when it started and finished, the commit and whether its code was modified **at start**, the interpreter, the thread settings and the package versions. Step 6 reads it and refuses to publish a document that does not say. A record from before #105 has no `started_at`; its run date reads *not recorded* |
 
 **Step 5 — the deployed model:**
 
@@ -628,8 +631,12 @@ Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model
 | `conformal-rows.csv` | The row accounting the carve implies: 893 train, 20 screened out, 172 calibration, 701 grown on |
 | `model-shap.csv` | Feature importance per quantile head, with a `computed_on` column. **Of the deployed fit** — it moved here from Step 4 when the deployed fit did |
 | `model-pdp.csv` | Partial-dependence curves, same |
+| `conformal-run.csv` | This step's run record (#105): `protocol` `deployed-fit`, `probe` true under `--no-screening`, and `source_run_id`, the `run_id` of the `model-run.csv` whose chosen configuration it fitted |
 
-**Step 6 — the document:** `evaluation-metrics.csv`, `evaluation-subgroups.csv` and `evaluation.md`.
+**Step 6 — the document:** `evaluation-metrics.csv`, `evaluation-subgroups.csv`, `evaluation-run.csv`
+and `evaluation.md`. The record's `source_run_id` is the train record it read, and `probe` is true
+when `--resamples` is below the configured 2,000. The document's `Emitted:` line is the date and
+commit **of the emit**, not of the run; the run's own date is the `Run date:` line above it (#105).
 
 **Step 10 — leave-one-alloy-class-out**, into `reports/loco/`:
 
@@ -638,7 +645,7 @@ Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model
 | `loco-per-class.csv` | One row per alloy class: R², MAE, **`rows_scored` and `compositions_scored` beside them**, and `estimable` with the reason when R² is undefined rather than bad |
 | `loco-summary.csv` | The row AC-6 is about: the macro average, the support-weighted one, the worst and best class, and the **random-split number beside them**. Neither figure can be published here without the other |
 | `loco-chosen.csv` | The hyperparameters each class fold's search settled on |
-| `loco-run.csv` | Full run or probe. AC-6 reads it and **fails** on a probe's tables, which are the same shape as a real run's |
+| `loco-run.csv` | The run record, as `model-run.csv` above. AC-6 reads it through `hydms.provenance` and **fails** on a probe's tables, which are the same shape as a real run's, and on a `probe` cell it cannot parse. `domain --emit` **refuses** (exit 2, reference untouched) unless it says full |
 | `loco-out-of-fold.csv` | **One row per training row**, predicted by the model that had not seen that row's *family*: `model-out-of-fold.csv` at this protocol's grain, with the class in `fold`. The second parity panel (#81, #83) is drawn from it. `--emit` does not read it, so it changes no published byte (card #98). A probe writes it too, unmarked; `loco-run.csv` beside it is what says which, and the committed-evidence test refuses the file when `probe` is true |
 
 ---

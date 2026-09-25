@@ -94,6 +94,7 @@ from typing import Any, TextIO
 import numpy as np
 import pandas as pd
 
+from hydms import provenance
 from hydms.artifacts.manifest import describe_git
 from hydms.config import Config, ConfigError, load
 from hydms.data.metadata import CANONICAL_KEY_COLUMN
@@ -131,6 +132,7 @@ __all__ = [
     "per_fold_intervals",
     "read_out_of_fold",
     "read_run",
+    "read_run_date",
     "shap_table",
     "subgroup_table",
     "to_markdown",
@@ -395,24 +397,30 @@ def read_run(source: Path) -> str:
     and a real one produce the same seven tables with the same columns; the only thing that
     separates them is written down here, and an *absent* record is reported as unknown rather
     than assumed to be the good case.
-    """
-    path = source / f"{SOURCE_TABLES[2]}.csv"
-    if not path.is_file():
-        return UNKNOWN_RUN
-    try:
-        record = pd.read_csv(path)
-    except (OSError, ValueError):
-        return UNKNOWN_RUN
-    if record.empty:
-        return UNKNOWN_RUN
 
-    row = record.iloc[0]
-    if not bool(row.get("probe", False)):
-        return f"full — {row.get('optuna_trials')} trial(s), screening on"
-    detail = f"{row.get('optuna_trials')} of {row.get('configured_optuna_trials')} trial(s)"
-    if not bool(row.get("screening", True)):
+    Read through :mod:`hydms.provenance` (card #105), so "is this a result?" has one answer
+    here and in AC-6. A record whose ``probe`` nobody can parse is unknown, not full.
+    """
+    record = provenance.read(source / provenance.TRAIN_RECORD)
+    if record.state != "recorded" or record.probe is None:
+        return UNKNOWN_RUN
+    if record.is_result:
+        return f"full — {record.get('optuna_trials')} trial(s), screening on"
+    detail = (
+        f"{record.get('optuna_trials')} of {record.get('configured_optuna_trials')} trial(s)"
+    )
+    if record.flag("screening") is False:
         detail += ", screening off"
     return f"PROBE ({detail}) — a cost check, not a result"
+
+
+def read_run_date(source: Path) -> str:
+    """When the run behind these tables started, or :data:`~hydms.provenance.NOT_RECORDED`.
+
+    Never the commit date and never the emit date: a record written before card #105 has no
+    ``started_at``, and that is stated rather than inferred (CONTEXT.md, **Run date**).
+    """
+    return provenance.read(source / provenance.TRAIN_RECORD).run_date_text
 
 
 def _heads(table: pd.DataFrame, quantiles: Sequence[float], *, prefix: str) -> np.ndarray:
@@ -901,6 +909,7 @@ def to_markdown(
     sha: str | None,
     code_modified: bool | None,
     dated: datetime,
+    run_date: str = provenance.NOT_RECORDED,
 ) -> str:
     """The published write-up, generated from the tables and from nothing else.
 
@@ -912,6 +921,11 @@ def to_markdown(
     The git SHA is stamped in because a table produced from an uncommitted tree cannot be tied
     to the code that made it, and card #34's manifest records the same thing for the artifact
     cut from the same run.
+
+    **The SHA and ``dated`` are the emit's, not the run's** (card #105): ``--emit`` reads them
+    when the document is written, which can be days after the fit. So they are labelled as the
+    emit, and the run's own date is stated beside them from the run record -- or as not
+    recorded, for a record that predates the field.
     """
     lines: list[str] = []
     lines.append("# Model evaluation — point estimates with intervals")
@@ -943,8 +957,8 @@ def to_markdown(
         else (" (uncommitted changes to code)" if code_modified else " (code committed)")
     )
     lines.append(f"- Run: {run}")
-    lines.append(f"- Code: `{stamp}`{state}")
-    lines.append(f"- Generated: {dated:%Y-%m-%d}")
+    lines.append(f"- Run date: {run_date}, from `{provenance.TRAIN_RECORD}`")
+    lines.append(f"- Emitted: {dated:%Y-%m-%d} from code `{stamp}`{state}")
     lines.append(f"- Resamples: {int(metrics['resamples'].max())} at {CONFIDENCE:.0%} confidence")
     lines.append(
         f"- Feature set: `{metrics['feature_set'].iloc[0]}` "
@@ -1106,6 +1120,20 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         return EXIT_BAD_INVOCATION
 
     source = args.report if args.report is not None else (cfg.paths.reports / "model")
+    # Stamped first, like every run (card #105). Which fit these intervals are over is the
+    # train record's `run_id`; blank when that record predates the field.
+    stamp = provenance.begin(
+        cfg.root,
+        protocol=provenance.BOOTSTRAP_INTERVALS,
+        probe=args.resamples < RESAMPLES,
+        settings={
+            "resamples": args.resamples,
+            "configured_resamples": RESAMPLES,
+            "confidence": CONFIDENCE,
+            "seed": cfg.seed,
+            "source_run_id": provenance.read(source / provenance.TRAIN_RECORD).get("run_id"),
+        },
+    )
     try:
         table = read_out_of_fold(source, config=cfg)
     except EvaluationError as error:
@@ -1176,6 +1204,8 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             path = source / f"{name}.csv"
             frame.to_csv(path, index=False)
             print(f"wrote {path}", file=stream)
+        written = provenance.write(source / provenance.EVALUATE_RECORD, stamp.finish())
+        print(f"wrote {written}", file=stream)
         if args.emit:
             git = describe_git(cfg.root)
             document = source / PUBLISHED
@@ -1186,6 +1216,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
                     sha=git.sha,
                     code_modified=git.code_modified,
                     dated=datetime.now(timezone.utc),
+                    run_date=read_run_date(source),
                 ),
                 encoding="utf-8",
             )

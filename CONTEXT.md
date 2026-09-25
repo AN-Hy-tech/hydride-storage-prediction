@@ -67,11 +67,23 @@ probe, the seed, the code and packages it ran on, and when it started and finish
 run of the pipeline, never a model — a model is identified by its artifact version.
 _Avoid_: "manifest" *(that is an artifact's)*, "metadata"
 
+> *State of the term, not part of the definition* (card #105, 2026-09-26): built.
+> `hydms/provenance.py` writes and reads it, and "is this a result?" is its `result()`, which
+> nothing else re-implements (a source-parsing test holds the serving, screening, figure and gate
+> packages to that). `train`, `loco`, `evaluate` and `calibrate` write one. `select` does not yet
+> (#106). The two committed records, `model-run.csv` and `loco-run.csv`, predate it and are not
+> rewritten until the next real run replaces them.
+
 **Run date**:
 When the run **started**, as its own run record states. Not the date its tables were committed,
 which can be hours later and on another day. A run whose record predates the field has **no run
 date** — it is stated as not recorded, never inferred from the commit.
 _Avoid_: "commit date" as a synonym, "date of the results"
+
+> *State of the term* (card #105, 2026-09-26): every run from now on records `started_at` in
+> local time with its offset, so the run date is the day the maintainer started it. **No
+> committed run has one yet.** `loco.md` and `evaluation.md` both print *not recorded*, and the
+> Chapter 1 paragraph on the two LOACO runs names them by commit, labelled as commits.
 
 **As published**:
 A figure from `REPORT.md` or the archival pipeline. It is *history*, not current performance, and

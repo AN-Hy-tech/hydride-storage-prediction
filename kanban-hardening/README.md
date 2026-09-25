@@ -2,9 +2,36 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-26 (architecture settled; #105 filed, not started)
+> ## ▶ Next action — as of 2026-09-26 (#105 `done`; #83 unblocked)
 >
-> **Handoff, one line: start #105 (the run record: `hydms/provenance.py`, standard library only)
+> **Handoff, one line: #105 is `done`: every run now stamps a run record via `hydms/provenance.py`,
+> and `result()` is the only "is this a result?". Start #83 (the Evidence Reader, ADR 0007) and
+> read runs through `provenance.read`/`result`; #84 is startable beside it. The next full LOACO
+> run (#104's) is the first with a run date. #106 (select/comparison) is split off and small.**
+>
+> **What landed.** `hydms/provenance.py`, standard library only: `begin()` stamps before the
+> fit, `Stamp.finish()` returns the row, `write()` writes it, `read()` never raises, `result()`
+> refuses an absent, unreadable, probe or unparseable-`probe` record. `train`, `loco`,
+> `evaluate` (`evaluation-run.csv`) and `calibrate` (`conformal-run.csv`) write records, and the
+> last two carry `source_run_id` back to the train record. AC-6, `evaluate`, `loco --emit`,
+> `domain.transfer_table` and the figures test read through it. `domain --emit` **refuses** a
+> probe's transfer table (exit 2, reference untouched). `tests/test_provenance.py` fails any
+> module under `hydms/{delivery,screens,figures,gates}` or `app/` that parses a record itself.
+>
+> **Three things that would cost an afternoon.** (1) The committed `model-run.csv` and
+> `loco-run.csv` predate the fields and were **not** rewritten. They read *not recorded*, and so
+> do `loco.md` and `evaluation.md`. Never fill a run date from `git log`. (2) `evaluation.md`'s
+> `Emitted:` line is the **emit's** date and commit, not the run's; the `Run date:` line is the
+> run's. (3) `docs/RUNNING-THE-FIT.md`'s commit lists now name `conformal-run.csv` and
+> `evaluation-run.csv`. A run that leaves them unstaged has lost its record.
+>
+> **For #83.** Caption the LOACO parity panel with `provenance.read(...).run_date_text`, which
+> says *not recorded* today, and name the run by its commit (`d8734ec`), labelled as a commit.
+> Do not open `*-run.csv` by hand: the source-parsing test will fail it under `app/`.
+>
+> *Below: the block this one replaces. Carried out.*
+>
+> **(2026-09-26, architecture settled; #105 filed)** **Handoff, one line: start #105 (the run record: `hydms/provenance.py`, standard library only)
 > and land it before any full LOACO run. Then #83 (the Evidence Reader, per ADR 0007), then #84
 > (`predict_many`). Every decision is on those three cards. #104's four probes are running, and
 > their diff goes on #104.**
@@ -388,7 +415,7 @@ leave-one-alloy-class-out result — and this line said "both of those" until 20
 blocked by #44 alone, which is right on the substance: an ElMD distance is a property of two
 compositions and reads nothing the surrogate produces. All three are `done`; S5 is closed.
 
-**The next free id is #106** (as of 2026-09-26). Scan both directories for `max(id) + 1` — this
+**The next free id is #107** (as of 2026-09-26). Scan both directories for `max(id) + 1` — this
 line has been stale before (it said #94 while #103 existed), so scan rather than trust it.
 
 ---
@@ -422,7 +449,7 @@ The runbook executes these in order. S2 and S3 are the only pair that may run in
 | **S1** QA foundation | 69, 70, 5, 71 | 2 |
 | **S2** Data layer | 3, 9, 10, 11, 87, 12, 13, 14, 15 | 7 |
 | **S3** Descriptor layer | 16, 17, 18, 19, 20, 21, 22 | 6 |
-| **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34, 97, 98, 104 | 13 |
+| **S4** Surrogate layer | 23, 24, 25, 88, 26, 27, 28, 29, 30, 31, 32, 33, 34, 97, 98, 104, 105, 106 | 13 |
 | **S5** Guard rails | 44, 48, 49 | 2.5 |
 | **S6** Delivery: contract + API | 75, 76, 77, 78, 79, 80 | 5 |
 | **S7** Delivery: interface | 81, 82, 83, 84 | 3.5 |

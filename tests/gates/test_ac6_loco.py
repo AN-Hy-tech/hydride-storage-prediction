@@ -115,6 +115,16 @@ def test_a_probes_tables_fail_rather_than_skip(tmp_path: Path) -> None:
     assert result.measured == "probe"
 
 
+def test_a_probe_cell_nobody_can_parse_fails_rather_than_passing(tmp_path: Path) -> None:
+    """Before #105 the gate refused only ``true``/``1``/``yes``, so ``probe=maybe`` passed as a
+    full run. Through :func:`hydms.provenance.result` an unreadable cell is not a result."""
+    _tables(tmp_path, probe="maybe")
+    result = GATE.check(_config(tmp_path))
+
+    assert result.status is Status.FAILED
+    assert result.measured == "no readable record"
+
+
 def test_the_class_number_published_alone_fails(tmp_path: Path) -> None:
     """The mistake this gate exists to catch, and the only one a person could make while
     believing they had met the criterion."""
@@ -145,13 +155,15 @@ def test_a_summary_with_no_rows_fails_rather_than_reporting_nothing(tmp_path: Pa
 def test_the_gate_names_the_directory_the_command_actually_writes() -> None:
     """The gate restates the directory rather than importing it, so that reading a manifest
     does not require pandas — the same trade `hydms.artifacts.manifest.GATE_SCHEMA` makes.
-    This is the test that keeps the two from drifting apart."""
-    from hydms.gates.ac6_leave_one_class_out import REPORTS, RUN, SUMMARY
+    This is the test that keeps the two from drifting apart. The record's name is no longer
+    restated: both sides import it from `hydms.provenance` (card #105)."""
+    from hydms import provenance
+    from hydms.gates.ac6_leave_one_class_out import REPORTS, SUMMARY
     from hydms.surrogate import loco
 
     assert REPORTS == loco.REPORTS
     assert f"{loco.TABLES[1]}.csv" == SUMMARY
-    assert f"{loco.TABLES[3]}.csv" == RUN
+    assert f"{loco.TABLES[3]}.csv" == provenance.LOCO_RECORD
 
 
 def test_the_gate_is_fast_because_it_reads_rather_than_refits() -> None:

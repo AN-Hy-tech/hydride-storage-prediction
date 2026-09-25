@@ -608,3 +608,58 @@ def test_a_reference_without_a_support_serialises_without_one() -> None:
     """Absent is omitted, never written as an empty histogram that reads as 'no rows'."""
     assert "temperature_support" not in json.loads(REFERENCE.to_json())
     assert DomainReference.from_json(REFERENCE.to_json()).temperature_counts == ()
+
+
+# --------------------------------------------------------------------------------------
+# The transfer table is served only if its run record says it is a result -- card #105
+# --------------------------------------------------------------------------------------
+
+
+def _loco_on_disk(tmp_path, *, probe: str | None):
+    """A config whose reports hold a transfer table, and a record saying ``probe`` (or none)."""
+    from dataclasses import replace
+
+    cfg = load_config()
+    directory = tmp_path / "loco"
+    directory.mkdir()
+    (directory / "loco-per-class.csv").write_text(
+        "model,fold,alloy_class,r2\nm,class:AB5,AB5,0.61\nm,class:Mg,Mg,-0.40\n",
+        encoding="utf-8",
+    )
+    if probe is not None:
+        (directory / "loco-run.csv").write_text(
+            f"probe,optuna_trials,configured_optuna_trials\n{probe},1,25\n", encoding="utf-8"
+        )
+    return replace(cfg, paths=replace(cfg.paths, reports=tmp_path))
+
+
+def test_a_full_runs_transfer_table_is_read(tmp_path) -> None:
+    from hydms.screens.domain import transfer_table
+
+    assert transfer_table(_loco_on_disk(tmp_path, probe="False")) == {"AB5": 0.61, "Mg": -0.40}
+
+
+@pytest.mark.parametrize("probe", ["True", None, "maybe"])
+def test_a_probes_transfer_table_is_refused(tmp_path, probe) -> None:
+    """A ``loco --trials 1`` without ``--report`` writes this exact file into
+    ``reports/loco/``. Before #105 nothing here asked, and ``domain --emit`` served it."""
+    from hydms.screens.domain import transfer_table
+
+    with pytest.raises(ScreenError, match="not a result"):
+        transfer_table(_loco_on_disk(tmp_path, probe=probe))
+
+
+def test_domain_emit_refuses_a_probe_and_leaves_the_reference_alone(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    """The card's own check: seed a probe record under ``reports/loco/`` and run ``--emit``.
+    It refuses before the featurisation, and the committed reference keeps its bytes."""
+    from hydms.screens import domain
+
+    cfg = _loco_on_disk(tmp_path, probe="True")
+    monkeypatch.setattr(domain, "load_config", lambda: cfg)
+    before = REFERENCE_FILE.read_bytes()
+
+    assert domain.main(["--emit"]) == 2
+    assert "probe=True" in capsys.readouterr().err
+    assert REFERENCE_FILE.read_bytes() == before

@@ -46,6 +46,7 @@ from hydms.surrogate.evaluate import (  # noqa: E402
     per_fold_intervals,
     read_out_of_fold,
     read_run,
+    read_run_date,
     subgroup_table,
     to_markdown,
 )
@@ -466,16 +467,19 @@ def test_the_run_record_the_training_command_writes_is_the_one_this_module_reads
     renamed column would leave the banner silently reporting "unknown" on a real run — which
     fails in the safe direction and is therefore exactly the kind of drift nobody notices.
     """
-    from hydms.surrogate.train import _run
+    from hydms import provenance
+    from hydms.surrogate.train import _begin
 
     cfg = load()
     settings = ModelSettings.from_config(cfg)
+    path = tmp_path / provenance.TRAIN_RECORD
 
-    _run(cfg, settings, probe=False).to_csv(tmp_path / "model-run.csv", index=False)
+    provenance.write(path, _begin(cfg, settings, probe=False).finish())
     assert read_run(tmp_path).startswith("full")
+    assert read_run_date(tmp_path) != provenance.NOT_RECORDED
 
     probe = replace(settings, optuna_trials=2, screen_labels=False)
-    _run(cfg, probe, probe=True).to_csv(tmp_path / "model-run.csv", index=False)
+    provenance.write(path, _begin(cfg, probe, probe=True).finish())
     run = read_run(tmp_path)
     assert run.startswith("PROBE")
     assert f"2 of {cfg.model.optuna_trials}" in run
@@ -535,3 +539,48 @@ def test_the_write_up_is_generated_and_therefore_reproducible() -> None:
     assert first == second
     assert "abc123def456" in first
     assert "(code committed)" in first
+
+
+# --------------------------------------------------------------------------------------
+# The run date beside the emit stamp -- card #105
+# --------------------------------------------------------------------------------------
+
+
+def test_the_document_states_the_run_date_apart_from_the_emit() -> None:
+    """`--emit` stamps its own date and the current commit. Those describe the document, so
+    they are labelled as the emit, and the run's own date is stated beside them."""
+    from datetime import datetime, timezone
+
+    from hydms import provenance
+
+    table = _out_of_fold()
+    cfg = load()
+    metrics = metrics_table(table, config=cfg, quantiles=QUANTILES, seed=cfg.seed, resamples=50)
+    subgroups = subgroup_table(
+        table, config=cfg, quantiles=QUANTILES, seed=cfg.seed, resamples=50
+    )
+    dated = datetime(2026, 9, 26, tzinfo=timezone.utc)
+
+    undated = to_markdown(metrics, subgroups, sha="abc", code_modified=False, dated=dated)
+    assert f"- Run date: {provenance.NOT_RECORDED}" in undated
+    assert "- Emitted: 2026-09-26 from code `abc` (code committed)" in undated
+
+    known = to_markdown(
+        metrics, subgroups, sha="abc", code_modified=False, dated=dated, run_date="2026-09-20"
+    )
+    assert "- Run date: 2026-09-20" in known
+
+
+def test_the_command_writes_its_own_record_tied_to_the_fit_it_read(tmp_path) -> None:
+    from hydms import provenance
+
+    directory = tmp_path / "model"
+    directory.mkdir()
+    _out_of_fold().to_csv(directory / "model-out-of-fold.csv")
+    provenance.write(directory / provenance.TRAIN_RECORD, {"probe": "False", "run_id": "fit-1"})
+
+    assert main(["--report", str(directory), "--resamples", "100"]) == 0
+    record = provenance.read(directory / provenance.EVALUATE_RECORD)
+    assert record.protocol == provenance.BOOTSTRAP_INTERVALS
+    assert record.get("source_run_id") == "fit-1"
+    assert record.probe is True, "fewer resamples than configured is a probe"

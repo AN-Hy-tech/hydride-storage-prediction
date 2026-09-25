@@ -1,6 +1,6 @@
 ---
 id: 105
-status: todo
+status: done
 priority: High
 blocked_by: []
 assignee: "@amirhossein"
@@ -57,26 +57,30 @@ Nothing captures them for a run.
 
 ## Done when
 
-- [ ] `hydms/provenance.py`: write and read a run record, standard library only, with round-trip
+- [x] `hydms/provenance.py`: write and read a run record, standard library only, with round-trip
       tests. The tests include a record with no date (not recorded), a probe (refused), an absent
       file (absent, not "full"), and `probe` spelled every way pandas and `csv` can write it
-- [ ] `train` and `loco` write it, with `started_at` taken **before** the fit and `code_modified`
+- [x] `train` and `loco` write it, with `started_at` taken **before** the fit and `code_modified`
       read **at start** (a run dirties its own stamp otherwise)
-- [ ] `evaluate`, AC-6, `tests/test_figures.py` and `domain.transfer_table` read through it. A
+- [x] `evaluate`, AC-6, `tests/test_figures.py` and `domain.transfer_table` read through it. A
       test seeds a probe record under `reports/loco/` and asserts that `domain --emit` **refuses**
-- [ ] A source-parsing test (the `test_api.py` `_FORBIDDEN` pattern) fails when a module in
+- [x] A source-parsing test (the `test_api.py` `_FORBIDDEN` pattern) fails when a module in
       `hydms/delivery`, `hydms/screens`, `hydms/figures`, `hydms/gates` or `app/` reads a
       `*-run.csv` other than through this module
-- [ ] Every other command that writes committed evidence under `reports/` writes a record:
+- [x] Every other command that writes committed evidence under `reports/` writes a record:
       `evaluate`, `select`, `comparison` and `calibrate`'s report tables. One box each if they
-      split
-- [ ] **The Chapter 1 paragraph on the two LOACO runs** dates them by commit, labelled as the
+      split. **Split:** `evaluate` writes `evaluation-run.csv` and `calibrate` writes
+      `conformal-run.csv`, each with `source_run_id` pointing at the train record they read.
+      `select` and `comparison` moved to **#106**, because their committed evidence is dated
+      from a file's mtime (`comparison._written_on`), and what replaces that is a question
+      about `comparison.py`
+- [x] **The Chapter 1 paragraph on the two LOACO runs** dates them by commit, labelled as the
       commit. Neither run has a run date. The chapter is the author's hand-written text, so this is
       a wording change the author reads, not a regeneration
-- [ ] **`evaluation.md`'s stamp is the time of the emit**, not of the run (`evaluate --emit`
+- [x] **`evaluation.md`'s stamp is the time of the emit**, not of the run (`evaluate --emit`
       stamps `datetime.now()` and the current sha). State the run record's run date beside it,
       regenerate, and update the byte test
-- [ ] The committed `loco-run.csv` and `model-run.csv` are **not** rewritten. They gain the new
+- [x] The committed `loco-run.csv` and `model-run.csv` are **not** rewritten. They gain the new
       columns only when the maintainer's next real run replaces them. **This card must land before
       that run**; #104 will likely call for one
 
@@ -84,6 +88,12 @@ Nothing captures them for a run.
 
 ```bash
 conda run -n Project python -m pytest tests/test_provenance.py tests/gates/test_ac6_loco.py tests/screens -q
+```
+
+Or, from Git Bash, by path (no `conda run` buffering):
+
+```bash
+/c/Users/Asus/miniconda3/envs/Project/python.exe -m pytest tests/test_provenance.py tests/gates/test_ac6_loco.py tests/screens -q
 ```
 
 ## Traces to
@@ -97,3 +107,23 @@ record), card #98 (the run that showed the record has no date)
 - 2026-09-26: Filed from the architecture review (candidate 1 of 4, "Strong") and the grilling
   that followed. Decisions Q4, Q5, Q13, Q14 and Q15 of that session are recorded above. Not started:
   the maintainer asked for it to be handed to the next session. (by @assistant)
+- 2026-09-26: Landed. `hydms/provenance.py` is one deep module. `begin()` stamps the start
+  before the fit (local time with its offset, so the run date is the maintainer's day),
+  `Stamp.finish()` returns the row, `write()` stores one CSV row, and `read()` / `result()` read
+  it back. `read` never raises, because `evaluate` has to *describe* a probe in a banner.
+  `result` is the question everyone else asks, and it refuses an absent record, an unreadable
+  one, a probe, and a `probe` cell nobody can parse. That last case is new: AC-6's old
+  `in ("true", "1", "yes")` passed `probe=maybe` as a full run.
+  **Consumers.** `train`, `loco`, `evaluate` and `calibrate` write records. `evaluate`, AC-6,
+  `loco --emit`, `domain.transfer_table` and `tests/test_figures.py` read through it. AC-6's
+  restated `RUN` constant is gone, and `loco.TABLES` takes the name from `provenance`.
+  `domain.emit()` now calls `transfer_table` **first**, so a probe is refused in a second rather
+  than after featurising 1,279 rows, and `domain --emit` exits 2 with the reference untouched.
+  **Documents.** `loco.md` gains a `Run date:` line (regenerated with `--emit`; it reads *not
+  recorded*). `evaluation.md` labels the SHA and date it carries as the **emit's**
+  (`- Emitted: … from code …`) and states `- Run date:` beside them.
+  **One premise of the card was wrong:** it asked to "update the byte test" for `evaluation.md`,
+  and there is none. `evaluate --emit` stamps `now()` and `HEAD`, so its bytes can never be
+  reproduced, and only `to_markdown`'s determinism is tested (with a fixed date). The document
+  was regenerated after the code commit, so its emit stamp names committed code.
+  **Split to #106:** `select`/`comparison`. See the box. (by @assistant)

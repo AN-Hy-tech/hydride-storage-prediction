@@ -23,6 +23,7 @@ import csv
 from pathlib import Path
 
 import pytest
+from hydms import provenance
 from hydms.delivery.contract import (
     DomainVerdict,
     Interval,
@@ -55,7 +56,7 @@ from hydms.figures.charts import (
 OUT_OF_FOLD = Path("reports/model/model-out-of-fold.csv")
 LOCO_SUMMARY = Path("reports/loco/loco-summary.csv")
 LOCO_OUT_OF_FOLD = Path("reports/loco/loco-out-of-fold.csv")
-LOCO_RUN = Path("reports/loco/loco-run.csv")
+LOCO_RUN = Path("reports/loco") / provenance.LOCO_RECORD
 
 TARGET = "H2_W% (max)"
 TEMPERATURE = "temperature(K)"
@@ -619,7 +620,7 @@ def test_the_committed_loco_run_keeps_every_scored_row(repo_root: Path) -> None:
     **And that a full run wrote it.** A ``--trials 1`` probe run without ``--report`` writes the
     same file into ``reports/loco/`` with no mark on it; the mark is ``loco-run.csv``'s
     ``probe`` column, which AC-6 already refuses on. Without this line a probe's 893 rows would
-    pass here as the result.
+    pass here as the result. Read through :func:`hydms.provenance.result`, the one rule (#105).
     """
     path = repo_root / LOCO_OUT_OF_FOLD
     if not path.is_file():
@@ -627,11 +628,10 @@ def test_the_committed_loco_run_keeps_every_scored_row(repo_root: Path) -> None:
             f"{path} is not committed yet: it is written by the full LOACO run card #98 hands "
             f"over (`python -m hydms.surrogate.loco --target capacity`), which the maintainer runs"
         )
-    with (repo_root / LOCO_RUN).open(encoding="utf-8", newline="") as handle:
-        run = list(csv.DictReader(handle))
-    assert [row["probe"] for row in run] == ["False"], (
-        f"{LOCO_RUN} says these rows came from a probe, not a result"
-    )
+    try:
+        provenance.result(repo_root / LOCO_RUN)
+    except provenance.NotAResult as error:
+        pytest.fail(f"the committed LOACO rows are not a result: {error}")
     with path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     with (repo_root / LOCO_SUMMARY).open(encoding="utf-8", newline="") as handle:

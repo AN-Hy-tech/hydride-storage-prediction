@@ -173,7 +173,9 @@ single prediction path and HG-3 covers the UI too.
 - [ ] **#83** `app/pages/` model card. **Must carry two things** or the UI recreates the problem it was
       built to fix: the material-vs-system caveat from PRD §4.4 (comparing a material wt% to a DOE
       system target is a two-step overstatement), and a link to `docs/REPORT-RECONCILIATION.md` so the
-      old published figures are not quietly inherited.
+      old published figures are not quietly inherited. **Unblocked 2026-09-26** by #105: read the
+      run record through `hydms.provenance.read`/`result`, never the CSV, and caption a panel
+      with `RunRecord.run_date_text`, which is *not recorded* for both committed runs.
 - [ ] **#84** Batch CSV screening page.
 
 **Exit check:** `conda run -n Project streamlit run app/main.py` plus the manual acceptance in §5.
@@ -279,6 +281,24 @@ single prediction path and HG-3 covers the UI too.
       chose the same one and still scored differently, so both the tuning and the
       fixed-parameter scoring fit vary. AC-1 covers only the deployed fit. First step: two
       `--trials 1 --no-screening` probes (~12 min each) diffed, then the same with screening on.
+- [x] **#105** One run record beside every run's tables. Filed 2026-09-26 from the architecture
+      review (ADR 0007); **not an unfreeze condition**. **Done 2026-09-26.** `hydms/provenance.py`
+      (standard library only) stamps a run **before** the fit (`started_at` with its UTC offset,
+      the commit, `code_modified` at start, interpreter, `cpu_count`, CatBoost's thread count,
+      `OMP`/`MKL` variables, eight `pkg_*` versions, a `run_id`) and writes one CSV row. `result()`
+      is the one answer to "is this a result?": it refuses an absent record, an unreadable one, a
+      probe, and a `probe` cell it cannot parse. `train`, `loco`, `evaluate` and `calibrate` write
+      records. AC-6, `evaluate`, `loco --emit`, `domain.transfer_table` and the figures test read
+      through it, and `tests/test_provenance.py` fails any serving, screening, figure or gate
+      module that parses a record itself. **`domain --emit` now refuses a probe's transfer table**
+      (exit 2, reference untouched); before, it would have served one. The committed
+      `model-run.csv` and `loco-run.csv` were not rewritten: they read *not recorded* until the
+      next real run replaces them. **So the next full LOACO run (#104's) is the first that carries
+      a run date.**
+- [ ] **#106** Selection evidence is dated by a file's mtime. Split from #105's last box,
+      2026-09-26; **not an unfreeze condition**. `select` writes no run record, and
+      `--emit-comparison` falls back to `comparison._written_on` (an mtime) for the selection
+      run's date. Not what the published `old_vs_new.md` reads today.
 - [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
       2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
       `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.

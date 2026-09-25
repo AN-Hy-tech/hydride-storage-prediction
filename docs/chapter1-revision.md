@@ -199,7 +199,9 @@ worse than predicting the held-out family's own mean. Small families (LEA, 19 ro
 scores with wide sampling error and should be read with their row counts.
 
 **The transfer score also moves between runs with the same seed, and the table above is the second
-run.** The protocol was run twice with seed 42 (2026-09-06 and 2026-09-25). Seven of the ten
+run.** The protocol was run twice with seed 42, committed on 2026-09-06 (`7149c4a`) and 2026-09-25
+(`d8734ec`). Those are commit dates. Neither run recorded when it started: the run record gained a
+run date only afterwards (card #105), and a commit date is not used as one. Seven of the ten
 family scores came back identical. Three moved: MEA 0.113 → 0.093, SS 0.763 → 0.778, and Mg
 −0.338 → −0.508. The macro average moved 0.273 → 0.256. Neither run is the right one: the
 difference is run-to-run variation the fixed seed does not remove, and its source has not been

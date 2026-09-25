@@ -26,7 +26,9 @@ found on ``artifacts/current.json`` the same day.
     names the command that would establish it. ``hydms.artifacts.promote`` treats this exactly
     as it treats a failure, which is correct -- an unrun protocol is not evidence.
   - Tables from a **probe**: ``FAILED``, not skipped. ``loco-run.csv`` records ``probe``, and a
-    probe's tables are the same shape as a real run's. Committed probe numbers are a defect
+    probe's tables are the same shape as a real run's. The record is read through
+    :func:`hydms.provenance.result` (card #105), so this gate and every other consumer ask
+    "is this a result?" with one rule; a ``probe`` cell nobody can parse also fails. Committed probe numbers are a defect
     somebody introduced, not an absence somebody has yet to fill, and the two deserve different
     words.
   - Tables with the class figure but **no random-split figure beside it**: ``FAILED``. The
@@ -46,6 +48,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from hydms import provenance
 from hydms.config import Config
 
 from ._core import Gate, GateResult, Speed
@@ -63,9 +66,6 @@ REPORTS = "loco"
 #: can be published without the other.
 SUMMARY = "loco-summary.csv"
 
-#: The provenance row. A probe's tables are the same shape as a result's, so this is the only
-#: thing standing between a cost check and a published claim.
-RUN = "loco-run.csv"
 
 
 def _read(path: Path) -> list[dict[str, str]]:
@@ -109,7 +109,7 @@ class LeaveOneClassOut:
     def check(self, cfg: Config) -> GateResult:
         directory = cfg.paths.reports / REPORTS
         summary_path = directory / SUMMARY
-        run_path = directory / RUN
+        run_path = directory / provenance.LOCO_RECORD
 
         absent = [p.name for p in (summary_path, run_path) if not p.is_file()]
         if absent:
@@ -123,26 +123,24 @@ class LeaveOneClassOut:
 
         try:
             summary = _read(summary_path)
-            run = _read(run_path)
         except (OSError, UnicodeDecodeError) as error:
             return GateResult.fail(self.name, f"{directory} could not be read: {error}")
 
-        if not summary or not run:
+        if not summary:
             return GateResult.fail(
                 self.name,
-                f"{summary_path.name} or {run_path.name} has a header and no rows, so the "
-                f"protocol wrote a table and recorded nothing in it.",
+                f"{summary_path.name} has a header and no rows, so the protocol wrote a table "
+                f"and recorded nothing in it.",
             )
 
-        if str(run[0].get("probe", "")).strip().lower() in ("true", "1", "yes"):
+        try:
+            provenance.result(run_path)
+        except provenance.NotAResult as error:
             return GateResult.fail(
                 self.name,
-                f"{run_path.name} records probe=True: these tables came from a reduced run "
-                f"({run[0].get('optuna_trials', '?')} trial(s) against the configured "
-                f"{run[0].get('configured_optuna_trials', '?')}), which is a cost check and "
-                f"not a result. A probe's tables are the same shape as a real run's, which is "
-                f"why this is checked rather than assumed.",
-                measured="probe",
+                f"{error} A probe's tables are the same shape as a real run's, which is why "
+                f"this is checked rather than assumed.",
+                measured="probe" if provenance.read(run_path).probe else "no readable record",
                 threshold="a full run",
             )
 

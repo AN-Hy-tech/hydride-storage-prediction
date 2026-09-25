@@ -36,7 +36,8 @@ Exit codes:
     0   the run finished and the tables were written
     2   the invocation itself was wrong (unreadable config, unknown target, unwritable path)
 
-Card #26; the run record is card #29's, and the deployed fit is card #34's.
+Card #26; the run record is card #29's (its date, commit and environment #105's), and the
+deployed fit is card #34's.
 """
 
 from __future__ import annotations
@@ -51,8 +52,10 @@ from typing import TextIO
 
 import pandas as pd
 
+from hydms import provenance
 from hydms.config import Config, ConfigError, load
 from hydms.surrogate.model import (
+    FIXED,
     Configuration,
     FitLog,
     ModelSettings,
@@ -96,7 +99,7 @@ TABLES = (
     "model-chosen",
     "model-fits",
     "model-out-of-fold",
-    "model-run",
+    provenance.TRAIN_RECORD.removesuffix(".csv"),
 )
 
 
@@ -261,28 +264,31 @@ def _deployed(evaluation: Evaluation) -> tuple[str, Configuration]:
     return fold, configuration
 
 
-def _run(cfg: Config, settings: ModelSettings, *, probe: bool) -> pd.DataFrame:
-    """One row saying what kind of run wrote the tables beside it.
+def _begin(cfg: Config, settings: ModelSettings, *, probe: bool) -> provenance.Stamp:
+    """Stamp the run before the fit: what kind it is, its settings, its code and machine.
 
-    The `PROBE:` line this command prints goes to a terminal somebody closes. This goes to
-    disk, in the same directory as the numbers, and `hydms.surrogate.evaluate` puts it at the
-    top of the published document -- because the failure it guards against is not a reader who
-    misunderstands a caveat, it is a reader who never saw one.
+    The `PROBE:` line this command prints goes to a terminal somebody closes. The record goes
+    to disk, in the same directory as the numbers, and `hydms.surrogate.evaluate` puts it at
+    the top of the published document -- because the failure it guards against is not a reader
+    who misunderstands a caveat, it is a reader who never saw one. Taken **before** the fit so
+    the run date is when it started and ``code_modified`` is not read off the run's own output
+    (card #105).
     """
-    return pd.DataFrame.from_records(
-        [
-            {
-                "probe": probe,
-                "optuna_trials": settings.optuna_trials,
-                "configured_optuna_trials": cfg.model.optuna_trials,
-                "screening": settings.screen_labels,
-                "cv_folds": cfg.model.cv_folds,
-                "inner_cv_folds": cfg.model.inner_cv_folds,
-                "feature_set": "hydms.descriptors.contract.SELECTED",
-                "features": len(settings.features),
-                "seed": settings.seed,
-            }
-        ]
+    return provenance.begin(
+        cfg.root,
+        protocol=provenance.RANDOM_SPLIT,
+        probe=probe,
+        settings={
+            "optuna_trials": settings.optuna_trials,
+            "configured_optuna_trials": cfg.model.optuna_trials,
+            "screening": settings.screen_labels,
+            "cv_folds": cfg.model.cv_folds,
+            "inner_cv_folds": cfg.model.inner_cv_folds,
+            "feature_set": "hydms.descriptors.contract.SELECTED",
+            "features": len(settings.features),
+            "seed": settings.seed,
+        },
+        catboost_thread_count=FIXED.get("thread_count"),
     )
 
 
@@ -332,6 +338,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             file=stream,
         )
 
+    stamp = _begin(cfg, settings, probe=probe)
     frame, split = capacity_matrix(cfg, settings=settings)
     print(
         f"{len(frame)} row(s) x {len(settings.features)} feature(s) "
@@ -366,20 +373,21 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
 
     tables = dict(
         zip(
-            TABLES,
+            TABLES[:-1],
             (
                 _per_fold(evaluation),
                 _record(evaluation, settings),
                 _chosen(evaluation),
                 log.table(),
                 evaluation.out_of_fold,
-                _run(cfg, settings, probe=probe),
             ),
             strict=True,
         )
     )
     try:
         _write(tables, destination, stream)
+        written = provenance.write(destination / provenance.TRAIN_RECORD, stamp.finish())
+        print(f"wrote {written}", file=stream)
     except OSError as error:
         print(f"could not write the tables: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION

@@ -28,6 +28,7 @@ pytest.importorskip("pandas", reason="the tables are pandas frames end to end")
 pytest.importorskip("sklearn", reason="the fold protocol is scikit-learn's")
 
 import pandas as pd  # noqa: E402
+from hydms import provenance  # noqa: E402
 from hydms.surrogate import loco  # noqa: E402
 from hydms.surrogate.validation import Evaluation, Fold, FoldSet  # noqa: E402
 
@@ -261,7 +262,7 @@ def test_the_worst_class_is_named_because_the_average_hides_it() -> None:
 # --------------------------------------------------------------------------------------
 
 
-def _tables(*, probe: bool = False) -> dict[str, pd.DataFrame]:
+def _tables() -> dict[str, pd.DataFrame]:
     table = _summary_table()
     table["compositions_scored"] = [207, 19]
     table["not_estimable_because"] = ["", ""]
@@ -270,21 +271,27 @@ def _tables(*, probe: bool = False) -> dict[str, pd.DataFrame]:
         "loco-per-class": table,
         "loco-summary": loco.summary(table, record),
         "loco-chosen": pd.DataFrame(),
-        "loco-run": pd.DataFrame.from_records(
-            [{"probe": probe, "optuna_trials": 2, "configured_optuna_trials": 25,
-              "screening": True}]
-        ),
     }
 
 
+def _record(*, probe: str = "False", started_at: str = "") -> provenance.RunRecord:
+    fields = {"probe": probe, "optuna_trials": "2", "configured_optuna_trials": "25",
+              "screening": "True"}
+    if started_at:
+        fields["started_at"] = started_at
+    return provenance.RunRecord(
+        path=Path(provenance.LOCO_RECORD), state="recorded", fields=fields
+    )
+
+
 def test_the_document_puts_the_two_numbers_in_one_table() -> None:
-    text = loco.document(_tables())
+    text = loco.document(_tables(), _record())
     assert "0.7481" in text and "0.4500" in text
     assert "interpolation" in text and "extrapolation" in text
 
 
 def test_the_document_lists_every_class_with_its_support() -> None:
-    text = loco.document(_tables())
+    text = loco.document(_tables(), _record())
     assert "| AB2 |" in text and "| LEA |" in text
     assert "260" in text and "19" in text
 
@@ -292,8 +299,21 @@ def test_the_document_lists_every_class_with_its_support() -> None:
 def test_a_probes_document_says_so_at_the_top() -> None:
     """A probe's tables and a real run's tables are the same shape. The difference has to be
     somewhere a reader cannot miss, and generated from `loco-run.csv` rather than remembered."""
-    assert "probe, not a result" in loco.document(_tables(probe=True))
-    assert "probe, not a result" not in loco.document(_tables(probe=False))
+    assert "probe, not a result" in loco.document(_tables(), _record(probe="True"))
+    assert "probe, not a result" not in loco.document(_tables(), _record(probe="False"))
+
+
+def test_the_document_states_the_run_date_or_says_it_was_not_recorded() -> None:
+    """Card #105: the run date is the record's ``started_at``, and a record that predates the
+    field says so rather than borrowing the commit date."""
+    assert "Run date: not recorded" in loco.document(_tables(), _record())
+    dated = _record(started_at="2026-09-27T01:10:00+03:30")
+    assert "Run date: 2026-09-27" in loco.document(_tables(), dated)
+
+
+def test_a_record_nobody_can_parse_puts_a_warning_on_the_document() -> None:
+    text = loco.document(_tables(), _record(probe="maybe"))
+    assert "not a result" in text.split("## The two numbers")[0]
 
 
 def test_emit_refuses_a_partial_set_of_tables_and_names_what_is_missing(
@@ -478,7 +498,7 @@ def test_the_committed_document_is_what_the_code_produces() -> None:
             f"{published} does not exist yet: the leave-one-alloy-class-out run has not "
             f"happened. AC-6 reports the same absence as SKIPPED, which blocks promotion."
         )
-    assert published.read_text(encoding="utf-8") == loco.document(loco._read_tables(directory))
+    assert published.read_text(encoding="utf-8") == loco.document(*loco._read_tables(directory))
 
 
 @pytest.mark.slow
@@ -516,7 +536,7 @@ def test_the_document_never_prints_the_word_nan_for_a_missing_comparison() -> No
     strange. AC-6 fails on this state anyway; the document should say so in words."""
     tables = _tables()
     tables["loco-summary"] = loco.summary(tables["loco-per-class"], None)
-    text = loco.document(tables)
+    text = loco.document(tables, _record())
 
     assert "not published" in text
     assert "| nan |" not in text

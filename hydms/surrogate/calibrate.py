@@ -54,6 +54,7 @@ from typing import TextIO
 
 import pandas as pd
 
+from hydms import provenance
 from hydms.config import Config, ConfigError, load
 from hydms.data.splits import SPLIT_NAMES
 from hydms.surrogate.conformal import (
@@ -72,6 +73,7 @@ from hydms.surrogate.deploy import (
 )
 from hydms.surrogate.evaluate import EvaluationError
 from hydms.surrogate.model import (
+    FIXED,
     FitLog,
     ModelError,
     ModelSettings,
@@ -253,6 +255,22 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         )
 
     destination = _destination(cfg, args.report)
+    # Stamped before the fit (card #105). Which search chose the configuration is the train
+    # record's `run_id`, read now because `deployed_params` reads the same directory.
+    stamp = provenance.begin(
+        cfg.root,
+        protocol=provenance.DEPLOYED_FIT,
+        probe=args.no_screening,
+        settings={
+            "screening": settings.screen_labels,
+            "seed": settings.seed,
+            "features": len(settings.features),
+            "source_run_id": provenance.read(destination / provenance.TRAIN_RECORD).get(
+                "run_id"
+            ),
+        },
+        catboost_thread_count=FIXED.get("thread_count"),
+    )
     frame, split = capacity_matrix(cfg, settings=settings)
     rows = {name: list(frame.index[split == name]) for name in SPLIT_NAMES}
     print(
@@ -261,7 +279,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         file=stream,
     )
 
-    params, provenance = deployed_params(destination, stream)
+    params, chosen_from = deployed_params(destination, stream)
     log = FitLog()
     started = time.perf_counter()
     try:
@@ -305,7 +323,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             )
     print(
         f"  the test split was not read. Coverage on held-out data is gate AC-3's "
-        f"(card #31); the configuration came from {provenance}.",
+        f"(card #31); the configuration came from {chosen_from}.",
         file=stream,
     )
 
@@ -346,6 +364,8 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     )
     try:
         _write(tables, destination, stream)
+        written = provenance.write(destination / provenance.CALIBRATE_RECORD, stamp.finish())
+        print(f"wrote {written}", file=stream)
     except OSError as error:
         print(f"could not write the tables: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
