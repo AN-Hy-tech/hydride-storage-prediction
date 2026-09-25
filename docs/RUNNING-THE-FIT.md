@@ -546,9 +546,21 @@ conda run --no-capture-output -n Project python -u -m hydms.surrogate.loco --tar
 conda run --no-capture-output -n Project python -m hydms.surrogate.loco --emit
 ```
 
-The first writes four tables into `reports/loco/`; the second rebuilds `loco.md` from them. As
+The first writes five tables into `reports/loco/`; the second rebuilds `loco.md` from them. As
 in Step 7, **read the document before committing it**: no probe banner at the top, ten classes
 in the per-class table, and a `Random split` row that is populated rather than blank.
+
+**Exit code 1 means the run finished but kept a partial per-row record.** The four tables AC-6
+reads are written regardless, so four hours are never lost to it; only `loco-out-of-fold.csv` is
+withheld, and stderr says how many rows it held against how many were scored. That is a defect to
+report, not a run to repeat (card #98).
+
+**Re-running it after it has already been done once (card #98).** The first full run, on
+2026-09-06, took **4 h 07 m** and predates `loco-out-of-fold.csv`, so its scored rows were never
+written. The only way to get them is the same command again. The run is seeded, so the four
+existing tables *should* come back unchanged — `git diff --stat reports/loco/` should show one
+new file and nothing else. If any of the four moved, commit them anyway after `--emit` and say
+so: it is a seed-reproducibility finding (AC-1), not a reason to discard the run.
 
 **What this number is for, and what it is not.** It is the extrapolation figure — how the model
 does on a family it has never seen — and it is **expected to be much worse** than the
@@ -611,6 +623,7 @@ Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model
 | `loco-summary.csv` | The row AC-6 is about: the macro average, the support-weighted one, the worst and best class, and the **random-split number beside them**. Neither figure can be published here without the other |
 | `loco-chosen.csv` | The hyperparameters each class fold's search settled on |
 | `loco-run.csv` | Full run or probe. AC-6 reads it and **fails** on a probe's tables, which are the same shape as a real run's |
+| `loco-out-of-fold.csv` | **One row per training row**, predicted by the model that had not seen that row's *family*: `model-out-of-fold.csv` at this protocol's grain, with the class in `fold`. The second parity panel (#81, #83) is drawn from it. `--emit` does not read it, so it changes no published byte (card #98) |
 
 ---
 

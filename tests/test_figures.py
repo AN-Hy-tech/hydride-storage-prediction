@@ -53,7 +53,8 @@ from hydms.figures.charts import (
 )
 
 OUT_OF_FOLD = Path("reports/model/model-out-of-fold.csv")
-LOCO_PER_CLASS = Path("reports/loco/loco-per-class.csv")
+LOCO_SUMMARY = Path("reports/loco/loco-summary.csv")
+LOCO_OUT_OF_FOLD = Path("reports/loco/loco-out-of-fold.csv")
 
 TARGET = "H2_W% (max)"
 TEMPERATURE = "temperature(K)"
@@ -605,23 +606,30 @@ def test_every_parity_point_carries_its_band(out_of_fold: list[dict[str, str]]) 
 # --------------------------------------------------------------------------------------
 
 
-def test_the_committed_loco_tables_hold_no_per_row_predictions(repo_root: Path) -> None:
-    """Why :func:`parity` cannot be built from what is on disk today -- card #98.
+def test_the_committed_loco_run_keeps_every_scored_row(repo_root: Path) -> None:
+    """The second parity panel's evidence: LOACO's scored rows, not only their averages -- #98.
 
-    ``hydms.surrogate.train`` writes ``evaluation.out_of_fold`` as a table;
-    ``hydms.surrogate.loco`` writes four tables and that is not one of them, so the
-    leave-one-alloy-class-out protocol leaves per-class aggregates and no scored rows. This
-    test states that as a measurement rather than a memory: when #98 lands and the file
-    appears, this is the test that says so.
+    Until card #98, ``hydms.surrogate.loco`` wrote four aggregate tables and no scored rows,
+    so :func:`parity` could not be built from committed evidence and this test asserted the
+    gap as a measurement. It now writes ``loco-out-of-fold.csv``; this skips until the
+    maintainer's LOACO run has committed it, and from then on checks it is the *whole* record:
+    one row per row the class folds scored, every one carrying the band a parity point needs.
     """
-    path = repo_root / LOCO_PER_CLASS
+    path = repo_root / LOCO_OUT_OF_FOLD
     if not path.is_file():
-        pytest.skip(f"the LOACO per-class table is not in this checkout: {path}")
+        pytest.skip(
+            f"{path} is not committed yet: it is written by the full LOACO run card #98 hands "
+            f"over (`python -m hydms.surrogate.loco --target capacity`), which the maintainer runs"
+        )
     with path.open(encoding="utf-8", newline="") as handle:
-        columns = set(csv.DictReader(handle).fieldnames or ())
-    assert "r2" in columns, "the per-class table is the aggregate evidence AC-6 reports"
-    assert not {"q0.5", "q0.1", "q0.9"} & columns
-    assert not (repo_root / "reports/loco/loco-out-of-fold.csv").exists()
+        rows = list(csv.DictReader(handle))
+    with (repo_root / LOCO_SUMMARY).open(encoding="utf-8", newline="") as handle:
+        summary = list(csv.DictReader(handle))
+    assert len(rows) == sum(int(row["rows_scored"]) for row in summary)
+    assert {"q0.1", "q0.5", "q0.9"} <= set(rows[0])
+    assert all(row["fold"].startswith("class:") for row in rows)
+    points = parity_points(rows)
+    assert len(points) == len(rows)
 
 
 def test_the_out_of_fold_table_is_the_whole_training_split(

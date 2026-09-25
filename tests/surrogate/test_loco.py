@@ -19,6 +19,7 @@ the protocol emits reaches this file rather than being absorbed by a fake.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -317,6 +318,103 @@ def test_budget_fits_nothing_and_says_how_this_compares_to_the_random_split_run(
 def test_an_unknown_target_is_refused_by_name(capsys) -> None:
     assert loco.main(["--target", "entropy"]) == loco.EXIT_BAD_INVOCATION
     assert "capacity" in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------------------------
+# The scored rows -- card #98
+# --------------------------------------------------------------------------------------
+
+_FOLDS = {"class:AB5": ["a", "b"], "class:AB": ["c", "d"], "class:Mg": ["e"]}
+_METRICS = {name: {"r2": 0.1, "mae": 0.2} for name in _FOLDS}
+_CLASSES = {
+    "a": ("La1Ni5", "AB5", 1.4),
+    "b": ("La1Ni5", "AB5", 1.5),
+    "c": ("Ti1Fe1", "AB", 1.8),
+    "d": ("Ti1Fe1", "AB", 1.9),
+    "e": ("Mg2Ni1", "Mg", 3.6),
+}
+
+
+def _kept(folds: dict[str, list[str]], model: str = "m") -> pd.DataFrame:
+    """What ``_keeper`` stacks: one stamped row per held-out label."""
+    return pd.DataFrame.from_records(
+        [
+            {"model": model, "fold": name, "label": label, "q0.5": 1.0}
+            for name, labels in folds.items()
+            for label in labels
+        ]
+    ).set_index("label")
+
+
+def _with_rows(evaluation: Evaluation, kept: pd.DataFrame) -> Evaluation:
+    return replace(evaluation, out_of_fold=kept)
+
+
+def test_the_scored_rows_are_returned_when_every_class_fold_kept_its_own() -> None:
+    evaluation = _with_rows(_evaluation(_FOLDS, _METRICS), _kept(_FOLDS))
+    table = loco.per_class(evaluation, _training(_CLASSES))
+    rows = loco.out_of_fold(evaluation, table)
+    assert len(rows) == int(table["rows_scored"].sum()) == 5
+    assert set(rows["fold"]) == set(_FOLDS)
+
+
+def test_a_contender_that_kept_nothing_is_refused_rather_than_written_as_an_empty_file() -> None:
+    """``Evaluation.out_of_fold`` is empty unless the contender used ``ScoringTask.keep``, and
+    an empty frame writes as a valid CSV -- the one state this card exists to rule out."""
+    evaluation = _evaluation(_FOLDS, _METRICS)
+    table = loco.per_class(evaluation, _training(_CLASSES))
+    with pytest.raises(ValueError, match=r"kept 0 out-of-fold row\(s\) where its class folds "
+                                         r"scored 5"):
+        loco.out_of_fold(evaluation, table)
+
+
+def test_a_record_missing_one_family_is_refused() -> None:
+    partial = {name: labels for name, labels in _FOLDS.items() if name != "class:Mg"}
+    evaluation = _with_rows(_evaluation(_FOLDS, _METRICS), _kept(partial))
+    table = loco.per_class(evaluation, _training(_CLASSES))
+    with pytest.raises(ValueError, match="kept 4 .* scored 5"):
+        loco.out_of_fold(evaluation, table)
+
+
+def _run_on(
+    monkeypatch, tmp_path: Path, evaluation: Evaluation
+) -> tuple[int, set[str]]:
+    """``main`` end to end with the fit replaced: what it writes and what it returns."""
+    training = _training(_CLASSES)
+    split = pd.Series("train", index=training.index)
+    monkeypatch.setattr(loco, "capacity_matrix", lambda cfg, settings: (training, split))
+    monkeypatch.setattr(loco, "nested_scores", lambda *args, **kwargs: evaluation)
+    # The fixture tuned nothing, so there is no configuration to tabulate; that table is
+    # card #30's and is not what these tests are about.
+    monkeypatch.setattr(loco, "_chosen", lambda evaluation: pd.DataFrame({"chosen": []}))
+    code = loco.main(["--trials", "1", "--no-screening", "--report", str(tmp_path)])
+    return code, {path.stem for path in tmp_path.glob("*.csv")}
+
+
+def test_the_run_writes_the_scored_rows_as_a_fifth_table(monkeypatch, tmp_path: Path) -> None:
+    code, written = _run_on(
+        monkeypatch, tmp_path, _with_rows(_evaluation(_FOLDS, _METRICS), _kept(_FOLDS))
+    )
+    assert code == loco.EXIT_OK
+    assert written == {*loco.TABLES, loco.OUT_OF_FOLD}
+    assert len(pd.read_csv(tmp_path / f"{loco.OUT_OF_FOLD}.csv", index_col=0)) == 5
+
+
+def test_a_partial_record_withholds_only_its_own_table_and_never_costs_the_run(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    """The check runs after a fit that takes hours. Failing it must not lose the four tables
+    AC-6 reads -- only the per-row one is withheld, and the exit code says so."""
+    code, written = _run_on(monkeypatch, tmp_path, _evaluation(_FOLDS, _METRICS))
+    assert code == loco.EXIT_INCOMPLETE
+    assert written == set(loco.TABLES)
+    assert loco.OUT_OF_FOLD in capsys.readouterr().err
+
+
+def test_emit_does_not_read_the_scored_rows() -> None:
+    """A table ``--emit`` required would make every checkout without it unable to rebuild a
+    document that never quotes it -- so it stays outside the set ``--emit`` reads."""
+    assert loco.OUT_OF_FOLD not in loco.TABLES
 
 
 # --------------------------------------------------------------------------------------

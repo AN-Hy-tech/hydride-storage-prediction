@@ -146,7 +146,8 @@ single prediction path and HG-3 covers the UI too.
          at the same scale. `parity()` refuses fewer than two readings, so the optimistic panel
          cannot ship alone — **and the LOACO panel has no data**: `train` writes
          `evaluation.out_of_fold`, `loco` does not, so `reports/loco/` holds ten class averages and
-         no scored rows. That is **#98**, and it needs a run.
+         no scored rows. That is **#98**: its code landed 2026-09-25 (`loco` now writes
+         `loco-out-of-fold.csv`), and the file waits on one more full LOACO run, the maintainer's.
 
       **The shape it landed in.** A chart is a *description* before it is an image:
       `hydms/figures/charts.py` builds `Figure` objects and imports no plotting library;
@@ -263,7 +264,10 @@ single prediction path and HG-3 covers the UI too.
       `evaluation.out_of_fold` as a table and `hydms/surrogate/loco.py:595` writes four tables
       without it, so the honest protocol leaves aggregates and the optimistic one leaves 893
       scored rows. The code change is small; the run is the maintainer's. It holds #83's parity
-      figure shut.
+      figure shut. **2026-09-25: `doing`, code landed.** `loco` writes `loco-out-of-fold.csv` as
+      a fifth table (outside the four `--emit` reads, so `loco.md` is unchanged) and exits 1
+      without it rather than write a partial record. What remains is the run: the command is on
+      the card and in `docs/RUNNING-THE-FIT.md` Step 10; the last one took 4 h 07 m.
 - [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
       2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
       `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.

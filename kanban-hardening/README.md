@@ -2,9 +2,28 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25 (after the #100 full run)
+> ## ▶ Next action — as of 2026-09-25 (#98's code landed)
 >
-> **Handoff, one line: the full run #100 asked for is green — 1650 passed, 0 failed, 1 h 15 m 4 s,
+> **Handoff, one line: #98 is `doing` with its code landed and verified at probe budget; its
+> last box is the full LOACO run (~4 h, the last took 4 h 07 m), which the maintainer runs with
+> the command in #98's last box — then commit `reports/loco/` by name. #83 and #84 next.**
+>
+> **What landed.** `hydms.surrogate.loco` now writes `loco-out-of-fold.csv`, one row per scored
+> training row — the same columns and the same 893 row labels as `model-out-of-fold.csv` — so
+> `parity()` can draw both protocols. It stays outside the four tables `--emit` reads, so
+> `loco.md` does not move. A short record is refused with exit 1, and the four AC-6 tables are
+> written anyway, so a four-hour run is never lost to it. The probe (1 trial, no screening) ran
+> 12.3 min and built both parity panels, 893 beside 893. **The rerun overwrites the four
+> committed tables; being seeded, they should come back unchanged** — if `git diff --stat
+> reports/loco/` shows any of them moved, that is an AC-1 finding to record on #98, not a
+> reason to discard the run.
+>
+> **While the run is out, #84 is startable** (it does not read `reports/loco/`). #83 can be
+> built, but its parity box stays open until the file is committed.
+>
+> *Below: the earlier block from after the #100 full run. Its pointer to #98 is now carried out.*
+>
+> **(2026-09-25, after the #100 full run)** **Handoff, one line: the full run #100 asked for is green — 1650 passed, 0 failed, 1 h 15 m 4 s,
 > quiet machine, no failure record — so #100 stays `doing` with nothing to fix; (2) #98 is next when
 > the maintainer assigns it.** Budget well over an hour for any future full run, not the ~29 min the
 > older blocks quote.

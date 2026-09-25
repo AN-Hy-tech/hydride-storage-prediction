@@ -130,6 +130,14 @@ DOE system target, and the published figures inherited as though nothing had cha
       AC-6's claim and the wrong evidence for a scatter: it can say a family transfers badly, not
       where. Do not relax `parity()` to draw the one panel it can. Not an unfreeze condition.
 
+      **2026-09-25, #98's code landed; the panel now waits only on the run.** `loco` writes the
+      scored rows as `reports/loco/loco-out-of-fold.csv` — same columns as
+      `model-out-of-fold.csv`, class in `fold` — and refuses to write a partial one. What is
+      missing is the file itself: the only full LOACO run (2026-09-06) predates the table, so
+      it takes one more, ~4 h, which the maintainer runs. When the file is committed,
+      `tests/test_figures.py::test_the_committed_loco_run_keeps_every_scored_row` stops skipping
+      and this box can be ticked the moment the page draws both panels from it.
+
 - [ ] **Every chart on this page comes from `hydms.figures`, none from a local helper** (added
       2026-09-12 by #81). The five builders exist so that this page and #82's cannot draw the
       same quantity two different ways, which is the drift a per-page chart helper always

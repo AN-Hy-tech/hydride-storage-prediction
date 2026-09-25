@@ -55,9 +55,16 @@ fit times an earlier run measured into ``reports/model/model-fits.csv`` and proj
 so the arithmetic can be checked without paying it. Run the real thing deliberately, once, and
 commit its tables.
 
+**The scored rows are kept, not only their averages** (card #98). The run writes
+``loco-out-of-fold.csv`` -- ``train``'s ``model-out-of-fold`` at this protocol's grain -- so the
+honest protocol leaves evidence a parity plot can be drawn from and not only a number to quote.
+``--emit`` does not read it, so its arrival changes no published byte.
+
 Exit codes:
 
     0   the run finished and the tables were written, or --budget/--emit did their cheap job
+    1   the run finished and the four tables AC-6 reads were written, but the per-row table
+        was withheld because it did not hold every scored row (the reason is on stderr)
     2   the invocation itself was wrong (unreadable config, unknown target, tables absent)
 
 Card #30; AC-6 reads what this writes.
@@ -86,6 +93,7 @@ from hydms.surrogate.scaler import TRAIN
 from hydms.surrogate.validation import Evaluation, leave_one_class_out, nested_scores
 
 EXIT_OK = 0
+EXIT_INCOMPLETE = 1
 EXIT_BAD_INVOCATION = 2
 
 #: The only target there is; the flag exists so a run says which one it scored.
@@ -105,6 +113,16 @@ DOCUMENT = "loco.md"
 #: the same shape, so which kind produced these numbers is written *beside* them and not only
 #: on a terminal somebody closes. ``--emit`` refuses to publish a document that does not say.
 TABLES = ("loco-per-class", "loco-summary", "loco-chosen", "loco-run")
+
+#: The scored rows themselves: one per held-out training row, with the truth and what the
+#: model fitted without that row's family said about it. ``train``'s ``model-out-of-fold`` at
+#: the other protocol's grain, and the only evidence that can show *where* a family fails
+#: rather than that it does -- a parity plot of the two protocols needs both (#81, card #98).
+#:
+#: Written beside :data:`TABLES` and deliberately not one of them. ``--emit`` reads exactly
+#: those four and refuses a partial set, so a table added to them would make every checkout
+#: without it unable to rebuild a document that never quotes it.
+OUT_OF_FOLD = "loco-out-of-fold"
 
 #: The random-split run's averaged record, which AC-6 requires this number to be reported
 #: *alongside*. Read, never recomputed -- recomputing it here would be a second answer to a
@@ -299,6 +317,26 @@ def _chosen(evaluation: Evaluation) -> pd.DataFrame:
         for (model, fold), configuration in sorted(evaluation.chosen.items())
     ]
     return pd.DataFrame.from_records(rows).set_index(["model", "alloy_class"])
+
+
+def out_of_fold(evaluation: Evaluation, table: pd.DataFrame) -> pd.DataFrame:
+    """The scored rows, or a ``ValueError`` saying why they are not the rows that were scored.
+
+    ``Evaluation.out_of_fold`` is empty unless the contender handed its predictions to
+    ``ScoringTask.keep``, and an empty frame writes as a perfectly valid CSV. So the rows are
+    counted against the per-class table's ``rows_scored`` for every model: a file that holds
+    fewer rows than the classes scored is a chart of the families that happened to be kept.
+    """
+    kept = evaluation.out_of_fold
+    for model, scored in table.groupby(level="model")["rows_scored"].sum().items():
+        rows = int((kept["model"] == model).sum()) if "model" in kept.columns else 0
+        if rows != int(scored):
+            raise ValueError(
+                f"{model!r} kept {rows} out-of-fold row(s) where its class folds scored "
+                f"{int(scored)}. {OUT_OF_FOLD}.csv would be a partial record passed off as the "
+                f"whole one, so it is not written."
+            )
+    return kept
 
 
 def _run(cfg: Config, settings: ModelSettings, classes: int, *, probe: bool) -> pd.DataFrame:
@@ -598,7 +636,16 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         TABLES[2]: _chosen(evaluation),
         TABLES[3]: _run(cfg, settings, len(evaluation.outer), probe=probe),
     }
+    # Checked after the fit and never allowed to cost it: a run that took hours still writes
+    # the four tables AC-6 reads, and only the per-row table is withheld.
+    try:
+        tables[OUT_OF_FOLD] = out_of_fold(evaluation, table)
+        incomplete = ""
+    except ValueError as error:
+        incomplete = str(error)
     _write(tables, destination, stream)
+    if incomplete:
+        print(incomplete, file=sys.stderr)
 
     for model, row in once.iterrows():
         against = float(row["random_split_r2"])
@@ -615,7 +662,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         "from these tables, never typed.",
         file=stream,
     )
-    return EXIT_OK
+    return EXIT_INCOMPLETE if incomplete else EXIT_OK
 
 
 def _read_random_split(cfg: Config) -> pd.DataFrame | None:
