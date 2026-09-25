@@ -2,11 +2,18 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25 (after the #100 session)
+> ## ▶ Next action — as of 2026-09-25 (after the #100 full run)
 >
-> **Handoff, one line: #100 stays `doing` (maintainer's ruling) — run the full `pytest` (no `-m`) on
-> a quiet machine, and if it goes red, fix the render test from the traceback now saved in
-> `reports/test-failures/`; otherwise go on to (2) #98.**
+> **Handoff, one line: the full run #100 asked for is green — 1650 passed, 0 failed, 1 h 15 m 4 s,
+> quiet machine, no failure record — so #100 stays `doing` with nothing to fix; (2) #98 is next when
+> the maintainer assigns it.** Budget well over an hour for any future full run, not the ~29 min the
+> older blocks quote.
+>
+> *Below: the earlier block from after the #100 session. Its instruction has now been carried out.*
+>
+> **(2026-09-25, #100 session)** **Handoff, one line: #100 stays `doing` (maintainer's ruling) — run
+> the full `pytest` (no `-m`) on a quiet machine, and if it goes red, fix the render test from the
+> traceback now saved in `reports/test-failures/`; otherwise go on to (2) #98.**
 >
 > *Below: the earlier 2026-09-25 block, written when #82 closed. Its pointer to #98 still holds.*
 >

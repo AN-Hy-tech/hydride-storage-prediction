@@ -246,7 +246,8 @@ single prediction path and HG-3 covers the UI too.
 - [ ] **#100** A render test passes alone and fails after the slow tests. **Still `doing` on
       its traceback box, by the maintainer's ruling of 2026-09-25: it stays open until a session
       fixes the failure.** The failure was seen once, in a local
-      full run, and never again. Five full-length runs since are green, and CI never ran it red:
+      full run, and never again. Six full-length runs since are green (the sixth, 2026-09-25: 1650 passed, 1 h 15 m, quiet
+      machine), and CI never ran it red:
       run `34716528657` was #97's tie. So no traceback exists and none can be manufactured. What
       was done instead: `hydms/figures/render.py` no longer chooses a backend or imports `pyplot`
       (a subprocess test holds it that way), and the evidence can no longer be lost. **Every
@@ -364,8 +365,8 @@ python scripts/check_freeze.py --base origin/main
 python scripts/verify_environment.py
 
 # Suite. TWO numbers live here and they are different commands; do not compare them. The FULL run
-# below was last measured at **1531 passed, 0 skipped on 2026-09-13 (26 min 45 s)** on a quiet
-# machine, post-#100 — the previous entry here was 1229 in 24 min 58 s on 2026-09-07, which the
+# below was last measured at **1650 passed, 0 failed on 2026-09-25 (1 h 15 min 4 s)** at f427089,
+# the #100 check run (1531 in 26 min 45 s on 2026-09-13 before it) — the previous entry here was 1229 in 24 min 58 s on 2026-09-07, which the
 # cards since have grown past. The FAST LANE (`-m "not slow"`, which
 # deselects the four `@pytest.mark.slow` tests) reported **1440 passed / 4 deselected of 1444
 # collected on 2026-09-12 (12 min 3 s)** — up from 1371/1375 the same day by #78's service and

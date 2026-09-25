@@ -148,6 +148,10 @@ attaches whatever canvas the output format calls for, so the import list is one 
       box below, **every pytest session that ends red writes its tracebacks to
       `reports/test-failures/`** — however it was launched and whatever it was piped through — so
       the next red run ticks this box without anyone having remembered the runnable check
+
+      **2026-09-25, later: the full run the ruling asked for is green** (1650 passed, 1 h 15 m,
+      quiet machine; see the last narrative entry). No record was written, so there is no
+      traceback, and the box stays unticked
 - [x] **A red run cannot lose its traceback again.** Added 2026-09-25, when the box above was the
       only one left and could not move. `FailureRecorder` in `tests/conftest.py` is registered for
       every session. When the session has any failed test or collection error it writes one file,
@@ -196,7 +200,7 @@ attaches whatever canvas the output format calls for, so the import list is one 
 ## Runnable check
 
 ```bash
-# The only command known to produce it. ~29 min. Redirect; never pipe through a truncating filter.
+# The only command known to produce it. ~75 min as of 2026-09-25 (was ~29). Redirect; never pipe through a truncating filter.
 conda run -n Project python -m pytest --tb=long > full-run.txt 2>&1
 ```
 
@@ -410,3 +414,30 @@ also writes `reports/test-failures/<start>-pid<N>.txt`, and its terminal summary
   it goes red, the traceback is in `reports/test-failures/` and the fix starts there. The fast lane
   over this commit is **1646 passed, 4 deselected, 38 m 43 s**, with only the maintainer's idle
   `uvicorn` alive, nothing modified mid-run and no record written. (by @assistant)
+
+- 2026-09-25 (the next session, the full run the ruling asked for): **green, so there is still
+  nothing to fix and the card stays `doing`.** `pytest --tb=long` with no `-m`, from the `Project`
+  interpreter by path, redirected to a file, at `f427089` with a clean tree: **1650 passed,
+  0 failed, 107 warnings, 1 h 15 m 4 s (4504.19 s), exit 0**, 03:16:27 → 04:31:38. No `FAILED` or
+  `ERROR` line in the log, and **no file under `reports/test-failures/`**. That absence is the
+  recorder working as designed, because a green session writes nothing. The count closes against
+  the fast lane recorded above: 1646 passed + 4 deselected = 1650.
+
+  **Quiet, as far as could be checked.** Before the start, the only other Python alive was the
+  maintainer's idle `uvicorn` on :8000 (started 01:21; 0 CPU seconds gained over 5 s, and the suite
+  uses in-process clients, not that port). By the end it had been stopped, and nothing else was
+  running. Nothing under `hydms/` or `tests/` was edited during the run. This session deliberately
+  left the tree alone until it finished, because the 2026-09-13 hybrid run shows what a mid-run
+  edit costs.
+
+  **The wall time is 2.8x the 2026-09-13 quiet run's 26 m 45 s, for 8 % more tests.** Nothing
+  here explains that, and it is not claimed as a clue. The recent fast lanes have drifted the same
+  way (53 m with `--cov` on 2026-09-24, 38 m 43 s earlier today), so it looks like the suite's
+  growth since #82 plus this machine, not something this defect did. It is recorded because the
+  runnable check's "~29 min" is now wrong by more than half, and the next session should budget
+  well over an hour for the full run.
+
+  The only warning worth a look was a `PytestDeprecationWarning` about `@pytest.mark.tryfirst`
+  inside `tests/test_failure_record.py`'s inner sessions. It comes from the third-party `dash`
+  plugin (`dash/testing/plugin.py:92`), which `pytester` loads, not from `FailureRecorder`.
+  (by @assistant)
