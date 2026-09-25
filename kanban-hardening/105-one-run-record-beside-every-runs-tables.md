@@ -127,3 +127,8 @@ record), card #98 (the run that showed the record has no date)
   reproduced, and only `to_markdown`'s determinism is tested (with a fixed date). The document
   was regenerated after the code commit, so its emit stamp names committed code.
   **Split to #106:** `select`/`comparison`. See the box. (by @assistant)
+- 2026-09-26: Regenerating `evaluation.md` found one more date bug: `--emit` stamped its date in
+  UTC, so at 01:22 +03:30 the document said *Emitted 2026-09-25* beside a record started
+  2026-09-26. The emit now uses local time with its offset, like the record (`b74a8f2`). The
+  regenerated metric tables were byte-identical both times; only the stamp lines moved, and
+  `evaluation-run.csv` is committed beside them. (by @assistant)
