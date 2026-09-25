@@ -267,7 +267,8 @@ single prediction path and HG-3 covers the UI too.
       figure shut. **2026-09-25: `doing`, code landed.** `loco` writes `loco-out-of-fold.csv` as
       a fifth table (outside the four `--emit` reads, so `loco.md` is unchanged) and exits 1
       without it rather than write a partial record. What remains is the run: the command is on
-      the card and in `docs/RUNNING-THE-FIT.md` Step 10; the last one took 4 h 07 m.
+      the card and in `docs/RUNNING-THE-FIT.md` Step 10; the last one took 4 h 07 m. **The run waits on four review fixes** (#98's fixes box), by the
+      maintainer's call.
 - [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
       2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
       `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.

@@ -76,8 +76,17 @@ hand over one command.
       `test_the_committed_loco_run_keeps_every_scored_row`: it skips, naming the run, while the
       file is absent, and asserts the whole record once it is committed. Left as it was, its
       `not exists` would have gone red on the maintainer's commit for doing the right thing.*
+- [ ] **Four review fixes, landed before the run** (found 2026-09-25 reviewing this card's own
+      commit `653d36c`; the full statement is the `▶ Next action` block in
+      `kanban-hardening/README.md`). (1) A withheld write must unlink a stale
+      `loco-out-of-fold.csv` — confirmed: it survives byte-identical and the committed-evidence
+      test still passes. (2) Exit 1 is also a traceback's code; the docs must say "with five
+      `wrote` lines". (3) The committed-evidence test must refuse a probe's rows via
+      `loco-run.csv`, and `parity()`'s message must drop "only a full run writes". (4)
+      `out_of_fold()` counts per fold, not per model
 - [ ] **The full LOACO run is done and `reports/loco/loco-out-of-fold.csv` is committed** — the
-      maintainer's; the card stays `doing` until then. From the repository root in PowerShell,
+      maintainer's, **after the box above is ticked** (the maintainer's call, 2026-09-25); the
+      card stays `doing` until then. From the repository root in PowerShell,
       with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10). **The last one took 4 h 07 m.**
 
       ```powershell

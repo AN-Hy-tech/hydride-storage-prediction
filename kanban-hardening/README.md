@@ -2,9 +2,30 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25 (#98's code landed)
+> ## ▶ Next action — as of 2026-09-25 (#98 reviewed; four fixes before the run)
 >
-> **Handoff, one line: #98 is `doing` with its code landed and verified at probe budget; its
+> **Handoff: land #98's four review fixes first; the maintainer runs LOACO only after they are
+> committed.** (1) **A withheld write leaves a stale per-row file** — confirmed by running it: a
+> complete run then a short-record run into one directory exits 1 and leaves the first run's
+> `loco-out-of-fold.csv` byte-identical beside the new per-class tables, and the committed-evidence
+> test still passes because both score 893 rows; on withholding, `main` must unlink
+> `<destination>/loco-out-of-fold.csv` and say so on stderr (`hydms/surrogate/loco.py`, the
+> `try`/`except` before `_write`), with a test that seeds a stale file first. (2) **Exit 1 is
+> ambiguous** — an uncaught traceback is also 1, so reword #98's run box and
+> `docs/RUNNING-THE-FIT.md` Step 10 to "exit 1 with five `wrote` lines and no traceback"; keep the
+> code, it matches `gates` and `smoke`. (3) **A probe's rows pass as a result** — a `--trials 1`
+> run without `--report` writes `reports/loco/loco-out-of-fold.csv` with no probe mark, so
+> `tests/test_figures.py::test_the_committed_loco_run_keeps_every_scored_row` must also assert
+> `loco-run.csv` has `probe` false, and `parity()`'s message in `hydms/figures/charts.py` must stop
+> saying "only a full run writes" it. (4) **Count per fold, not per model** in `loco.out_of_fold()`
+> — group `table` by `fold` against `kept["fold"]`, so a fold kept twice cannot mask one never kept;
+> a test for exactly that. Then the fast lane, commit, push, tick #98's fixes box, and hand the
+> maintainer the run command already in #98's last box; #84 is startable meanwhile.
+>
+> *Below: the earlier block, written when #98's code landed. Its facts stand; its run instruction
+> now waits on the fixes above.*
+>
+> **(2026-09-25, #98's code landed)** **Handoff, one line: #98 is `doing` with its code landed and verified at probe budget; its
 > last box is the full LOACO run (~4 h, the last took 4 h 07 m), which the maintainer runs with
 > the command in #98's last box — then commit `reports/loco/` by name. #83 and #84 next.**
 >
