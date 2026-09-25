@@ -376,6 +376,26 @@ def test_a_record_missing_one_family_is_refused() -> None:
         loco.out_of_fold(evaluation, table)
 
 
+def test_a_fold_kept_twice_cannot_stand_in_for_a_fold_never_kept() -> None:
+    """The per-model total is 5 against 5 here -- AB5 kept twice, AB never kept -- so a check
+    that only sums per model passes a record with a whole family missing from the chart."""
+    doubled = {"class:AB5": ["a", "b", "a", "b"], "class:Mg": ["e"]}
+    kept = _kept(doubled)
+    assert len(kept) == 5, "the fixture must hide the gap from a per-model sum"
+    evaluation = _with_rows(_evaluation(_FOLDS, _METRICS), kept)
+    table = loco.per_class(evaluation, _training(_CLASSES))
+    with pytest.raises(ValueError, match=r"class:AB kept 0 of 2; class:AB5 kept 4 of 2"):
+        loco.out_of_fold(evaluation, table)
+
+
+def test_a_fold_the_table_never_scored_is_refused() -> None:
+    kept = pd.concat([_kept(_FOLDS), _kept({"class:Laves": ["z"]})])
+    evaluation = _with_rows(_evaluation(_FOLDS, _METRICS), kept)
+    table = loco.per_class(evaluation, _training(_CLASSES))
+    with pytest.raises(ValueError, match=r"class:Laves kept 1 of 0"):
+        loco.out_of_fold(evaluation, table)
+
+
 def _run_on(
     monkeypatch, tmp_path: Path, evaluation: Evaluation
 ) -> tuple[int, set[str]]:
@@ -409,6 +429,24 @@ def test_a_partial_record_withholds_only_its_own_table_and_never_costs_the_run(
     assert code == loco.EXIT_INCOMPLETE
     assert written == set(loco.TABLES)
     assert loco.OUT_OF_FOLD in capsys.readouterr().err
+
+
+def test_a_withheld_write_removes_the_rows_an_earlier_run_left(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    """Withholding alone leaves a complete earlier run's file beside this run's tables, where
+    it scores the same row count and passes as this run's. Seeded with exactly that file."""
+    stale = tmp_path / f"{loco.OUT_OF_FOLD}.csv"
+    _kept(_FOLDS).to_csv(stale)
+    code, written = _run_on(monkeypatch, tmp_path, _evaluation(_FOLDS, _METRICS))
+    captured = capsys.readouterr()
+    assert code == loco.EXIT_INCOMPLETE
+    assert written == set(loco.TABLES)
+    assert not stale.exists()
+    assert "was removed" in captured.err
+    assert captured.out.count("wrote ") == len(loco.TABLES), (
+        "the documented reading of exit 1 is four `wrote` lines and no traceback"
+    )
 
 
 def test_emit_does_not_read_the_scored_rows() -> None:

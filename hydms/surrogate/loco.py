@@ -64,7 +64,10 @@ Exit codes:
 
     0   the run finished and the tables were written, or --budget/--emit did their cheap job
     1   the run finished and the four tables AC-6 reads were written, but the per-row table
-        was withheld because it did not hold every scored row (the reason is on stderr)
+        was withheld because it did not hold every scored row (the reason is on stderr, and
+        a copy an earlier run left in the destination is removed). Python also exits 1 on an
+        uncaught exception, so read it with the output: this 1 prints four ``wrote`` lines
+        and no traceback; a crash prints a traceback and, if it died in the fit, no ``wrote``
     2   the invocation itself was wrong (unreadable config, unknown target, tables absent)
 
 Card #30; AC-6 reads what this writes.
@@ -324,18 +327,37 @@ def out_of_fold(evaluation: Evaluation, table: pd.DataFrame) -> pd.DataFrame:
 
     ``Evaluation.out_of_fold`` is empty unless the contender handed its predictions to
     ``ScoringTask.keep``, and an empty frame writes as a perfectly valid CSV. So the rows are
-    counted against the per-class table's ``rows_scored`` for every model: a file that holds
-    fewer rows than the classes scored is a chart of the families that happened to be kept.
+    counted against the per-class table's ``rows_scored``: a file that holds fewer rows than
+    the classes scored is a chart of the families that happened to be kept.
+
+    **Counted per class fold, not per model.** A per-model total lets one fold kept twice
+    stand in for another never kept -- the sum comes out right and the chart is missing a
+    family. So every ``(model, fold)`` pair on either side is compared, including a fold the
+    kept rows name and the table does not.
     """
     kept = evaluation.out_of_fold
-    for model, scored in table.groupby(level="model")["rows_scored"].sum().items():
-        rows = int((kept["model"] == model).sum()) if "model" in kept.columns else 0
-        if rows != int(scored):
-            raise ValueError(
-                f"{model!r} kept {rows} out-of-fold row(s) where its class folds scored "
-                f"{int(scored)}. {OUT_OF_FOLD}.csv would be a partial record passed off as the "
-                f"whole one, so it is not written."
-            )
+    scored = table.reset_index().set_index(["model", "fold"])["rows_scored"].astype(int)
+    if {"model", "fold"} <= set(kept.columns):
+        counted = kept.groupby(["model", "fold"]).size()
+    else:
+        counted = pd.Series(0, index=scored.index[:0], dtype=int)
+    pairs = scored.index.union(counted.index)
+    scored = scored.reindex(pairs, fill_value=0)
+    counted = counted.reindex(pairs, fill_value=0)
+    wrong = sorted(pairs[scored.to_numpy() != counted.to_numpy()])
+    if wrong:
+        model = wrong[0][0]
+        folds = "; ".join(
+            f"{fold} kept {int(counted[(name, fold)])} of {int(scored[(name, fold)])}"
+            for name, fold in wrong
+            if name == model
+        )
+        raise ValueError(
+            f"{model!r} kept {int(counted.xs(model).sum())} out-of-fold row(s) where its class "
+            f"folds scored {int(scored.xs(model).sum())}, and not fold by fold: {folds}. "
+            f"{OUT_OF_FOLD}.csv would be a partial record passed off as the whole one, so it "
+            f"is not written."
+        )
     return kept
 
 
@@ -643,6 +665,15 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         incomplete = ""
     except ValueError as error:
         incomplete = str(error)
+        # Withholding is not enough when an earlier run left the file here: it would sit
+        # beside this run's tables, score the same row count, and pass as this run's rows.
+        stale = destination / f"{OUT_OF_FOLD}.csv"
+        if stale.exists():
+            stale.unlink()
+            incomplete += (
+                f" The {stale.name} an earlier run left in {destination} was removed, so it "
+                f"cannot pass as this run's."
+            )
     _write(tables, destination, stream)
     if incomplete:
         print(incomplete, file=sys.stderr)

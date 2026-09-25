@@ -37,7 +37,7 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 | # | Finding | Cost | State |
 |---|---|---|---|
 | **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | `backlog`, unblocked (#82 `done` 2026-09-25) |
-| **98** | `loco.py:595` writes four tables but not `evaluation.out_of_fold`, so LOACO leaves ten class averages and no scored rows — and `parity()` refuses fewer than two readings. **#83's parity panel cannot be built from committed evidence.** Code landed 2026-09-25: `loco` now writes `loco-out-of-fold.csv`. What is left is one LOACO run (~4 h), which is the maintainer's | 0.25 d + a run | `doing`, code landed; four review fixes (README `▶ Next action`), then the maintainer's run |
+| **98** | `loco.py:595` writes four tables but not `evaluation.out_of_fold`, so LOACO leaves ten class averages and no scored rows — and `parity()` refuses fewer than two readings. **#83's parity panel cannot be built from committed evidence.** Code landed 2026-09-25: `loco` now writes `loco-out-of-fold.csv`. What is left is one LOACO run (~4 h), which is the maintainer's | 0.25 d + a run | `doing`, code and its four review fixes landed; the maintainer's run is all that is left |
 | **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `backlog`, unblocked (#82 `done` 2026-09-25); its parity panel still waits on #98 |
 
 ## P3 — blocks the unfreeze

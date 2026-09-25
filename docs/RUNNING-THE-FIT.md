@@ -550,10 +550,14 @@ The first writes five tables into `reports/loco/`; the second rebuilds `loco.md`
 in Step 7, **read the document before committing it**: no probe banner at the top, ten classes
 in the per-class table, and a `Random split` row that is populated rather than blank.
 
-**Exit code 1 means the run finished but kept a partial per-row record.** The four tables AC-6
-reads are written regardless, so four hours are never lost to it; only `loco-out-of-fold.csv` is
-withheld, and stderr says how many rows it held against how many were scored. That is a defect to
-report, not a run to repeat (card #98).
+**Exit code 1 with four `wrote` lines and no traceback means the run finished but kept a partial
+per-row record.** The four tables AC-6 reads are written regardless, so four hours are never lost
+to it; only `loco-out-of-fold.csv` is withheld, stderr says which class folds held how many rows
+against how many were scored, and a `loco-out-of-fold.csv` an earlier run left in `reports/loco/`
+is **deleted** (stderr says so) so it cannot pass as this run's. That is a defect to report, not a
+run to repeat (card #98). **Exit 1 with a traceback is a crash**, not this: Python uses the same
+code for an uncaught exception, so read the output, not only `$LASTEXITCODE`. Success is exit 0
+with five `wrote` lines.
 
 **Re-running it after it has already been done once (card #98).** The first full run, on
 2026-09-06, took **4 h 07 m** and predates `loco-out-of-fold.csv`, so its scored rows were never
@@ -623,7 +627,7 @@ Six from Step 4, five from Step 5, three from Step 6 — all into `reports/model
 | `loco-summary.csv` | The row AC-6 is about: the macro average, the support-weighted one, the worst and best class, and the **random-split number beside them**. Neither figure can be published here without the other |
 | `loco-chosen.csv` | The hyperparameters each class fold's search settled on |
 | `loco-run.csv` | Full run or probe. AC-6 reads it and **fails** on a probe's tables, which are the same shape as a real run's |
-| `loco-out-of-fold.csv` | **One row per training row**, predicted by the model that had not seen that row's *family*: `model-out-of-fold.csv` at this protocol's grain, with the class in `fold`. The second parity panel (#81, #83) is drawn from it. `--emit` does not read it, so it changes no published byte (card #98) |
+| `loco-out-of-fold.csv` | **One row per training row**, predicted by the model that had not seen that row's *family*: `model-out-of-fold.csv` at this protocol's grain, with the class in `fold`. The second parity panel (#81, #83) is drawn from it. `--emit` does not read it, so it changes no published byte (card #98). A probe writes it too, unmarked; `loco-run.csv` beside it is what says which, and the committed-evidence test refuses the file when `probe` is true |
 
 ---
 

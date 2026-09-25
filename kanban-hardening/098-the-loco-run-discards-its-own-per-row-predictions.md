@@ -76,14 +76,15 @@ hand over one command.
       `test_the_committed_loco_run_keeps_every_scored_row`: it skips, naming the run, while the
       file is absent, and asserts the whole record once it is committed. Left as it was, its
       `not exists` would have gone red on the maintainer's commit for doing the right thing.*
-- [ ] **Four review fixes, landed before the run** (found 2026-09-25 reviewing this card's own
-      commit `653d36c`; the full statement is the `▶ Next action` block in
+- [x] **Four review fixes, landed before the run** (found 2026-09-25 reviewing this card's own
+      commit `653d36c`; the full statement is in the archived `▶ Next action` block of
       `kanban-hardening/README.md`). (1) A withheld write must unlink a stale
       `loco-out-of-fold.csv` — confirmed: it survives byte-identical and the committed-evidence
-      test still passes. (2) Exit 1 is also a traceback's code; the docs must say "with five
-      `wrote` lines". (3) The committed-evidence test must refuse a probe's rows via
-      `loco-run.csv`, and `parity()`'s message must drop "only a full run writes". (4)
-      `out_of_fold()` counts per fold, not per model
+      test still passes. (2) Exit 1 is also a traceback's code; the docs must say "with ~~five~~
+      **four** `wrote` lines" (a withheld run writes the four AC-6 tables, not five). (3) The
+      committed-evidence test must refuse a probe's rows via `loco-run.csv`, and `parity()`'s
+      message must drop "only a full run writes". (4) `out_of_fold()` counts per fold, not per
+      model. *Landed 2026-09-25; see the Narrative.*
 - [ ] **The full LOACO run is done and `reports/loco/loco-out-of-fold.csv` is committed** — the
       maintainer's, **after the box above is ticked** (the maintainer's call, 2026-09-25); the
       card stays `doing` until then. From the repository root in PowerShell,
@@ -96,8 +97,10 @@ hand over one command.
       & C:\Users\Asus\miniconda3\envs\Project\python.exe -m pytest tests/surrogate/test_loco.py tests/test_figures.py -p no:cacheprovider
       ```
 
-      Exit 0 with a new 893-row `loco-out-of-fold.csv` is success. Exit 1 means the four AC-6
-      tables were written and the per-row one withheld; stderr says why. The run is seeded, so the
+      Exit 0 with five `wrote` lines and a new 893-row `loco-out-of-fold.csv` is success. Exit 1
+      **with four `wrote` lines and no traceback** means the four AC-6 tables were written and
+      the per-row one withheld (any older copy deleted); stderr says which class folds fell
+      short. Exit 1 **with a traceback** is a crash — same code, different event. The run is seeded, so the
       diff *should* show one new file and nothing else. If any of the four tables moved, commit
       them after `--emit` anyway and record it here: that is an AC-1 finding, not a failed run.
       Then `git add reports/loco/` by name and commit; the figures test stops skipping.
@@ -143,3 +146,19 @@ conda run -n Project python -m pytest tests/surrogate/test_loco.py tests/test_fi
   present. Probe numbers, not a result: macro R2 0.3168, weighted 0.2436, worst Mg -0.2561.
   `parity()`'s refusal message was reworded — it said `loco` *does not write* the rows, which
   stopped being true today; it now names the file and the run that writes it. (by @assistant)
+- 2026-09-25: **The four review fixes landed; the card stays `doing` on the run.** (1) On
+  withholding, `main` deletes a `loco-out-of-fold.csv` already in the destination and appends that
+  to the stderr reason; the test seeds a complete earlier file first and asserts it is gone.
+  (2) Exit 1 stays exit 1 — it matches `gates` and `smoke` — and the docstring, this card's run box
+  and `docs/RUNNING-THE-FIT.md` Step 10 now read it with the output. **The handoff's wording was
+  wrong by one:** it said "five `wrote` lines", but a withheld run writes only the four AC-6 tables,
+  so it is *four* `wrote` lines and no traceback; a test pins the count. (3)
+  `test_the_committed_loco_run_keeps_every_scored_row` now also asserts `loco-run.csv` records
+  `probe` false, and `parity()`'s refusal says the file is a result only when `loco-run.csv` says
+  so — a probe run without `--report` writes the same file unmarked. (4) `out_of_fold()` compares
+  every `(model, fold)` pair on either side, so AB5 kept twice cannot cover AB never kept (5 rows
+  against 5, the fixture asserts the per-model sum is blind to it), and a fold the table never
+  scored is refused too. Fast checks: `tests/surrogate/test_loco.py tests/test_figures.py` 86
+  passed, 1 skipped (the committed-evidence test, until the run); ruff and mypy clean. Fast lane
+  (`pytest -m "not slow"`): **1654 passed, 1 skipped, 4 deselected, 38 m 30 s**, exit 0.
+  (by @assistant)

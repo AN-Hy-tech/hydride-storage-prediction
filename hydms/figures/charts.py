@@ -1348,8 +1348,9 @@ def parity(readings: Mapping[str, Sequence[ParityPoint]], *, level: float) -> Fi
         FigureError: with one reading. The message names what is missing, because the case
             that reached it first was a real gap in the evidence: ``hydms.surrogate.loco``
             wrote per-class metrics and no per-row predictions, so the leave-one-alloy-class-out
-            panel could not be drawn. Since card #98 it writes ``loco-out-of-fold.csv``, which
-            exists only once a full LOACO run has been committed.
+            panel could not be drawn. Since card #98 it writes ``loco-out-of-fold.csv``. A
+            probe writes the same file, so whether it is a *result* is ``loco-run.csv``'s
+            ``probe`` column, not the file's presence.
     """
     named = dict(readings)
     if len(named) < 2:
@@ -1359,8 +1360,9 @@ def parity(readings: Mapping[str, Sequence[ParityPoint]], *, level: float) -> Fi
             f"({have}). One protocol on its own page is the optimistic number presented "
             f"alone; the honest one belongs beside it at the same scale. If the second "
             f"reading is leave-one-alloy-class-out, its rows are "
-            f"`reports/loco/loco-out-of-fold.csv`, which only a full "
-            f"`python -m hydms.surrogate.loco --target capacity` run writes (card #98)."
+            f"`reports/loco/loco-out-of-fold.csv`, written by "
+            f"`python -m hydms.surrogate.loco --target capacity` (card #98) -- and a result "
+            f"only when `loco-run.csv` beside it records `probe` false."
         )
     for name, points in named.items():
         _text(name, "a reading name")

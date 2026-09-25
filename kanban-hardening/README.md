@@ -2,9 +2,25 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-25 (#98 reviewed; four fixes before the run)
+> ## ▶ Next action — as of 2026-09-25 (#98's review fixes landed; the run is the maintainer's)
 >
-> **Handoff: land #98's four review fixes first; the maintainer runs LOACO only after they are
+> **Handoff, one line: #98's four review fixes are committed and its fixes box is ticked, so the
+> maintainer starts the full LOACO run with the command in #98's last box (~4 h; the last took
+> 4 h 07 m), then commits `reports/loco/` by name. #84 is startable meanwhile; #83 builds but its
+> parity box waits on the file.**
+>
+> **How to read the run's exit, corrected by one.** Exit 0 with **five** `wrote` lines is
+> success. Exit 1 with **four** `wrote` lines and no traceback is a withheld per-row table (the
+> earlier block below said "five"; a withheld run writes only the four AC-6 tables, and a test now
+> pins the count). Exit 1 with a traceback is a crash. A withheld run also **deletes** any
+> `loco-out-of-fold.csv` already in the destination, and says so. The committed-evidence test
+> now refuses the file when `loco-run.csv` records `probe` true, so **do not commit a probe's
+> rows** — a `--trials` run without `--report` writes into `reports/loco/`.
+>
+> *Below: the block that asked for the fixes. Carried out; its wording "five `wrote` lines" is
+> superseded above.*
+>
+> **(2026-09-25, #98 reviewed)** **Handoff: land #98's four review fixes first; the maintainer runs LOACO only after they are
 > committed.** (1) **A withheld write leaves a stale per-row file** — confirmed by running it: a
 > complete run then a short-record run into one directory exits 1 and leaves the first run's
 > `loco-out-of-fold.csv` byte-identical beside the new per-class tables, and the committed-evidence
