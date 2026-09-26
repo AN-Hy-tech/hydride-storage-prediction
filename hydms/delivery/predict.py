@@ -77,8 +77,10 @@ places -- the drift #28's docstring exists to prevent -- or widening #28's inter
 "predict from this matrix" door, which is exactly the door "never scale, never reorder" is closed
 against. The measured price of keeping both closed is ~4 ms on a call whose fixed cost is an
 order of magnitude larger, and the alternative buys nothing until a **batch** entry point exists.
-That is #78's and #84's problem, not this one's, and it is the right place for it: a batch
-featurises and screens once for the whole frame, where the saving is real. That is why
+That entry point is now :func:`predict_many` (#84), and the duplicate is paid once per *batch*
+rather than once per candidate: a batch featurises, predicts and screens once for the whole
+frame, where the saving is real. That is why
+
 :func:`~hydms.delivery.contract.delivery_screens` grew a ``cfg`` argument: its docstring is
 right that a module-level constant would freeze whatever configuration was loaded first, and
 a bundle is the thing that may legitimately hold them, because a bundle is already pinned to
@@ -153,6 +155,7 @@ from .contract import (
     ADMITTED,
     INDETERMINATE,
     Answer,
+    ContractError,
     DomainVerdict,
     Interval,
     Novelty,
@@ -173,13 +176,16 @@ __all__ = [
     "load_bundle",
     "novelty_from",
     "predict_capacity",
+    "predict_many",
     "screen_verdicts",
 ]
 
-#: The index label the single candidate carries through the screens. A screen's verdict is
-#: addressed by label (:func:`~hydms.screens.protocol.apply_screens` refuses a repeated one),
-#: so the one-row frame needs one, and a named label reads better than ``0`` in the error a
-#: malformed screen produces.
+#: The index label a lone candidate carries through the screens where a caller builds its own
+#: one-row frame -- the refusal catalogue's probes, and the tests that assemble a candidate by
+#: hand. :func:`predict_many` labels its rows by position instead, because a batch may repeat
+#: a formula and a screen's verdict is addressed by label
+#: (:func:`~hydms.screens.protocol.apply_screens` refuses a repeated one). No sentence a
+#: caller is given names either label: a row's refusal is written for the row (#84).
 CANDIDATE = "candidate"
 
 #: The column the width lives in, spelled once. It is
@@ -623,57 +629,146 @@ def predict_capacity(
     either judging something adjacent to it.
     """
     request = PredictionRequest(formula=formula, temperature_k=temperature_k)
-    loaded = bundle if bundle is not None else load_bundle(version, store=store)
+    return predict_many([request], bundle=bundle, version=version, store=store)[0]
 
-    formulas = pd.Series([request.formula], index=pd.Index([CANDIDATE]))
-    temperatures = pd.Series([request.temperature_k], index=pd.Index([CANDIDATE]))
+
+def predict_many(
+    requests: Sequence[PredictionRequest],
+    *,
+    bundle: ArtifactBundle | None = None,
+    version: str | None = None,
+    store: Path | None = None,
+) -> list[Answer]:
+    """One answer per request, in order: :func:`predict_capacity` over a whole batch at once.
+
+    Args:
+        requests: What to ask, as :class:`~hydms.delivery.contract.PredictionRequest` objects
+            -- already validated, because a malformed row is the *caller's* error and each
+            transport reports it in its own way (#78 rejects the request whole; #84 lists the
+            row as unread). Duplicates are allowed and answered twice.
+        bundle, version, store: As for :func:`predict_capacity`.
+
+    Returns:
+        A list the length of ``requests``, where item ``i`` is exactly what
+        ``predict_capacity(requests[i].formula, requests[i].temperature_k)`` returns -- the same
+        type, the same numbers to 1e-12, the same sentences. A refused row is a
+        :class:`~hydms.delivery.contract.Refusal` in its place, never a gap, so the list can
+        be zipped back onto the input without a key.
+
+    Raises:
+        ~hydms.delivery.contract.ContractError: an item is not a ``PredictionRequest``.
+        DeliveryError, PredictionError, GatesIncomplete: the deployment cannot answer at all.
+
+    **This is the evaluator's primary path, and** :func:`predict_capacity` **is its one-row
+    case** (card #84, decided 2026-09-26). #78 measured a served prediction at 66-78 ms, split
+    13 ms featurise / 22 ms surrogate / 34 ms screens, and none of it work: it was per-call
+    pandas overhead on a one-row frame, paid three times per candidate, so the batch route was
+    linear in its rows with nothing amortised. Here the batch is featurised once, predicted
+    once and screened in one :func:`~hydms.screens.protocol.apply_screens` pass -- which is
+    what the screens were built for.
+
+    **A bad formula refuses its own row, and only its own row.** The featuriser refuses a
+    batch whole, naming every offender, and it now hands those offenders back **as data**
+    (:attr:`~hydms.descriptors.featurize.FeaturisationError.rows`), each with a sentence
+    written for that one row. So a row that will not parse, or that names an element with a
+    hole in the tables, becomes ``INDETERMINATE`` with the featuriser's own words, and the rest
+    of the batch is featurised again without it -- once, because the featuriser reports both
+    kinds of offender in one raise. There is no pre-parse here, which would be a second copy
+    of the grammar, and no per-row fallback, which would bring the cost back.
+    """
+    asked = list(requests)
+    for position, request in enumerate(asked):
+        if not isinstance(request, PredictionRequest):
+            raise ContractError(
+                f"predict_many() takes PredictionRequest objects, and item {position} is a "
+                f"{type(request).__name__}. Build the request first: its constructor is where "
+                f"an empty formula or a non-finite temperature is refused, and a batch path "
+                f"that skipped it would answer a row nobody validated."
+            )
+    loaded = bundle if bundle is not None else load_bundle(version, store=store)
+    if not asked:
+        return []
+
+    labels = pd.RangeIndex(len(asked))
+    formulas = pd.Series([request.formula for request in asked], index=labels, dtype=object)
+    temperatures = pd.Series(
+        [request.temperature_k for request in asked], index=labels, dtype="float64"
+    )
+    answers: dict[int, Answer] = {}
     try:
         features = featurize(formulas, temperatures, contract=loaded._contract)
-        intervals = loaded._surrogate.predict(formulas, temperatures)
     except FeaturisationError as error:
-        # The one cause with no screen of its own, and the code for it is declared rather than
-        # invented: `INDETERMINATE` means "this rule could not be evaluated on this
-        # candidate". The featuriser's own sentence is the explanation because it names the
-        # offending string and says what is wrong with it -- #90's whole point being that a
-        # true verdict with a sentence written for a different defect is the defect no
-        # assertion catches.
-        return Refusal(
-            request=request,
-            code=INDETERMINATE,
-            explanation=str(error),
-            model_version=loaded.version,
-        )
+        if not error.rows:
+            # A defect of the batch rather than of a row -- nothing a caller typed can cause
+            # one, since every request was validated -- so it is not a statement about any
+            # candidate and must not be dressed as a refusal of all of them.
+            raise
+        for label, sentence in error.rows.items():
+            # The one cause with no screen of its own, and the code for it is declared rather
+            # than invented: `INDETERMINATE` means "this rule could not be evaluated on this
+            # candidate". The featuriser's own sentence is the explanation because it names
+            # the offending string and says what is wrong with it -- #90's whole point being
+            # that a true verdict with a sentence written for a different defect is the defect
+            # no assertion catches.
+            answers[int(label)] = Refusal(
+                request=asked[int(label)],
+                code=INDETERMINATE,
+                explanation=sentence,
+                model_version=loaded.version,
+            )
+        survivors = formulas.index.difference(pd.Index(list(error.rows)), sort=False)
+        formulas, temperatures = formulas.loc[survivors], temperatures.loc[survivors]
+        features = featurize(formulas, temperatures, contract=loaded._contract)
 
-    verdicts = apply_screens(_candidate(loaded, request, features, intervals), loaded._screens)
-    judged = screen_verdicts(verdicts, CANDIDATE)
+    if len(formulas):
+        intervals = loaded._surrogate.predict(formulas, temperatures)
+        verdicts = apply_screens(
+            _candidate(loaded, formulas, features, intervals), loaded._screens
+        )
+        for label in formulas.index:
+            answers[int(label)] = _answer(
+                loaded, asked[int(label)], label, verdicts, intervals
+            )
+    return [answers[position] for position in range(len(asked))]
+
+
+def _answer(
+    bundle: ArtifactBundle,
+    request: PredictionRequest,
+    label: object,
+    verdicts: Verdicts,
+    intervals: pd.DataFrame,
+) -> Answer:
+    """One screened row as the contract's answer: a refusal if any screen rejected it."""
+    judged = screen_verdicts(verdicts, label)
     code, reason = resolve(judged)
     if code != ADMITTED:
         return Refusal(
             request=request,
             code=code,
             explanation=reason,
-            model_version=loaded.version,
+            model_version=bundle.version,
             screens=judged,
         )
 
-    row = intervals.loc[CANDIDATE]
+    row = intervals.loc[label]
     return PredictionResult(
         request=request,
-        capacity=float(row[loaded.median_head]),
+        capacity=float(row[bundle.median_head]),
         interval=Interval(
             # Read by the names the *calibration* recorded rather than by position, the same
             # rule `_with_bound_and_width` follows one layer down: `lcb + interval_width` is
             # the upper head only up to a rounding, and a band whose quantiles are not in
             # ascending order would take the wrong column entirely.
-            lower=float(row[loaded.lower_head]),
-            upper=float(row[loaded.upper_head]),
-            level=loaded.confidence_level,
+            lower=float(row[bundle.lower_head]),
+            upper=float(row[bundle.upper_head]),
+            level=bundle.confidence_level,
         ),
         domain=DomainVerdict(
             admitted=True, code=ADMITTED, reason=reason, screens=judged
         ),
-        novelty=novelty_from(verdicts, loaded.screens, CANDIDATE),
-        model_version=loaded.version,
+        novelty=novelty_from(verdicts, bundle.screens, label),
+        model_version=bundle.version,
     )
 
 
@@ -684,11 +779,15 @@ def predict_capacity(
 
 def _candidate(
     bundle: ArtifactBundle,
-    request: PredictionRequest,
+    formulas: pd.Series,
     features: pd.DataFrame,
     intervals: pd.DataFrame,
 ) -> pd.DataFrame:
-    """The one-row frame the screens judge: the features, the formula, the number, the band.
+    """The frame the screens judge, one row per candidate: features, formula, number, band.
+
+    Every row is aligned **by label**: ``formulas``, ``features`` and ``intervals`` all carry
+    the batch's own index, and a column assignment in pandas aligns on it -- which is the
+    point, since a positional join here would be leak L9 inside the delivery path.
 
     Every column each screen reads, and no column it does not. The temperature is already in
     ``features`` -- it is a passthrough descriptor, and the window reads it under the same
@@ -707,7 +806,7 @@ def _candidate(
     path (#84) and the screening of curated frames.
     """
     frame = features.copy()
-    frame[bundle._formula_column] = request.formula
+    frame[bundle._formula_column] = formulas
     frame[bundle.median_head] = intervals[bundle.median_head]
     frame[WIDTH_COLUMN] = intervals[WIDTH_COLUMN]
     return frame

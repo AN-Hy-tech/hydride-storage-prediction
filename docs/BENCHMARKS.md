@@ -86,6 +86,39 @@ number here beside this one.
 
 ---
 
+## End to end, measured (#84, 2026-09-26)
+
+The half the section above said was missing. One candidate evaluation on the delivery path is
+featurisation (twice: once for the screens, once inside the surrogate), a CatBoost MultiQuantile
+prediction, the conformal band, and three screens (temperature window, applicability ceiling, ElMD
+novelty). Measured on the deployed **`v3`** over the curated corpus's own formula–temperature pairs,
+on the development machine (Intel Family 6 Model 154, 20 logical CPUs), best of three:
+
+| call | rows | wall clock | per row |
+|---|---:|---:|---:|
+| `predict_capacity`, one call per row | 40 | 1.6 s | **41 ms** |
+| `predict_many`, one call | 10 | 0.04 s | 4.4 ms |
+| `predict_many`, one call | 256 | 0.23 s | 0.91 ms |
+| `predict_many`, one call | 1,279 | 1.05 s | **0.83 ms** |
+| `POST /v1/predict/batch` (TestClient, JSON both ways) | 4,096 | 3.05 s | 0.75 ms |
+| `POST /v1/predict/batch` | 8,192 | 5.64 s | 0.69 ms |
+
+So **the evaluator runs at roughly 1,200 candidates a second** when it is handed a batch, and about
+25 when it is called once per candidate. The fifty-fold gap is per-call overhead (#78 measured
+13 ms / 22 ms / 34 ms of pandas on a one-row frame), not work. The corpus pairs are not all
+answered: 276 of 1,279 come back refused, by the featuriser or by a screen. A featuriser refusal
+costs one extra featurisation of the survivors per batch, not one per row.
+
+What this licenses for R6, when the frozen programme resumes: Architecture B's 100,000-candidate
+budget is **about 80 s of evaluation**, and a 1e6-point grid for Architecture A is **about 14
+minutes**. Both hold only if candidates are evaluated in batches. That is the design
+`predict_many` makes the primary path. The evaluator is still not the whole cost of a search,
+because the optimiser's own bookkeeping is unmeasured. So this is a floor on a generation's
+wall clock, not an estimate of it.
+
+---
+
+
 ## The 13× that was hiding
 
 This section is the finding, and it is the reason the card was worth its half-day.

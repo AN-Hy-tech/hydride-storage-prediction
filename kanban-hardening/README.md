@@ -2,8 +2,46 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-26 evening (#83 built, `doing`; #104 fixed, `doing`; #106 `done`)
+> ## ▶ Next action — as of 2026-09-26 night (#84 `done`; #83 and #104 `doing`)
 >
+> **Next session — verify #84, test only, no development:** run `python -m pytest tests/delivery/test_batch.py tests/delivery/test_app_script.py tests/delivery/test_predict.py tests/delivery/test_refusals.py tests/delivery/test_apidoc.py tests/gates/test_hg2_refusal_path.py tests/gates/test_cli.py` under `Project`, then `python -m hydms.delivery.apidoc` (no flags; must say `API.md is current`), and record the pass counts on card #84's Narrative; any failure goes on #84 as an unticked box, not a fix.
+>
+> **Handoff, one line: #84 is `done`: `predict_many` is the library's batch path, the route calls it once, the limit is 4,096, and the CSV page is `app/pages/2_Batch_screening.py`. Of S7 only #83 remains, and it waits on the per-row width table and #104's repeat. The LOACO repeat is handed to the maintainer: two full runs, then a diff.**
+>
+> **What landed.** `predict_many(requests, bundle=)` featurises, predicts and screens a list
+> once, and `predict_capacity` is its one-row case. Row *i* equals the lone call to 1e-12,
+> duplicates included. `FeaturisationError.rows` carries each offender's own sentence **as
+> data**, so a bad formula refuses only its row. A served row now costs 0.7–1.0 ms against
+> 41 ms alone, so `MAX_BATCH_ROWS` went **256 → 4,096**; response size is now the limit
+> (`docs/BENCHMARKS.md`). `hydms/delivery/batch.py` (standard library) reads the CSV, pairs rows
+> with answers, writes the summary and the download. A formula cell reading `NaN` is ambiguous,
+> and the page asks which reading is meant.
+>
+> **Three things that would cost an afternoon.** (1) The unreadable-formula sentence changed
+> (the row's own, not "1 of 1 formula(e) … ['candidate']"). `docs/REFUSALS.md` and `docs/API.md`
+> are regenerated; anything else quoting the old sentence is stale. (2) One crossed band still
+> fails a whole batch: that is **#94**, now concrete, and the page reports it as a failed batch.
+> (3) `apidoc-examples.json` stores the over-limit request **shortened**, with `candidates_total`
+> beside it. Do not "fix" it back to the full list, which would be 4,097 rows.
+>
+> **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, run one
+> after the other on an idle machine with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10).
+> Run A writes the committed tables; run B writes to a gitignored scratch directory; then the
+> diff. Every table except `loco-chosen.csv`'s `seconds` column should be identical. **If
+> anything else moves, that is a new #104 finding, not a failed run.** Commit A's tables either
+> way, then do the regeneration chain in RUNNING-THE-FIT Step 10.
+>
+> ```powershell
+> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity | Tee-Object -FilePath .\reports\_loco-run-a.log
+> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity --report .\reports\_loco-b | Tee-Object -FilePath .\reports\_loco-run-b.log
+> foreach ($t in 'loco-per-class','loco-summary','loco-out-of-fold','loco-chosen') { git diff --no-index --stat "reports/loco/$t.csv" "reports/_loco-b/$t.csv" }
+> ```
+>
+> *Below: the block this one replaces. Carried out, except the LOACO repeat, which is handed over above.*
+>
+> **(2026-09-26 evening, #83 built)**
+>
+
 > **Handoff, one line: #83's model card is built and served (`GET /v1/evidence`, `/v1/evidence/parity`, `app/pages/1_Model_card.py`) and stays `doing` on the per-row width table and #104's repeat; start #84 (`predict_many`); the maintainer's next full LOACO run is the first with a run date *and* the #104 fix, so rerun it twice and diff.**
 >
 > **What landed.** #104: the drift was `label_issues`' parallel forest (its `predict` sums trees

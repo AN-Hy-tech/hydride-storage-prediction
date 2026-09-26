@@ -439,61 +439,158 @@ def _structural() -> list[str]:
     return found
 
 
-def _exits() -> tuple[int, list[str]]:
-    """How many exits ``predict_capacity`` has, and every finding about them.
-
-    A probe set establishes what its probes do. This reads the function's own exits, so a
-    branch that returns a float, a dict or nothing is a finding the moment it is written --
-    which is what card #77 means by "asserted exhaustively, not sampled".
-    """
-    from hydms.delivery import predict as module
-
-    source = inspect.getsource(module.predict_capacity)
-    tree = ast.parse(textwrap.dedent(source))
+def _function(module: Any, name: str) -> tuple[ast.FunctionDef | None, int, list[ast.AST]]:
+    """``name``'s parsed definition, its first line, and the nodes of any function nested in it."""
+    target = getattr(module, name)
+    tree = ast.parse(textwrap.dedent(inspect.getsource(target)))
     function = tree.body[0]
     if not isinstance(function, ast.FunctionDef):  # pragma: no cover - defensive
-        return 0, [
-            f"predict_capacity did not parse as a function definition: {type(function)}"
-        ]
-
-    allowed = {"Refusal", "PredictionResult"}
-    found: list[str] = []
-    inner = {
+        return None, 0, []
+    inner = [
         node
         for parent in ast.walk(function)
         if parent is not function and isinstance(parent, ast.FunctionDef | ast.Lambda)
         for node in ast.walk(parent)
-    }
-    exits = [
-        node
-        for node in ast.walk(function)
-        if isinstance(node, ast.Return) and node not in inner
     ]
-    if not exits:
-        return 0, ["predict_capacity has no return statement; it cannot answer anything."]
+    return function, target.__code__.co_firstlineno, inner
 
-    for node in exits:
-        line = node.lineno + module.predict_capacity.__code__.co_firstlineno - 1
-        if node.value is None:
-            found.append(
-                f"line {line}: a bare `return`, so this path answers None. A caller cannot "
-                f"tell that from a refusal and will read it as an absent answer."
-            )
+
+def _called(node: ast.AST | None) -> str | None:
+    """The bare name a call expression calls, or ``None`` if it is not ``name(...)``."""
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return node.func.id
+    return None
+
+
+#: The two types an answer can be. Everything below reduces to "every exit is one of these".
+_ANSWERS = {"Refusal", "PredictionResult"}
+
+#: What :func:`~hydms.delivery.predict.predict_many` collects its answers into, by name.
+_COLLECTED = "answers"
+
+
+def _exits() -> tuple[int, list[str]]:
+    """How many exits the prediction path has, and every finding about them.
+
+    A probe set establishes what its probes do. This reads the functions' own exits, so a
+    branch that returns a float, a dict or nothing is a finding the moment it is written --
+    which is what card #77 means by "asserted exhaustively, not sampled".
+
+    **Three functions, since card #84.** ``predict_capacity`` is now the one-row case of
+    ``predict_many``, whose answers are built by ``_answer``. So the exits are read where they
+    now are, and the delegation between them is itself checked rather than trusted:
+
+    ``predict_capacity``
+        Every return is a contract type, or ``predict_many(...)[0]``.
+    ``predict_many``
+        Every return is ``[]`` or a comprehension that reads ``answers[...]``, and every value
+        ever stored in ``answers[...]`` is a contract type or a call to ``_answer``.
+    ``_answer``
+        Every return is a contract type.
+
+    A branch in any of the three that hands back something else is red, and so is a
+    ``predict_capacity`` that stops delegating to the function this reads.
+    """
+    from hydms.delivery import predict as module
+
+    found: list[str] = []
+    count = 0
+    for name, check in (
+        ("predict_capacity", _capacity_exit),
+        ("predict_many", _many_exit),
+        ("_answer", _answer_exit),
+    ):
+        function, first, inner = _function(module, name)
+        if function is None:  # pragma: no cover - defensive
+            found.append(f"{name} did not parse as a function definition.")
             continue
-        call = node.value
-        name = (
-            call.func.id
-            if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
-            else None
-        )
-        if name not in allowed:
-            found.append(
-                f"line {line}: returns {ast.unparse(node.value)[:60]!r}, which is not a "
-                f"Refusal or a PredictionResult. Every exit from this function is one of the "
-                f"two contract types, because that is the whole of how a number cannot leave "
-                f"without an interval and a verdict."
-            )
-    return len(exits), found
+        exits = [
+            node
+            for node in ast.walk(function)
+            if isinstance(node, ast.Return) and node not in inner
+        ]
+        if not exits:
+            found.append(f"{name} has no return statement; it cannot answer anything.")
+        count += len(exits)
+        for node in exits:
+            line = node.lineno + first - 1
+            if node.value is None:
+                found.append(
+                    f"{name}, line {line}: a bare `return`, so this path answers None. A "
+                    f"caller cannot tell that from a refusal and will read it as an absent "
+                    f"answer."
+                )
+                continue
+            if not check(node.value):
+                found.append(
+                    f"{name}, line {line}: returns {ast.unparse(node.value)[:60]!r}, which is "
+                    f"not a Refusal or a PredictionResult. Every exit from the prediction path "
+                    f"is one of the two contract types, because that is the whole of how a "
+                    f"number cannot leave without an interval and a verdict."
+                )
+        if name == "predict_many":
+            found.extend(_stored(function, first, inner))
+    return count, found
+
+
+def _capacity_exit(value: ast.expr) -> bool:
+    if _called(value) in _ANSWERS:
+        return True
+    # The delegation, and only the one-row form of it: `predict_many(...)[0]`.
+    return (
+        isinstance(value, ast.Subscript)
+        and _called(value.value) == "predict_many"
+        and isinstance(value.slice, ast.Constant)
+        and value.slice.value == 0
+    )
+
+
+def _many_exit(value: ast.expr) -> bool:
+    if isinstance(value, ast.List) and not value.elts:
+        return True
+    return (
+        isinstance(value, ast.ListComp)
+        and isinstance(value.elt, ast.Subscript)
+        and isinstance(value.elt.value, ast.Name)
+        and value.elt.value.id == _COLLECTED
+    )
+
+
+def _answer_exit(value: ast.expr) -> bool:
+    return _called(value) in _ANSWERS
+
+
+def _stored(function: ast.FunctionDef, first: int, inner: list[ast.AST]) -> list[str]:
+    """Every value ``predict_many`` stores into ``answers[...]`` that is not an answer."""
+    found: list[str] = []
+    for node in ast.walk(function):
+        if node in inner or not isinstance(node, ast.Assign | ast.AnnAssign | ast.AugAssign):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        for target in targets:
+            line = node.lineno + first - 1
+            if isinstance(target, ast.Name) and target.id == _COLLECTED:
+                # The collection itself: it must start empty, so nothing is in it that was
+                # not stored below.
+                if not (isinstance(node.value, ast.Dict) and not node.value.keys):
+                    found.append(
+                        f"predict_many, line {line}: `{_COLLECTED}` starts as "
+                        f"{ast.unparse(node.value) if node.value else 'nothing'!r}, not an "
+                        f"empty dict, so it can hold a value no line below put there."
+                    )
+            elif (
+                isinstance(target, ast.Subscript)
+                and isinstance(target.value, ast.Name)
+                and target.value.id == _COLLECTED
+            ):
+                stored = _called(node.value)
+                if isinstance(node, ast.AugAssign) or stored not in _ANSWERS | {"_answer"}:
+                    found.append(
+                        f"predict_many, line {line}: stores "
+                        f"{ast.unparse(node.value)[:60] if node.value else ''!r} as an answer, "
+                        f"which is not a Refusal, a PredictionResult or a call to _answer."
+                    )
+    return found
 
 
 @dataclass(frozen=True)

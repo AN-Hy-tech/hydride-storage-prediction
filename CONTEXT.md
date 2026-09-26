@@ -175,9 +175,13 @@ _Avoid_: "the estimate", "the output", "the number"
 > `interval` and `domain` fields have **no defaults and cannot be `None`** — a type rather than a
 > check. `novelty` has no default either, so a caller must *say* what it knows; `None` means "not
 > measured", and the delivery path itself never returns it, because the novelty screen is in
-> `delivery_screens()`. HG-2 adds the behavioural half: every `return` in `predict_capacity` is
-> read from its source and required to be one of the two contract types — **exhaustively, not by
-> sampling** — and eleven probes run against the served artifact.
+> `delivery_screens()`. HG-2 adds the behavioural half: every `return` on the path is read from
+> its source and required to be one of the two contract types — **exhaustively, not by
+> sampling** — and eleven probes run against the served artifact. Since #84 (2026-09-26) the path
+> is three functions: `predict_capacity` is `predict_many([request])[0]`, `predict_many` returns
+> only what it stored in `answers`, and `_answer` builds each one. HG-2 reads all three, and the
+> delegation between them.
+
 >
 > **The layer is the qualifier.** The surrogate alone still does not refuse an out-of-domain
 > candidate, and its docstring still says so outright — so "prediction" in this glossary's sense

@@ -19,7 +19,9 @@ is a type that cannot represent a bare number.
     version-stamped :class:`~hydms.delivery.predict.ArtifactBundle` that loads once. Null
     check, featurise, predict, screen, resolve, answer — and a formula that will not parse is
     caught where it raises and comes back as a refusal carrying the parse error's own
-    sentence. Card #76.
+    sentence. Card #76. :func:`~hydms.delivery.predict.predict_many` is the same path over a
+    whole batch at once, and ``predict_capacity`` is its one-row case (card #84).
+
 
 ``modelcard.py``
     What the deployment can honestly say about itself — the version, when it was fitted, what
@@ -69,6 +71,7 @@ from .predict import (
     clear_cache,
     load_bundle,
     predict_capacity,
+    predict_many,
 )
 
 __all__ = [
@@ -93,6 +96,7 @@ __all__ = [
     "delivery_screens",
     "load_bundle",
     "predict_capacity",
+    "predict_many",
     "reason_codes",
     "resolve",
 ]

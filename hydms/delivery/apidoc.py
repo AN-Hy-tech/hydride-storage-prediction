@@ -251,23 +251,42 @@ def _and(names: Sequence[str]) -> str:
     return f"{', '.join(quoted[:-1])} and {quoted[-1]}"
 
 
-def _request_block(payload: Any) -> list[str]:
+def _request_block(payload: Any, total: int | None = None) -> list[str]:
     """A request as the page shows it: whole, or shortened and *said* to be shortened.
 
     Returns the fence and, where rows were dropped, the sentence naming how many the real
-    request carried. The count comes from the captured request itself, so an elided example
-    cannot claim a size nobody sent.
+    request carried. The count comes from the capture -- ``total``, recorded beside a request
+    stored shortened (:func:`_shortened_request`), or the captured list's own length -- so an
+    elided example cannot claim a size nobody sent.
     """
     rows = payload.get("candidates") if isinstance(payload, dict) else None
-    if not isinstance(rows, list) or len(rows) <= _ELIDE_CANDIDATES_ABOVE:
+    count = total if total is not None else (len(rows) if isinstance(rows, list) else 0)
+    if not isinstance(rows, list) or count <= _ELIDE_CANDIDATES_ABOVE:
         return [_fence(payload)]
     shown = {**payload, "candidates": rows[:_ELIDE_CANDIDATES_ABOVE]}
     return [
         _fence(shown),
         "",
         f"*Shortened for reading.* The request that produced the response below carried "
-        f"**{len(rows)}** candidates — one more than the limit — all identical to those above.",
+        f"**{count}** candidates — one more than the limit — all identical to those above.",
     ]
+
+
+def _shortened_request(body: Any) -> dict[str, Any]:
+    """The over-limit request with its first rows, and how many it carried.
+
+    Stored shortened, as :func:`_shortened_parity` stores the parity response, since card #84
+    raised the limit from 256 to 4,096: the whole request is 4,097 identical rows, about
+    sixteen thousand lines of JSON committed to say one thing. The count is recorded from the
+    body that was actually sent, before shortening.
+    """
+    rows = body.get("candidates") if isinstance(body, dict) else None
+    if not isinstance(rows, list):
+        return {}
+    return {
+        "request": {**body, "candidates": rows[:_ELIDE_CANDIDATES_ABOVE]},
+        "candidates_total": len(rows),
+    }
 
 
 def _shortened_parity(payload: Any) -> dict[str, Any]:
@@ -563,7 +582,8 @@ def document(captured: Mapping[str, Any] | None = None) -> str:
         if exchange.get("request") is not None:
             write("Request:")
             write("")
-            for line in _request_block(exchange["request"]):
+            for line in _request_block(exchange["request"], exchange.get("candidates_total")):
+
                 write(line)
             write("")
         write(f"Response — **`{exchange['status']}`**:")
@@ -1018,6 +1038,8 @@ def probe(out: TextIO | None = None) -> Path:
             }
             if label == "evidence-parity":
                 exchanges[label].update(_shortened_parity(exchanges[label]["response"]))
+            if label == "batch-too-large":
+                exchanges[label].update(_shortened_request(body))
             print(f"  {label:24s} {method:5s} {path:20s} -> {response.status_code}", file=stream)
 
     bundle = load_bundle()

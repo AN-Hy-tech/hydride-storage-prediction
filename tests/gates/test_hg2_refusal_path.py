@@ -197,6 +197,30 @@ def test_a_branch_returning_a_bare_number_is_caught_by_reading_the_source(
     assert any("not a Refusal or a PredictionResult" in line for line in findings), findings
 
 
+def _stores_a_float(requests, **kwargs):  # type: ignore[no-untyped-def]
+    """A batch path whose returned list holds a number that was never an answer."""
+    answers = {}
+    answers[0] = 1.4
+    return [answers[position] for position in range(1)]
+
+
+def test_a_batch_path_that_stores_a_bare_number_is_caught(monkeypatch) -> None:
+    """Since #84 the exits run through predict_many; what it *collects* is read too."""
+    monkeypatch.setattr(_delivery, "predict_many", _stores_a_float)
+
+    _count, findings = hg2._exits()
+
+    assert any("stores '1.4' as an answer" in line for line in findings), findings
+
+
+def test_an_answer_builder_that_returns_a_number_is_caught(monkeypatch) -> None:
+    monkeypatch.setattr(_delivery, "_answer", _returns_a_float)
+
+    _count, findings = hg2._exits()
+
+    assert any(line.startswith("_answer, line") for line in findings), findings
+
+
 def test_a_bare_return_is_caught_as_an_answer_of_none(monkeypatch) -> None:
     monkeypatch.setattr(_delivery, "predict_capacity", _returns_nothing)
 
@@ -366,8 +390,14 @@ def test_a_sentence_that_only_echoes_the_formula_does_not_count_as_naming(
     def _echo(formulas, temperatures, *args, **kwargs):
         try:
             return real(formulas, temperatures, *args, **kwargs)
-        except FeaturisationError:
-            raise FeaturisationError(f"{next(iter(formulas))}: cannot predict") from None
+        except FeaturisationError as error:
+            # Row by row, as the featuriser reports since #84: the echo is each row's own
+            # sentence, so the delivery path hands it to the caller exactly as it would a
+            # real one.
+            raise FeaturisationError(
+                "echo",
+                rows={label: f"{formulas[label]}: cannot predict" for label in error.rows},
+            ) from None
 
     monkeypatch.setattr(_delivery, "featurize", _echo)
 

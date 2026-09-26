@@ -182,7 +182,19 @@ single prediction path and HG-3 covers the UI too.
       `app/pages/1_Model_card.py` over `hydms/delivery/modelcard_page.py`. Both carry-overs are
       on it: the material-vs-system caveat and the reconciliation link. Owed: the per-row width
       table, and the one-run-or-spread question, which waits on #104's repeat.
-- [ ] **#84** Batch CSV screening page.
+- [x] **#84** Batch CSV screening page. **Done 2026-09-26.** The batched call is in the library:
+      `hydms.delivery.predict.predict_many(requests, bundle=)` featurises, predicts and screens a
+      whole list once, and `predict_capacity` is its one-row case. A bad formula refuses only its
+      own row, because `FeaturisationError.rows` hands the offenders back as data, each with a
+      sentence written for that row. Row *i* of a batch equals the lone call to 1e-12, and the
+      test includes duplicates. Measured on `v3`, a served row costs **0.7–1.0 ms end to end,
+      against 41 ms alone**. `MAX_BATCH_ROWS` was re-set from that measurement, **256 → 4,096**,
+      and the response size (1.1 KB a row) is now the binding limit, not time. The page is
+      `app/pages/2_Batch_screening.py` over `hydms/delivery/batch.py`, standard library only.
+      Every uploaded row comes back, refused and unread rows say so in every number column,
+      the summary comes before the download, and the version is on every row. A formula cell
+      reading `NaN` is ambiguous (sodium nitride, or pandas' missing value), and the page asks
+      which before it asks the model.
 
 **Exit check:** `conda run -n Project streamlit run app/main.py` plus the manual acceptance in §5.
 
@@ -386,7 +398,8 @@ lives in `current.json` and never in the report; see §2's artifact-store bullet
 | Gate | Card | Fails when |
 |---|---|---|
 | **HG-1** Leak sentinels | #71 | Any leak in §1 can be reintroduced without a test going red: a detector stopped firing, a sentinel's subject module exists with nothing wired to it, or a leak has neither a sentinel nor a recorded deferral. Green only when all thirteen are checked against the real pipeline |
-| **HG-2** No bare numbers | #77 | A contract type gains a default for `interval` or `domain`; any `return` in `predict_capacity` stops being a `Refusal` or a `PredictionResult`; a probe comes back without a code, a sentence, or the thing its refusal is about — named *outside* the echo of the formula that was typed, since every sentence here quotes its input and `'Xx'` is in `'Xx2'`; a declared code stops being reachable through either door with nothing saying why; or a code with no input at the request door becomes reachable there. Skips, loudly, where no artifact is on disk or where every probe was refused |
+| **HG-2** No bare numbers | #77 | A contract type gains a default for `interval` or `domain`; any `return` in `predict_capacity`, `predict_many` or `_answer` stops being a `Refusal` or a `PredictionResult` (or, for the first two, the checked delegation between them), or `predict_many` stores anything else as an answer;
+ a probe comes back without a code, a sentence, or the thing its refusal is about — named *outside* the echo of the formula that was typed, since every sentence here quotes its input and `'Xx'` is in `'Xx2'`; a declared code stops being reachable through either door with nothing saying why; or a code with no input at the request door becomes reachable there. Skips, loudly, where no artifact is on disk or where every probe was refused |
 | **HG-3** Transport parity | #79 | The API's answer differs from `predict_capacity()`'s for the same input at any JSON pointer; a served body cannot be rebuilt by `answer_from()` into an equal object; a batch reorders its rows, fails whole over a refused row, or does not enforce the limit it publishes; a rejected request carries `refused`, or `answer_from()` reads one as an answer; the committed OpenAPI document is not what the code produces; the request model declares a field `PredictionRequest` does not, or stops forbidding unknown ones; `/v1/health` or `/v1/model` names a version other than the one that answered. Skips, loudly, where no artifact is on disk or the `api` extra is absent — the document and the door are checked first either way |
 | **HG-4** Hygiene | #86 | ruff or mypy fail on `hydms/ tests/ scripts/`, or the coverage floor in `[tool.coverage.report]` is not met. Runs the tools rather than reading a log — ruff is 0.045 s and a warm mypy 2.33 s, so re-asking is cheaper than trusting. Skips, loudly, where a tool is absent from `PATH`, where there is no `pyproject.toml` to lint by, or where no `pytest --cov` has been run; and **refuses to report a coverage number from data older than the newest file under `hydms/`**, because `pytest --cov` writes its data only when the run ends, so a gate running inside that suite would otherwise score the previous run |
 | AC-1 | #32 | Same seed does not reproduce identical metrics |
@@ -514,7 +527,8 @@ curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
      -d '{"formula":"","temperature_k":298}'
 # expect: ALSO 422, and a different body — `error: invalid_request`, no `refused` key. The
 # status cannot separate a declined material from an unreadable request; the body is what does.
-curl -s localhost:8000/v1/health   # {"status":"ok","model_version":"v2","max_batch_rows":256}
+curl -s localhost:8000/v1/health   # {"status":"ok","model_version":"v3","max_batch_rows":4096,...}
+
 
 conda run -n Project streamlit run app/main.py
 ```

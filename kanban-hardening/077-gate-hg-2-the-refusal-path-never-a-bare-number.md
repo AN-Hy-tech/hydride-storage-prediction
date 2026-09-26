@@ -178,6 +178,15 @@ conda run -n Project python -m hydms.gates run HG-2
 
 ## Narrative
 
+- 2026-09-26: #84 made `predict_capacity` the one-row case of `predict_many`, and this gate went
+  red on the change, as it should have. Its source read found `return predict_many(...)[0]`,
+  which is neither contract type. `_exits` now reads the three functions the answer passes
+  through. `predict_capacity` may return a contract type or exactly `predict_many(...)[0]`.
+  `predict_many` may return `[]` or a comprehension over `answers`, and every value stored in
+  `answers` must be a contract type or `_answer(...)`. `_answer` must return a contract type.
+  Two new tests feed it a batch path that stores a float and an `_answer` that returns one. The
+  echo test's stand-in featuriser now raises the way the real one does, row by row through
+  `FeaturisationError.rows`. (by @assistant)
 - 2026-09-02: Created for Phase H. The distinction that matters to a user, and that the API
   documentation (#80) must answer: how do you tell a refusal from a genuinely low prediction? (by @assistant)
 

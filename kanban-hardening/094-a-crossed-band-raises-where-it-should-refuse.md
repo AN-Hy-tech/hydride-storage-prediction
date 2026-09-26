@@ -88,6 +88,14 @@ card #90 owns the catalogue any new reason lands in
 
 ## Narrative
 
+- 2026-09-26: #84 made the batch path one call, and that sharpens this card without deciding it.
+  `predict_many` builds every answer from one screened frame, so a crossed band on any row raises
+  `ContractError` out of the whole call. That means a `POST /v1/predict/batch` of up to 4,096 rows,
+  or one chunk of the CSV page, fails whole. The route's old per-row loop failed the same way, so
+  no behaviour regressed. But the blast radius is now a batch by construction, and the last box
+  above is now concrete. The page catches the resulting `ServiceError` and says the batch failed,
+  never showing the rows either side. `v3` answered all 1,279 corpus pairs in one call without
+  raising, so no corpus row crosses on the deployed model. (by @assistant)
 - 2026-09-12: Created by the #93 session. Filed rather than fixed for two reasons. The first is
   scope: #93 owns two tests and a diagnosis, and this is a question about what the delivery layer
   *says*. The second is that every card that would naturally own it — #77, #90, #48 — is already

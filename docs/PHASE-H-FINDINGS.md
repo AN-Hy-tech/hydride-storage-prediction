@@ -31,13 +31,14 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 | **99** | *"Only 39 test rows sit above 500 K"* is `REPORT.md`'s count over the archival 247-row test split. Measured now: **130 of 893**. Three production docstrings and two tests still carry the old number | 0.25 d | `backlog`, unblocked |
 | **68** | `scripts/check_board.py` has **no done-card checkbox rule** and the prose said it did. **Prose half cleared 2026-09-13** — board README, `CLAUDE.md` and #81 corrected; the surviving claim count was two, not six. **Still owed:** nothing enforces the convention, and this index is a mitigation, not a check | done / 0.25 d left | box on a `done` card |
 | **96** | `--report` on `surrogate.calibrate` is both an output *and* an input path: redirecting it silently falls back to CatBoost defaults, and `--save` then persists that as a `deployed fit`. It has produced a wrong conformal correction once already | 0.25 d | `backlog`, unblocked |
-| **94** | A crossed band raises where it should refuse — a measured-23 %-likely crossing is passed through unclipped by design, and the delivery path's answer to it is an exception rather than a refusal | 0.25 d | `backlog`, unblocked |
+| **94** | A crossed band raises where it should refuse — a measured-23 %-likely crossing is passed through unclipped by design, and the delivery path's answer to it is an exception rather than a refusal. **Since #84, one crossed row fails a whole `predict_many` call**, so it fails a batch request and a page chunk of up to 4,096 rows. The route loop failed the same way before #84 | 0.25 d | `backlog`, unblocked |
+
 
 ## P2 — blocks the objective (a user-facing predictor)
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | `backlog`, unblocked (#82 `done` 2026-09-25) |
+| **84** | ~~Batch CSV screening page~~ | — | **`done` 2026-09-26.** `predict_many` is in the library, and the route calls it once. 0.7–1.0 ms a row served, so the limit is now 4,096. The page is `app/pages/2_Batch_screening.py`. Leaves #94's crossed band as the one way a batch still fails whole |
 | **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `doing`. **Built 2026-09-26**: Evidence Reader, `/v1/evidence(/parity)`, the page (`app/pages/1_Model_card.py`), and the transfer interval. Owed: the per-row width table (population is a decision) and the OPEN one-run-or-spread question, which waits on #104's repeat |
 
 ## P3 — blocks the unfreeze

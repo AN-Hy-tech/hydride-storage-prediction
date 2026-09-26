@@ -663,8 +663,13 @@ def delivery_refusal(probe: Probe) -> str | None:
     depend on which artifact version answers or on how many features that version was fitted
     on -- which is what lets this page print it with no artifact on disk, in a lane that has
     none. ``tests/delivery/test_refusals.py`` pins that independence rather than assuming it.
-    The label is :data:`~hydms.delivery.predict.CANDIDATE`, because the sentence names the row
-    and a page showing a different label would be showing a different sentence.
+
+    The sentence is the row's own --
+    :attr:`~hydms.descriptors.featurize.FeaturisationError.rows` -- which is what
+    :func:`~hydms.delivery.predict.predict_many` hands a refused row, and so what
+    ``predict_capacity`` says. Until #84 the page printed the batch's account instead ("1 of 1
+    formula(e) could not be parsed: ['candidate'] ..."), because that was what a lone caller
+    was told: true, and written for a caller holding a batch.
     """
     from hydms.delivery.predict import CANDIDATE
 
@@ -675,8 +680,9 @@ def delivery_refusal(probe: Probe) -> str | None:
     try:
         featurize(formulas, temperatures)
     except FeaturisationError as error:
-        return str(error)
+        return error.rows.get(CANDIDATE, str(error))
     return None
+
 
 
 def reached(built: Sequence[tuple[Probe, Answer]]) -> dict[str, tuple[str, ...]]:

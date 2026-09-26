@@ -254,7 +254,13 @@ def test_the_check_command_exits_non_zero_on_drift(monkeypatch: pytest.MonkeyPat
 def test_an_over_long_batch_request_is_shortened_and_says_that_it_was() -> None:
     """A reader must be able to tell a shortened example from a short one."""
     rendered = document(examples())
-    batch = examples()["exchanges"]["batch-too-large"]["request"]["candidates"]
-    assert len(batch) > 3, "the fixture no longer carries an over-long batch"
+    exchange = examples()["exchanges"]["batch-too-large"]
+    sent = exchange["candidates_total"]
+    assert sent > 3, "the fixture no longer carries an over-long batch"
+    assert len(exchange["request"]["candidates"]) <= 3, "stored shortened, count beside it"
     assert "Shortened for reading" in rendered
-    assert f"**{len(batch)}** candidates" in rendered
+    assert f"**{sent}** candidates" in rendered
+    assert f"this request carries {sent} candidates" in exchange["response"]["message"], (
+        "the recorded count must be the one the service saw"
+    )
+

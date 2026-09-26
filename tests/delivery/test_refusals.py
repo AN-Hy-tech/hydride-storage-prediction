@@ -283,11 +283,11 @@ def test_a_parse_failure_says_the_same_thing_whatever_the_version_was_fitted_on(
     for contract in (None, narrowed):
         with pytest.raises(FeaturisationError) as raised:
             featurize(formulas, temperatures, contract=contract)
-        said.append(str(raised.value))
+        said.append((str(raised.value), raised.value.rows[CANDIDATE]))
 
     assert said[0] == said[1], "a parse failure named a feature set it never reached"
     by_name = {probe.name: probe for probe in PROBES}
-    assert delivery_refusal(by_name["unreadable-formula"]) == said[0]
+    assert delivery_refusal(by_name["unreadable-formula"]) == said[0][1]
 
 
 def test_a_frame_only_probe_has_no_typed_sentence() -> None:

@@ -113,6 +113,7 @@ and :meth:`~hydms.descriptors.element_data.PropertyTable.of` builds the table.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -152,7 +153,20 @@ class FeaturisationError(ValueError):
     rest of the project's prose. The *module* is ``featurize`` because that is the name the
     L13 sentinel already points at and the name CBFV gave the operation; the two spellings sit
     side by side deliberately rather than by accident.
+
+    Attributes:
+        rows: Each offending row's own sentence, by the caller's label, in batch order --
+            **as data**, so a caller screening many candidates can refuse exactly those rows
+            and answer the rest (card #84). Empty when the defect belongs to the batch rather
+            than to a row: a repeated label, temperatures that do not line up, an unknown
+            table. A row's sentence names its formula and says what is wrong with it; it does
+            not name the label or the batch, because it is written for the one row it
+            describes. The message is still the whole account, every offender listed.
     """
+
+    def __init__(self, message: str, rows: Mapping[Any, str] | None = None) -> None:
+        super().__init__(message)
+        self.rows: Mapping[Any, str] = MappingProxyType(dict(rows or {}))
 
 
 def _named(items: Iterable[object]) -> str:
@@ -268,60 +282,108 @@ def _audit_composites(declared: FeatureContract, sources: Mapping[str, PropertyT
         require_self_consistent(table, props)
 
 
-def _parse(strings: Sequence[str], labels: pd.Index) -> list[dict[str, float]]:
-    """Every formula parsed, or an exception naming every one that would not parse."""
-    parsed: list[dict[str, float]] = []
-    failures: list[str] = []
+def _parse(
+    strings: Sequence[str], labels: pd.Index
+) -> tuple[list[dict[str, float] | None], dict[int, str]]:
+    """Every formula parsed, and the parser's own sentence for each one that would not parse.
+
+    Returns ``(parsed, failures)``: ``parsed`` is aligned with ``strings``, holding ``None``
+    where a formula failed, and ``failures`` maps each failed *position* to its sentence. It
+    does not raise, so :func:`featurize` can ask the contract about the rows that did parse
+    and refuse the batch **once**, naming every offender of both kinds -- a caller that drops
+    the offenders and asks again must not discover a second list of them on the retry.
+    """
+    parsed: list[dict[str, float] | None] = []
+    failures: dict[int, str] = {}
     for position, formula in enumerate(strings):
         try:
             parsed.append(parse_formula(formula))
         except FormulaError as error:
-            parsed.append({})
-            failures.append(f"[{labels[position]!r}] {error}")
-    if failures:
-        raise FeaturisationError(
-            f"{len(failures)} of {len(strings)} formula(e) could not be parsed: "
-            f"{_named(failures)}. Nothing was featurised -- a batch that silently returns "
-            f"fewer rows than it was given is how a feature matrix comes to be attached to "
-            f"the wrong compositions."
-        )
-    return parsed
+            parsed.append(None)
+            failures[position] = str(error)
+    return parsed, failures
 
 
 def _require_computable(
     declared: FeatureContract,
-    parsed: Sequence[dict[str, float]],
-    labels: pd.Index,
+    parsed: Sequence[dict[str, float] | None],
     strings: Sequence[str],
     sources: Mapping[str, PropertyTable],
-) -> None:
-    """Ask the contract before building a row, and refuse the batch if any answer is no.
+) -> dict[int, str]:
+    """Ask the contract before building a row: each parsed row that cannot be built, and why.
 
-    The verdict is per *element set* -- the amounts cannot make a hole -- so it is computed
-    once and reused. The curated data's 1,279 rows carry 1,115 distinct compositions and
-    **464** distinct element sets, so the memo is worth having even before a candidate
-    generator starts handing over ten thousand variations on the same alloy.
+    Rows that did not parse (``None``) are skipped -- they are already refused, for a reason
+    that comes first. The verdict is per *element set* -- the amounts cannot make a hole -- so
+    it is computed once and reused. The curated data's 1,279 rows carry 1,115 distinct
+    compositions and **464** distinct element sets, so the memo is worth having even before a
+    candidate generator starts handing over ten thousand variations on the same alloy.
     """
     verdicts: dict[tuple[str, ...], Computability] = {}
-    refused: list[str] = []
+    refused: dict[int, str] = {}
     for position, composition in enumerate(parsed):
+        if composition is None:
+            continue
         elements = tuple(composition)
         verdict = verdicts.get(elements)
         if verdict is None:
             verdict = declared.computability(elements, tables=sources)
             verdicts[elements] = verdict
         if not verdict.complete:
-            refused.append(f"[{labels[position]!r}] {strings[position]}: {verdict.reason}")
-    if refused:
-        raise FeaturisationError(
-            f"{len(refused)} of {len(parsed)} composition(s) cannot produce all "
-            f"{len(declared)} features from the tables given: {_named(refused)}. These rows "
-            f"are refused rather than filled: a hole in a published table is not a number, "
-            f"and a NaN here would be indistinguishable from a measurement two stages later. "
-            f"To featurise them, pass a contract without the blocking features -- "
+            refused[position] = f"{strings[position]}: {verdict.reason}"
+    return refused
+
+
+def _refuse(
+    declared: FeatureContract,
+    labels: pd.Index,
+    strings: Sequence[str],
+    unparsed: Mapping[int, str],
+    holes: Mapping[int, str],
+) -> None:
+    """Raise one :class:`FeaturisationError` for every offender of both kinds, if there are any.
+
+    Two things are built from the same findings. The **message** is the batch's account, as
+    it always was: each offender prefixed by its label, and the reason nothing was returned.
+    The **rows** are each offender's own sentence, written for that one row and naming no
+    label and no batch -- so a delivery path that answers N candidates at once can refuse
+    exactly the rows that failed, with the same words it would give each of them alone.
+    """
+    if not unparsed and not holes:
+        return
+    parts: list[str] = []
+    if unparsed:
+        parts.append(
+            f"{len(unparsed)} of {len(strings)} formula(e) could not be parsed: "
+            f"{_named(f'[{labels[p]!r}] {s}' for p, s in unparsed.items())}. Nothing was "
+            f"featurised -- a batch that silently returns fewer rows than it was given is how "
+            f"a feature matrix comes to be attached to the wrong compositions."
+        )
+    if holes:
+        parts.append(
+            f"{len(holes)} of {len(strings)} composition(s) cannot produce all "
+            f"{len(declared)} features from the tables given: "
+            f"{_named(f'[{labels[p]!r}] {s}' for p, s in holes.items())}. These rows are "
+            f"refused rather than filled: a hole in a published table is not a number, and a "
+            f"NaN here would be indistinguishable from a measurement two stages later. To "
+            f"featurise them, pass a contract without the blocking features -- "
             f"FeatureContract.from_names() builds one -- which is the trade cards #24 and #25 "
             f"own."
         )
+    rows = {
+        position: f"the formula could not be parsed: {sentence.rstrip('.')}."
+        for position, sentence in unparsed.items()
+    }
+    rows.update(
+        (
+            position,
+            f"{sentence}. A hole in a published element table is refused rather than filled, "
+            f"because a filled hole is a number nobody measured.",
+        )
+        for position, sentence in holes.items()
+    )
+    raise FeaturisationError(
+        " ".join(parts), rows={labels[position]: rows[position] for position in sorted(rows)}
+    )
 
 
 def _pack(parsed: Sequence[dict[str, float]]) -> tuple[np.ndarray, np.ndarray, tuple[str, ...]]:
@@ -429,10 +491,11 @@ def featurize(
     if not strings:
         return _empty(declared, labels)
 
-    parsed = _parse(strings, labels)
-    _require_computable(declared, parsed, labels, strings, sources)
+    parsed, unparsed = _parse(strings, labels)
+    holes = _require_computable(declared, parsed, strings, sources)
+    _refuse(declared, labels, strings, unparsed, holes)
 
-    weights, codes, universe = _pack(parsed)
+    weights, codes, universe = _pack([row for row in parsed if row is not None])
     computed: dict[tuple[str, str], Statistics] = {}
     built: dict[str, np.ndarray] = {}
     for spec in declared:

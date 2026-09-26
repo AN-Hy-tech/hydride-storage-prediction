@@ -2,7 +2,9 @@
 
 Seven routes, and not one of them computes anything. ``POST /v1/predict`` builds the contract's
 own request type, hands it to :func:`~hydms.delivery.predict.predict_capacity`, and serialises
-what comes back; ``POST /v1/predict/batch`` does that in a loop; ``GET /v1/health`` reports the
+what comes back; ``POST /v1/predict/batch`` hands the whole list to
+:func:`~hydms.delivery.predict.predict_many` in one call (card #84); ``GET /v1/health`` reports the
+
 loaded version; ``GET /v1/model`` returns :func:`~hydms.delivery.modelcard.model_card`;
 ``GET /v1/neighbours`` returns :func:`~hydms.delivery.neighbours.nearest_measured` -- the known
 alloys nearest a composition, with what was *measured* on them, which is a lookup and not a
@@ -71,7 +73,13 @@ from fastapi.responses import JSONResponse
 from hydms.delivery.contract import SCHEMA, ContractError, PredictionRequest
 from hydms.delivery.modelcard import model_card
 from hydms.delivery.neighbours import DEFAULT_K, MAX_K, UnreadableFormula, nearest_measured
-from hydms.delivery.predict import ArtifactBundle, DeliveryError, load_bundle, predict_capacity
+from hydms.delivery.predict import (
+    ArtifactBundle,
+    DeliveryError,
+    load_bundle,
+    predict_capacity,
+    predict_many,
+)
 from hydms.evidence.reader import Evidence
 from hydms.evidence.reader import read as read_evidence
 
@@ -94,17 +102,27 @@ __all__ = ["MAX_BATCH_ROWS", "create_app"]
 
 #: The most candidates one batch request may carry.
 #:
-#: Measured, not chosen. One served prediction costs **66-78 ms** against the deployed ``v2``
-#: on the development machine -- 13 ms to featurise, 22 ms in the surrogate, 34 ms across the
-#: three screens -- and the cost is linear in the rows, because each candidate goes through
-#: :func:`~hydms.delivery.predict.predict_capacity` as its own one-row frame. 256 rows is
-#: therefore about 19 s, and about 38 s on a machine half this speed, which still returns
-#: inside the 60 s timeout most clients and proxies default to. 512 would not.
+#: Measured, not chosen, and measured twice. Until card #84 every candidate went through
+#: :func:`~hydms.delivery.predict.predict_capacity` as its own one-row frame, at 66-78 ms a row
+#: against ``v2`` (13 ms featurise, 22 ms surrogate, 34 ms screens, all of it per-call pandas
+#: overhead), so the limit was 256 rows: about 19 s, and 38 s on a machine half as fast, inside
+#: the 60 s timeout most clients and proxies default to.
 #:
+#: The route now makes one :func:`~hydms.delivery.predict.predict_many` call per request, and
+#: re-measured end to end (``TestClient``, ``v3``, the curated corpus repeated, 2026-09-26, the
+#: development machine: 20 logical CPUs) a request costs **0.27 s at 256 rows, 1.00 s at 1,024,
+#: 3.05 s at 4,096 and 5.64 s at 8,192** -- 0.7-1.0 ms a row. Time has stopped being the
+#: binding constraint; the **response** has not: an answer serialises to about 1.1 KB, so
+#: 4,096 rows is a 4.5 MB body. 4,096 is 3 s here and so about 6 s at half speed -- a tenth of
+#: the timeout budget, left deliberately, because a busy server is slower than an idle one --
+#: and a client with more rows chunks (:meth:`~hydms.delivery.client.ServiceClient.predict_many`
+#: does, reading this number from ``GET /v1/health``).
+#:
+
 #: It is a module constant with a ``create_app`` override rather than a configuration key
 #: because it is transport policy -- how much work one HTTP request may do -- and not a
 #: threshold the pipeline reads. Nothing below this layer knows or should know it.
-MAX_BATCH_ROWS = 256
+MAX_BATCH_ROWS = 4096
 
 #: The path prefix every route lives under. Versioned so that a contract change is a new
 #: prefix rather than a surprise for whoever wrote a client.
@@ -353,9 +371,10 @@ def _router(max_batch_rows: int) -> APIRouter:
         if len(body.candidates) > max_batch_rows:
             return _invalid(
                 f"this request carries {len(body.candidates)} candidates and the limit is "
-                f"{max_batch_rows}. Split it: the limit exists because every candidate is "
-                f"featurised, predicted and screened on its own, so a longer list is a "
-                f"slower request rather than a cheaper one.",
+                f"{max_batch_rows}. Split it into requests of at most {max_batch_rows}: the "
+                f"limit bounds how long one request runs and how large its answer is, and a "
+                f"client that chunks gets the same answers row for row.",
+
                 [Problem(location=["candidates"], message="too many candidates", kind="limit")],
                 error="batch_too_large",
             )
@@ -369,10 +388,9 @@ def _router(max_batch_rows: int) -> APIRouter:
                 "a caller never has to guess which rows were answered.",
                 problems,
             )
-        answers = [
-            predict_capacity(item.formula, item.temperature_k, bundle=bundle).to_dict()
-            for item in built
-        ]
+        # One call for the whole list (card #84): featurised, predicted and screened once, and
+        # each answer is exactly what `/predict` would have said about that row alone.
+        answers = [answer.to_dict() for answer in predict_many(built, bundle=bundle)]
         return {"schema": SCHEMA, "count": len(answers), "answers": answers}
 
     @router.get(

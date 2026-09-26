@@ -86,7 +86,7 @@ Every `request`-door row above, with the answer `predict_capacity()` gives it. T
 | `window-upper-edge` | reaches the screens, which judge the model's own prediction and band rather than the stated ones above -- so the code is the fit's to decide and this page cannot show it. Gate HG-2 measures it against the served artifact. |
 | `too-cold` | **the same code and the same sentence, whatever the fit.** The first screen in run order rejected it, and that screen reads the temperature the caller stated rather than anything the model produced, so no version can answer this differently: `outside-window`. |
 | `too-hot` | **the same code and the same sentence, whatever the fit.** The first screen in run order rejected it, and that screen reads the temperature the caller stated rather than anything the model produced, so no version can answer this differently: `outside-window`. |
-| `unreadable-formula` | **refused before any screen runs**, with the featuriser's own sentence and zero verdicts: 1 of 1 formula(e) could not be parsed: ['candidate'] 'LaNi5Xx2' names 'Xx', which is not a chemical element. Nothing was featurised -- a batch that silently returns fewer rows than it was given is how a feature matrix comes to be attached to the wrong compositions. |
+| `unreadable-formula` | **refused before any screen runs**, with the featuriser's own sentence and zero verdicts: the formula could not be parsed: 'LaNi5Xx2' names 'Xx', which is not a chemical element. |
 | `beyond-known-chemistry` | reaches the screens, which judge the model's own prediction and band rather than the stated ones above -- so the code is the fit's to decide and this page cannot show it. Gate HG-2 measures it against the served artifact. |
 
 ### Why each input was chosen

@@ -691,16 +691,14 @@ def test_the_candidate_frame_carries_the_features_in_fitting_order(
     bundle: ArtifactBundle,
 ) -> None:
     """Column order is asserted against the contract, not assumed."""
-    from hydms.delivery.contract import PredictionRequest
     from hydms.delivery.predict import _candidate
 
-    request = PredictionRequest(formula=KNOWN, temperature_k=WARM)
     formulas = pd.Series([KNOWN], index=pd.Index([CANDIDATE]))
     features = featurize(
         formulas, pd.Series([WARM], index=pd.Index([CANDIDATE])), contract=bundle._contract
     )
     intervals = bundle._surrogate.predict(formulas, formulas.map(lambda _: WARM))
-    frame = _candidate(bundle, request, features, intervals)
+    frame = _candidate(bundle, formulas, features, intervals)
 
     assert list(frame.columns)[: len(bundle.feature_names)] == list(bundle.feature_names)
     assert frame.index.tolist() == [CANDIDATE]
@@ -715,10 +713,8 @@ def test_the_alloy_class_is_not_supplied_so_untrusted_family_is_not_reachable_he
     Stated as a test rather than as prose because ``docs/REFUSALS.md`` documents
     ``untrusted-family`` and a reader would otherwise conclude this function can produce it.
     """
-    from hydms.delivery.contract import PredictionRequest
     from hydms.delivery.predict import _candidate
 
-    request = PredictionRequest(formula=KNOWN, temperature_k=WARM)
     formulas = pd.Series([KNOWN], index=pd.Index([CANDIDATE]))
     features = featurize(
         formulas, pd.Series([WARM], index=pd.Index([CANDIDATE])), contract=bundle._contract
@@ -726,7 +722,7 @@ def test_the_alloy_class_is_not_supplied_so_untrusted_family_is_not_reachable_he
     intervals = bundle._surrogate.predict(formulas, pd.Series([WARM], index=formulas.index))
 
     assert load_config().columns.alloy_class not in _candidate(
-        bundle, request, features, intervals
+        bundle, formulas, features, intervals
     )
 
 

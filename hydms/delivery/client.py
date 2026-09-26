@@ -75,9 +75,10 @@ DEFAULT_URL = "http://127.0.0.1:8000"
 #: this one fails loudly against a service that has moved rather than misreading it.
 PREFIX = "/v1"
 
-#: Seconds to wait for one request. A single prediction is well under a second; a batch of
-#: the published 256-row limit is measured at about 19 s (``service.MAX_BATCH_ROWS``), so
-#: this leaves room for a machine half as fast without hanging a page indefinitely.
+#: Seconds to wait for one request. A single prediction is well under a second; a batch at
+#: the published limit (``service.MAX_BATCH_ROWS``, 4,096 rows) is measured at about 3 s, so
+#: this leaves room for a much slower or busier machine without hanging a page indefinitely.
+
 TIMEOUT_S = 60.0
 
 

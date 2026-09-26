@@ -134,3 +134,80 @@ def test_the_model_card_page_says_so_when_the_service_is_down(monkeypatch) -> No
     app.run()
     assert not app.exception, [error.value for error in app.exception]
     assert app.error and "not reachable" in app.error[0].value
+
+
+# --------------------------------------------------------------------------------------
+# The batch screening page (card #84)
+# --------------------------------------------------------------------------------------
+
+BATCH_PAGE = APP.parent / "pages" / "2_Batch_screening.py"
+
+
+class _Uploaded:
+    """What ``st.file_uploader`` hands back, as far as the script reads it."""
+
+    def __init__(self, text: str) -> None:
+        self._data = text.encode("utf-8")
+
+    def getvalue(self) -> bytes:
+        return self._data
+
+
+def _batch_page(service, monkeypatch: pytest.MonkeyPatch, text: str | None) -> AppTest:
+    """The page with a file already chosen. AppTest cannot drive an upload, so it is handed one."""
+    import streamlit
+
+    monkeypatch.setenv("HYDMS_API_URL", service.base_url)
+    monkeypatch.setattr(
+        streamlit, "file_uploader", lambda *a, **k: None if text is None else _Uploaded(text)
+    )
+    app = AppTest.from_file(str(BATCH_PAGE), default_timeout=120)
+    app.run()
+    assert not app.exception, [error.value for error in app.exception]
+    return app
+
+
+def test_the_batch_page_waits_for_a_file(service, monkeypatch) -> None:
+    app = _batch_page(service, monkeypatch, None)
+
+    assert not app.button and not app.info and not app.error
+
+
+def test_the_batch_page_screens_a_file_and_says_what_happened_first(service, monkeypatch) -> None:
+    app = _batch_page(
+        service,
+        monkeypatch,
+        "formula,temperature_k\nLa1Ni5,298\nLaNi5Xx2,298\n,298\nLa1Ni5,1000\n",
+    )
+    assert app.button[0].label == "Screen 3 row(s)"
+
+    app.button[0].click()
+    app.run()
+    assert not app.exception, [error.value for error in app.exception]
+
+    summary = [info.value for info in app.info]
+    assert summary[0].startswith("4 row(s) read. 1 answered by model v1, 2 refused")
+    assert any("missing formula x 1 (row(s) 3)" in line for line in summary)
+    shown = app.dataframe[0].value
+    assert list(shown["status"]) == ["answered", "refused", "unread", "refused"]
+    assert list(shown["capacity_wt_pct"])[1:] == ["refused", "unread", "refused"]
+
+
+def test_the_batch_page_asks_what_nan_means_before_asking_the_model(service, monkeypatch) -> None:
+    app = _batch_page(service, monkeypatch, "formula,temperature_k\nLa1Ni5,298\nNaN,298\n")
+
+    assert app.warning and "read exactly `NaN`" in app.warning[0].value
+    assert app.radio and app.radio[0].value is None
+    assert not app.button, "nothing may be asked while NaN is undecided"
+
+    app.radio[0].set_value("missing")
+    app.run()
+    assert not app.exception, [error.value for error in app.exception]
+    assert app.button[0].label == "Screen 1 row(s)"
+
+
+def test_the_batch_page_refuses_a_file_it_cannot_read_whole(service, monkeypatch) -> None:
+    app = _batch_page(service, monkeypatch, "alloy,kelvin\nLaNi5,298\n")
+
+    assert app.error and "cannot be read as a whole" in app.error[0].value
+    assert "no formula column" in app.caption[-1].value
