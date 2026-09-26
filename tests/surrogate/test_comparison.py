@@ -17,6 +17,7 @@ suite normally cannot defend. Three things are checkable and all three are check
 
 from __future__ import annotations
 
+import io
 from dataclasses import replace
 from pathlib import Path
 
@@ -317,3 +318,148 @@ def test_the_consensus_follows_the_first_folds_order(
     built = Comparison.read(tmp_path)
     assert built.consensus == ("gamma", "alpha")
     assert built.union == ("gamma", "alpha", "beta")
+
+
+# --------------------------------------------------------------------------------------
+# The run date comes from a run record, never from a file's mtime (card #106)
+# --------------------------------------------------------------------------------------
+
+
+def _tables_only(published: Path, into: Path) -> Path:
+    """The run's tables with no date beside them: no record and no ``provenance.csv``."""
+    for stem in ("selection-per-fold", "selection-stability", "selection-once"):
+        (into / f"{stem}.csv").write_bytes((published / f"{stem}.csv").read_bytes())
+    return into
+
+
+def _stamped(directory: Path, started_at: str) -> None:
+    from hydms import provenance
+
+    provenance.write(
+        directory / provenance.SELECTION_RECORD,
+        {"probe": "False", "protocol": provenance.FEATURE_SELECTION, "started_at": started_at},
+    )
+
+
+def test_the_run_date_is_read_from_the_selection_runs_record(
+    published: Path, tmp_path: Path, raw_data_path: Path
+) -> None:
+    _stamped(_tables_only(published, tmp_path), "2026-10-02T23:40:00+03:30")
+    built = Comparison.read(tmp_path)
+    assert built.dated == "2026-10-02"
+    assert "on **2026-10-02**" in built.to_markdown()
+    assert built.tables()["provenance"].loc["dated", "value"] == "2026-10-02"
+
+
+def test_with_no_record_the_date_is_not_recorded_whatever_the_mtime(
+    published: Path, tmp_path: Path, raw_data_path: Path
+) -> None:
+    # The fallback this replaced: `_written_on(selection-per-fold.csv)`. Touching the file to a
+    # known day would have made that day the published run date.
+    import os
+    from datetime import datetime
+
+    _tables_only(published, tmp_path)
+    touched = datetime(2026, 1, 1, 12, 0).timestamp()
+    os.utime(tmp_path / "selection-per-fold.csv", (touched, touched))
+    built = Comparison.read(tmp_path)
+    assert built.dated is None
+    assert "2026-01-01" not in built.to_markdown()
+    assert "on a date that was **not recorded**" in built.to_markdown()
+    assert built.tables()["provenance"].loc["dated", "value"] == "not recorded"
+
+
+def test_a_record_that_predates_the_run_date_is_not_recorded_not_backfilled(
+    published: Path, tmp_path: Path, raw_data_path: Path
+) -> None:
+    from hydms import provenance
+
+    _tables_only(published, tmp_path)
+    provenance.write(tmp_path / provenance.SELECTION_RECORD, {"probe": "False"})
+    assert Comparison.read(tmp_path).dated is None
+
+
+def test_a_published_not_recorded_stamp_reads_back_as_not_recorded(
+    published: Path, tmp_path: Path, raw_data_path: Path
+) -> None:
+    _tables_only(published, tmp_path)
+    Comparison.read(tmp_path).tables()["provenance"].to_csv(tmp_path / "provenance.csv")
+    assert Comparison.read(tmp_path).dated is None
+
+
+def test_emit_comparison_publishes_the_record_it_dated_from(
+    published: Path, tmp_path: Path, raw_data_path: Path
+) -> None:
+    from hydms import provenance
+    from hydms.surrogate.select import main
+
+    source = tmp_path / "run"
+    source.mkdir()
+    _stamped(_tables_only(published, source), "2026-10-02T09:00:00+03:30")
+    target = tmp_path / "published"
+    assert main(["--emit-comparison", "--report", str(source), "--publish", str(target)]) == 0
+    assert (target / provenance.SELECTION_RECORD).read_bytes() == (
+        source / provenance.SELECTION_RECORD
+    ).read_bytes()
+    assert Comparison.read(target).dated == "2026-10-02"
+
+
+@pytest.mark.parametrize(
+    ("flags", "name", "probe"),
+    [
+        ([], "selection-run.csv", False),
+        (["--once"], "selection-once-run.csv", True),
+        (["--no-screening"], "selection-unscreened-run.csv", True),
+        (["--all-features"], "selection-all-features-run.csv", True),
+        (
+            ["--once", "--all-features", "--no-screening"],
+            "selection-once-all-features-unscreened-run.csv",
+            True,
+        ),
+    ],
+)
+def test_a_variant_run_never_writes_the_published_runs_record(
+    flags: list[str], name: str, probe: bool
+) -> None:
+    from hydms.config import load
+    from hydms.surrogate.select import _begin, _parser, _record_name
+    from hydms.surrogate.selection import SelectionSettings
+
+    args = _parser().parse_args(flags)
+    cfg = load()
+    assert _record_name(args) == name
+    stamp = _begin(cfg, SelectionSettings.from_config(cfg), args)
+    assert stamp.probe is probe
+    assert stamp.finish()["protocol"] == "feature-selection"
+
+
+def test_select_writes_its_record_beside_its_tables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The ``--once`` path end to end, with the matrix and Boruta replaced by stand-ins."""
+    from hydms import provenance
+    from hydms.surrogate import select
+
+    frame = pd.DataFrame({"f": [0.0, 1.0]}, index=["r0", "r1"])
+    split = pd.Series(["train", "train"], index=frame.index)
+
+    class StandIn:
+        features = ("f",)
+        candidates = ("f",)
+
+        def __len__(self) -> int:
+            return 1
+
+        def trace(self) -> pd.DataFrame:
+            return pd.DataFrame({"stage": ["boruta"]})
+
+        def record(self) -> dict[str, object]:
+            return {"selected": 1, "features": "f"}
+
+    monkeypatch.setattr(select, "_matrix", lambda cfg, *, all_features: (frame, split))
+    monkeypatch.setattr(select, "select_features", lambda *a, **k: StandIn())
+    assert select.main(["--once", "--report", str(tmp_path)], out=io.StringIO()) == 0
+    record = provenance.read(tmp_path / "selection-once-run.csv")
+    assert record.probe is True
+    assert record.run_date is not None
+    assert not (tmp_path / provenance.SELECTION_RECORD).exists()

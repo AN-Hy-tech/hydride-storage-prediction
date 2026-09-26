@@ -300,10 +300,13 @@ single prediction path and HG-3 covers the UI too.
       `model-run.csv` and `loco-run.csv` were not rewritten: they read *not recorded* until the
       next real run replaces them. **So the next full LOACO run (#104's) is the first that carries
       a run date.**
-- [ ] **#106** Selection evidence is dated by a file's mtime. Split from #105's last box,
-      2026-09-26; **not an unfreeze condition**. `select` writes no run record, and
-      `--emit-comparison` falls back to `comparison._written_on` (an mtime) for the selection
-      run's date. Not what the published `old_vs_new.md` reads today.
+- [x] **#106** Selection evidence is dated by a file's mtime. Split from #105's last box,
+      2026-09-26; **not an unfreeze condition**. **Done 2026-09-26.** `select` stamps before the
+      matrix and writes `selection<variant>-run.csv`. Only the default five-fold run writes
+      `selection-run.csv`, and `--once`, `--all-features` and `--no-screening` are probes.
+      `--emit-comparison` dates from that record, then from a published `provenance.csv`,
+      otherwise *not recorded*. `_written_on` (the mtime) is gone. The committed
+      `reports/feature_selection/` is untouched, and its byte test passes.
 - [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
       2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
       `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.

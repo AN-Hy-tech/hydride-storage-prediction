@@ -67,12 +67,14 @@ __all__ = [
     "CALIBRATE_RECORD",
     "DEPLOYED_FIT",
     "EVALUATE_RECORD",
+    "FEATURE_SELECTION",
     "LEAVE_ONE_CLASS_OUT",
     "LOCO_RECORD",
     "NOT_RECORDED",
     "PACKAGES",
     "RANDOM_SPLIT",
     "RECORD_SUFFIX",
+    "SELECTION_RECORD",
     "THREAD_VARIABLES",
     "TRAIN_RECORD",
     "NotAResult",
@@ -100,6 +102,11 @@ EVALUATE_RECORD: Final = "evaluation-run.csv"
 #: ``python -m hydms.surrogate.calibrate`` writes this beside ``conformal*.csv``.
 CALIBRATE_RECORD: Final = "conformal-run.csv"
 
+#: ``python -m hydms.surrogate.select`` writes this beside the five-fold tables, the run card #25
+#: publishes. A variant run inserts its table suffix before ``-run.csv``
+#: (``selection-once-run.csv``, ``selection-unscreened-run.csv``), so it never overwrites this one.
+SELECTION_RECORD: Final = "selection-run.csv"
+
 #: The kinds of run. ``protocol`` names which one; whether it was reduced is ``probe``.
 RANDOM_SPLIT: Final = "random-split"
 LEAVE_ONE_CLASS_OUT: Final = "leave-one-alloy-class-out"
@@ -107,6 +114,8 @@ LEAVE_ONE_CLASS_OUT: Final = "leave-one-alloy-class-out"
 BOOTSTRAP_INTERVALS: Final = "bootstrap-intervals"
 #: ``calibrate``: the one deployed fit, its conformal correction and its explanation tables.
 DEPLOYED_FIT: Final = "deployed-fit"
+#: ``select``: Boruta inside the outer folds, or once over the training split with ``--once``.
+FEATURE_SELECTION: Final = "feature-selection"
 
 #: What a missing run date is called, wherever one is stated.
 NOT_RECORDED: Final = "not recorded"

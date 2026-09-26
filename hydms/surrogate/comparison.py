@@ -32,13 +32,14 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from textwrap import fill
 from typing import Final
 
 import pandas as pd
 
+from hydms import provenance
 from hydms.config import Config
 from hydms.config import load as load_config
 from hydms.data.load import load_hydride_data, parse_formula
@@ -306,8 +307,23 @@ def _reflow(document: str) -> str:
     return "\n\n".join(out) + "\n"
 
 
-def _written_on(path: Path) -> date:
-    return datetime.fromtimestamp(path.stat().st_mtime).date()
+def _run_date(directory: Path) -> str | None:
+    """When the selection run behind ``directory`` started, ``YYYY-MM-DD``, or ``None``.
+
+    Read from the run's own record when the directory has one. Otherwise, from the ``dated``
+    stamp an earlier ``--emit-comparison`` published, which is how the committed
+    ``reports/feature_selection/`` re-reads itself. With neither, the date is *not recorded*.
+    A file's modification time is **never** used: a copy, a checkout or a touch moves it, and
+    before card #106 this was that fallback.
+    """
+    record = provenance.read(directory / provenance.SELECTION_RECORD)
+    if record.state != "absent":
+        return record.run_date
+    stamp = directory / f"{PROVENANCE}.csv"
+    if not stamp.exists():
+        return None
+    value = str(pd.read_csv(stamp, index_col="field").loc["dated", "value"])
+    return None if value == provenance.NOT_RECORDED else date.fromisoformat(value).isoformat()
 
 
 @dataclass(frozen=True)
@@ -335,7 +351,8 @@ class Comparison:
         selected: What this card declares.
             :data:`~hydms.descriptors.contract.SELECTED`.
         source: Where the tables were read from.
-        dated: When they were written.
+        dated: The date the selection run started, ``YYYY-MM-DD``, from its run record.
+            ``None`` when nothing recorded it; see :func:`_run_date`.
     """
 
     stability: pd.DataFrame
@@ -348,7 +365,7 @@ class Comparison:
     published: FeatureContract
     selected: FeatureContract
     source: Path
-    dated: date
+    dated: str | None
 
     @classmethod
     def read(
@@ -379,7 +396,6 @@ class Comparison:
             return pd.read_csv(directory / f"{stem}.csv", index_col=index)
 
         optional = directory / "selection-once-all-features.csv"
-        stamp = directory / f"{PROVENANCE}.csv"
         formulae = _record(config)
         return cls(
             stability=table("selection-stability", "feature"),
@@ -394,16 +410,15 @@ class Comparison:
             published=published or CONTRACT,
             selected=selected or SELECTED,
             source=directory,
-            dated=(
-                date.fromisoformat(
-                    str(pd.read_csv(stamp, index_col="field").loc["dated", "value"])
-                )
-                if stamp.exists()
-                else _written_on(directory / "selection-per-fold.csv")
-            ),
+            dated=_run_date(directory),
         )
 
     # -- what the folds said -------------------------------------------------------------
+
+    @property
+    def dated_text(self) -> str:
+        """The run date as prose says it: the date, or ``not recorded``."""
+        return self.dated or provenance.NOT_RECORDED
 
     @property
     def folds(self) -> int:
@@ -529,7 +544,7 @@ class Comparison:
         published[PROVENANCE] = pd.DataFrame(
             {
                 "value": [
-                    self.dated.isoformat(),
+                    self.dated_text,
                     "python -m hydms.surrogate.select --emit-comparison",
                 ]
             },
@@ -584,10 +599,14 @@ python -m hydms.surrogate.select --emit-comparison
 ```
 
 The tables it reads are published beside it. They came from a {_spelled(self.folds)}-fold run at the configured
-Boruta budget on **{self.dated:%Y-%m-%d}**, about fifty minutes of fitting, and from the
+Boruta budget {self._on_date}, about fifty minutes of fitting, and from the
 single-pass runs described under *Which comparison each column is*. **The first result stands:**
 this document is not re-run until there is a better reason than disliking it.
 """
+
+    @property
+    def _on_date(self) -> str:
+        return f"on **{self.dated}**" if self.dated else "on a date that was **not recorded**"
 
     def _decision(self) -> str:
         names = "\n".join(f"{i + 1}. `{name}`" for i, name in enumerate(self.selected.names))

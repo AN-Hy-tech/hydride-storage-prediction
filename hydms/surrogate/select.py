@@ -13,7 +13,9 @@ leak L6, which is what this module exists to stop, so the run says so in its own
 
 ``--emit-comparison`` is the cheap half and card #25's runnable check: it fits nothing, reads
 the tables the runs above left on disk, and publishes the old-22-versus-new-N write-up from
-them (:mod:`hydms.surrogate.comparison`). Regenerating the document therefore costs a second
+them (:mod:`hydms.surrogate.comparison`). It dates the write-up from the run record the
+five-fold run writes (:data:`hydms.provenance.SELECTION_RECORD`), and says *not recorded* when
+there is none. A file's modification time is not a run date (card #106). Regenerating the document therefore costs a second
 rather than an hour, which is the only reason it can be checked against the code that
 generates it.
 
@@ -28,6 +30,7 @@ Card #24.
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -35,6 +38,7 @@ from typing import TextIO
 
 import pandas as pd
 
+from hydms import provenance
 from hydms.config import Config, ConfigError, load
 from hydms.data.load import load_hydride_data, parse_formula
 from hydms.data.metadata import with_features, with_metadata
@@ -158,6 +162,49 @@ def _matrix(cfg: Config, *, all_features: bool) -> tuple[pd.DataFrame, pd.Series
     return with_features(usable, features), split.loc[keep]
 
 
+def _record_name(args: argparse.Namespace) -> str:
+    """The run record's file name, carrying the same suffix as the tables beside it.
+
+    Only the default five-fold run, the one card #25 publishes, writes
+    :data:`~hydms.provenance.SELECTION_RECORD`. Every variant inserts what varied, so a probe
+    never overwrites the record of the run the published date is read from.
+    """
+    varied = (
+        ("-once" if args.once else "")
+        + ("-all-features" if args.all_features else "")
+        + ("-unscreened" if args.no_screening else "")
+    )
+    stem = provenance.SELECTION_RECORD.removesuffix(provenance.RECORD_SUFFIX)
+    return f"{stem}{varied}{provenance.RECORD_SUFFIX}"
+
+
+def _begin(
+    cfg: Config, settings: SelectionSettings, args: argparse.Namespace
+) -> provenance.Stamp:
+    """Stamp the run before the matrix is built and before Boruta, never after.
+
+    Any of ``--once``, ``--all-features`` and ``--no-screening`` makes the run a **probe**. None
+    of them is the run the published comparison calls "selection": ``--once`` is leak L6, and the
+    other two are the contrasts card #25 sets beside the result.
+    """
+    return provenance.begin(
+        cfg.root,
+        protocol=provenance.FEATURE_SELECTION,
+        probe=bool(args.once or args.all_features or args.no_screening),
+        settings={
+            "once": bool(args.once),
+            "all_features": bool(args.all_features),
+            "screening": settings.screen_labels,
+            "boruta_max_iter": settings.boruta_max_iter,
+            "boruta_max_depth": settings.boruta_max_depth,
+            "boruta_estimators": settings.boruta_estimators,
+            "variance_threshold": settings.variance_threshold,
+            "vif_threshold": settings.vif_threshold,
+            "seed": settings.seed,
+        },
+    )
+
+
 def _write(tables: dict[str, pd.DataFrame], destination: Path, out: TextIO) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for name, table in tables.items():
@@ -181,7 +228,10 @@ def _emit(cfg: Config, args: argparse.Namespace, stream: TextIO) -> int:
         print(f"could not read the selection tables: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
 
-    print(f"{comparison.folds} fold(s) from {source}, written {comparison.dated:%Y-%m-%d}", file=stream)
+    print(
+        f"{comparison.folds} fold(s) from {source}, run date {comparison.dated_text}",
+        file=stream,
+    )
     print(f"consensus ({len(comparison.consensus)}): {', '.join(comparison.consensus)}", file=stream)
     print(f"union ({len(comparison.union)}): {', '.join(comparison.union)}", file=stream)
     print(
@@ -200,6 +250,12 @@ def _emit(cfg: Config, args: argparse.Namespace, stream: TextIO) -> int:
 
     try:
         _write(comparison.tables(), destination, stream)
+        # The record travels with the evidence, so the published directory dates itself the
+        # same way the run directory does when it is read back.
+        record = source / provenance.SELECTION_RECORD
+        if record.is_file() and record.resolve() != (destination / record.name).resolve():
+            shutil.copyfile(record, destination / record.name)
+            print(f"wrote {destination / record.name}", file=stream)
         document = destination / DOCUMENT
         document.write_text(comparison.to_markdown(), encoding="utf-8")
     except OSError as error:
@@ -227,6 +283,7 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
     if args.no_screening:
         settings = replace(settings, screen_labels=False)
 
+    stamp = _begin(cfg, settings, args)
     frame, split = _matrix(cfg, all_features=args.all_features)
     print(
         f"{len(frame)} row(s) x {len(frame.columns)} column(s); "
@@ -280,11 +337,14 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
             tables[f"selection-trace-{fold.name}{suffix}"] = selection.trace()
 
     destination = args.report or (cfg.paths.reports / "selection")
+    record = destination / _record_name(args)
     try:
         _write(tables, destination, stream)
+        provenance.write(record, stamp.finish())
     except OSError as error:
         print(f"could not write the report: {error}", file=sys.stderr)
         return EXIT_BAD_INVOCATION
+    print(f"wrote {record}", file=stream)
     return EXIT_OK
 
 

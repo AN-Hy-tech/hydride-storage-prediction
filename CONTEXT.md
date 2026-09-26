@@ -72,8 +72,8 @@ _Avoid_: "manifest" *(that is an artifact's)*, "metadata"
 > *State of the term, not part of the definition* (card #105, 2026-09-26): built.
 > `hydms/provenance.py` writes and reads it, and "is this a result?" is its `result()`, which
 > nothing else re-implements (a source-parsing test holds the serving, screening, figure and gate
-> packages to that). `train`, `loco`, `evaluate` and `calibrate` write one. `select` does not yet
-> (#106). The two committed records, `model-run.csv` and `loco-run.csv`, predate it and are not
+> packages to that). `train`, `loco`, `evaluate`, `calibrate` and `select` (#106) write one. The
+> two committed records, `model-run.csv` and `loco-run.csv`, predate it and are not
 > rewritten until the next real run replaces them.
 
 **Run date**:
