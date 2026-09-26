@@ -565,8 +565,11 @@ with five `wrote` lines.
 **Re-running it (cards #98, #104).** Two full runs exist: 2026-09-06 took **4 h 07 m**, and
 2026-09-25 took **4 h 48 m** (288.4 min) — budget five hours. **They did not agree**, although
 both used seed 42 and the fit path had not changed: seven families came back identical, and Mg,
-MEA and SS moved (macro 0.2734 → 0.2559). That is card #104's to explain. Until it is closed,
-expect `git diff --stat reports/loco/` to show moved tables after any rerun. Commit them anyway
+MEA and SS moved (macro 0.2734 → 0.2559). Card #104 found why on 2026-09-26: the label screen's
+forest predicted on many threads, and its sum drifts at the last digit. It now runs on one thread.
+**Expect the first rerun after that fix to move the tables once more**, because it is new code
+drawing one value from the old spread. A second rerun on unchanged code should then reproduce every
+table except the `seconds` column of `loco-chosen.csv`. If it does not, that is a new finding for #104. Commit them anyway
 after `--emit`, and then regenerate what reads them, in this order:
 
 ```powershell

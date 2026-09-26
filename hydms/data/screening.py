@@ -316,9 +316,20 @@ def label_issues(
         estimator: The regressor to cross-fit. Defaults to the archival selector's forest --
             ``RandomForestRegressor(max_depth=selection.boruta_max_depth)`` -- so the model
             deciding which labels are suspect is the same family as the one deciding which
-            features matter, rather than a second, unrelated choice.
-        seed: Defaults to ``seed`` in ``pipeline.yaml``. CleanLab's own ``seed`` argument;
-            the same seed over the same rows reproduces the verdict exactly, measured.
+            features matter, rather than a second, unrelated choice. **It runs on one
+            thread, and an estimator that would run on more is refused** (card #104): a
+            scikit-learn forest's ``predict`` adds its trees' predictions under a lock in
+            whatever order the threads finish, so a parallel forest returns a slightly
+            different sum on every call. CleanLab ranks rows by that residual and drops the
+            worst from its own refits, so the drift grows, measured on SS's outer-training
+            rows, to 5e-4 in ``label_quality`` between two identical calls in one process,
+            and to a different verdict between two LOACO runs. One thread costs about half
+            as much again per pass (34 s against 23 s on those rows). That is minutes on a
+            run of hours, and it buys a verdict that does not move.
+        seed: Defaults to ``seed`` in ``pipeline.yaml``. CleanLab's own ``seed`` argument.
+            With the one-thread estimator, the same seed over the same rows reproduces the
+            verdict bit for bit. The earlier "measured" here held for the flagged set on
+            one call pair, not for the scores, and not across runs (#104).
 
     Returns:
         A :class:`LabelIssues`. Splat it into :func:`screen`::
@@ -327,8 +338,15 @@ def label_issues(
             screen(frame, split, label_issues=verdict.issues, label_quality=verdict.quality)
 
     Raises:
-        ScreeningError: The target is not aligned to the matrix, or either is empty.
+        ScreeningError: The target is not aligned to the matrix, or either is empty, or the
+            estimator would predict on more than one thread.
     """
+    if estimator is not None and _threads(estimator) not in (None, 1):
+        raise ScreeningError(
+            f"the estimator runs on n_jobs={_threads(estimator)}. A parallel forest sums its "
+            f"trees in thread-finishing order, so the same rows and seed give a different "
+            f"verdict on every call (card #104). Pass it with n_jobs=1."
+        )
     if not isinstance(features, pd.DataFrame):
         raise ScreeningError(
             f"label_issues needs a DataFrame so the verdict can be returned on its index, "
@@ -355,7 +373,7 @@ def label_issues(
         estimator
         if estimator is not None
         else RandomForestRegressor(
-            n_jobs=-1, max_depth=config.selection.boruta_max_depth, random_state=rng_seed
+            n_jobs=1, max_depth=config.selection.boruta_max_depth, random_state=rng_seed
         )
     )
 
@@ -375,6 +393,12 @@ def label_issues(
         rows=len(features),
         estimator=type(model).__name__,
     )
+
+
+def _threads(estimator: object) -> object:
+    """The estimator's ``n_jobs``, or ``None`` when it has no such parameter."""
+    get_params = getattr(estimator, "get_params", None)
+    return get_params().get("n_jobs") if callable(get_params) else None
 
 
 def screen(

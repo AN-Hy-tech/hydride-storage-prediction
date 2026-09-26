@@ -279,8 +279,13 @@ single prediction path and HG-3 covers the UI too.
 - [ ] **#104** The seeded LOACO run is not reproducible run to run. Filed by #98, 2026-09-25;
       **not an unfreeze condition**. Mg's search chose a different configuration; MEA and SS
       chose the same one and still scored differently, so both the tuning and the
-      fixed-parameter scoring fit vary. AC-1 covers only the deployed fit. First step: two
-      `--trials 1 --no-screening` probes (~12 min each) diffed, then the same with screening on.
+      fixed-parameter scoring fit vary. AC-1 covers only the deployed fit. **Localised and fixed
+      2026-09-26.** Screening off, the pair was identical, and so was a third probe from
+      2026-09-25. (These took ~110 min each against that one's 12.3 min: the machine was busy.) Screening on, SS and Mg's objective moved. The cause is `label_issues`'
+      `RandomForestRegressor(n_jobs=-1)`: its `predict` sums trees in thread-finishing order, and
+      CleanLab's residual ranking turns that last-digit drift into a different drop set. It now
+      runs on `n_jobs=1` and refuses a parallel estimator, with three tests. AC-1 still reproduces
+      `v3`'s sealed metrics exactly. Owed: a `train --trials 1` pair and the full LOACO rerun.
 - [x] **#105** One run record beside every run's tables. Filed 2026-09-26 from the architecture
       review (ADR 0007); **not an unfreeze condition**. **Done 2026-09-26.** `hydms/provenance.py`
       (standard library only) stamps a run **before** the fit (`started_at` with its UTC offset,

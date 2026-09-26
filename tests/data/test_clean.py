@@ -251,3 +251,65 @@ def test_the_contract_is_enforced_at_runtime_not_only_by_construction(monkeypatc
     issues = pd.Series([True, False, False, False], index=frame.index)
     with pytest.raises(LeakDetected):
         screen(frame, assignment, label_issues=issues)
+
+
+# --------------------------------------------------------------------------------------
+# The CleanLab seam gives the same verdict every time (card #104)
+# --------------------------------------------------------------------------------------
+
+
+def noisy(rows: int = 120) -> tuple[pd.DataFrame, pd.Series]:
+    """A smooth target over three columns, with a few labels pushed far off it."""
+    import numpy as np
+
+    rng = np.random.default_rng(7)
+    features = pd.DataFrame(rng.uniform(size=(rows, 3)), columns=["p", "q", "r"])
+    target = features["p"] * 2 + features["q"] ** 2 + rng.normal(scale=0.05, size=rows)
+    target.iloc[::17] += 1.5
+    return features, target.rename("y")
+
+
+def test_the_default_forest_predicts_on_one_thread(monkeypatch) -> None:
+    # The step #104's probes localised: a forest on n_jobs=-1 sums its trees in the order the
+    # threads finish, and CleanLab's ranking turns that last-digit drift into a new verdict.
+    # Caught here structurally, because the drift itself is intermittent.
+    import cleanlab.regression.learn as learn
+    from hydms.data.screening import label_issues
+
+    handed: list[object] = []
+
+    class Spy:
+        def __init__(self, model, **kwargs) -> None:
+            handed.append(model)
+
+        def find_label_issues(self, X, y):
+            return pd.DataFrame({"is_label_issue": [False] * len(y), "label_quality": 1.0})
+
+    monkeypatch.setattr(learn, "CleanLearning", Spy)
+    label_issues(*noisy(), seed=42)
+    assert [model.get_params()["n_jobs"] for model in handed] == [1]
+
+
+def test_a_parallel_estimator_is_refused_before_it_is_fitted() -> None:
+    from hydms.data.screening import label_issues
+    from sklearn.ensemble import RandomForestRegressor
+
+    with pytest.raises(ScreeningError, match=r"n_jobs=-1.*#104"):
+        label_issues(*noisy(), estimator=RandomForestRegressor(n_jobs=-1), seed=42)
+
+
+def test_the_same_rows_and_seed_give_the_same_scores_bit_for_bit() -> None:
+    # Equality, not a tolerance: the claim is reproduction, and #104's drift was 5e-4 at worst
+    # but began at the last digit, which any tolerance here would have passed. A ten-tree
+    # forest keeps this in the fast lane (the default's hundred trees cost about 12 s a call); the
+    # thread count, which is what #104 was about, is the default's.
+    from hydms.data.screening import label_issues
+    from sklearn.ensemble import RandomForestRegressor
+
+    def forest() -> RandomForestRegressor:
+        return RandomForestRegressor(n_estimators=10, max_depth=4, n_jobs=1, random_state=0)
+
+    first, second = (label_issues(*noisy(), estimator=forest(), seed=42) for _ in range(2))
+    assert first.issues.equals(second.issues)
+    assert first.quality.equals(second.quality)
+    assert first.flagged > 0

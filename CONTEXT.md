@@ -46,8 +46,10 @@ the transfer score)*
 > Neither run so far does, so each is named by its commit: two seeded runs gave macro 0.2734
 > (committed 2026-09-06) and 0.2559 (committed 2026-09-25; the one on disk), with Mg moving
 > −0.338 → −0.508.
-> Until #104 finds the step that varies, one run's transfer score is a single draw from a spread
-> nobody has sized. When #104 closes, rewrite this block.
+> #104 found the step that varied on 2026-09-26: the label screen's forest summed its trees in
+> thread-finishing order. It now runs on one thread. Both committed runs predate that fix, so each
+> is one draw from a spread nobody has sized. The next full run is the first expected to repeat.
+> When #104 closes, rewrite this block.
 
 > **The gaps between the three are findings in their own right.** A small procedure-to-artifact gap
 > is evidence the procedure is stable. A large procedure-to-transfer gap is the argument for every

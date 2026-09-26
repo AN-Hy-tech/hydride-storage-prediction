@@ -204,8 +204,10 @@ run.** The protocol was run twice with seed 42, committed on 2026-09-06 (`7149c4
 run date only afterwards (card #105), and a commit date is not used as one. Seven of the ten
 family scores came back identical. Three moved: MEA 0.113 → 0.093, SS 0.763 → 0.778, and Mg
 −0.338 → −0.508. The macro average moved 0.273 → 0.256. Neither run is the right one: the
-difference is run-to-run variation the fixed seed does not remove, and its source has not been
-isolated yet (card #104). The ordering of the families, and every claim above that depends on it,
+difference is run-to-run variation the fixed seed did not remove. Its source was found afterwards
+(card #104): the step that screens suspect labels used a parallel random forest, whose predictions
+differ in their last digits from one call to the next. That step now runs on a single thread, and
+both runs above predate the change. The ordering of the families, and every claim above that depends on it,
 is the same in both runs.
 
 This is why the delivered model refuses rather than guesses outside its domain. The per-family
