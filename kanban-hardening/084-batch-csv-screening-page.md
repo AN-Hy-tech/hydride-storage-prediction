@@ -126,6 +126,17 @@ conda run -n Project python -m pytest tests/delivery/test_batch.py -q
 
 ## Narrative
 
+- 2026-09-26: Verified, test only, no code touched, at `a458086` on a clean tree. Under
+  `Project`, invoked by the env's `python.exe` path. The seven files ran in **one** invocation:
+  `python -m pytest tests/delivery/test_batch.py tests/delivery/test_app_script.py
+  tests/delivery/test_predict.py tests/delivery/test_refusals.py tests/delivery/test_apidoc.py
+  tests/gates/test_hg2_refusal_path.py tests/gates/test_cli.py`. Result: **164 passed, 0 failed,
+  0 skipped**, exit 0, in 2065 s (34 min 25 s) with no other job on the machine. The 102 warnings
+  are all TensorFlow/NumPy deprecations raised under `test_cli.py`. By file, from `--collect-only`:
+  `test_batch` 34, `test_app_script` 12, `test_predict` 31, `test_refusals` 34, `test_apidoc` 19,
+  `test_hg2_refusal_path` 22, `test_cli` 12. That sums to 164. Then `python -m hydms.delivery.apidoc`
+  with no flags printed *"API.md is current: 15 exchange(s) against v3, 9 declared code(s) all
+  documented."* and exited 0. No failure, so no box was added. (by @assistant)
 - 2026-09-26: Done. The architecture grilling's decision held once it was built, with one
   refinement. The featuriser used to raise on parse failures *before* checking holes, so a batch
   holding both kinds would have needed two retries. It now reports both kinds in one raise, and
