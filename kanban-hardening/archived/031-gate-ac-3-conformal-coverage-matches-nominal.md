@@ -39,11 +39,11 @@ believed at all — it is the load-bearing check for risk R1.
       rather than inheriting the number; what this session contributed is the version it scored.
       **(b) `conformal.csv`, `conformal-coverage.csv` and `conformal-rows.csv` sat untracked in
       `reports/model/` from 2026-09-05 to 2026-09-06**, written at 14:35 by a probe-budget run, nine
-      hours before the real fit — while [PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) S4,
-      [README.md](README.md) and card #27 all quoted `conformal-rows.csv`'s 893/172/701 by value.
+      hours before the real fit — while [PHASE-H-RUNBOOK.md](../../docs/PHASE-H-RUNBOOK.md) S4,
+      [README.md](../README.md) and card #27 all quoted `conformal-rows.csv`'s 893/172/701 by value.
       Three committed documents citing a file no committed run produced. `calibrate --save`
       regenerates all three from a real fit and Step 8 of
-      [RUNNING-THE-FIT.md](../docs/RUNNING-THE-FIT.md) now stages them by name. **Check the
+      [RUNNING-THE-FIT.md](../../docs/RUNNING-THE-FIT.md) now stages them by name. **Check the
       regenerated numbers against what those three documents say** before ticking anything here: if
       they moved, the documents are wrong, not the run
 

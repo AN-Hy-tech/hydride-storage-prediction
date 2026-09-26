@@ -1,7 +1,7 @@
 ---
 id: 83
 status: doing
-priority: High
+priority: P2
 blocked_by: [29, 30, 82, 89, 103, 105]
 assignee: "@amirhossein"
 tags: [ph, l6, S6, R4]
@@ -213,6 +213,13 @@ conda run -n Project python -m pytest tests/delivery/test_model_card.py -q
 `docs/PHASE-H-RUNBOOK.md` — S7; `docs/PRD-inverse-design.md` — S6, R4
 
 ## Narrative
+
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Score**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term* (card #83, 2026-09-26): built as `hydms.evidence.reader.Score`, which
+  > cannot be constructed half-stated. A present value carries an interval or
+  > `no_interval_because`, and an absent one carries `absent_because`. The service serves them on
+  > `GET /v1/evidence`.
 
 - 2026-09-26: Built, and left `doing` on two boxes: the per-row width table and the OPEN
   question, which now waits on #104's repeat. What landed:

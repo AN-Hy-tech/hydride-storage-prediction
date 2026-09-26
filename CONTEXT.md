@@ -24,11 +24,6 @@ the three kinds; a bare figure without the other parts is not a score, it is a n
 quote for the wrong question.
 _Avoid_: "metric" or "reading" for the whole object *(a reading is one part of a score)*
 
-> *State of the term* (card #83, 2026-09-26): built as `hydms.evidence.reader.Score`, which
-> cannot be constructed half-stated. A present value carries an interval or
-> `no_interval_because`, and an absent one carries `absent_because`. The service serves them on
-> `GET /v1/evidence`.
-
 **Procedure score**:
 How well the *modelling method* performs, estimated out-of-fold across every outer fold. It comes
 from several models, none of which is ever shipped. The published reading is
@@ -45,16 +40,7 @@ _Avoid_: "the R²", "the final score", "the real score"
 How well a model predicts an **alloy family it was never trained on** — the leave-one-alloy-class-out
 reading. A claim about extrapolation, and the only one of the three that speaks to inverse design.
 _Avoid_: "generalisation", "the LOACO number" *(the protocol is leave-one-class-out; the score is
-the transfer score)*
-
-> **State of the term (2026-09-26):** quote it **with its run date** where the run record has one.
-> Neither run so far does, so each is named by its commit: two seeded runs gave macro 0.2734
-> (committed 2026-09-06) and 0.2559 (committed 2026-09-25; the one on disk), with Mg moving
-> −0.338 → −0.508.
-> #104 found the step that varied on 2026-09-26: the label screen's forest summed its trees in
-> thread-finishing order. It now runs on one thread. Both committed runs predate that fix, so each
-> is one draw from a spread nobody has sized. The next full run is the first expected to repeat.
-> When #104 closes, rewrite this block.
+the transfer score)*, and quoting it without its run date, or, where the run record has none, its commit
 
 > **The gaps between the three are findings in their own right.** A small procedure-to-artifact gap
 > is evidence the procedure is stable. A large procedure-to-transfer gap is the argument for every
@@ -74,23 +60,11 @@ probe, the seed, the code and packages it ran on, and when it started and finish
 run of the pipeline, never a model — a model is identified by its artifact version.
 _Avoid_: "manifest" *(that is an artifact's)*, "metadata"
 
-> *State of the term, not part of the definition* (card #105, 2026-09-26): built.
-> `hydms/provenance.py` writes and reads it, and "is this a result?" is its `result()`, which
-> nothing else re-implements (a source-parsing test holds the serving, screening, figure and gate
-> packages to that). `train`, `loco`, `evaluate`, `calibrate` and `select` (#106) write one. The
-> two committed records, `model-run.csv` and `loco-run.csv`, predate it and are not
-> rewritten until the next real run replaces them.
-
 **Run date**:
 When the run **started**, as its own run record states. Not the date its tables were committed,
 which can be hours later and on another day. A run whose record predates the field has **no run
 date** — it is stated as not recorded, never inferred from the commit.
 _Avoid_: "commit date" as a synonym, "date of the results"
-
-> *State of the term* (card #105, 2026-09-26): every run from now on records `started_at` in
-> local time with its offset, so the run date is the day the maintainer started it. **No
-> committed run has one yet.** `loco.md` and `evaluation.md` both print *not recorded*, and the
-> Chapter 1 paragraph on the two LOACO runs names them by commit, labelled as commits.
 
 **As published**:
 A figure from `REPORT.md` or the archival pipeline. It is *history*, not current performance, and
@@ -105,13 +79,6 @@ sense. It is not a synonym for "measured versus predicted": every point in a par
 prediction, and what the panel's name states is which protocol scored it.
 _Avoid_: "reading" for the origin of a mark *(the charts call that `origin`, deliberately)*, and
 "the out-of-fold reading" as though it named a model
-
-> *State of the term, not part of the definition* (card #81, 2026-09-12): the collision was caught
-> before it landed rather than after. `Series` was first written with a `reading` field holding
-> `measured` / `predicted`, which would have put two senses of the word inside one module and one
-> import of `evaluate`'s tables away from a page that draws both. The chart vocabulary has
-> `Series.origin` instead, and `parity(readings=...)` keeps the word in the sense this glossary
-> defines. Nothing enforces that — this entry is the whole of it.
 
 ---
 
@@ -167,22 +134,6 @@ An estimate together with **an interval and a domain verdict**. A bare number is
 here — it is a model output that has not yet been made into one.
 _Avoid_: "the estimate", "the output", "the number"
 
-> *State of the term, not part of the definition:* **both halves are enforced today, at the
-> delivery layer, and gate HG-2 now measures it** (cards #48, #49, #75, #76, #77, all `done`
-> 2026-09-11). The interval half is the surrogate's: it returns `lcb` and `interval_width` as
-> columns, so a caller cannot get a point estimate without them. The domain-verdict half is
-> `hydms.delivery.predict.predict_capacity()`, which answers with a `PredictionResult` whose
-> `interval` and `domain` fields have **no defaults and cannot be `None`** — a type rather than a
-> check. `novelty` has no default either, so a caller must *say* what it knows; `None` means "not
-> measured", and the delivery path itself never returns it, because the novelty screen is in
-> `delivery_screens()`. HG-2 adds the behavioural half: every `return` on the path is read from
-> its source and required to be one of the two contract types — **exhaustively, not by
-> sampling** — and eleven probes run against the served artifact. Since #84 (2026-09-26) the path
-> is three functions: `predict_capacity` is `predict_many([request])[0]`, `predict_many` returns
-> only what it stored in `answers`, and `_answer` builds each one. HG-2 reads all three, and the
-> delegation between them.
-
->
 > **The layer is the qualifier.** The surrogate alone still does not refuse an out-of-domain
 > candidate, and its docstring still says so outright — so "prediction" in this glossary's sense
 > is what the *delivery* layer produces, not what `hydms.surrogate.predict` returns.
@@ -192,30 +143,12 @@ A **refusal** is an answer *about a material*: the screens judged this candidate
 it carries a code from their declared vocabulary, a sentence naming the rule, and no number. An
 **invalid request** is not an answer at all — the question could not be read, so no candidate ever
 existed to judge, and there is nothing a refusal could honestly name. Over HTTP the two share a
-status: **422** for both, fixed by `docs/PHASE-H-RUNBOOK.md` §6 for the refusal and by card #78 for
+status: **422** for both, fixed by `docs/PHASE-H-RUNBOOK.md` §5 for the refusal and by card #78 for
 the other. **The body is therefore the whole of the difference** — a refusal carries `refused`, an
 invalid request carries `error` — and a client that branches on the status code alone will read one
 as the other. A third thing is neither: a `DeliveryError` is the *deployment* failing and is never a
 statement about a candidate, so it is a 500.
 _Avoid_: "error" for a refusal, "refused" for a malformed request, and reading the status alone
-
-> *State of the term, not part of the definition:* **gate HG-3 measures the distinction at the
-> transport** (card #79, `done` 2026-09-12). Eight malformed bodies are sent over HTTP and each must
-> come back 422 carrying `error`, carrying no `refused`, and be **refused** by
-> `hydms.delivery.contract.answer_from()`; every refusal must come back carrying `refused`, carrying
-> no `error`, and rebuild through the same function into an object equal to the library's. So the
-> one-key split is executable rather than a convention — and the failure it exists to catch, a
-> client reading a rejected request as an answer, is the one that would otherwise be silent.
->
-> **The client keeps it too** (card #82, 2026-09-24). `hydms.delivery.client` returns an
-> `InvalidRequest` (not a `Refusal`) for a 422 carrying `error`, and the prediction page words it
-> as "No material was judged". Both are tested over a real socket in `tests/delivery/test_app.py`.
->
-> **A lookup has only the second kind** (card #82, 2026-09-24 night). `GET /v1/neighbours` judges
-> no material, so it has no refusal: a blank formula, an unreadable one or a `k` out of range is a
-> 422 carrying `error`, and an unreadable formula carries the novelty screen's own sentence — the
-> one `POST /v1/predict` *refuses* the same string with. Same words, different kind, because one
-> route judged a material and the other did not.
 
 **Lower confidence bound**:
 The bottom of the calibrated interval, and **the ranking signal**. Ranking on the mean is what lets
@@ -226,53 +159,26 @@ _Avoid_: "the prediction", "the lower estimate", ranking on the mean
 The size of the calibrated band for one prediction. **Not a constant** — the correction is estimated
 in transformed space and the inverse transform is convex, so the same correction is a wider band at a
 high prediction than at a low one.
-_Avoid_: reading a single correction constant off a manifest and doubling it
+_Avoid_: reading a single correction constant off a manifest and doubling it; "width" as a promise
+of a positive number — it is a measurement
 
-> **A width can be negative, and that is a signal rather than an error** (card #93, 2026-09-12).
-> A `MultiQuantile` booster fits its heads jointly without constraining them to be monotone —
-> `quantile_metrics` counts `crossings` and measured **23 % of rows** on a small fit — and CQR's
-> correction is one constant added to both outer heads, so it shifts a crossed band without
-> re-ordering it. On the versions CI resolves, two of three probe candidates came back at
-> **−0.094422** and **−0.029760** wt%. `hydms.surrogate.predict` reports that unclipped on purpose;
-> `hydms.delivery.contract.Interval` refuses it.
->
-> **State of the term:** "width" alone is a *measurement*, not a promise of a positive number. Say
-> **crossed band** for the negative case and do not call it a narrow one — the whole danger is that
-> `abs()` or a clip turns a defect a screen can see into the most confident-looking row in a batch.
-> What the delivery layer should *say* about one is card **#94**, which is open.
+**Crossed band**:
+An interval whose upper bound sits below its lower one, so its width is negative. The quantile heads
+are fitted jointly but not constrained to be monotone, and the conformal correction shifts a
+crossed band without re-ordering it. It is a signal a screen can see, not an error to clip.
+_Avoid_: "a narrow band", and `abs()` or a clip, which turn the defect into the most
+confident-looking row in a batch
 
-**Coverage**:
-The share of held-out rows whose true value falls inside the interval, read against the nominal
-level the intervals claim. Always reported with the level it is being judged against.
-_Avoid_: "accuracy", "confidence"
-
-> **Held-out is load-bearing: coverage on the *calibration* rows is a construction, not a
-> measurement** (card #93, 2026-09-12). Split CQR sets the correction to the `k`-th smallest
-> conformity score with `k = ceil((n + 1) * level)`, so exactly `k` of `n` calibration rows sit
-> inside the widened band and their coverage is `k / n` — on the fixture that found this,
-> `46/56 = 0.8214285714285714`, identical on three different installations to every digit. It is a
-> property of the arithmetic and it knows nothing about the fit. **Only the held-out number is
-> evidence**, and that one is AC-3's.
->
-> **State of the term:** never report coverage without saying which rows it is over. A conformal
-> guarantee is `>= nominal`, never "closer to nominal" — on a finite calibration set it overshoots
-> by up to `(1 + level) / n`, so a *better* uncalibrated model moves the calibrated number
-> *further* from nominal. #93 exists because a test asserted the "closer" reading and a better fit
-> broke it.
-
-> **The word now names two unrelated numbers, and they are both reported by gates** (card #86,
-> 2026-09-12). **Conformal coverage** is the entry above — a property of the *model*, measured
-> against a nominal level, owned by AC-3 and card #27. **Test coverage** is the share of
-> statements and branches under `hydms/` that the suite executes — a property of the *suite*,
-> measured against the `fail_under` floor in `[tool.coverage.report]`, owned by HG-4 and card
-> #86. They are both percentages, both called "coverage", both appear in `gate-results.json`,
-> and neither says anything whatsoever about the other: a repository can hold 88 % test
-> coverage over a model whose intervals cover 71 % of what they promise.
->
-> **State of the term:** say *conformal coverage* or *test coverage* whenever both could be
-> meant, which in a gate report is always. Bare "coverage" in prose about the model means the
-> entry above; bare "coverage" in prose about CI means the floor. HG-4's own result string says
-> "line-and-branch coverage of hydms/" for exactly this reason.
+**Conformal coverage** vs **Test coverage**:
+**Conformal coverage** is the share of held-out rows whose true value falls inside the interval, read
+against the nominal level the intervals claim — a property of the *model*, and always reported with
+that level. Only the **held-out** number is evidence: on the calibration rows, coverage is fixed by
+the conformal arithmetic (`k / n`) whatever the fit. The guarantee is `>= nominal`, never "closer to
+nominal", so a better raw model can move the calibrated number further from it. **Test coverage** is
+the share of `hydms/` the suite executes, read against the `fail_under` floor — a property of the
+*suite*. Both are percentages in the same gate report and neither says anything about the other.
+_Avoid_: bare "coverage" wherever both could be meant (a gate report always), "accuracy",
+"confidence", and coverage without saying which rows it is over
 
 **Uncertainty** vs **Novelty** vs **Applicability domain**:
 Three separate things that all mean "be careful". **Uncertainty** is interval width — how unsure the
@@ -305,25 +211,6 @@ named a *different* object, and the committed explainability tables described a 
 An immutable directory holding a model, its correction, its scaler and a manifest. **Written once
 and never edited**, which is why certifying a version produces a *new* one.
 _Avoid_: "the model", "the checkpoint", "the saved model"
-
-> *State of the term, not part of the definition:* **the scaler is on its way out of this list**
-> (card #23, decided 2026-09-12; removal boxed on #7 since #34 closed). `v1`, `v2` and `v3` carry a
-> `scaler` payload and always will — a version is sealed when written — but nothing reads it back
-> at inference. The justification for keeping it named exactly one consumer, #48's applicability
-> domain, and #48 landed as a *capacity* ceiling that reads no scaled matrix.
->
-> **Corrected 2026-09-12, the day after this block was written, by the thing it predicted.** It
-> said "the next version written holds a model, its correction and a manifest". The next version
-> written was **`v3`**, promoted that evening, and it holds all four. The sentence was wrong about
-> *which act changes a payload set*: **`promote` copies the payloads of the version it certifies —
-> it fits nothing — so only a fit can drop a key.** The next *fit* is card #7's retrain, which is
-> where the box now lives and where this entry changes with it. Until then the definition above is
-> true of every version that exists.
->
-> *Keep the correction rather than the clean sentence.* Nothing tests this file, so a prediction
-> written into it is a claim no diff can go red on; this one survived exactly one day, and it
-> survived because the version that falsified it was written by a command nobody thought of as
-> writing a version.
 
 **Artifact bundle**:
 An **artifact version plus the screens that judge its answers**, loaded once and frozen —
@@ -392,18 +279,6 @@ formula and a temperature?" — and a gate report states the third, because a do
 gate can afford. The three can disagree without any of them being wrong.
 _Avoid_: "the code is unreachable" with no door and no measurement behind it
 
-> *State of the term, not part of the definition* (cards #80, #90, 2026-09-12): all three readings
-> are live in this repository right now, in documents a reader will put side by side.
-> `docs/REFUSALS.md` splits by **door** — the *request* door (`predict_capacity`, a typed formula
-> and temperature) against the *frame* door (`apply_screens` over a curated frame, which can also
-> **state** a prediction, a band width and an alloy-class label). HG-2 and HG-3 report their own
-> **probe set**, and currently record `above-physical-ceiling` and `out-of-domain` as *unreached on
-> this fit* — the honest statement for eleven probes. `docs/API.md` reports a **50 x 10 sweep**
-> through the request door and marks both reachable, which is a lower bound on what a caller can
-> meet. Only `untrusted-family` is unreachable in the strong sense at the request door, and that is
-> structural: the API declares exactly two fields, so there is no way to supply the label the rule
-> judges.
-
 **Trained range** vs **Applicability domain**:
 A **trained range** is a numeric span the training rows covered — the 195–773 K window, the capacity
 range, the fourteen feature spans. The **applicability domain** is a judgement about a *candidate
@@ -444,16 +319,23 @@ A row of PRD §5 — who wants it, why, and what proves it. It appears in a card
 which is the entire reason the two collide: `S10` on #78 is "explore results without running code",
 and there is no Stage 10.
 
-> *State of the term, not part of the definition:* on 2026-09-11 **thirty-nine of sixty-four cards
-> stated the wrong stage** — thirty-six still carrying the frozen board's `Phase` heading after
-> #72's `git mv`, two claiming an `S1` the runbook contradicts, one an `S6` the README does. Nothing
-> reads that line: not `check_board.py`, not a test, not an `--emit`. All are corrected and **#92**
-> is the card for making the map load-bearing. Until it lands, this pair is checked by a reader or
-> not at all.
-
 **Blocker** (`blocked_by`):
 The board's machine-readable dependency graph, and **the authority on order**. Where a runbook
 arrow and a `blocked_by` edge disagree, the edge is right and the arrow is prose — S4 opened at #88,
 not at the #24 its chain pointed to. An edge nothing supports is worse than a missing one: #89 was
 held shut by an edge to #34 that its own *Done when* never asked for, and that took #83 with it.
 _Avoid_: reading the runbook's `→` chains as dependencies; ask the board which card is startable
+
+**Finding**:
+Open work of any kind: a card that is not `done`, **or an unticked box on a card that is**. The
+second kind is invisible to every tool here, which is why a `done` card with an open box stays on
+the active board rather than moving to `archived/`.
+_Avoid_: reading `done` as "nothing left"
+
+**Priority band** (`P1`…`P4`):
+A finding's rank by **blast radius**, not by size, stored in the card's `priority:`. **P1** can make
+something published wrong; **P2** blocks Phase H's objective, a user-facing predictor; **P3** blocks
+the unfreeze; **P4** is accepted debt with a named owner. Within a band, cheapest first.
+`docs/PHASE-H-FINDINGS.md` indexes the bands; the card owns them.
+_Avoid_: `High` / `Normal` *(the kanban-ai default, which ranked #100's accepted debt above #104's
+unreproducible published number)*, and reading `P1` as a stage or a user story

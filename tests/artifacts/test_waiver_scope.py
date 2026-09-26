@@ -43,7 +43,7 @@ _CARD_ID = re.compile(r"^(\d+)-")
 def board_of(card: int) -> str:
     """Which board directory holds this card, by the id its filename carries."""
     for board in (ACTIVE_BOARD, FROZEN_BOARD):
-        for path in board.glob("*.md"):
+        for path in board.rglob("*.md"):
             match = _CARD_ID.match(path.name)
             if match and int(match.group(1)) == card:
                 return board.name

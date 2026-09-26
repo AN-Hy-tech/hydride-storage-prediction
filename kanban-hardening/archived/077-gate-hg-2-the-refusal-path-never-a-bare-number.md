@@ -178,6 +178,23 @@ conda run -n Project python -m hydms.gates run HG-2
 
 ## Narrative
 
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Prediction**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term, not part of the definition:* **both halves are enforced today, at the
+  > delivery layer, and gate HG-2 now measures it** (cards #48, #49, #75, #76, #77, all `done`
+  > 2026-09-11). The interval half is the surrogate's: it returns `lcb` and `interval_width` as
+  > columns, so a caller cannot get a point estimate without them. The domain-verdict half is
+  > `hydms.delivery.predict.predict_capacity()`, which answers with a `PredictionResult` whose
+  > `interval` and `domain` fields have **no defaults and cannot be `None`** — a type rather than a
+  > check. `novelty` has no default either, so a caller must *say* what it knows; `None` means "not
+  > measured", and the delivery path itself never returns it, because the novelty screen is in
+  > `delivery_screens()`. HG-2 adds the behavioural half: every `return` on the path is read from
+  > its source and required to be one of the two contract types — **exhaustively, not by
+  > sampling** — and eleven probes run against the served artifact. Since #84 (2026-09-26) the path
+  > is three functions: `predict_capacity` is `predict_many([request])[0]`, `predict_many` returns
+  > only what it stored in `answers`, and `_answer` builds each one. HG-2 reads all three, and the
+  > delegation between them.
+
 - 2026-09-26: #84 made `predict_capacity` the one-row case of `predict_many`, and this gate went
   red on the change, as it should have. Its source read found `return predict_many(...)[0]`,
   which is neither contract type. `_exits` now reads the three functions the answer passes

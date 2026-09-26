@@ -166,7 +166,7 @@ intervals alongside point estimates by default — not as an option.
       return value from `nested_scores`, which would split one concept across two returns
 - [x] **OWED — the run, and only the run (2026-09-05).** Every box above this one is machinery and
       it is committed and verified end to end at a reduced budget. What is missing is the numbers.
-      **Step-by-step operator guide: [../docs/RUNNING-THE-FIT.md](../docs/RUNNING-THE-FIT.md)** —
+      **Step-by-step operator guide: [../docs/RUNNING-THE-FIT.md](../../docs/RUNNING-THE-FIT.md)** —
       the smoke test to run first, what each line of output means, the three exit codes, and how to
       stage the results without committing a probe. The short version, once, by the maintainer:
 

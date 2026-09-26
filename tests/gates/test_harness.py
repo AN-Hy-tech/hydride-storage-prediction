@@ -109,7 +109,7 @@ def test_every_gate_names_a_card_that_exists_on_one_of_the_two_boards() -> None:
     ids = {
         int(p.name[:3])
         for board in ("kanban", "kanban-hardening")
-        for p in (REPO_ROOT / board).glob("[0-9][0-9][0-9]-*.md")
+        for p in (REPO_ROOT / board).rglob("[0-9][0-9][0-9]-*.md")
     }
     for gate in registry():
         assert gate.card in ids, f"{gate.name} names card #{gate.card}, which is on no board"

@@ -114,7 +114,7 @@ python -m hydms.surrogate.calibrate --target capacity
 ## Narrative
 
 - 2026-09-06: **This card's headline numbers were measured on CatBoost's defaults, not on the
-  deployed configuration, and are corrected in [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md)
+  deployed configuration, and are corrected in [../docs/PHASE-H-RUNBOOK.md](../../docs/PHASE-H-RUNBOOK.md)
   S4.** The calibration run that produced 0.6628 / +0.030990 / 0.7317 → 0.9155 ran at 14:35 on
   2026-09-05; `model-chosen.csv` was not written until 23:44, so `_params` took its documented
   "no deployed configuration on disk" branch and fitted with library defaults. The command *said*

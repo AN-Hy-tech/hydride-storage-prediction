@@ -190,6 +190,22 @@ python scripts/check_board.py --root . && python scripts/check_freeze.py --base 
 
 ## Narrative
 
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Coverage**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > **The word now names two unrelated numbers, and they are both reported by gates** (card #86,
+  > 2026-09-12). **Conformal coverage** is the entry above — a property of the *model*, measured
+  > against a nominal level, owned by AC-3 and card #27. **Test coverage** is the share of
+  > statements and branches under `hydms/` that the suite executes — a property of the *suite*,
+  > measured against the `fail_under` floor in `[tool.coverage.report]`, owned by HG-4 and card
+  > #86. They are both percentages, both called "coverage", both appear in `gate-results.json`,
+  > and neither says anything whatsoever about the other: a repository can hold 88 % test
+  > coverage over a model whose intervals cover 71 % of what they promise.
+  >
+  > **State of the term:** say *conformal coverage* or *test coverage* whenever both could be
+  > meant, which in a gate report is always. Bare "coverage" in prose about the model means the
+  > entry above; bare "coverage" in prose about CI means the floor. HG-4's own result string says
+  > "line-and-branch coverage of hydms/" for exactly this reason.
+
 - 2026-09-02: Created for Phase H (by @assistant)
 - 2026-09-02: Two prerequisites recorded while landing #5. The lint/type lane is conda-free
   (see #6's amendment the same day), and the coverage floor cannot be measured anywhere right

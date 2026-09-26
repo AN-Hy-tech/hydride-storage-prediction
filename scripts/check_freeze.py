@@ -123,7 +123,7 @@ def check(root: Path, entries: list[tuple[str, str, str]]) -> list[str]:
         name = path.rsplit("/", 1)[-1]
         if status == "D" and path.startswith("kanban/") and CARD.match(name):
             # Match on the id prefix, not the filename: a card may be renamed as it moves.
-            if list((root / "kanban-hardening").glob(f"{name[:3]}-*.md")):
+            if list((root / "kanban-hardening").rglob(f"{name[:3]}-*.md")):
                 continue  # the card moved boards; that is the migration
             problems.append(f"{path}: card deleted from the frozen board, not migrated")
             continue

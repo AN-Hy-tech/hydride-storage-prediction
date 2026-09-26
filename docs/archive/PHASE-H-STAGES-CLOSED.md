@@ -1050,3 +1050,547 @@ scaling, quantile assembly, conformal widening, the AD check — is hidden. An i
 
 ---
 
+---
+
+## S7 and S8, and runbook §5–§6, as they stood 2026-09-26
+
+Moved verbatim when the runbook was compacted: closed cards became one-line rows and the suite-count history left §5. Links re-pointed only.
+
+### S7 — Delivery: the interface · #81–#84 · 3.5 d
+
+**The deliverable.** Streamlit is an **HTTP client**, not an in-process caller, so the API stays the
+single prediction path and HG-3 covers the UI too.
+
+- [x] **#81** App chart vocabulary in `hydms/figures/`. **Done 2026-09-12.** Five charts, each
+      chosen because it makes a false prediction harder to believe:
+      1. **Prediction band** — the point estimate drawn *inside* its conformal interval, width stated
+         numerically. A wide band must look wide.
+      2. **Domain strip** — where this composition sits against the training distribution and the AD ceiling.
+      3. **Temperature sweep** — predicted wt% across the valid T range with the interval as a band.
+         ~~Only 39 test rows sit above 500 K~~ — that is `REPORT.md`'s count over the archival
+         **247-row test split**, which this protocol no longer has. Measured against
+         `reports/model/model-out-of-fold.csv`: **130 of 893** scored rows sit above 500 K. The
+         claim is unchanged (15.8% then, 14.6% now); only the number was inherited. The string
+         still stands in four docstrings and two tests — that is **#99**.
+      4. **Nearest neighbours** — the k closest training alloys by ElMD with their *measured* capacities.
+      5. **Parity plot** *(model card)* — predicted vs measured, with the **LOACO** version beside it
+         at the same scale. `parity()` refuses fewer than two readings, so the optimistic panel
+         cannot ship alone. The LOACO panel's rows are `reports/loco/loco-out-of-fold.csv`, 893 of
+         them, committed 2026-09-25 by **#98** (`done`). Caption it with its run date: the seeded
+         LOACO run is not reproducible run to run (**#104**).
+
+      **The shape it landed in.** A chart is a *description* before it is an image:
+      `hydms/figures/charts.py` builds `Figure` objects and imports no plotting library;
+      `render.py` draws one in matplotlib. Every promise above is a construction error in the
+      description — a predicted `Series` cannot exist without a band, a quantitative `Axis` cannot
+      exist without a unit, a `Panel` refuses a series its axis would clip (so a builder widens the
+      axis instead), and `Figure.shared` makes "at the same scale" checked rather than intended.
+      Put in the renderer, each would have been a guarantee that runs only where a plotting library
+      is installed. matplotlib is a new `figures` extra, already in both lock files, and **CI
+      installs it**.
+- [x] **#82** `app/main.py` — formula + temperature → capacity. **Done 2026-09-25.** The script ran
+      under `Project` through Streamlit's `AppTest` (`tests/delivery/test_app_script.py`, 40 passed
+      with `test_app.py`, 0 skipped); Streamlit 1.56.0 is installed and pinned. History below.
+      The guarantees are in `hydms/delivery/client.py` (HTTP, stdlib `urllib`) and
+      `hydms/delivery/page.py` (what the page shows), tested against uvicorn on a real socket.
+      `app/main.py` is a thin Streamlit layer and **has never run**: Streamlit is not in `Project`,
+      and an unpinned install would move `starlette` past what `fastapi` 0.115 accepts. That is a
+      lock decision for the maintainer. The two API additions **landed 2026-09-24 night**:
+      `GET /v1/neighbours` (the k nearest known alloys with every row measured on them — a
+      lookup, not a prediction) and `trained_ranges.temperature_support` on `GET /v1/model`
+      (training rows per 50 K bin). Both are read from the committed screen references, not the
+      artifact, so `v3` serves them unchanged; `openapi.json` and `docs/API.md` are regenerated.
+      **The one open box is the Streamlit pin**, then running the script.
+- [ ] **#83** `app/pages/` model card. **Must carry two things** or the UI recreates the problem it was
+      built to fix: the material-vs-system caveat from PRD §4.4 (comparing a material wt% to a DOE
+      system target is a two-step overstatement), and a link to `docs/REPORT-RECONCILIATION.md` so the
+      old published figures are not quietly inherited. **Unblocked 2026-09-26** by #105: read the
+      run record through `hydms.provenance.read`/`result`, never the CSV, and caption a panel
+      with `RunRecord.run_date_text`, which is *not recorded* for both committed runs.
+      **Built 2026-09-26, `doing` on two boxes.** `hydms/evidence/reader.py` returns `Score`s
+      and the service serves them (`GET /v1/evidence`, `/v1/evidence/parity`, the digest in
+      `/v1/health`). `loco --emit` writes `loco-intervals.csv`. The page is
+      `app/pages/1_Model_card.py` over `hydms/delivery/modelcard_page.py`. Both carry-overs are
+      on it: the material-vs-system caveat and the reconciliation link. Owed: the per-row width
+      table, and the one-run-or-spread question, which waits on #104's repeat.
+- [x] **#84** Batch CSV screening page. **Done 2026-09-26.** The batched call is in the library:
+      `hydms.delivery.predict.predict_many(requests, bundle=)` featurises, predicts and screens a
+      whole list once, and `predict_capacity` is its one-row case. A bad formula refuses only its
+      own row, because `FeaturisationError.rows` hands the offenders back as data, each with a
+      sentence written for that row. Row *i* of a batch equals the lone call to 1e-12, and the
+      test includes duplicates. Measured on `v3`, a served row costs **0.7–1.0 ms end to end,
+      against 41 ms alone**. `MAX_BATCH_ROWS` was re-set from that measurement, **256 → 4,096**,
+      and the response size (1.1 KB a row) is now the binding limit, not time. The page is
+      `app/pages/2_Batch_screening.py` over `hydms/delivery/batch.py`, standard library only.
+      Every uploaded row comes back, refused and unread rows say so in every number column,
+      the summary comes before the download, and the version is on every row. A formula cell
+      reading `NaN` is ambiguous (sodium nitride, or pandas' missing value), and the page asks
+      which before it asks the model.
+
+**Exit check:** `conda run -n Project streamlit run app/main.py` plus the manual acceptance in §5.
+
+---
+
+### S8 — Evidence and close · #89, #85, #86, #35, #36, #37 · 5 d
+
+- [x] **#89** `docs/REPORT-RECONCILIATION.md`. **Done 2026-09-24.** Generated by
+      `python -m hydms.evidence.reconciliation --emit`, **twelve** disagreements rather than eight.
+      The audit's eight were never enumerated, so the table is a re-measurement. Every quotation
+      is tested to occur in `REPORT.md` verbatim and every refuting value is read from its CSV.
+      The headline finding: two committed CSVs describe two different ensembles.
+      *Original entry follows:* the eight prose-vs-artifact contradictions, each with
+      the CSV that refutes it. **REPORT.md is not corrected in place**; it is the archival record.
+      **Unblocked since 2026-09-11** — `blocked_by` is now `[29, 30]`, the two cards that produced
+      the honest numbers it sets beside the published ones, and both are `done`. It is the one piece
+      of S8 that can be written today, and two later cards want it: #83's model card links to it and
+      #37 is written from it.
+- [x] **#85** ADR — the delivery seam and why the API owns no ML logic. **Landed 2026-09-12**
+      with #80, as `docs/adr/0006-the-delivery-seam.md`. It argues **both** directions: the API
+      owns no ML logic, *and* the library owns no I/O — and the second is the one a future reader
+      will push on, because #91's rejected alternative (the library owning its own prediction
+      record) is a real guarantee. The cost is stated plainly rather than hidden: **a script that
+      imports the library leaves no record.**
+      It carries the five decisions #76 and #78 owed it, each with the argument that forces it:
+      the assembly order (screen-before-featurise does not exist — the domain screen reads a
+      prediction); novelty in `delivery_screens()` (the cost was already paid by `pyproject.toml`
+      and the GPL); one cache or two; 422 shared between a refusal and an invalid request (two
+      authorities, neither bendable, so the split moved into the body); and the transport
+      declaring less than it can (one owner per rule, one level down).
+      **It is `0006`, not `0001`:** `0001`–`0005` are reserved for #36's five, whose done-when
+      names that glob. `docs/adr/README.md` records the reservation and #36's standing decision
+      that the card is not renamed.
+- [~] **#86 (HG-4)** Extend the CI fast lane with the delivery suite, the freeze check, and
+      ruff / mypy / coverage. **Gate written and CI wired 2026-09-12; one box open.** It found
+      that **CI has never completed the `suite` job on this branch** — every push run is
+      `cancelled` or `failure`, the newest annotated *"exceeded the maximum execution time of
+      20m0s"* — because the job ran the full 24 m 58 s suite against a 20-minute cap. It now
+      runs `-m "not slow"`, which is what `pyproject.toml` has said the marker means since #69.
+      It also found CI's `mypy` red on six `import-not-found` errors that **cannot reproduce on
+      the maintainer's machine**, because this interpreter has fastapi and pydantic and the
+      runner does not. Coverage is **88.43 %** against the 80 % floor. The open box is the
+      timeout itself, and it waits on **#93**: the first completed `suite` job
+      (`34696231293`, 13 m 40 s against a 20-minute cap) reported two failures that pass on the
+      maintainer's machine. ~~That is a claim about the surrogate's arithmetic on other
+      hardware, not about the lane.~~ **It was not about hardware** — see #93.
+
+- [~] **#93** The two CI-only failures. Filed by #86; **not an unfreeze condition**, but #86's
+      last box waits on it. **Diagnosed 2026-09-12, and the answer is the `pip install` line, not
+      the runner.** `suite` installs from `pyproject.toml`'s floors rather than
+      `requirements-lock.txt`, and `catboost>=1.2` resolved to **1.2.10** against the `Project`
+      environment's **1.2.8**. A venv on the resolved versions reproduces both failures **on the
+      maintainer's own Windows box**, to every digit the runner printed, so neither failure needs
+      a CI round trip to see. Both tests were asserting more than the code guarantees:
+      `test_calibration_moves_coverage_toward_nominal` compared a constant — calibrated coverage
+      on the calibration rows is the conformal rank over n, `46/56`, identical on every
+      configuration — against the *raw* coverage, which is the fitted half and moved 49/56 →
+      44/56; and `test_the_width_is_the_calibrated_span_and_varies_row_to_row` demanded positive
+      widths from three extrapolation candidates when `quantile_metrics` measures quantile
+      crossing at **23 % of rows** and `conformal.py` states that CQR cannot repair one. Restated
+      as what is guaranteed; **no tolerance was widened and AC-3 inherits nothing**. The lane's
+      environment obligation lands on **#7**, and what the delivery layer should *say* about a
+      crossed band lands on **#94**.
+
+- [ ] **#94** A crossed band raises where it should refuse. Filed by #93; **not an unfreeze
+      condition**. `hydms.delivery.contract.Interval` raises `ContractError` on `upper < lower`
+      and nothing between the surrogate and that boundary looks at the sign, so a crossed
+      candidate is a loud failure rather than a refusal carrying a reason code.
+- [ ] **#100** A render test passes alone and fails after the slow tests. **Still `doing` on
+      its traceback box, by the maintainer's ruling of 2026-09-25: it stays open until a session
+      fixes the failure.** The failure was seen once, in a local
+      full run, and never again. Six full-length runs since are green (the sixth, 2026-09-25: 1650 passed, 1 h 15 m, quiet
+      machine), and CI never ran it red:
+      run `34716528657` was #97's tie. So no traceback exists and none can be manufactured. What
+      was done instead: `hydms/figures/render.py` no longer chooses a backend or imports `pyplot`
+      (a subprocess test holds it that way), and the evidence can no longer be lost. **Every
+      pytest session that ends red now writes `reports/test-failures/<start>-pid<N>.txt`**
+      (gitignored). It holds each failure's traceback and captured output, the other Python
+      processes alive at the run's start and end, and the source files modified while it ran.
+      `FailureRecorder` in `tests/conftest.py`, six tests in `tests/test_failure_record.py`. A
+      next session runs the full suite; a record naming `test_every_figure_renders_in_both_themes`
+      is the traceback the fix starts from. Filed by #81,
+      2026-09-12; **not an unfreeze condition**.
+- [x] **#98** The LOACO run discards its own per-row predictions. Filed by #81, 2026-09-12;
+      **not an unfreeze condition**. `hydms/surrogate/train.py:369` writes
+      `evaluation.out_of_fold` as a table and `hydms/surrogate/loco.py:595` writes four tables
+      without it, so the honest protocol leaves aggregates and the optimistic one leaves 893
+      scored rows. The code change is small; the run is the maintainer's. It holds #83's parity
+      figure shut. **2026-09-25: `doing`, code landed.** `loco` writes `loco-out-of-fold.csv` as
+      a fifth table (outside the four `--emit` reads, so `loco.md` is unchanged) and exits 1
+      without it rather than write a partial record. What remains is the run: the command is on
+      the card and in `docs/RUNNING-THE-FIT.md` Step 10; the last one took 4 h 07 m. **The four review fixes the maintainer put before the run
+      landed 2026-09-25** (stale file deleted on withholding, exit 1 read as four `wrote` lines
+      and no traceback, a probe's rows refused via `loco-run.csv`, rows counted per class fold).
+      **Done 2026-09-25:** the full run took 288.4 min (budget five hours, not four), wrote 893
+      scored rows, and AC-6 passes at macro 0.2559 against 0.7459. **The seeded tables moved**
+      (Mg −0.3381 → −0.5084, MEA, SS; macro 0.2734 → 0.2559; seven families identical), and
+      that is **#104**. The domain reference, `docs/REFUSALS.md`, `docs/REPORT-RECONCILIATION.md`
+      and `docs/API.md` were regenerated from it; no refusal verdict moved.
+- [ ] **#104** The seeded LOACO run is not reproducible run to run. Filed by #98, 2026-09-25;
+      **not an unfreeze condition**. Mg's search chose a different configuration; MEA and SS
+      chose the same one and still scored differently, so both the tuning and the
+      fixed-parameter scoring fit vary. AC-1 covers only the deployed fit. **Localised and fixed
+      2026-09-26.** Screening off, the pair was identical, and so was a third probe from
+      2026-09-25. (These took ~110 min each against that one's 12.3 min: the machine was busy.) Screening on, SS and Mg's objective moved. The cause is `label_issues`'
+      `RandomForestRegressor(n_jobs=-1)`: its `predict` sums trees in thread-finishing order, and
+      CleanLab's residual ranking turns that last-digit drift into a different drop set. It now
+      runs on `n_jobs=1` and refuses a parallel estimator, with three tests. AC-1 still reproduces
+      `v3`'s sealed metrics exactly. Owed: a `train --trials 1` pair and the full LOACO rerun.
+- [x] **#105** One run record beside every run's tables. Filed 2026-09-26 from the architecture
+      review (ADR 0007); **not an unfreeze condition**. **Done 2026-09-26.** `hydms/provenance.py`
+      (standard library only) stamps a run **before** the fit (`started_at` with its UTC offset,
+      the commit, `code_modified` at start, interpreter, `cpu_count`, CatBoost's thread count,
+      `OMP`/`MKL` variables, eight `pkg_*` versions, a `run_id`) and writes one CSV row. `result()`
+      is the one answer to "is this a result?": it refuses an absent record, an unreadable one, a
+      probe, and a `probe` cell it cannot parse. `train`, `loco`, `evaluate` and `calibrate` write
+      records. AC-6, `evaluate`, `loco --emit`, `domain.transfer_table` and the figures test read
+      through it, and `tests/test_provenance.py` fails any serving, screening, figure or gate
+      module that parses a record itself. **`domain --emit` now refuses a probe's transfer table**
+      (exit 2, reference untouched); before, it would have served one. The committed
+      `model-run.csv` and `loco-run.csv` were not rewritten: they read *not recorded* until the
+      next real run replaces them. **So the next full LOACO run (#104's) is the first that carries
+      a run date.**
+- [x] **#106** Selection evidence is dated by a file's mtime. Split from #105's last box,
+      2026-09-26; **not an unfreeze condition**. **Done 2026-09-26.** `select` stamps before the
+      matrix and writes `selection<variant>-run.csv`. Only the default five-fold run writes
+      `selection-run.csv`, and `--once`, `--all-features` and `--no-screening` are probes.
+      `--emit-comparison` dates from that record, then from a published `provenance.csv`,
+      otherwise *not recorded*. `_written_on` (the mtime) is gone. The committed
+      `reports/feature_selection/` is untouched, and its byte test passes.
+- [ ] **#99** A REPORT.md number is quoted as current in four docstrings. Filed by #81,
+      2026-09-12; **not an unfreeze condition**. *"Only 39 test rows sit above 500 K"* is
+      `REPORT.md:394`'s count over the archival test split; the measured figure is 130 of 893.
+      The claim is unaffected and the number is not; `REPORT.md` itself is not touched, which is
+      #89's business.
+- [ ] **#96** An output flag that silently changes the fit. Moved off #34 at its close, 2026-09-12;
+      **not an unfreeze condition**. `calibrate --report` is both where a run writes its tables and
+      where `deploy.py:163` reads `model-chosen.csv`, so redirecting it to a scratch directory falls
+      back to CatBoost's own defaults and `--save` persists that as `deployed fit`. It produced a
+      correction of +0.030990 instead of +0.037355 on 2026-09-07 and was discarded.
+- [x] **#35** `CONTEXT.md` glossary. **Closed 2026-09-06** by the review session — the terms are
+      in it because conflating them has already cost this project something.
+- [x] **#37 done 2026-09-24** as [chapter1-revision.md](../chapter1-revision.md), accepted by the
+      author. The artifact score (R² 0.7071) and the test
+      coverage (0.7795) were committed by **#103** in `reports/model/artifact-score.csv`,
+      generated from the sealed gate record (`python -m hydms.evidence.artifact_score --probe
+      --emit` after any promotion). **#36 is still `backlog`.**
+- [ ] **#36** five ADRs · **#37** Chapter 1 revision. ~~#37 is unblocked on everything but #34.~~
+      ~~**#37 waits on #34 *and* #89**~~ (edge added 2026-09-11). **#34 closed 2026-09-12, so #37
+      waits on #89 alone, and #36 is unblocked outright.** The #89 edge stands and is the load-
+      bearing one: #89's card says the reconciliation is "what card #37 is written from", and
+      writing the chapter first would mean re-deriving those eight disagreements by hand, in prose
+      nothing checks.
+- [ ] Lift the freeze: set `freeze: lifted` in [FREEZE.md](../FREEZE.md), record the closing date, and the
+      PA/PB board resumes. **All four conditions hold since 2026-09-24 (#37 `done`), and the
+      maintainer is holding the freeze until S7 is finished.** See FREEZE.md §Unfreeze condition.
+
+---
+
+## 5. Verification
+
+```bash
+# Board and freeze integrity (stdlib only, no environment needed)
+python scripts/check_board.py --root .
+python scripts/check_freeze.py --base origin/main
+
+# NOT one of the cheap checks: this rebuilds a throwaway conda env from both lock files,
+# roughly 8 GB and 15-20 minutes. Run it by hand after touching an environment file, never
+# in a routine pass. As of 2026-09-03 it fails at stage 1 on this machine with an HTTP 403
+# from repo.anaconda.com/pkgs/main; re-probed 2026-09-12 and the 403 is permanent, not an
+# outage. `python` and `numpy` themselves come from the blocked `defaults` channel (95 of 248
+# conda packages do), so this command cannot pass here until the lock is re-solved. The three
+# remedies and their costs are the open box on card #1 -- do not start a re-solve unasked.
+python scripts/verify_environment.py
+
+# Suite. TWO numbers live here and they are different commands; do not compare them. The FULL run
+# below was last measured at **1650 passed, 0 failed on 2026-09-25 (1 h 15 min 4 s)** at f427089,
+# the #100 check run (1531 in 26 min 45 s on 2026-09-13 before it) — the previous entry here was 1229 in 24 min 58 s on 2026-09-07, which the
+# cards since have grown past. The FAST LANE (`-m "not slow"`, which
+# deselects the four `@pytest.mark.slow` tests) reported **1440 passed / 4 deselected of 1444
+# collected on 2026-09-12 (12 min 3 s)** — up from 1371/1375 the same day by #78's service and
+# #79's gate, and from 1308/1312 after #90 on 2026-09-07. That is the figure the recent handoffs
+# quote. **Latest: 1583 passed / 4 deselected WITH `--cov` (89.42 %) on 2026-09-24, 53 min 7 s on a
+# quiet machine** (only that pytest process running), after #82's app tests and #89's evidence
+# tests. **Fast lane on 2026-09-26: 1765 passed, 2 failed, 8 errors, 4 deselected in 52 min 54 s**
+# (#83 session, machine shared with the session's own work). All ten were the smoke module
+# meeting #104's new refusal. After `smoke.py`'s fix the module passes 19/19; the lane was not
+# rerun whole. A handoff that
+# states one of these must say which.
+#
+# AND IT MUST SAY WHETHER THE MACHINE WAS QUIET, which card #100 learned the expensive way on
+# 2026-09-13: two sessions spent this 29-minute command concurrently, ~18 minutes of it
+# simultaneously, and one of them landed a source edit WHILE the other's run was still going. pytest
+# imports test modules at collection but a production module whenever the code first reaches it, so
+# that run tested the old test body against the new renderer — a combination nobody wrote, and a
+# green that meant nothing. Before a run you intend to quote:
+#     Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Select ProcessId, CreationDate, CommandLine
+# and print Get-Date either side of the command, so an mtime inside that window tells you the run is
+# not a measurement. Contention costs only a minute or two of wall time here (26 m 45 s quiet against
+# 28 m 24 s contended), so the number that misleads you is the PASS, not the duration.
+# A RED RUN WRITES ITS OWN RECORD (card #100, 2026-09-25): reports/test-failures/<start>-pid<N>.txt,
+# named in the terminal summary. It holds every traceback and captured output, and the two answers
+# the paragraph above asks for: the other python.exe processes alive at the start and end, and the
+# files modified mid-run. Read it before re-running anything. A green run writes nothing there.
+# Anything red is a real failure. Do NOT pass -q: pyproject already sets
+# it, and a second one hides the `N passed` line every handoff quotes. THERE IS NO SKIP, and that
+# is new: test_the_committed_document_is_what_the_code_produces was waiting on the 4.7-hour LOCO
+# run, which happened on 2026-09-06, so it now asserts the committed reports/loco/loco.md against
+# what `loco --emit` builds. A skip reappearing there means the tables have gone missing, not that
+# a test is quarantined.
+#
+# THE FULL RUN IS NOT WHAT CI RUNS, as of card #86 (2026-09-12). CI's `suite` job runs
+# `-m "not slow"` because the full run does not fit its 20-minute cap and never did — every
+# push run on this branch was `cancelled` or `failure`, the newest annotated "exceeded the
+# maximum execution time of 20m0s". So the FULL run below is the maintainer's command and the
+# only place the four slow tests are executed at all until card #7's slow lane exists.
+# Measured 2026-09-12 WITH `--cov`: 1443 passed in 37 m 52 s, TOTAL coverage 88.43 % against
+# the 80 % floor in [tool.coverage.report]. `--cov` needs pytest-cov, which card #86 installed
+# into `Project` (pytest-cov 7.1.0 + coverage 7.16.0, no existing pin moved).
+conda run -n Project python -m pytest
+conda run -n Project python -m pytest -m "not slow" --cov   # what CI actually runs
+conda run -n Project python -m pytest tests/leaks               # HG-1
+# Lint and types run OUTSIDE the environment, deliberately: neither imports the project's
+# dependencies, and card #68 fixed that the fast lane installs nothing (docs/QA-PROTOCOL.md §6).
+#
+# A GREEN `mypy` HERE IS NOT EVIDENCE ABOUT CI, and card #86 found that out the expensive way
+# on 2026-09-12: the hygiene job was failing on six `import-not-found` errors for fastapi,
+# uvicorn and pydantic that cannot occur on this machine, because this interpreter happens to
+# have them installed and a bare runner does not. The overrides in pyproject now cover them.
+# When you add an import under `hydms/` that is not in `[[tool.mypy.overrides]]`, ask the lane
+# the way the lane asks it — a bare interpreter, nothing installed but mypy:
+#     python -m venv /tmp/barelint && /tmp/barelint/bin/python -m pip install mypy==1.13.0
+#     /tmp/barelint/bin/python -m mypy
+# Keep the version equal to the workflow's; `tests/test_tooling.py` asserts the `dev` extra and
+# the workflow name the same ruff and the same mypy, so a bump is one commit touching both.
+ruff check hydms/ tests/ scripts/ && mypy
+# `run` with no selection exits 2 -- a selection is a decision, so name one.
+conda run -n Project python -m hydms.gates run --all           # 8 passed, 0 failed, 4 skipped (3.0 min)
+
+# Pipeline: one command, no absolute paths (AC-1); same seed twice -> identical output.
+# This is the SMOKE run (card #73), not a retrain: every stage over a committed 235-row fixture
+# in about 12 s, answering "does the chain connect" and nothing about accuracy. `--digest` prints
+# only what a second run with the same seed must reproduce. The real run is `hydms.surrogate.train`
+# and `hydms.surrogate.calibrate` (docs/RUNNING-THE-FIT.md), which is hours.
+conda run -n Project python -m hydms.pipeline.smoke
+conda run -n Project python -m hydms.pipeline.smoke --digest
+
+# The published contract, and the cheapest check in this block: it builds the OpenAPI document
+# from the code and compares it to the committed `hydms/delivery/api/openapi.json`, exiting 1 and
+# printing the pointers that moved when they differ. `--emit` rewrites the file; commit the diff
+# deliberately, because it is what a client author reads. Gate HG-3 runs the same comparison, and
+# this is the half of it that needs no artifact and no environment beyond the `api` extra.
+conda run -n Project python -m hydms.delivery.api.openapi
+
+# API. It resolves the PROMOTED version at startup and refuses to start if there is none. Until
+# 2026-09-12 this command exited with `load_bundle`'s own sentence -- "nothing is promoted in
+# artifacts" -- and that was card #34 working, not a fault. **#34 closed that evening: `current`
+# points at `v3`, so the service now starts.** It still refuses on a fresh clone, because
+# `artifacts/` is gitignored and the promoted version is on one machine. The two checks below
+# were run against the real `v2` through the gate door on 2026-09-12 and produced exactly what
+# they say they will. `python -m hydms.delivery.api` is the same thing with the uvicorn line
+# remembered for you.
+conda run -n Project uvicorn hydms.delivery.api:app --port 8000
+curl -s localhost:8000/v1/model
+curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
+     -d '{"formula":"LaNi5","temperature_k":298}'
+# expect: estimate + interval + level + domain verdict + elmd + model_version
+curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
+     -d '{"formula":"Xx9Zz3","temperature_k":298}'
+# expect: a structured refusal with a reason, HTTP 422 — never a number.
+# Measured against `v2` on 2026-09-12: code `indeterminate`, and the sentence is the
+# featuriser's own — "'Xx9Zz3' names 'Xx', which is not a chemical element".
+curl -s -X POST localhost:8000/v1/predict -H 'content-type: application/json' \
+     -d '{"formula":"","temperature_k":298}'
+# expect: ALSO 422, and a different body — `error: invalid_request`, no `refused` key. The
+# status cannot separate a declined material from an unreadable request; the body is what does.
+curl -s localhost:8000/v1/health   # {"status":"ok","model_version":"v3","max_batch_rows":4096,...}
+
+
+conda run -n Project streamlit run app/main.py
+```
+
+> **`pytest --cov` does not run here yet.** Neither `pytest-cov` nor `coverage` is installed in
+> `Project`, so the coverage floor in `pyproject.toml` is unenforceable anywhere today — the command
+> exits with `unrecognized arguments: --cov`. Both are declared in the `dev` extra and nothing
+> installed them. Where they get installed is card **#86**'s decision, because adding a package to
+> `Project` invalidates `environment.lock.yml`.
+
+**Manual acceptance for the interface**
+
+- A known training alloy returns the model's prediction for that row (AC-4 at the UI boundary).
+- `Mg12Ce1` and `Ce1Mg12` return the **same** answer — L8 fixed, visibly. They already share one
+  canonical key (`Ce0.07692Mg0.9231`, #87), and since #74 the *prediction path* is asserted on all
+  six known collision pairs as well (`tests/test_metamorphic.py`), so what is left here is the UI
+  boundary rather than the library.
+- A plausible-but-far composition visibly widens the interval and flags the domain.
+- Nonsense is refused with a reason, not answered.
+
+---
+
+## 6. Assumptions, risks, and what is deliberately out
+
+- **Ids were preserved when cards migrated boards.** Renumbering from 1 would break every `blocked_by`
+  edge, every `Traces to` link, and the `## Narrative` notes the ADRs and #37 are written from — and
+  `check_board.py` enforces exactly that integrity. The two directories are a **freeze boundary, not
+  an id-space boundary**; blockers reach across them and are checked as one graph.
+- **#44, #48, #49 were pulled out of the frozen PA phase.** Without them the interface has no refusal path.
+- ~~**#18 is the live technical risk (R3).**~~ **Closed 2026-09-04, and it never was one.** #16
+  settled R3 from the source data before #18 started — a composite is a table column, so the form
+  is statistic-of-composite by construction — and #18's measurement of the rejected order (1.8% to
+  65x off CBFV) only confirms it. What #18 found instead is that eleven of the table's 156
+  composite columns are not their own arithmetic. #21 is still gated by #20, not by this.
+- **Expect the headline numbers to fall, substantially.** Risk R4 anticipates it; given L2 and the
+  contradicting CSVs, the fall will be large. Per the PRD that is *a reported result, not a failure*.
+- **Scope:** ~31 board-days of existing cards + 4 migrated + ~15 new ≈ **50 developer-days** for one
+  developer. That is a rebuild, not a patch, and it sits in tension with the word *emergency*. It is
+  the honest cost of the chosen scope.
+- **Out of scope:** `ML-HYDPARK_v0.0.5.csv`'s ΔH/ΔS columns and `database/combined_dataset.csv` stay
+  unused — they belong to the frozen thermodynamics work (#38–#43). `Machine_Model/**`, `REPORT.md`
+  and the inverse-design PRD are read, never rewritten.
+
+**Three gaps this phase will close only if somebody decides to** (added 2026-09-06, from a review;
+each is boxed on a card, and none is a defect in what was built):
+
+- **`artifacts/` is gitignored, so nothing this phase ships has ever been seen by CI.** The model,
+  its manifest and `current.json` exist on one machine. This is not only a reproducibility risk
+  (card #7 owns that half) — it is also why two checks had to move after being written: the
+  waiver-scope rule left `check_board.py` because a rule about a *committed* `current.json` could
+  never fire, and `reports/loco/` had to be un-ignored so AC-6 would not read an empty directory in
+  CI. **Check whether a file reaches CI before writing a check that reads it** is now a two-instance
+  pattern, and it is the stated reason HG-1's mechanical subject check is deferred on #71.
+- **A gate can be green over a sentinel whose subject moved.** Measured: five hours twenty-one
+  minutes in which L11 guarded `model.final_fit` while the shipped object was
+  `deploy.deployed_fit`, with HG-1 reporting 13/13 throughout. `docs/QA-PROTOCOL.md` §5 now carries
+  the rule; the mechanical check is deferred with its reason, because every available proxy is
+  weaker than the structural fix that landed (one module both callers call).
+- **Two measured results are published nowhere.** *(The first was published by #103 on 2026-09-24,
+  in `reports/model/artifact-score.csv`.)* The deployed model's own held-out score, computed
+  by AC-1 as a side effect, and the near-ambient temperature bin's near-zero R² in
+  `evaluation-subgroups.csv`. Both are boxed on #83. The pattern is worth naming because this phase
+  exists because of it: **a number that only a gate message or an uncommitted file has ever held is
+  not published**, and the distance between "measured" and "published" is where REPORT.md went
+  wrong in the first place.
+
+---
+
+## FREEZE.md below its deny-list, as it stood 2026-09-26
+
+Moved verbatim when FREEZE.md was compacted. The four unfreeze conditions were not changed; only the evidence and history beside them moved. Links re-pointed only.
+
+### Everything else is allowed
+
+**The table above is the whole of the freeze.** `scripts/check_freeze.py` enforces a *deny*-list
+— those five paths — and passes every other path in the repository. This section used to read as
+an allow-list (`hydms/** · tests/** · app/** · kanban-hardening/** · scripts/** · .github/** ·
+pyproject.toml · CLAUDE.md · README.md · docs/** except the PRD`), which a reader reasonably took
+as exhaustive. It was not, and the gap was load-bearing: `environment.lock.yml`,
+`environment.yml`, `requirements-lock.txt`, `CONTEXT.md` and `.graphifyignore` are all editable
+and none of them was named, so a session reading only this file would have deferred card #1's
+lock re-solve forever while a session reading only the script would have concluded this document
+meant nothing.
+
+**The deny-list is authoritative, and deliberately so** (decided 2026-09-12, card #72). A freeze
+expressed as an allow-list has to be edited every time hardening work reaches a file nobody
+listed in advance — which turns the one document that exists to *resist* widening into the most
+frequently widened one, and makes each ordinary change an occasion to renegotiate the boundary.
+Naming only what is protected inverts that: the five denied paths are the frozen programme and
+its archival record, they are the freeze's entire purpose, and they do not grow as the phase
+proceeds.
+
+So: **do not add to `DENIED` to express a preference.** It is short on purpose. If a path needs
+protecting it needs a reason of the same kind as the five — that it belongs to the frozen
+programme or to the published record — not that changing it seems unwise.
+
+### Three cards were pulled out of the freeze
+
+**#44** (screen interface), **#48** (applicability-domain ceiling) and **#49** (ElMD novelty) were
+tagged `pa` but are not inverse-design work: they are what lets the interface **refuse** to answer
+instead of guessing. A predictor with no domain check is precisely the false-prediction machine this
+phase exists to remove. They live in `kanban-hardening/`.
+
+---
+
+## Unfreeze condition
+
+Fixed now, before results are seen, so it cannot be softened later. All four must hold:
+
+- [x] **Every gate green.** HG-1 … HG-4 and the inherited AC-1, AC-2, AC-3, AC-4, AC-6.
+      (AC-5 is thermodynamic and AC-7/AC-8 are inverse-design; they stay frozen.)
+      **Met 2026-09-12: 9 passed, 0 failed, 3 skipped, 0 errored** — the three skips are exactly
+      AC-5, AC-7 and AC-8, the three this bullet excludes in its own parenthesis, and they were
+      named as waivers at the prompt rather than counted as passes. The four that must never be
+      waived (AC-6, HG-2, HG-3, HG-4) came green with #30, #77, #79 and #86. Re-check with
+      `python -m hydms.surrogate.promote --dry-run --waive AC-5 --waive AC-7 --waive AC-8`; it
+      is ~3 minutes and fits nothing.
+- [x] **An artifact version promoted** — card #34, **done 2026-09-12T17:37:26Z**. A trained
+      model, scaler, feature contract and conformal calibration on disk, reachable by manifest
+      pointer. *Written as `artifacts/v1` when this condition was fixed; the version to promote
+      became **`v2`**, re-saved 2026-09-07 from a clean tree because v1's manifest records
+      `code_modified: true` and a manifest is sealed when written. The requirement is unchanged —
+      a promoted version — and is named by role here rather than by number so a re-save cannot
+      look like a softening.* **What `current` points at is `v3`, and the role is still what is
+      met:** a manifest is sealed when written, so the gate report could not be added to `v2`;
+      `promote` wrote `v3` carrying the report and moved the pointer, leaving `v2` on disk as the
+      record of the fit. `current.json` records the three waivers beside the pointer, which is
+      where the decision to proceed lives — the embedded report still says `SKIPPED`.
+      **Caveat that belongs here rather than only on the card: `artifacts/` is gitignored.** The
+      promoted version exists on the maintainer's machine and nowhere else, so a fresh clone has
+      no model and `predict()` refuses there. That is card #7's to fix and it does not reopen this
+      bullet, which asks for a promoted version and not for a portable one.
+- [x] **`docs/API.md` published** — card #80, **done 2026-09-12**. Every endpoint with a real
+      request and a real response, what the interval is and is not, all nine reason codes with
+      what a caller should do about each, the trained ranges, and the material-versus-system
+      caveat. *It is **generated**, not written:* `python -m hydms.delivery.apidoc --emit`, with
+      a test asserting the committed bytes are what the code produces. The examples are real
+      exchanges captured against **`v3`** and carry that version on the page, because
+      `--probe` needs an artifact and `--emit` must not — the same gitignored-path trap this
+      file's own caveat above describes. Card #85's ADR landed with it at
+      `docs/adr/0006-the-delivery-seam.md`, which #80's last box required.
+- [x] **The Chapter 1 revision written** — card #37: what exists, what was wrong, what it is now.
+      **Met 2026-09-24:** [chapter1-revision.md](../chapter1-revision.md), accepted by the author.
+      Its last box was closed by #103, which committed the artifact score.
+
+When all four hold: set `freeze: lifted` in this file's frontmatter, record the closing date below,
+and the PA/PB board resumes.
+
+**Three of four hold as of 2026-09-12.** The one that remains is the Chapter 1 revision, **#37**.
+It waited on **#89**, and #89 closed on 2026-09-24:
+[REPORT-RECONCILIATION.md](../REPORT-RECONCILIATION.md) exists, so **#37 is unblocked**. Nothing left
+in this condition needs a fit, a decision, or a run of the pipeline.
+
+**#37 was drafted on 2026-09-24** ([chapter1-revision.md](../chapter1-revision.md)), and the bullet
+above stays unticked. The card has one box open: three of the draft's numbers (the artifact score
+and the test coverage) trace only to the gitignored `artifacts/`, and the card requires every claim
+to trace to a report file. The fix needs no fit. It changes neither this condition nor its wording.
+
+> **This list is not a plan, and it is not the measure of Phase H.** It says when the *frozen*
+> programme may resume — nothing more. The phase's own objective is stated in §Why above: **a
+> user-facing interface that predicts gravimetric capacity.** That is stage **S7** (#81–#84), it is
+> not any of the four bullets, and the execution order in
+> [PHASE-H-RUNBOOK.md](../PHASE-H-RUNBOOK.md) §2 puts it before S8 in a chain — *"S2 and S3 are the
+> only parallelism worth taking. Everything else is a chain."*
+>
+> So "#89 and #37 are all that is left" is true **of this condition** and false of the phase.
+> Reading a short unfreeze list as a to-do list is how the interface this freeze was declared to
+> protect gets treated as optional. Ask the runbook what comes next; ask this file only whether the
+> other board may reopen.
+
+**All four hold as of 2026-09-24, and the freeze is held anyway, by the maintainer's decision.**
+Meeting the condition *permits* lifting; it does not require it. The maintainer chose to keep
+`freeze: in-force` until the interface (S7: #82, #83, #84) is finished and the open findings on
+the hardening board have been triaged. The reason is the paragraph above: the interface is the
+phase's objective, and reopening the inverse-design board now would split the effort. This is
+not a new condition. The list above is unchanged and nothing is added to it. When the
+maintainer decides to lift, the mechanical act is what the list says.
+
+**Closed:** _(not yet — held by decision, 2026-09-24)_
+
+---
+
+## For the next session
+
+If you are picking this up cold: the freeze is enforced, not remembered. `scripts/check_freeze.py`
+runs on every pull request and `scripts/check_board.py` fails if a card under `kanban/` leaves
+`backlog`. You do not need to hold this in your head — but you do need to know the freeze exists
+before you wonder why your change was rejected.
+
+The active board is [../kanban-hardening/](../../kanban-hardening/). Start there.

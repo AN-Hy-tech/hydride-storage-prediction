@@ -1,7 +1,7 @@
 ---
 id: 92
 status: backlog
-priority: Normal
+priority: P4
 blocked_by: []
 assignee: "@amirhossein"
 tags: [ph, l0]
@@ -68,3 +68,14 @@ python scripts/check_board.py --root .
 [../docs/PHASE-H-RUNBOOK.md](../docs/PHASE-H-RUNBOOK.md) §2 — the execution order it encodes.
 Card #68, which seeded exactly this kind of check and deliberately checked only what it could
 honestly check at the time.
+
+## Narrative
+
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **User story**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term, not part of the definition:* on 2026-09-11 **thirty-nine of sixty-four cards
+  > stated the wrong stage** — thirty-six still carrying the frozen board's `Phase` heading after
+  > #72's `git mv`, two claiming an `S1` the runbook contradicts, one an `S6` the README does. Nothing
+  > reads that line: not `check_board.py`, not a test, not an `--emit`. All are corrected and **#92**
+  > is the card for making the map load-bearing. Until it lands, this pair is checked by a reader or
+  > not at all.

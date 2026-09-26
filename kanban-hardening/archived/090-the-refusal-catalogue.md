@@ -80,6 +80,20 @@ conda run -n Project python -m pytest tests/delivery/test_refusals.py -q
 
 ## Narrative
 
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Reachable**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term, not part of the definition* (cards #80, #90, 2026-09-12): all three readings
+  > are live in this repository right now, in documents a reader will put side by side.
+  > `docs/REFUSALS.md` splits by **door** — the *request* door (`predict_capacity`, a typed formula
+  > and temperature) against the *frame* door (`apply_screens` over a curated frame, which can also
+  > **state** a prediction, a band width and an alloy-class label). HG-2 and HG-3 report their own
+  > **probe set**, and currently record `above-physical-ceiling` and `out-of-domain` as *unreached on
+  > this fit* — the honest statement for eleven probes. `docs/API.md` reports a **50 x 10 sweep**
+  > through the request door and marks both reachable, which is a lower bound on what a caller can
+  > meet. Only `untrusted-family` is unreachable in the strong sense at the request door, and that is
+  > structural: the API declares exactly two fields, so there is no way to supply the label the rule
+  > judges.
+
 - 2026-09-07: Created from a `/grill-with-docs` session that began as "add a logging system to catch
   bugs during the model's working cycle". Four things the grilling settled, recorded so the card is
   not re-argued from its title.

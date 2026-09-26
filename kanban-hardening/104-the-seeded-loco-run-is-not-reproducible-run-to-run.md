@@ -1,7 +1,7 @@
 ---
 id: 104
 status: doing
-priority: Normal
+priority: P1
 blocked_by: []
 assignee: "@amirhossein"
 tags: [ph, l3, AC-1, AC-6]
@@ -141,6 +141,17 @@ git diff --no-index <scratch>/a/loco-per-class.csv <scratch>/b/loco-per-class.cs
 scope), card #98 (the run that found it)
 
 ## Narrative
+
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Transfer score**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > **State of the term (2026-09-26):** quote it **with its run date** where the run record has one.
+  > Neither run so far does, so each is named by its commit: two seeded runs gave macro 0.2734
+  > (committed 2026-09-06) and 0.2559 (committed 2026-09-25; the one on disk), with Mg moving
+  > −0.338 → −0.508.
+  > #104 found the step that varied on 2026-09-26: the label screen's forest summed its trees in
+  > thread-finishing order. It now runs on one thread. Both committed runs predate that fix, so each
+  > is one draw from a spread nobody has sized. The next full run is the first expected to repeat.
+  > When #104 closes, rewrite this block.
 
 - 2026-09-26 (later): The refusal found a second site. `hydms/pipeline/smoke.py` built its own
   `RandomForestRegressor(n_jobs=-1)` for the screen and failed ten smoke tests on the new

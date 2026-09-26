@@ -59,6 +59,26 @@ conda run -n Project python -m hydms.gates run HG-3
 
 ## Narrative
 
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Refusal vs Invalid request**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term, not part of the definition:* **gate HG-3 measures the distinction at the
+  > transport** (card #79, `done` 2026-09-12). Eight malformed bodies are sent over HTTP and each must
+  > come back 422 carrying `error`, carrying no `refused`, and be **refused** by
+  > `hydms.delivery.contract.answer_from()`; every refusal must come back carrying `refused`, carrying
+  > no `error`, and rebuild through the same function into an object equal to the library's. So the
+  > one-key split is executable rather than a convention — and the failure it exists to catch, a
+  > client reading a rejected request as an answer, is the one that would otherwise be silent.
+  >
+  > **The client keeps it too** (card #82, 2026-09-24). `hydms.delivery.client` returns an
+  > `InvalidRequest` (not a `Refusal`) for a 422 carrying `error`, and the prediction page words it
+  > as "No material was judged". Both are tested over a real socket in `tests/delivery/test_app.py`.
+  >
+  > **A lookup has only the second kind** (card #82, 2026-09-24 night). `GET /v1/neighbours` judges
+  > no material, so it has no refusal: a blank formula, an unreadable one or a `k` out of range is a
+  > 422 carrying `error`, and an unreadable formula carries the novelty screen's own sentence — the
+  > one `POST /v1/predict` *refuses* the same string with. Same words, different kind, because one
+  > route judged a material and the other did not.
+
 - 2026-09-02: Created for Phase H (by @assistant)
 
 - 2026-09-12: **Landed.** `hydms/gates/hg3_transport_parity.py` replaces the `Pending`, over a new

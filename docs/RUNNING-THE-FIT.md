@@ -683,6 +683,6 @@ fit takes any part in. So a mistake in the deployed fit is cheap to correct, whi
 you want of the artifact that ships.
 
 Related: [PHASE-H-RUNBOOK.md](PHASE-H-RUNBOOK.md) for why each of these guards exists,
-[../kanban-hardening/029-evaluation-metrics-with-bootstrap-confidence-intervals.md](../kanban-hardening/029-evaluation-metrics-with-bootstrap-confidence-intervals.md)
+[../kanban-hardening/archived/029-evaluation-metrics-with-bootstrap-confidence-intervals.md](../kanban-hardening/archived/029-evaluation-metrics-with-bootstrap-confidence-intervals.md)
 for the decisions behind the numbers, and [ENVIRONMENT.md](ENVIRONMENT.md) when the environment
 misbehaves.

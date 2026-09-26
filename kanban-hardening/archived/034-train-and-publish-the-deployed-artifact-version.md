@@ -84,7 +84,7 @@ that reason.
       committed explainability tables describing a model nobody ships — the same class of mismatch
       as leak L11. And the fit is seeded (`random_seed`, the stopping slice, the Optuna sampler)
       but **`model.FIXED` pins no `thread_count`**, while #7's slow lane runs on `windows-latest`.
-      See the 2026-09-06 handoff in [README.md](README.md) for the full framing.
+      See the 2026-09-06 handoff in [README.md](../README.md) for the full framing.
 
 - [x] Full pipeline run from `data/raw/` produces `artifacts/v1/` — done 2026-09-06 by `calibrate --target capacity --save`; the version holds `model`, `conformal` and `scaler`, fitted at `5fd9be5` from a modified tree, and carries **no gate report**, which is honest
 - [x] **Name the version explicitly when you promote.** `save_deployed` takes the next free `v<N>`,

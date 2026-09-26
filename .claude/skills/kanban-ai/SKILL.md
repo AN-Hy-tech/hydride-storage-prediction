@@ -28,7 +28,7 @@ Each card's frontmatter supports the following fields:
 
 - `id` — Unique numeric identifier. Scan existing cards in `kanban/` (including `kanban/archived/`), take max + 1. Start at `1` if empty. Reference cards by this number.
 - `status` — Column: `backlog`, `todo`, `doing`, `done`, or `archive`.
-- `priority` — `High` or `Normal`. Defaults to `Normal` if omitted.
+- `priority` — `High` or `Normal`. Defaults to `Normal` if omitted. **On `kanban-hardening/` it is a band, `P1`–`P4`** (`CONTEXT.md`, *Priority band*).
 - `blocked_by` — List of card IDs that must be `done` before this card moves to `doing`. Example: `[3, 7]`. Omit or set to `[]` if unblocked.
 - `assignee` — (optional) Owner of the card.
 - `due_date` — (optional) Target date.

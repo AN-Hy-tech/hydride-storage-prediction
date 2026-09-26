@@ -1,7 +1,7 @@
 ---
 id: 96
 status: backlog
-priority: Normal
+priority: P1
 blocked_by: []
 assignee: "@amirhossein"
 tags: [ph, l3]

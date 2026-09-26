@@ -1,7 +1,7 @@
 ---
 id: 36
 status: backlog
-priority: High
+priority: P3
 blocked_by: [34]
 assignee: "@amirhossein"
 tags: [p1, l7, S7]

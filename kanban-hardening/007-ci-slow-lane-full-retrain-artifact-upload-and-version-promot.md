@@ -1,7 +1,7 @@
 ---
 id: 7
 status: backlog
-priority: Normal
+priority: P2
 blocked_by: [4, 6]
 assignee: "@amirhossein"
 tags: [p0, l0, S1]
@@ -148,5 +148,26 @@ gh workflow run retrain.yml --ref main
 `docs/PRD-inverse-design.md` — S1
 
 ## Narrative
+
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Artifact version**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term, not part of the definition:* **the scaler is on its way out of this list**
+  > (card #23, decided 2026-09-12; removal boxed on #7 since #34 closed). `v1`, `v2` and `v3` carry a
+  > `scaler` payload and always will — a version is sealed when written — but nothing reads it back
+  > at inference. The justification for keeping it named exactly one consumer, #48's applicability
+  > domain, and #48 landed as a *capacity* ceiling that reads no scaled matrix.
+  >
+  > **Corrected 2026-09-12, the day after this block was written, by the thing it predicted.** It
+  > said "the next version written holds a model, its correction and a manifest". The next version
+  > written was **`v3`**, promoted that evening, and it holds all four. The sentence was wrong about
+  > *which act changes a payload set*: **`promote` copies the payloads of the version it certifies —
+  > it fits nothing — so only a fit can drop a key.** The next *fit* is card #7's retrain, which is
+  > where the box now lives and where this entry changes with it. Until then the definition above is
+  > true of every version that exists.
+  >
+  > *Keep the correction rather than the clean sentence.* Nothing tests this file, so a prediction
+  > written into it is a claim no diff can go red on; this one survived exactly one day, and it
+  > survived because the version that falsified it was written by a command nobody thought of as
+  > writing a version.
 
 - 2026-08-30: Created during the layer decomposition of the PRD. Tickets are cut by architectural layer rather than by phase, because the PRD's phase list is a temporal decomposition and cutting along it would duplicate the evaluation stack between Architectures A and B. (by @assistant)

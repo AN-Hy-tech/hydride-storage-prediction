@@ -51,7 +51,7 @@ def cards() -> dict[int, Path]:
     return {
         int(path.name[:3]): path
         for board in BOARDS
-        for path in (REPO_ROOT / board).glob("[0-9][0-9][0-9]-*.md")
+        for path in (REPO_ROOT / board).rglob("[0-9][0-9][0-9]-*.md")
     }
 
 

@@ -50,6 +50,15 @@ conda run -n Project python -m pytest tests/test_figures.py -q
 
 ## Narrative
 
+- 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Reading**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
+
+  > *State of the term, not part of the definition* (card #81, 2026-09-12): the collision was caught
+  > before it landed rather than after. `Series` was first written with a `reading` field holding
+  > `measured` / `predicted`, which would have put two senses of the word inside one module and one
+  > import of `evaluate`'s tables away from a page that draws both. The chart vocabulary has
+  > `Series.origin` instead, and `parity(readings=...)` keeps the word in the sense this glossary
+  > defines. Nothing enforces that — this entry is the whole of it.
+
 - 2026-09-02: Created for Phase H. The parity plot showing random-split and LOACO at the same
   scale is the one that matters most: it puts the optimistic number and the honest number on one page (by @assistant)
 
@@ -150,4 +159,4 @@ conda run -n Project python -m pytest tests/test_figures.py -q
   card is a finding nobody is going to see. Only the mechanism was imagined. The correction is
   appended rather than edited in, because a narrative records what a session believed at the time
   and that is the whole of its value. Open findings are indexed in
-  [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md). (by @assistant)
+  [../docs/PHASE-H-FINDINGS.md](../../docs/PHASE-H-FINDINGS.md). (by @assistant)
