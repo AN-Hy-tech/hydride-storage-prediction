@@ -17,8 +17,9 @@ import pytest
 pytest.importorskip("pandas", reason="the reconciliation reads committed CSVs")
 
 import pandas as pd  # noqa: E402
+from hydms import provenance  # noqa: E402
 from hydms.config import repo_root  # noqa: E402
-from hydms.evidence import reconciliation  # noqa: E402
+from hydms.evidence import reader, reconciliation  # noqa: E402
 from hydms.evidence.reconciliation import (  # noqa: E402
     DISAGREEMENTS,
     DOCUMENT,
@@ -78,6 +79,8 @@ def _copy(tmp_path: Path) -> Path:
         reconciliation._LOCO,
         reconciliation._RAW,
     }
+    # The current numbers come through the Evidence Reader (#83), with the run records it reads.
+    paths |= set(reader.read(ROOT).sources)
     for relative in paths:
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -104,6 +107,18 @@ def test_the_page_built_from_a_faithful_copy_is_the_committed_page(
 ) -> None:
     """The copy above is complete: every file the page reads was copied, none read from ROOT."""
     assert document(_copy(tmp_path)) == page
+
+
+def test_a_probes_transfer_tables_are_not_reconciled_as_current(tmp_path: Path, page: str) -> None:
+    """Through the reader, a probe's leave-one-class-out tables are absent, never published (#83)."""
+    root = _copy(tmp_path)
+    provenance.write(root / reader.TRANSFER_RECORD, {"probe": "True", "optuna_trials": "1"})
+    moved = document(root)
+    line = next(row for row in moved.splitlines() if "leave-one-alloy-class-out, macro" in row)
+    assert "absent: " in line and "probe=True" in line
+    assert "absent" not in next(
+        row for row in page.splitlines() if "leave-one-alloy-class-out, macro" in row
+    )
 
 
 def test_the_unique_compositions_example_is_one_material() -> None:

@@ -38,10 +38,12 @@ def test_the_committed_openapi_document_is_what_the_code_produces() -> None:
     )
 
 
-def test_the_document_describes_the_five_routes_and_declares_its_schema_version() -> None:
+def test_the_document_describes_the_seven_routes_and_declares_its_schema_version() -> None:
     doc = openapi.document()
 
     assert sorted(doc["paths"]) == [
+        "/v1/evidence",
+        "/v1/evidence/parity",
         "/v1/health",
         "/v1/model",
         "/v1/neighbours",

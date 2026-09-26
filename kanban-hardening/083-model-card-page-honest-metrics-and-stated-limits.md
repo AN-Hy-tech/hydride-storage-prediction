@@ -1,6 +1,6 @@
 ---
 id: 83
-status: backlog
+status: doing
 priority: High
 blocked_by: [29, 30, 82, 89, 103, 105]
 assignee: "@amirhossein"
@@ -25,19 +25,19 @@ DOE system target, and the published figures inherited as though nothing had cha
 
 ## Done when
 
-- [ ] Random-split metrics and **leave-one-alloy-class-out** metrics shown together, at the same scale
-- [ ] Bootstrap confidence intervals shown, not just point metrics
-- [ ] The training data described: rows, unique canonical compositions, alloy families, element coverage,
+- [x] Random-split metrics and **leave-one-alloy-class-out** metrics shown together, at the same scale
+- [x] Bootstrap confidence intervals shown, not just point metrics
+- [x] The training data described: rows, unique canonical compositions, alloy families, element coverage,
       temperature range
-- [ ] The applicability domain stated in terms a reader can apply to their own candidate
-- [ ] **The material-versus-system caveat** — comparing a material wt% to a DOE onboard-storage target is
+- [x] The applicability domain stated in terms a reader can apply to their own candidate
+- [x] **The material-versus-system caveat** — comparing a material wt% to a DOE onboard-storage target is
       a two-step overstatement
-- [ ] A link to `docs/REPORT-RECONCILIATION.md`, so the previously published figures are not silently inherited
-- [ ] The known limits stated plainly, including no pressure data and therefore no reversible-versus-maximum
+- [x] A link to `docs/REPORT-RECONCILIATION.md`, so the previously published figures are not silently inherited
+- [x] The known limits stated plainly, including no pressure data and therefore no reversible-versus-maximum
       capacity distinction
-- [ ] The artifact version and training date
+- [x] The artifact version and training date
 
-- [ ] **State the two descriptor-level filler values (from #18 and #19).** `dev_Gordy_electonegativity`
+- [x] **State the two descriptor-level filler values (from #18 and #19).** `dev_Gordy_electonegativity`
       cannot be computed for 266 of 1,279 rows from the citable Oliynyk edition, and
       `dev_voro_coord_divi_mol_vol` rests on `voro_coord = 1.0` for gadolinium — a placeholder, not
       a measurement: every other element in the JARVIS table sits between 3 and 12, and Gd is hcp
@@ -45,7 +45,7 @@ DOE system target, and the published figures inherited as though nothing had cha
       neither moves parity; both are limits a reader forming a belief about the model should be
       told, in the same paragraph as the no-pressure-data limit
 
-- [ ] **Two limits this card owes, both measured and both already public (from #25).** First, one
+- [x] **Two limits this card owes, both measured and both already public (from #25).** First, one
       of the 14 declared features rests on filler: the JARVIS table stores `voro_coord = 1.0` for
       `Cs` and `Gd` where every other element is 3 to 12, and gadolinium is in **18 of the 1,279
       curated rows (1.4 %)**, so `dev_voro_coord_divi_mol_vol` is computed from a placeholder for
@@ -56,7 +56,7 @@ DOE system target, and the published figures inherited as though nothing had cha
       five, so "the model uses these 14 features" is a statement about a consensus, not a discovery
       about hydrogen storage. `reports/feature_selection/old_vs_new.md` is the source for both
 
-- [ ] **Three R² values, and a sentence that says which is which** (raised 2026-09-06). The card
+- [x] **Three R² values, and a sentence that says which is which** (raised 2026-09-06). The card
       already asks for random-split and leave-one-class-out side by side; a third reading now
       exists and is easy to conflate with the first. **The procedure** scores R² 0.7481
       [0.6889, 0.7985] wt% out-of-fold over five models (`reports/model/evaluation.md`). **The
@@ -70,7 +70,7 @@ DOE system target, and the published figures inherited as though nothing had cha
       the publishing half of that promise. Report it beside 0.7481 with the reason they differ:
       the deployed model grows on **701** rows where each CV fold was cut from 893
 
-- [ ] **The near-ambient temperature bin is the weakest and the table already says so** (raised
+- [x] **The near-ambient temperature bin is the weakest and the table already says so** (raised
       2026-09-06 from the committed `reports/model/evaluation-subgroups.csv`, out-of-fold, wt%):
       **(195, 293] K → R² 0.187, 95 % CI [−0.012, 0.423]** — the interval includes zero — against
       0.657, 0.717, 0.757 and 0.772 for the four warmer bins. That is the regime a practical storage
@@ -78,7 +78,7 @@ DOE system target, and the published figures inherited as though nothing had cha
       result, and it is sitting in a committed CSV that no prose mentions. State it in the limits
       with its confidence interval, not as a rounded point estimate
 
-- [ ] **The band is wide relative to the physics, and that is the honest reading.** The calibrated
+- [x] **The band is wide relative to the physics, and that is the honest reading.** The calibrated
       interval averages **0.8630 wt%** at ~80 % coverage — about ±0.43 wt%. Intermetallics generally
       deliver under 2 wt% usable capacity under practical pressure and temperature swings, so the
       band is a large fraction of the signal for the family this dataset is densest in. Read
@@ -100,7 +100,14 @@ DOE system target, and the published figures inherited as though nothing had cha
       is a defensible derivation but **not a calibration**: nobody can yet say what fraction of
       real predictions that threshold refuses
 
-- [ ] **One validation row carries a physically impossible label, and the limits section has to
+      **2026-09-26, still open.** No committed table holds per-row widths:
+      `conformal-rows.csv` is row accounting, not widths. Producing one means predicting a
+      population through the promoted bundle, and choosing that population is a decision: the
+      172 calibration rows, the 131 early-stopping rows, or the training rows, never `test`.
+      The page states the mean (0.8630 wt%, from the artifact score) and that the band widens
+      with the prediction. The distribution is what is owed
+
+- [x] **One validation row carries a physically impossible label, and the limits section has to
       say so** (added 2026-09-12 by #14's decision). `Ce1Ni4Cr1` is recorded at 4.73 wt%, which
       is H/M **3.339** against `LaNi5H6`'s 1.0 — no AB5 intermetallic holds that much hydrogen,
       so the label is a transcription or unit defect rather than an unusual material. It sits in
@@ -116,7 +123,7 @@ DOE system target, and the published figures inherited as though nothing had cha
       The arithmetic and the other two rows are in #14's box; the L4 ceiling screen that catches
       this class at serve time is #48's. Not an unfreeze condition.
 
-- [ ] **The parity figure's second panel has no data on disk, and this page must not ship with
+- [x] **The parity figure's second panel has no data on disk, and this page must not ship with
       one panel** (added 2026-09-12 by #81). The first box above asks for random-split and
       leave-one-class-out metrics "together, at the same scale", and
       `hydms.figures.charts.parity()` makes that structural: it refuses a figure with fewer than
@@ -143,7 +150,12 @@ DOE system target, and the published figures inherited as though nothing had cha
       the page. Caption the LOACO panel with its run date: the seeded run is not reproducible
       run to run (#104), so the panel is *one* run's rows, not a fixed fact.
 
-- [ ] **Every chart on this page comes from `hydms.figures`, none from a local helper** (added
+      **2026-09-26, drawn.** Both panels come from `GET /v1/evidence/parity` (893 rows each).
+      The caption gives the run date as *not recorded* and names the tables by commit
+      (`d8734ec`, labelled as a commit), and it cites #104. With one reading absent the page
+      draws no figure and says why. `parity()` was not relaxed
+
+- [x] **Every chart on this page comes from `hydms.figures`, none from a local helper** (added
       2026-09-12 by #81). The five builders exist so that this page and #82's cannot draw the
       same quantity two different ways, which is the drift a per-page chart helper always
       reaches. The parity plot and the domain strip are this page's; `prediction_band` and
@@ -151,7 +163,13 @@ DOE system target, and the published figures inherited as though nothing had cha
       `hydms.figures` does not have is a builder added *there*, with its guards, not a matplotlib
       call added here
 
-- [ ] **The page gets its evidence from the service, through an Evidence Reader** (added
+      **2026-09-26.** The page's one chart is `hydms.figures.charts.parity`, drawn by
+      `render`. `domain_strip` takes a `PredictionResult`: it places *a candidate*, so it has
+      nothing to draw on a page with no candidate. The domain is stated as four rules a reader
+      can apply, read from `/v1/model`'s screen limits. The page file's imports are held to
+      `client`, `modelcard_page` and `render` by a test
+
+- [x] **The page gets its evidence from the service, through an Evidence Reader** (added
       2026-09-26; ADR 0007; blocked on #105's run record). A reader in `hydms/evidence/`,
       standard library only, returns `Score` objects (CONTEXT.md, **Score**): `reading` is
       `procedure | artifact | transfer`; then the value, the interval **or** the stated reason it
@@ -162,21 +180,27 @@ DOE system target, and the published figures inherited as though nothing had cha
       `docs/API.md` with `apidoc --probe --emit`. The reader maps `evaluation-metrics.csv`'s
       `reading = out-of-fold` to `procedure` in one place, because the LOACO rows are out-of-fold
       too
-- [ ] **The transfer score gets a bootstrap interval, computed by `loco --emit` and not by the
+- [x] **The transfer score gets a bootstrap interval, computed by `loco --emit` and not by the
       reader** (added 2026-09-26). The interval resamples canonical groups over the 893 committed
       LOACO rows, as `evaluate` does, and needs no fit. It writes a table with a byte test and a
       caveat column: it prices the sampling of materials, **not** run-to-run variation (#104). The
       artifact score carries no interval, with its reason: it is scored once on the test split,
       which only AC-3 reads
-- [ ] **Rename `artifact-score.csv`'s `reading` column to `description`** (added 2026-09-26). It
+- [x] **Rename `artifact-score.csv`'s `reading` column to `description`** (added 2026-09-26). It
       holds a sentence ("R² of the median head…"), which is a third meaning of the word, in the file
       the reader maps into `Score.reading`. Change `hydms.evidence.artifact_score`, regenerate with
       `--emit`, and update its test
-- [ ] **Move `hydms/evidence/reconciliation.py` onto the reader** (added 2026-09-26). It is exempt
+- [x] **Move `hydms/evidence/reconciliation.py` onto the reader** (added 2026-09-26). It is exempt
       from #105's direct-read test until this box is ticked
 - [ ] **OPEN, waiting on #104's diff: does a transfer Score show one run or a spread over repeats?**
       Until #104 answers, the caption names the run by its commit. The committed run has no
       **Run date**
+
+      **2026-09-26, the diff is in, and it points to one run.** #104 found that the drift came
+      from label screening (a parallel forest) and fixed it. Screening off, three probes were
+      byte-identical. If the maintainer's next full LOACO run reproduces on a repeat, a Score is
+      one run, and a spread over repeats would price nothing. Close this once that repeat
+      agrees; if it does not, #104 has a new finding and this stays open
 
 ## Runnable check
 
@@ -189,6 +213,25 @@ conda run -n Project python -m pytest tests/delivery/test_model_card.py -q
 `docs/PHASE-H-RUNBOOK.md` — S7; `docs/PRD-inverse-design.md` — S6, R4
 
 ## Narrative
+
+- 2026-09-26: Built, and left `doing` on two boxes: the per-row width table and the OPEN
+  question, which now waits on #104's repeat. What landed:
+  `hydms/evidence/reader.py` (standard library only) returns `Score`s for the three readings,
+  serving an absence with its reason and never omitting it; probe records are refused through
+  `provenance.read`. The service reads it once at startup. `GET /v1/evidence` and
+  `GET /v1/evidence/parity` are new, and `/v1/health` carries `evidence_sha256`.
+  `loco --emit` writes `reports/loco/loco-intervals.csv`: macro R2 0.2559 [0.1166, 0.3235],
+  resampling canonical groups within each family, with a caveat column naming #104. The
+  model card gained `trained_ranges.corpus` (780 compositions, 50 elements) and
+  `min_transfer_r2` in the domain limits. `hydms/delivery/modelcard_page.py` decides every
+  sentence, and `app/pages/1_Model_card.py` renders it (it ran under `AppTest`). Reconciliation
+  now reads through the reader and regenerates byte-identical, and `hydms/evidence` joined
+  #105's direct-read test. `docs/API.md` was re-probed against `v3`: only the capture time,
+  the health digest, the new limit, the corpus block and the two routes moved. Two things
+  learned. The committed `loco-run.csv` did not change in the 2026-09-25 run (same settings,
+  pre-#105 format), so the run's commit is read off its scored table, not its record. And the
+  numbers the page types (the Gordy filler, Gd, selection stability, `Ce1Ni4Cr1`) are
+  `LIMIT_FACTS`, each recomputed from its source by a test. (by @assistant)
 
 - 2026-09-04: One box added by #18 — two descriptor-level filler values a reader must be told
   about, both measured during S3 (by @assistant)

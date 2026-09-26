@@ -24,6 +24,11 @@ the three kinds; a bare figure without the other parts is not a score, it is a n
 quote for the wrong question.
 _Avoid_: "metric" or "reading" for the whole object *(a reading is one part of a score)*
 
+> *State of the term* (card #83, 2026-09-26): built as `hydms.evidence.reader.Score`, which
+> cannot be constructed half-stated. A present value carries an interval or
+> `no_interval_because`, and an absent one carries `absent_because`. The service serves them on
+> `GET /v1/evidence`.
+
 **Procedure score**:
 How well the *modelling method* performs, estimated out-of-fold across every outer fold. It comes
 from several models, none of which is ever shipped. The published reading is

@@ -151,7 +151,23 @@ SECTIONS: tuple[tuple[str, str], ...] = (
         "A formula that is not a composition: an invalid request, with the same sentence a "
         "prediction for it is refused with.",
     ),
+    (
+        "evidence",
+        "Every committed score: the procedure, artifact and transfer readings, each with its "
+        "interval or the reason it has none, and the run it came from. Read once at startup.",
+    ),
+    (
+        "evidence-parity",
+        "The scored rows behind the procedure and transfer scores, for a parity plot. "
+        "Measurements against out-of-fold predictions, not new predictions.",
+    ),
 )
+
+#: How many scored rows of each reading the ``evidence-parity`` example keeps. The real response
+#: carries every out-of-fold row of both protocols, about 1,800, and the fixture is package
+#: data. So the capture keeps the first rows of each and records the true counts, and the page
+#: says it is shortened, as :data:`_ELIDE_CANDIDATES_ABOVE` does for a request.
+_ELIDE_PARITY_ROWS_ABOVE = 3
 
 #: How many candidates of an over-long batch request the page prints before eliding the rest.
 #:
@@ -252,6 +268,19 @@ def _request_block(payload: Any) -> list[str]:
         f"*Shortened for reading.* The request that produced the response below carried "
         f"**{len(rows)}** candidates — one more than the limit — all identical to those above.",
     ]
+
+
+def _shortened_parity(payload: Any) -> dict[str, Any]:
+    """The parity response with the first rows of each reading, and how many there were."""
+    readings = payload.get("readings") if isinstance(payload, dict) else None
+    if not isinstance(readings, dict):
+        return {}
+    totals = {name: len(entry.get("rows") or []) for name, entry in readings.items()}
+    shown = {
+        name: {**entry, "rows": (entry.get("rows") or [])[:_ELIDE_PARITY_ROWS_ABOVE]}
+        for name, entry in readings.items()
+    }
+    return {"response": {**payload, "readings": shown}, "rows_total": totals}
 
 
 def _codes_by_screen() -> dict[str, tuple[str, ...]]:
@@ -541,6 +570,14 @@ def document(captured: Mapping[str, Any] | None = None) -> str:
         write("")
         write(_fence(exchange["response"]))
         write("")
+        totals = exchange.get("rows_total")
+        if totals:
+            counted = ", ".join(f"**{count}** {reading}" for reading, count in totals.items())
+            write(
+                f"*Shortened for reading.* The response carried {counted} rows; the first "
+                f"{_ELIDE_PARITY_ROWS_ABOVE} of each are shown."
+            )
+            write("")
 
     # ------------------------------------------------------------------ the interval
     interval = data.get("interval", {})
@@ -908,6 +945,8 @@ def probe(out: TextIO | None = None) -> Path:
         "neighbours-unreadable": ("GET", f"{PREFIX}/neighbours", None),
         "health": ("GET", f"{PREFIX}/health", None),
         "model-card": ("GET", f"{PREFIX}/model", None),
+        "evidence": ("GET", f"{PREFIX}/evidence", None),
+        "evidence-parity": ("GET", f"{PREFIX}/evidence/parity", None),
         "predict-baseline": (
             "POST",
             f"{PREFIX}/predict",
@@ -977,6 +1016,8 @@ def probe(out: TextIO | None = None) -> Path:
                 "status": response.status_code,
                 "response": response.json(),
             }
+            if label == "evidence-parity":
+                exchanges[label].update(_shortened_parity(exchanges[label]["response"]))
             print(f"  {label:24s} {method:5s} {path:20s} -> {response.status_code}", file=stream)
 
     bundle = load_bundle()

@@ -38,6 +38,7 @@ from typing import TextIO
 import pandas as pd
 
 from hydms.config import repo_root
+from hydms.evidence import reader
 
 __all__ = [
     "DISAGREEMENTS",
@@ -382,20 +383,33 @@ DISAGREEMENTS: tuple[Disagreement, ...] = (
 
 
 def _honest(root: Path) -> list[str]:
-    metrics = _csv(root, _EVALUATION)
-    chosen = metrics.loc[
-        (metrics["reading"] == "out-of-fold")
-        & (metrics["scale"] == "wt_pct")
-        & (metrics["subgroup"] == "all")
-        & (metrics["interval_from"] == "out-of-fold canonical groups")
-    ].set_index("metric")
-    loco = _csv(root, _LOCO).iloc[0]
+    """The current numbers, read through :mod:`hydms.evidence.reader` (card #83).
+
+    Through the reader and not off the tables, so this page and the model card cannot decide
+    differently whether a table is a result: a probe's leave-one-class-out tables come back
+    absent here with the record's reason, where reading ``loco-summary.csv`` directly would
+    have published them.
+    """
+    evidence = reader.read(root)
     improved = _row(_csv(root, _IMPROVED), "Ensemble")
 
     def cell(metric: str) -> str:
-        row = chosen.loc[metric]
-        return f"{row['point']:.3f} [{row['ci_low']:.3f}, {row['ci_high']:.3f}]"
+        score = evidence.score(reader.PROCEDURE, metric)
+        if score.value is None:
+            return f"absent: {score.absent_because}"
+        if score.interval is None:
+            return f"{score.value:.3f}"
+        return f"{score.value:.3f} [{score.interval.low:.3f}, {score.interval.high:.3f}]"
 
+    def plain(score: reader.Score) -> str:
+        return f"{score.value:.3f}" if score.value is not None else f"absent: {score.absent_because}"
+
+    families = [
+        score
+        for score in evidence.of(reader.TRANSFER)
+        if score.subject.startswith("family:") and score.value is not None
+    ]
+    worst = min(families, key=lambda score: float(score.value or 0.0)) if families else None
     return [
         "| Reading | R² (wt%) | MAE (wt%) | Source |",
         "|---|---|---|---|",
@@ -405,10 +419,12 @@ def _honest(root: Path) -> list[str]:
         f"{improved['Test_MAE_Orig']:.3f} | same |",
         f"| Now: out-of-fold, group-aware nested CV (#29) | {cell('r2')} | {cell('mae')} | "
         f"`{_EVALUATION}` |",
-        f"| Now: leave-one-alloy-class-out, macro over {int(loco['classes_scored'])} classes "
-        f"(#30) | {loco['macro_r2']:.3f} | {loco['macro_mae']:.3f} | `{_LOCO}` |",
-        f"| Now: the worst held-out class, {loco['worst_class']} | "
-        f"{loco['worst_class_r2']:.3f} | — | same |",
+        f"| Now: leave-one-alloy-class-out, macro over {len(families)} classes "
+        f"(#30) | {plain(evidence.score(reader.TRANSFER, 'r2', 'macro'))} | "
+        f"{plain(evidence.score(reader.TRANSFER, 'mae', 'macro'))} | `{_LOCO}` |",
+        f"| Now: the worst held-out class, "
+        f"{worst.subject.split(':', 1)[1] if worst else 'none scored'} | "
+        f"{plain(worst) if worst else '—'} | — | same |",
     ]
 
 

@@ -53,11 +53,13 @@ __all__ = [
     "BatchResponse",
     "Candidate",
     "Declined",
+    "EvidenceBody",
     "Health",
     "InvalidRequest",
     "KnownAlloyBody",
     "MeasuredBody",
     "NeighbourhoodBody",
+    "ParityBody",
     "PredictionResultBody",
     "Problem",
     "RefusalBody",
@@ -210,13 +212,111 @@ class BatchResponse(_Payload):
 
 
 class Health(_Payload):
-    """Liveness, and the two facts a caller needs before it trusts anything else."""
+    """Liveness, and the facts a caller needs before it trusts anything else."""
 
     status: Literal["ok"]
     model_version: str = Field(description="The artifact version answering right now.")
     max_batch_rows: int = Field(
         description="The most candidates POST /v1/predict/batch will accept in one request."
     )
+    evidence_sha256: str = Field(
+        description=(
+            "Digest of every evidence file this process read at startup. It changes only when "
+            "the service restarts over regenerated tables, so a stale service is visible "
+            "beside the domain screen's `reference_sha256` in GET /v1/model (ADR 0007)."
+        )
+    )
+
+
+class EvidenceIntervalBody(_Payload):
+    """A score's confidence interval, what it resampled, and what it does not price."""
+
+    low: float
+    high: float
+    confidence: float
+    resampled: str
+    caveat: str
+
+
+class EvidenceRunBody(_Payload):
+    """Which run a score came from. `run_date` is null when the record predates it, and is
+    never filled from a commit; `committed_in` is a commit and is labelled as one."""
+
+    kind: str = Field(description="'run' for a pipeline run, 'gate run' for the artifact score.")
+    record: str
+    run_date: str | None
+    run_date_text: str
+    started_at: str | None
+    commit: str | None = Field(description="The commit the run started on, from its record.")
+    committed_in: str | None = Field(
+        description="The commit that last changed the run's scored table. Not a run date."
+    )
+    version: str | None = Field(description="The artifact version, for the artifact score.")
+
+
+class ScoreBody(_Payload):
+    """One score: its reading, its value or why it is absent, its interval or why it has none."""
+
+    reading: Literal["procedure", "artifact", "transfer"]
+    quantity: str
+    subject: str = Field(
+        description=(
+            "'all'; 'macro' or 'weighted' for the transfer averages; 'family:<class>' for one "
+            "alloy family; 'temperature:<bin>' for one temperature bin of the procedure score."
+        )
+    )
+    value: float | None
+    unit: str
+    rows: int | None
+    interval: EvidenceIntervalBody | None
+    no_interval_because: str | None
+    absent_because: str | None
+    source: str
+    run: EvidenceRunBody
+
+
+class EvidenceBody(_Payload):
+    """``GET /v1/evidence``: every committed score, read once at startup."""
+
+    evidence_schema: str = Field(alias="schema")
+    digest: str
+    sources: list[str]
+    scores: list[ScoreBody]
+    artifact_facts: dict[str, float] = Field(
+        description=(
+            "What the artifact score is a score of: rows grown on, rows carved for "
+            "calibration, trees, the conformal correction, and the nominal, raw and standard "
+            "error of the band's coverage. Copied from reports/model/artifact-score.csv."
+        )
+    )
+
+
+class ParityRowBody(_Payload):
+    """One scored row: measured, the median head, and the raw 10-90 band."""
+
+    measured: float
+    predicted: float
+    lower: float
+    upper: float
+    fold: str
+    temperature_k: float
+    composition: str
+
+
+class ParityReadingBody(_Payload):
+    rows: list[ParityRowBody]
+    absent_because: str | None
+    run: EvidenceRunBody
+
+
+class ParityBody(_Payload):
+    """``GET /v1/evidence/parity``: the scored rows of both protocols, or why one is absent."""
+
+    evidence_schema: str = Field(alias="schema")
+    digest: str
+    level: float
+    band: str
+    readings: dict[str, ParityReadingBody]
 
 
 class MeasuredBody(_Payload):

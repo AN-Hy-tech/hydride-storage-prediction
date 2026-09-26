@@ -540,3 +540,77 @@ def test_the_document_never_prints_the_word_nan_for_a_missing_comparison() -> No
 
     assert "not published" in text
     assert "| nan |" not in text
+
+
+# --------------------------------------------------------------------------------------
+# The transfer score's interval (card #83)
+# --------------------------------------------------------------------------------------
+
+
+def _committed() -> tuple[Path, dict[str, pd.DataFrame]]:
+    from hydms.config import load as load_config
+
+    directory = load_config().paths.reports / loco.REPORTS
+    if not (directory / f"{loco.OUT_OF_FOLD}.csv").exists():
+        pytest.skip("no committed leave-one-alloy-class-out rows in this checkout")
+    return directory, loco._read_tables(directory)[0]
+
+
+def test_the_committed_intervals_are_what_the_code_produces() -> None:
+    from hydms.config import load as load_config
+
+    directory, tables = _committed()
+    built = loco.intervals_from(directory, tables, cfg=load_config())
+    written = directory / f"{loco.INTERVALS}.csv"
+    assert written.read_text(encoding="utf-8") == built.to_csv(lineterminator="\n"), (
+        "reports/loco/loco-intervals.csv is not what `python -m hydms.surrogate.loco --emit` "
+        "builds from the committed rows. Regenerate it; never edit it."
+    )
+
+
+def test_every_point_is_the_tables_own_and_sits_inside_its_interval() -> None:
+    from hydms.config import load as load_config
+
+    directory, tables = _committed()
+    built = loco.intervals_from(directory, tables, cfg=load_config()).xs("catboost-multiquantile")
+    once = tables["loco-summary"].iloc[0]
+    assert built.loc["macro", "point"] == float(once["macro_r2"])
+    assert built.loc["weighted", "point"] == float(once["weighted_r2"])
+    per = tables["loco-per-class"].xs("catboost-multiquantile")
+    for label, row in per.iterrows():
+        assert built.loc[f"class:{label}", "point"] == float(row["r2"])
+    assert (built["ci_low"] <= built["point"]).all() and (built["point"] <= built["ci_high"]).all()
+    assert set(built["interval_caveat"]) == {loco.TRANSFER_CAVEAT}
+    assert "#104" in loco.TRANSFER_CAVEAT
+
+
+def test_rows_from_another_run_get_no_interval() -> None:
+    from hydms.config import load as load_config
+
+    directory, tables = _committed()
+    rows = pd.read_csv(directory / f"{loco.OUT_OF_FOLD}.csv", index_col=0)
+    moved = rows.copy()
+    first = moved.index[moved["fold"] == "class:SS"][0]
+    moved.loc[first, "q0.5"] += 0.25
+    with pytest.raises(ValueError, match="SS.*not the run"):
+        loco.transfer_intervals(
+            moved, tables["loco-per-class"], tables["loco-summary"], seed=load_config().seed,
+            resamples=5,
+        )
+
+
+def test_emit_without_the_scored_rows_removes_an_intervals_table_they_no_longer_back(
+    tmp_path: Path, capsys
+) -> None:
+    directory, _ = _committed()
+    for name in (*loco.TABLES[:-1], "loco-run"):
+        (tmp_path / f"{name}.csv").write_bytes((directory / f"{name}.csv").read_bytes())
+    stale = tmp_path / f"{loco.INTERVALS}.csv"
+    stale.write_text("left by an earlier emit\n", encoding="utf-8")
+    assert loco.main(["--emit", "--report", str(tmp_path)]) == loco.EXIT_OK
+    assert not stale.exists()
+    assert "was removed" in capsys.readouterr().err
+
+
+def test_the_intervals_are_outside_the_tables_the_document_reads() -> None:
+    assert loco.INTERVALS not in loco.TABLES

@@ -38,7 +38,7 @@ blocks the unfreeze. P4 is accepted debt with a named owner. Within a band, chea
 | # | Finding | Cost | State |
 |---|---|---|---|
 | **84** | Batch CSV screening page. Needs a *batched call in the library*: a served prediction is 66–78 ms and linear in the rows, and the published limit is 256 | 1 d | `backlog`, unblocked (#82 `done` 2026-09-25) |
-| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `backlog`, **unblocked** (#105 `done` 2026-09-26: the run record exists, read it through `hydms.provenance`); its parity panel's file is committed (#98 `done` 2026-09-25) |
+| **83** | Model card: honest metrics and stated limits. Seventeen boxes, and it is where #14's impossible label and #30's interval-free per-class scores are owed a written limit. Its reconciliation link can now be satisfied (#89 is `done`) | 1.5 d | `doing`. **Built 2026-09-26**: Evidence Reader, `/v1/evidence(/parity)`, the page (`app/pages/1_Model_card.py`), and the transfer interval. Owed: the per-row width table (population is a decision) and the OPEN one-run-or-spread question, which waits on #104's repeat |
 
 ## P3 — blocks the unfreeze
 
@@ -66,8 +66,8 @@ Still open in S8, and not an unfreeze condition:
 | **92** | The stage line and the stage map are checked, not remembered. Nothing currently reads either | unblocked | six boxes |
 | **91** | The prediction record, and replay as its consumer | blocked by #76, #78 (both `done`) — startable | eight boxes |
 | **1** | Two boxes, both open: the conda lock **cannot be re-solved** (the `defaults` channel is 403 and supplies 95 of 248 packages, `python` and `numpy` among them) — three remedies, and the choice is **the maintainer's, do not start one unasked**. And `matplotlib` is installed **twice** in `Project`, with the export naming the version that is not running | maintainer | boxes on a `done` card |
-| **30** | Three boxes, all deliberate: the 4.7-hour LOACO run has **no resume**; it is **silent**, so a hung run is indistinguishable from a working one until the end; and the per-class scores carry **no interval** — which the model card must not imply otherwise | #83 owes the written limit | boxes on a `done` card |
-| **14** | `Ce1Ni4Cr1` at 4.73 wt% is H/M 3.339 — an **impossible label sitting in `val`**, so it feeds early stopping and every validation figure. L3 forbids removing it, correctly. It is a **stated limit**, owed by #83 | #83 | box on a `done` card, no action here |
+| **30** | Three boxes, all deliberate: the 4.7-hour LOACO run has **no resume**; it is **silent**, so a hung run is indistinguishable from a working one until the end; and the per-class scores carry **no interval** — which the model card must not imply otherwise | #83 owes the written limit. Since 2026-09-26 `loco --emit` writes per-family intervals (`loco-intervals.csv`) and the page shows them, so #30's third box can be re-read against that | boxes on a `done` card |
+| **14** | `Ce1Ni4Cr1` at 4.73 wt% is H/M 3.339 — an **impossible label sitting in `val`**, so it feeds early stopping and every validation figure. L3 forbids removing it, correctly. It is a **stated limit**, and #83's page states it (2026-09-26) | #83 | box on a `done` card, no action here |
 
 ---
 

@@ -40,6 +40,15 @@ def test_the_committed_table_is_what_the_record_produces(payload: dict[str, Any]
     )
 
 
+def test_the_sentence_column_is_description_not_reading() -> None:
+    # #83: `reading` is the Evidence Reader's procedure | artifact | transfer. A column of the
+    # same name holding a sentence, in the file that reader maps, is the crossing it invites.
+    header = next(
+        line for line in TABLE.read_text(encoding="utf-8").splitlines() if not line.startswith("#")
+    )
+    assert header.split(",") == ["quantity", "value", "unit", "gate", "split", "rows", "description"]
+
+
 def test_the_headline_numbers_are_the_ones_the_chapter_cites(payload: dict[str, Any]) -> None:
     published = {row.quantity: row.value for row in rows(payload)}
     assert published["r2"] == "0.707064"

@@ -2,9 +2,29 @@
 
 **This is the active board.** [../kanban/](../kanban/) is frozen; see [../docs/FREEZE.md](../docs/FREEZE.md).
 
-> ## ▶ Next action — as of 2026-09-26 (#105 `done`; #83 unblocked)
+> ## ▶ Next action — as of 2026-09-26 evening (#83 built, `doing`; #104 fixed, `doing`; #106 `done`)
 >
-> **Handoff, one line: #105 is `done`: every run now stamps a run record via `hydms/provenance.py`,
+> **Handoff, one line: #83's model card is built and served (`GET /v1/evidence`, `/v1/evidence/parity`, `app/pages/1_Model_card.py`) and stays `doing` on the per-row width table and #104's repeat; start #84 (`predict_many`); the maintainer's next full LOACO run is the first with a run date *and* the #104 fix, so rerun it twice and diff.**
+>
+> **What landed.** #104: the drift was `label_issues`' parallel forest (its `predict` sums trees
+> in thread-finishing order). It runs on one thread now and refuses a parallel estimator; the
+> refusal then caught the same defect in `hydms/pipeline/smoke.py`. AC-1 still reproduces `v3`
+> exactly. #106: `select` writes `selection<variant>-run.csv` and the comparison is dated from it.
+> #83: `hydms/evidence/reader.py` (standard library only) turns the committed tables into
+> `Score`s, the service reads it once at startup, `loco --emit` writes `loco-intervals.csv`, and
+> reconciliation reads through the reader. `docs/API.md` was re-probed against `v3`.
+>
+> **Three things that would cost an afternoon.** (1) Any change to a table the reader serves
+> changes `evidence_sha256`, and so `docs/API.md`'s captured example: re-run
+> `apidoc --probe --emit` after `loco --emit` or `evaluate`. (2) The first LOACO and `train` runs
+> after the #104 fix will move the tables **once** (new code, one draw of the old spread). Only a
+> second run on unchanged code tests the fix. (3) The fast lane took 53 min this session with
+> 1765 passed. Its 10 smoke failures were the #104 refusal, fixed since (smoke 19/19); the lane
+> was not rerun whole.
+>
+> *Below: the block this one replaces. Carried out, except #84, which is still unstarted.*
+>
+> **(2026-09-26, #105 `done`)** **Handoff, one line: #105 is `done`: every run now stamps a run record via `hydms/provenance.py`,
 > and `result()` is the only "is this a result?". Start #83 (the Evidence Reader, ADR 0007) and
 > read runs through `provenance.read`/`result`; #84 is startable beside it. The next full LOACO
 > run (#104's) is the first with a run date. #106 (select/comparison) is split off and small.**

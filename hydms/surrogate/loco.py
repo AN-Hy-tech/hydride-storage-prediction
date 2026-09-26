@@ -58,7 +58,17 @@ commit its tables.
 **The scored rows are kept, not only their averages** (card #98). The run writes
 ``loco-out-of-fold.csv`` -- ``train``'s ``model-out-of-fold`` at this protocol's grain -- so the
 honest protocol leaves evidence a parity plot can be drawn from and not only a number to quote.
-``--emit`` does not read it, so its arrival changes no published byte.
+``--emit`` does not read it for the document, so its arrival changes no byte of ``loco.md``.
+
+**The transfer score's interval is computed from those rows, by ``--emit``, and fits nothing**
+(card #83). :func:`transfer_intervals` resamples canonical compositions *within each family*,
+2,000 times, and recomputes every family's R2 and both averages on each draw, writing
+``loco-intervals.csv``. It follows ``evaluate``'s bootstrap in its unit and its budget. It
+differs in one way, deliberately: ``evaluate`` draws once over all rows, and a draw here that
+happened to leave a family out could not compute an average over ten. The families are the
+design, so the draw keeps each one's composition count. The interval prices which materials each
+family happened to contain. It does **not** price run-to-run variation (#104), and it does not
+price which ten families were studied. Both sentences ride on every row as a column.
 
 Exit codes:
 
@@ -82,6 +92,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TextIO
 
+import numpy as np
 import pandas as pd
 
 from hydms import provenance
@@ -135,6 +146,21 @@ TABLES = (
 #: those four and refuses a partial set, so a table added to them would make every checkout
 #: without it unable to rebuild a document that never quotes it.
 OUT_OF_FOLD = "loco-out-of-fold"
+
+#: The transfer score's bootstrap interval, written by ``--emit`` from :data:`OUT_OF_FOLD` and
+#: nothing else (card #83). Outside :data:`TABLES` for the reason :data:`OUT_OF_FOLD` is.
+INTERVALS = "loco-intervals"
+
+#: The resampling unit, as the ``interval_from`` column states it.
+WITHIN_FAMILIES = "canonical groups, resampled within each family"
+
+#: The caveat every interval row carries. A column, not prose, for the reason
+#: :data:`hydms.surrogate.evaluate.INTERVAL_CAVEAT` gives.
+TRANSFER_CAVEAT = (
+    "prices the sampling of materials within each family, nothing else: not run-to-run "
+    "variation, which two seeded runs of this protocol showed is real (card #104), and not the "
+    "choice of which families were studied"
+)
 
 #: The random-split run's averaged record, which AC-6 requires this number to be reported
 #: *alongside*. Read, never recomputed -- recomputing it here would be a second answer to a
@@ -448,6 +474,142 @@ def _budget(cfg: Config, settings: ModelSettings, stream: TextIO) -> int:
     return EXIT_OK
 
 
+def _r2(truth: np.ndarray, predicted: np.ndarray) -> float:
+    """R2 of the median head in wt%, as the per-class table computes it; NaN if undefined."""
+    total = float(((truth - truth.mean()) ** 2).sum())
+    if truth.size < MIN_SCORED_ROWS or total == 0.0:
+        return float("nan")
+    return 1.0 - float(((truth - predicted) ** 2).sum()) / total
+
+
+def _same(a: float, b: float) -> bool:
+    """Equal to 1e-12, with NaN equal to NaN (an unestimable class is NaN on both sides)."""
+    return (a != a and b != b) or abs(a - b) <= 1e-12
+
+
+def transfer_intervals(
+    rows: pd.DataFrame,
+    per: pd.DataFrame,
+    once: pd.DataFrame,
+    *,
+    seed: int,
+    resamples: int | None = None,
+) -> pd.DataFrame:
+    """Every family's R2 and both averages, each with a 95 % bootstrap interval.
+
+    ``rows`` is :data:`OUT_OF_FOLD` as written; ``per`` is ``loco-per-class``, indexed
+    ``(model, alloy_class)``; ``once`` is ``loco-summary``, indexed by model. Each family's
+    point estimate is recomputed from ``rows`` and **must** equal ``per``'s to 1e-12, and the
+    two averages ``once``'s. Otherwise the rows are not the run the tables came from, and this
+    raises rather than attach an interval to a different run's number. The points written are
+    the tables' own, never the recomputation, so no reader meets two spellings of one number.
+
+    Raises:
+        ValueError: the rows and the per-class table disagree on a family's score, or a family
+            is in one and not the other.
+    """
+    from hydms.surrogate.evaluate import CONFIDENCE, RESAMPLES, _percentiles
+
+    draws = RESAMPLES if resamples is None else resamples
+    target = load().columns.target
+    records = []
+    for model, table in per.groupby(level="model"):
+        scored = rows[rows["model"] == model]
+        classes = sorted(str(label) for label in table.index.get_level_values("alloy_class"))
+        found = sorted(str(fold).split(":", 1)[-1] for fold in scored["fold"].unique())
+        if found != classes:
+            raise ValueError(
+                f"{model!r}: {OUT_OF_FOLD}.csv scores the families {found} and "
+                f"loco-per-class.csv {classes}. They are not one run's tables."
+            )
+        truth: dict[str, np.ndarray] = {}
+        median: dict[str, np.ndarray] = {}
+        blocks: dict[str, list[np.ndarray]] = {}
+        for label in classes:
+            members = scored[scored["fold"] == f"class:{label}"]
+            truth[label] = members[target].to_numpy(dtype="float64")
+            median[label] = members["q0.5"].to_numpy(dtype="float64")
+            where: dict[object, list[int]] = {}
+            for at, key in enumerate(members["canonical_key"]):
+                where.setdefault(key, []).append(at)
+            blocks[label] = [np.asarray(found_at, dtype="int64") for found_at in where.values()]
+            published = float(table.loc[(model, label), "r2"])
+            recomputed = _r2(truth[label], median[label])
+            if not _same(recomputed, published):
+                raise ValueError(
+                    f"{model!r} {label}: the scored rows give R2 {recomputed!r} and "
+                    f"loco-per-class.csv {published!r}. The rows are not the run the table "
+                    f"came from, so no interval is attached to it."
+                )
+
+        estimable = [label for label in classes if bool(table.loc[(model, label), "estimable"])]
+        rng = np.random.default_rng(seed)
+        per_draw = {label: np.empty(draws, dtype="float64") for label in classes}
+        macro = np.empty(draws, dtype="float64")
+        weighted = np.empty(draws, dtype="float64")
+        for at in range(draws):
+            sizes: dict[str, int] = {}
+            for label in classes:
+                chosen = rng.integers(0, len(blocks[label]), size=len(blocks[label]))
+                index = np.concatenate([blocks[label][pick] for pick in chosen])
+                per_draw[label][at] = _r2(truth[label][index], median[label][index])
+                sizes[label] = int(index.size)
+            scores = np.array([per_draw[label][at] for label in estimable], dtype="float64")
+            weights = np.array([sizes[label] for label in estimable], dtype="float64")
+            macro[at] = float(scores.mean()) if scores.size else float("nan")
+            weighted[at] = (
+                float((scores * weights).sum() / weights.sum()) if scores.size else float("nan")
+            )
+
+        points = {label: float(table.loc[(model, label), "r2"]) for label in classes}
+        support = {label: (int(truth[label].size), len(blocks[label])) for label in classes}
+        usable = np.array([points[label] for label in estimable], dtype="float64")
+        counts = np.array([support[label][0] for label in estimable], dtype="float64")
+        averaged = {
+            "macro_r2": float(usable.mean()) if usable.size else float("nan"),
+            "weighted_r2": (
+                float((usable * counts).sum() / counts.sum()) if usable.size else float("nan")
+            ),
+        }
+        for column, value in averaged.items():
+            if not _same(value, float(once.loc[model, column])):
+                raise ValueError(
+                    f"{model!r}: the per-class scores give {column} {value!r} and "
+                    f"loco-summary.csv {float(once.loc[model, column])!r}. The tables are not "
+                    f"one run's."
+                )
+        rows_in = sum(support[label][0] for label in estimable)
+        groups_in = sum(support[label][1] for label in estimable)
+        subjects: list[tuple[str, float, np.ndarray, int, int]] = [
+            ("macro", float(once.loc[model, "macro_r2"]), macro, rows_in, groups_in),
+            ("weighted", float(once.loc[model, "weighted_r2"]), weighted, rows_in, groups_in),
+        ]
+        subjects += [
+            (f"class:{label}", points[label], per_draw[label], *support[label])
+            for label in classes
+        ]
+        for subject, value, drawn, n_rows, n_groups in subjects:
+            low, high = _percentiles(drawn)
+            records.append(
+                {
+                    "model": str(model),
+                    "subject": subject,
+                    "metric": "r2",
+                    "point": value,
+                    "ci_low": low,
+                    "ci_high": high,
+                    "confidence": CONFIDENCE,
+                    "interval_from": WITHIN_FAMILIES,
+                    "resamples": int(np.isfinite(drawn).sum()),
+                    "rows": n_rows,
+                    "compositions": n_groups,
+                    "seed": seed,
+                    "interval_caveat": TRANSFER_CAVEAT,
+                }
+            )
+    return pd.DataFrame.from_records(records).set_index(["model", "subject"])
+
+
 def document(tables: dict[str, pd.DataFrame], run: provenance.RunRecord) -> str:
     """The published write-up, built from the tables and the run record, never typed.
 
@@ -591,7 +753,40 @@ def _emit(cfg: Config, source: Path, stream: TextIO) -> int:
     path = source / DOCUMENT
     path.write_text(document(tables, run), encoding="utf-8")
     print(f"wrote {path}", file=stream)
+    return _emit_intervals(cfg, source, tables, stream)
+
+
+def _emit_intervals(
+    cfg: Config, source: Path, tables: dict[str, pd.DataFrame], stream: TextIO
+) -> int:
+    """Write :data:`INTERVALS` from the scored rows, or remove a copy they no longer back."""
+    rows_path = source / f"{OUT_OF_FOLD}.csv"
+    out = source / f"{INTERVALS}.csv"
+    if not rows_path.exists():
+        note = f"{out.name} not written: no {rows_path.name} beside the tables (card #98)."
+        if out.exists():
+            out.unlink()
+            note += " The copy an earlier emit left was removed: no rows are behind it now."
+        print(note, file=sys.stderr)
+        return EXIT_OK
+    try:
+        intervals = intervals_from(source, tables, cfg=cfg)
+    except (OSError, ValueError, KeyError) as error:
+        print(f"{out.name} not written: {error}", file=sys.stderr)
+        return EXIT_BAD_INVOCATION
+    intervals.to_csv(out, lineterminator="\n")
+    print(f"wrote {out}", file=stream)
     return EXIT_OK
+
+
+def intervals_from(
+    source: Path, tables: dict[str, pd.DataFrame], *, cfg: Config
+) -> pd.DataFrame:
+    """:func:`transfer_intervals` over the scored rows in ``source``. What the byte test calls."""
+    rows = pd.read_csv(source / f"{OUT_OF_FOLD}.csv", index_col=0)
+    return transfer_intervals(
+        rows, tables["loco-per-class"], tables["loco-summary"], seed=cfg.seed
+    )
 
 
 # --------------------------------------------------------------------------------------

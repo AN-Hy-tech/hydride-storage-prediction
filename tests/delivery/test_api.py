@@ -70,6 +70,7 @@ from hydms.delivery.predict import (  # noqa: E402
     load_bundle,
     predict_capacity,
 )
+from hydms.evidence.reader import read as read_evidence  # noqa: E402
 
 #: A composition the fixture fit answers, and one it refuses for being a long way from any
 #: alloy it knows. Both are #76's, chosen there for reasons this file inherits rather than
@@ -416,6 +417,7 @@ def test_health_reports_liveness_and_the_version_that_is_answering(
         "status": "ok",
         "model_version": bundle.version,
         "max_batch_rows": MAX_BATCH_ROWS,
+        "evidence_sha256": read_evidence().digest,
     }
 
 
@@ -820,7 +822,7 @@ def test_the_model_card_serves_the_temperature_support_behind_a_sweep(
 # --------------------------------------------------------------------------------------
 
 
-def test_the_openapi_document_declares_the_five_routes_and_their_refusals(
+def test_the_openapi_document_declares_the_seven_routes_and_their_refusals(
     client: TestClient,
 ) -> None:
     """#79 snapshots this; here it only has to exist and name what a caller must handle."""
@@ -833,6 +835,8 @@ def test_the_openapi_document_declares_the_five_routes_and_their_refusals(
         "/v1/health",
         "/v1/model",
         "/v1/neighbours",
+        "/v1/evidence",
+        "/v1/evidence/parity",
     }
     assert "422" in paths["/v1/predict"]["post"]["responses"]
     assert "422" in paths["/v1/predict/batch"]["post"]["responses"]

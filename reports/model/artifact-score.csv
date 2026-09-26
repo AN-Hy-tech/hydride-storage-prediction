@@ -1,7 +1,7 @@
 # Deployed model v3, scored once on the held-out test split by the gates recorded in its manifest.
 # manifest sha256 ae913ab03045a2661b22e6610920b400fcfb2107d65debee77b3fb1aa2909673; gate run 2026-09-12T17:34:30+00:00.
 # Generated from reports/model/artifact-gates.json by `python -m hydms.evidence.artifact_score --emit`; do not edit.
-quantity,value,unit,gate,split,rows,reading
+quantity,value,unit,gate,split,rows,description
 r2,0.707064,,AC-1,test,254,"R² of the median head, computed in wt% (not log1p)"
 rmse,0.542028,wt%,AC-1,test,254,RMSE of the median head
 mae,0.311710,wt%,AC-1,test,254,MAE of the median head

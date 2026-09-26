@@ -176,6 +176,12 @@ single prediction path and HG-3 covers the UI too.
       old published figures are not quietly inherited. **Unblocked 2026-09-26** by #105: read the
       run record through `hydms.provenance.read`/`result`, never the CSV, and caption a panel
       with `RunRecord.run_date_text`, which is *not recorded* for both committed runs.
+      **Built 2026-09-26, `doing` on two boxes.** `hydms/evidence/reader.py` returns `Score`s
+      and the service serves them (`GET /v1/evidence`, `/v1/evidence/parity`, the digest in
+      `/v1/health`). `loco --emit` writes `loco-intervals.csv`. The page is
+      `app/pages/1_Model_card.py` over `hydms/delivery/modelcard_page.py`. Both carry-overs are
+      on it: the material-vs-system caveat and the reconciliation link. Owed: the per-row width
+      table, and the one-run-or-spread question, which waits on #104's repeat.
 - [ ] **#84** Batch CSV screening page.
 
 **Exit check:** `conda run -n Project streamlit run app/main.py` plus the manual acceptance in §5.
@@ -416,7 +422,10 @@ python scripts/verify_environment.py
 # #79's gate, and from 1308/1312 after #90 on 2026-09-07. That is the figure the recent handoffs
 # quote. **Latest: 1583 passed / 4 deselected WITH `--cov` (89.42 %) on 2026-09-24, 53 min 7 s on a
 # quiet machine** (only that pytest process running), after #82's app tests and #89's evidence
-# tests. A handoff that
+# tests. **Fast lane on 2026-09-26: 1765 passed, 2 failed, 8 errors, 4 deselected in 52 min 54 s**
+# (#83 session, machine shared with the session's own work). All ten were the smoke module
+# meeting #104's new refusal. After `smoke.py`'s fix the module passes 19/19; the lane was not
+# rerun whole. A handoff that
 # states one of these must say which.
 #
 # AND IT MUST SAY WHETHER THE MACHINE WAS QUIET, which card #100 learned the expensive way on

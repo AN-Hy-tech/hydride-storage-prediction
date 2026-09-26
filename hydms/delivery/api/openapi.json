@@ -124,10 +124,184 @@
         "title": "DomainVerdictBody",
         "type": "object"
       },
+      "EvidenceBody": {
+        "additionalProperties": false,
+        "description": "``GET /v1/evidence``: every committed score, read once at startup.",
+        "properties": {
+          "artifact_facts": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "What the artifact score is a score of: rows grown on, rows carved for calibration, trees, the conformal correction, and the nominal, raw and standard error of the band's coverage. Copied from reports/model/artifact-score.csv.",
+            "title": "Artifact Facts",
+            "type": "object"
+          },
+          "digest": {
+            "title": "Digest",
+            "type": "string"
+          },
+          "schema": {
+            "title": "Schema",
+            "type": "string"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreBody"
+            },
+            "title": "Scores",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "schema",
+          "digest",
+          "sources",
+          "scores",
+          "artifact_facts"
+        ],
+        "title": "EvidenceBody",
+        "type": "object"
+      },
+      "EvidenceIntervalBody": {
+        "additionalProperties": false,
+        "description": "A score's confidence interval, what it resampled, and what it does not price.",
+        "properties": {
+          "caveat": {
+            "title": "Caveat",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "high": {
+            "title": "High",
+            "type": "number"
+          },
+          "low": {
+            "title": "Low",
+            "type": "number"
+          },
+          "resampled": {
+            "title": "Resampled",
+            "type": "string"
+          }
+        },
+        "required": [
+          "low",
+          "high",
+          "confidence",
+          "resampled",
+          "caveat"
+        ],
+        "title": "EvidenceIntervalBody",
+        "type": "object"
+      },
+      "EvidenceRunBody": {
+        "additionalProperties": false,
+        "description": "Which run a score came from. `run_date` is null when the record predates it, and is\nnever filled from a commit; `committed_in` is a commit and is labelled as one.",
+        "properties": {
+          "commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The commit the run started on, from its record.",
+            "title": "Commit"
+          },
+          "committed_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The commit that last changed the run's scored table. Not a run date.",
+            "title": "Committed In"
+          },
+          "kind": {
+            "description": "'run' for a pipeline run, 'gate run' for the artifact score.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "title": "Record",
+            "type": "string"
+          },
+          "run_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Date"
+          },
+          "run_date_text": {
+            "title": "Run Date Text",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The artifact version, for the artifact score.",
+            "title": "Version"
+          }
+        },
+        "required": [
+          "kind",
+          "record",
+          "run_date",
+          "run_date_text",
+          "started_at",
+          "commit",
+          "committed_in",
+          "version"
+        ],
+        "title": "EvidenceRunBody",
+        "type": "object"
+      },
       "Health": {
         "additionalProperties": false,
-        "description": "Liveness, and the two facts a caller needs before it trusts anything else.",
+        "description": "Liveness, and the facts a caller needs before it trusts anything else.",
         "properties": {
+          "evidence_sha256": {
+            "description": "Digest of every evidence file this process read at startup. It changes only when the service restarts over regenerated tables, so a stale service is visible beside the domain screen's `reference_sha256` in GET /v1/model (ADR 0007).",
+            "title": "Evidence Sha256",
+            "type": "string"
+          },
           "max_batch_rows": {
             "description": "The most candidates POST /v1/predict/batch will accept in one request.",
             "title": "Max Batch Rows",
@@ -147,7 +321,8 @@
         "required": [
           "status",
           "model_version",
-          "max_batch_rows"
+          "max_batch_rows",
+          "evidence_sha256"
         ],
         "title": "Health",
         "type": "object"
@@ -376,6 +551,122 @@
         "title": "NoveltyBody",
         "type": "object"
       },
+      "ParityBody": {
+        "additionalProperties": false,
+        "description": "``GET /v1/evidence/parity``: the scored rows of both protocols, or why one is absent.",
+        "properties": {
+          "band": {
+            "title": "Band",
+            "type": "string"
+          },
+          "digest": {
+            "title": "Digest",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "number"
+          },
+          "readings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ParityReadingBody"
+            },
+            "title": "Readings",
+            "type": "object"
+          },
+          "schema": {
+            "title": "Schema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema",
+          "digest",
+          "level",
+          "band",
+          "readings"
+        ],
+        "title": "ParityBody",
+        "type": "object"
+      },
+      "ParityReadingBody": {
+        "additionalProperties": false,
+        "properties": {
+          "absent_because": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absent Because"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ParityRowBody"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "run": {
+            "$ref": "#/components/schemas/EvidenceRunBody"
+          }
+        },
+        "required": [
+          "rows",
+          "absent_because",
+          "run"
+        ],
+        "title": "ParityReadingBody",
+        "type": "object"
+      },
+      "ParityRowBody": {
+        "additionalProperties": false,
+        "description": "One scored row: measured, the median head, and the raw 10-90 band.",
+        "properties": {
+          "composition": {
+            "title": "Composition",
+            "type": "string"
+          },
+          "fold": {
+            "title": "Fold",
+            "type": "string"
+          },
+          "lower": {
+            "title": "Lower",
+            "type": "number"
+          },
+          "measured": {
+            "title": "Measured",
+            "type": "number"
+          },
+          "predicted": {
+            "title": "Predicted",
+            "type": "number"
+          },
+          "temperature_k": {
+            "title": "Temperature K",
+            "type": "number"
+          },
+          "upper": {
+            "title": "Upper",
+            "type": "number"
+          }
+        },
+        "required": [
+          "measured",
+          "predicted",
+          "lower",
+          "upper",
+          "fold",
+          "temperature_k",
+          "composition"
+        ],
+        "title": "ParityRowBody",
+        "type": "object"
+      },
       "PredictionResultBody": {
         "additionalProperties": false,
         "description": "An answer with a number in it -- and therefore with an interval and a verdict.",
@@ -552,6 +843,110 @@
         "title": "RequestBody",
         "type": "object"
       },
+      "ScoreBody": {
+        "additionalProperties": false,
+        "description": "One score: its reading, its value or why it is absent, its interval or why it has none.",
+        "properties": {
+          "absent_because": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absent Because"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceIntervalBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "no_interval_because": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Interval Because"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "reading": {
+            "enum": [
+              "procedure",
+              "artifact",
+              "transfer"
+            ],
+            "title": "Reading",
+            "type": "string"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "run": {
+            "$ref": "#/components/schemas/EvidenceRunBody"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "subject": {
+            "description": "'all'; 'macro' or 'weighted' for the transfer averages; 'family:<class>' for one alloy family; 'temperature:<bin>' for one temperature bin of the procedure score.",
+            "title": "Subject",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "reading",
+          "quantity",
+          "subject",
+          "value",
+          "unit",
+          "rows",
+          "interval",
+          "no_interval_because",
+          "absent_because",
+          "source",
+          "run"
+        ],
+        "title": "ScoreBody",
+        "type": "object"
+      },
       "ScreenVerdictBody": {
         "additionalProperties": false,
         "description": "One rule's judgement: which rule, whether it passed, its code and its sentence.",
@@ -591,6 +986,42 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/evidence": {
+      "get": {
+        "operationId": "evidence_v1_evidence_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceBody"
+                }
+              }
+            },
+            "description": "The three readings of the model, read from the committed tables once at startup (ADR 0007). A score whose table or run record is missing, or whose record says `probe`, is served with `value` null and `absent_because` saying which. It is never omitted. A present score carries an `interval` or `no_interval_because`, exactly one."
+          }
+        },
+        "summary": "Every committed score: procedure, artifact and transfer, each with its run"
+      }
+    },
+    "/v1/evidence/parity": {
+      "get": {
+        "operationId": "parity_v1_evidence_parity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParityBody"
+                }
+              }
+            },
+            "description": "Every out-of-fold row of the random-split run and of the leave-one-alloy-class-out run: the measurement, the median head and the raw 10-90 band. **Predictions scored against measurements, not new predictions.** A reading whose run is not a result is served with no rows and `absent_because`."
+          }
+        },
+        "summary": "The scored rows behind the procedure and transfer scores, for a parity plot"
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "health_v1_health_get",

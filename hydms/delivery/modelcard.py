@@ -66,6 +66,7 @@ _LIMIT_ATTRS = (
     "ceiling",
     "hm_floor",
     "max_interval_width",
+    "min_transfer_r2",
 )
 
 #: Facts a screen's committed reference may carry about the *target*'s span in the training
@@ -144,6 +145,9 @@ def _trained_ranges(screens: tuple[Any, ...]) -> dict[str, Any]:
         reference = getattr(screen, "reference", None)
         if reference is None:
             continue
+        formulas = getattr(reference, "formulas", None)
+        if formulas:
+            ranges["corpus"] = _corpus(tuple(str(formula) for formula in formulas))
         capacity: dict[str, Any] = {}
         for attribute, reported in _CAPACITY_FACTS:
             value = getattr(reference, attribute, None)
@@ -170,6 +174,37 @@ def _trained_ranges(screens: tuple[Any, ...]) -> dict[str, Any]:
                 "source": _SUPPORT_SOURCE,
             }
     return ranges
+
+
+def _corpus(formulas: tuple[str, ...]) -> dict[str, Any]:
+    """How many distinct canonical compositions the training split holds, and which elements.
+
+    Read off the novelty screen's reference, which is one formula per canonical composition of
+    the training split (card #49). Element coverage is **not a bound**: nothing refuses a
+    composition for naming an element the corpus lacks, because the novelty screen measures
+    distance, which is the right rule and a different one. It is here because a reader deciding
+    whether to trust an answer about rhenium has nowhere else to look (card #83). A formula the
+    grammar will not read is counted and not parsed, and ``unparsed`` says how many.
+    """
+    from hydms.data.load import FormulaError, parse_formula
+
+    seen: dict[str, int] = {}
+    unparsed = 0
+    for formula in formulas:
+        try:
+            parsed = parse_formula(formula)
+        except FormulaError:
+            unparsed += 1
+            continue
+        for element in parsed:
+            seen[element] = seen.get(element, 0) + 1
+    return {
+        "compositions": len(formulas),
+        "elements": sorted(seen),
+        "rare_elements": sorted(symbol for symbol, count in seen.items() if count <= 2),
+        "unparsed": unparsed,
+        "source": "the novelty screen's reference: one formula per canonical composition",
+    }
 
 
 def _transfer(screens: tuple[Any, ...]) -> dict[str, float] | None:

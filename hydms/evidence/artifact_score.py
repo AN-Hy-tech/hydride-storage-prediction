@@ -76,7 +76,10 @@ GATES: Final = ("AC-1", "AC-3")
 #: The only split either gate scores. Named, so a record that scored anything else is refused.
 HELD_OUT: Final = "test"
 
-COLUMNS: Final = ("quantity", "value", "unit", "gate", "split", "rows", "reading")
+#: ``description`` is the sentence that says what a quantity is. It was ``reading`` until #83,
+#: which gave the Evidence Reader a ``Score.reading`` of ``procedure | artifact | transfer``;
+#: one word with three meanings in the file that reader maps is how they get crossed.
+COLUMNS: Final = ("quantity", "value", "unit", "gate", "split", "rows", "description")
 
 _RECORD_SCHEMA: Final = "hydms.artifact-gates/1"
 
@@ -152,7 +155,7 @@ class _Row:
     unit: str
     gate: str
     rows: int
-    reading: str
+    description: str
 
     def cells(self) -> tuple[str, ...]:
         return (
@@ -162,7 +165,7 @@ class _Row:
             self.gate,
             HELD_OUT,
             str(self.rows),
-            self.reading,
+            self.description,
         )
 
 
@@ -266,8 +269,8 @@ def rows(payload: Mapping[str, Any]) -> list[_Row]:
         raise ScoreUnavailable(f"AC-3's threshold {nominal!r} is not a nominal level.")
 
     out = [
-        _Row(name, metrics[name], unit, "AC-1", n, reading)
-        for name, (unit, reading) in _POINT.items()
+        _Row(name, metrics[name], unit, "AC-1", n, description)
+        for name, (unit, description) in _POINT.items()
     ]
     out += [
         _Row(

@@ -1,12 +1,14 @@
 """The HTTP boundary: transport, validation, error shape, and which version answered.
 
-Five routes, and not one of them computes anything. ``POST /v1/predict`` builds the contract's
+Seven routes, and not one of them computes anything. ``POST /v1/predict`` builds the contract's
 own request type, hands it to :func:`~hydms.delivery.predict.predict_capacity`, and serialises
 what comes back; ``POST /v1/predict/batch`` does that in a loop; ``GET /v1/health`` reports the
-loaded version; ``GET /v1/model`` returns :func:`~hydms.delivery.modelcard.model_card`; and
+loaded version; ``GET /v1/model`` returns :func:`~hydms.delivery.modelcard.model_card`;
 ``GET /v1/neighbours`` returns :func:`~hydms.delivery.neighbours.nearest_measured` -- the known
 alloys nearest a composition, with what was *measured* on them, which is a lookup and not a
-prediction (card #82). A
+prediction (card #82); and ``GET /v1/evidence`` and ``GET /v1/evidence/parity`` serve what
+:func:`hydms.evidence.reader.read` found in the committed tables at startup (card #83, ADR
+0007). A
 handler that reached into the model would be the shallow design stage S6 exists to avoid, and
 it is how the app and the API start disagreeing -- so ``tests/delivery/test_api.py`` parses
 every module in this package and fails on an import of the surrogate, the descriptors, the
@@ -19,6 +21,11 @@ would give the app a private path no contract test sees. The full argument is #8
 
 The one loaded thing
 --------------------
+
+The evidence is read **once** too, in the same lifespan, so the scores the model-card page shows
+and the per-family transfer scores the refusals quote come from one moment. Unlike the bundle,
+missing evidence does not stop the service: a prediction does not depend on it, and the reader
+serves each absence as a score with its reason rather than raising (ADR 0007).
 
 The bundle is resolved **once**, at startup, in the lifespan. If it cannot be resolved the
 lifespan raises and the server does not start -- there is no lazy load in a request path, no
@@ -65,6 +72,8 @@ from hydms.delivery.contract import SCHEMA, ContractError, PredictionRequest
 from hydms.delivery.modelcard import model_card
 from hydms.delivery.neighbours import DEFAULT_K, MAX_K, UnreadableFormula, nearest_measured
 from hydms.delivery.predict import ArtifactBundle, DeliveryError, load_bundle, predict_capacity
+from hydms.evidence.reader import Evidence
+from hydms.evidence.reader import read as read_evidence
 
 from .schemas import (
     Answer,
@@ -72,9 +81,11 @@ from .schemas import (
     BatchResponse,
     Candidate,
     Declined,
+    EvidenceBody,
     Health,
     InvalidRequest,
     NeighbourhoodBody,
+    ParityBody,
     Problem,
     model_card_schema,
 )
@@ -138,8 +149,28 @@ def _bundle(request: Request) -> ArtifactBundle:
 Bundle = Annotated[ArtifactBundle, Depends(_bundle)]
 
 
-def _lifespan(resolve: Callable[[], ArtifactBundle]) -> Any:
-    """Load the bundle before the first request, and refuse to start if it cannot be."""
+def _evidence(request: Request) -> Evidence:
+    """The evidence this process read at startup. A 500 without it, for :func:`_bundle`'s reason."""
+    loaded: Evidence | None = getattr(request.app.state, "evidence", None)
+    if loaded is None:
+        raise DeliveryError(
+            "the service is answering with no evidence read, which means its startup did not "
+            "complete. Evidence read per request could disagree with the refusals beside it."
+        )
+    return loaded
+
+
+EvidenceRead = Annotated[Evidence, Depends(_evidence)]
+
+
+def _lifespan(
+    resolve: Callable[[], ArtifactBundle], evidence: Callable[[], Evidence]
+) -> Any:
+    """Load the bundle and read the evidence before the first request.
+
+    The bundle refuses to start the service if it cannot be resolved. The evidence never does:
+    the reader returns each absence as a score with its reason.
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> Any:
@@ -147,8 +178,10 @@ def _lifespan(resolve: Callable[[], ArtifactBundle]) -> Any:
         # about it -- nothing promoted, no such version, gates unestablished -- and wrapping
         # those sentences in a vaguer one of our own would cost an operator the fix.
         app.state.bundle = resolve()
+        app.state.evidence = evidence()
         yield
         app.state.bundle = None
+        app.state.evidence = None
 
     return lifespan
 
@@ -347,15 +380,17 @@ def _router(max_batch_rows: int) -> APIRouter:
         response_model=Health,
         summary="Liveness, and which artifact version is answering",
     )
-    def health(bundle: Bundle) -> Any:
+    def health(bundle: Bundle, evidence: EvidenceRead) -> Any:
         # Liveness alone would be a check that passes while the service answers from a model
         # nobody meant to deploy. The version is the half that makes it worth reading, and
         # the batch limit is here because it is the one policy a client must respect and
-        # there is nowhere else a client can discover it at runtime.
+        # there is nowhere else a client can discover it at runtime. The evidence digest is
+        # how a service still serving yesterday's tables shows it (ADR 0007).
         return {
             "status": "ok",
             "model_version": bundle.version,
             "max_batch_rows": max_batch_rows,
+            "evidence_sha256": evidence.digest,
         }
 
     @router.get(
@@ -370,6 +405,44 @@ def _router(max_batch_rows: int) -> APIRouter:
     )
     def model(bundle: Bundle) -> Any:
         return model_card(bundle)
+
+    @router.get(
+        "/evidence",
+        response_model=EvidenceBody,
+        summary="Every committed score: procedure, artifact and transfer, each with its run",
+        responses={
+            200: {
+                "description": (
+                    "The three readings of the model, read from the committed tables once at "
+                    "startup (ADR 0007). A score whose table or run record is missing, or whose "
+                    "record says `probe`, is served with `value` null and `absent_because` "
+                    "saying which. It is never omitted. A present score carries an `interval` "
+                    "or `no_interval_because`, exactly one."
+                )
+            }
+        },
+    )
+    def evidence(read: EvidenceRead) -> Any:
+        return read.to_dict()
+
+    @router.get(
+        "/evidence/parity",
+        response_model=ParityBody,
+        summary="The scored rows behind the procedure and transfer scores, for a parity plot",
+        responses={
+            200: {
+                "description": (
+                    "Every out-of-fold row of the random-split run and of the "
+                    "leave-one-alloy-class-out run: the measurement, the median head and the "
+                    "raw 10-90 band. **Predictions scored against measurements, not new "
+                    "predictions.** A reading whose run is not a result is served with no rows "
+                    "and `absent_because`."
+                )
+            }
+        },
+    )
+    def parity(read: EvidenceRead) -> Any:
+        return read.parity_dict()
 
     @router.get(
         "/neighbours",
@@ -425,6 +498,7 @@ def _router(max_batch_rows: int) -> APIRouter:
 def create_app(
     *,
     resolve: Callable[[], ArtifactBundle] | None = None,
+    evidence: Callable[[], Evidence] | None = None,
     max_batch_rows: int = MAX_BATCH_ROWS,
 ) -> FastAPI:
     """Build the application. Nothing is loaded until it starts.
@@ -435,6 +509,9 @@ def create_app(
             version. It is a parameter so that a test can start the service over a temporary
             store, and for no other reason -- in particular it is not a way for a request to
             choose a version, which card #75 forbids and the request schema refuses.
+        evidence: How to read the evidence at startup. Defaults to
+            :func:`hydms.evidence.reader.read` over the repository's committed tables. A
+            parameter so a test can serve damaged evidence, and for no other reason.
         max_batch_rows: The batch limit. See :data:`MAX_BATCH_ROWS` for where the number
             comes from.
 
@@ -453,7 +530,10 @@ def create_app(
         title=_TITLE,
         description=_DESCRIPTION,
         version=SCHEMA,
-        lifespan=_lifespan(resolve if resolve is not None else load_bundle),
+        lifespan=_lifespan(
+            resolve if resolve is not None else load_bundle,
+            evidence if evidence is not None else read_evidence,
+        ),
     )
     application.add_exception_handler(RequestValidationError, _validation_handler)
     application.include_router(_router(max_batch_rows))

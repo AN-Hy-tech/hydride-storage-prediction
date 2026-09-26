@@ -206,6 +206,14 @@ class ServiceClient:
         """``GET /v1/model``: the deployment's own description of itself."""
         return self._get("/model")
 
+    def evidence(self) -> dict[str, Any]:
+        """``GET /v1/evidence``: every committed score, as the service read it at startup."""
+        return self._get("/evidence")
+
+    def parity(self) -> dict[str, Any]:
+        """``GET /v1/evidence/parity``: the scored rows of both protocols, or why one is absent."""
+        return self._get("/evidence/parity")
+
     def predict(self, formula: str, temperature_k: float) -> Answer | InvalidRequest:
         """``POST /v1/predict`` for one composition at one temperature."""
         body = {"formula": formula, "temperature_k": temperature_k}

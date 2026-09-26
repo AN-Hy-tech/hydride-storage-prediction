@@ -231,7 +231,14 @@ def test_the_committed_records_are_read_as_full_runs(repo_root: Path, record: st
 
 #: The packages that serve, screen, draw or gate. A record they read goes through
 #: ``hydms.provenance`` or not at all.
-CONSUMERS = ("hydms/delivery", "hydms/screens", "hydms/figures", "hydms/gates", "app")
+CONSUMERS = (
+    "hydms/delivery",
+    "hydms/screens",
+    "hydms/figures",
+    "hydms/gates",
+    "hydms/evidence",
+    "app",
+)
 
 #: A string that *is* a record's file name, or the ``-run.csv`` tail an f-string builds one from.
 #: Prose that merely mentions ``loco-run.csv`` is a longer string and does not match.

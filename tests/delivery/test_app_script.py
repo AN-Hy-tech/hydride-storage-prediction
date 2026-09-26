@@ -103,3 +103,34 @@ def test_an_unreachable_service_is_said_and_the_page_stops(monkeypatch: pytest.M
 def test_the_environment_variable_is_what_the_script_reads() -> None:
     """Guard on the fixture above: were the name to drift, every test here would hit port 8000."""
     assert "HYDMS_API_URL" in APP.read_text(encoding="utf-8")
+
+
+# --------------------------------------------------------------------------------------
+# The model-card page (card #83)
+# --------------------------------------------------------------------------------------
+
+CARD_PAGE = APP.parent / "pages" / "1_Model_card.py"
+
+
+def test_the_model_card_page_runs_and_draws_every_section(service, monkeypatch, repo_root) -> None:
+    from hydms.delivery.modelcard_page import model_card_view
+
+    if not (repo_root / "reports" / "model" / "evaluation-metrics.csv").is_file():
+        pytest.skip("no committed evidence in this checkout")
+    monkeypatch.setenv("HYDMS_API_URL", service.base_url)
+    app = AppTest.from_file(str(CARD_PAGE), default_timeout=120)
+    app.run()
+    assert not app.exception, [error.value for error in app.exception]
+
+    view = model_card_view(service.evidence(), service.parity(), service.model())
+    assert [header.value for header in app.header] == [section.title for section in view.sections]
+    assert len(app.table) == sum(section.table is not None for section in view.sections)
+    assert not app.error
+
+
+def test_the_model_card_page_says_so_when_the_service_is_down(monkeypatch) -> None:
+    monkeypatch.setenv("HYDMS_API_URL", "http://127.0.0.1:9")
+    app = AppTest.from_file(str(CARD_PAGE), default_timeout=60)
+    app.run()
+    assert not app.exception, [error.value for error in app.exception]
+    assert app.error and "not reachable" in app.error[0].value
