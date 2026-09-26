@@ -543,7 +543,9 @@ def run(
         estimator=RandomForestRegressor(
             n_estimators=SMOKE_FOREST_TREES,
             max_depth=config.selection.boruta_max_depth,
-            n_jobs=-1,
+            # One thread, which `label_issues` now requires: a parallel forest sums its trees
+            # in thread-finishing order and the verdict moves between runs (card #104).
+            n_jobs=1,
             random_state=config.seed,
         ),
         seed=config.seed,

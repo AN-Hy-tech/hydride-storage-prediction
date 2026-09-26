@@ -142,6 +142,13 @@ scope), card #98 (the run that found it)
 
 ## Narrative
 
+- 2026-09-26 (later): The refusal found a second site. `hydms/pipeline/smoke.py` built its own
+  `RandomForestRegressor(n_jobs=-1)` for the screen and failed ten smoke tests on the new
+  `ScreeningError`. It is now `n_jobs=1`, the smoke module passes 19 of 19, and its committed
+  fixture did not move. `selection._boruta`'s forest is also `n_jobs=-1`, but Boruta reads
+  `feature_importances_`, which scikit-learn gathers in tree order. Its predictions are never
+  summed, so it is not this defect. (by @assistant)
+
 - 2026-09-26: The four probes came back and localised the drift to label screening. The cause
   is a parallel forest's `predict`, whose sum depends on the order the threads finish. Fixed
   in `hydms.data.screening` by running that forest on one thread, with three tests. The fix
