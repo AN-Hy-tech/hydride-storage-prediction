@@ -316,8 +316,7 @@ def support_from(card: Mapping[str, Any]) -> TemperatureSupport:
 
     Raises:
         PageError: the card carries no support. The sweep will not be drawn over a histogram
-            the page made up or remembered: that is the "39 rows above 500 K" constant
-            :class:`~hydms.figures.TemperatureSupport` was written to retire.
+            the page made up or remembered; :class:`~hydms.figures.TemperatureSupport` measures it.
     """
     support = (card.get("trained_ranges") or {}).get("temperature_support")
     if not isinstance(support, Mapping) or not support.get("counts"):

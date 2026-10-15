@@ -5,8 +5,8 @@ Two rules shape this file:
   - **Nothing heavy at import time.** Collection must succeed on a machine where the `Project`
     environment is not built, so pandas and the rest are imported inside fixtures, and a
     missing dependency skips rather than errors.
-  - **Read-only on the raw data.** `Machine_Model/data/raw/` is the archival input behind
-    REPORT.md. Fixtures hand out copies; a test that mutates one must not affect the next.
+  - **Read-only on the raw data.** `data/raw/` is the committed source data. Fixtures hand
+    out copies; a test that mutates one must not affect the next.
 
 Layout, one directory per layer, mirroring `hydms/`:
 
@@ -39,9 +39,9 @@ pytest_plugins = ("pytester",)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The archival dataset behind REPORT.md. Facts asserted against it elsewhere in the suite:
+# The curated dataset. Facts asserted against it elsewhere in the suite:
 # 1279 rows, 6 columns, 1149 distinct formula strings, 1115 distinct canonical compositions.
-RAW_DATA = REPO_ROOT / "Machine_Model" / "data" / "raw" / "hydride_data.csv"
+RAW_DATA = REPO_ROOT / "data" / "raw" / "hydride_data.csv"
 
 TARGET_COLUMN = "H2_W% (max)"
 FORMULA_COLUMN = "Composition"
@@ -105,7 +105,8 @@ def trained_temperature_range() -> tuple[float, float]:
     """The temperature span the dataset actually covers, in kelvin.
 
     The refusal path (#77) declines anything outside it. Note the coverage is not uniform:
-    only 39 test rows sit above 500 K, which the temperature-sweep chart (#81) must not hide.
+    only 130 of 893 out-of-fold rows sit above 500 K (``tests/test_figures.py`` asserts it), which
+    the temperature-sweep chart (#81) must not hide.
     """
     return (195.0, 773.0)
 

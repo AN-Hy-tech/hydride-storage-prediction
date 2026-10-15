@@ -234,8 +234,7 @@ class FeatureSpec:
     """
 
     #: The published name, e.g. ``dev_Pauling_Electronegativity``. This is the identity: it
-    #: is what REPORT.md quotes, what the manifest stores and what the matrix column is
-    #: called.
+    #: is what the manifest stores and what the matrix column is called.
     name: str
     #: One of :data:`~hydms.descriptors.stats.STATISTICS`, or ``None`` for the passthrough.
     statistic: str | None

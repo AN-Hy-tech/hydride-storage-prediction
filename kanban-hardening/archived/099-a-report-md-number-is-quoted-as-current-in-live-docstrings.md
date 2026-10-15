@@ -1,6 +1,6 @@
 ---
 id: 99
-status: backlog
+status: done
 priority: P1
 blocked_by: []
 assignee: "@amirhossein"
@@ -54,16 +54,16 @@ freeze denies it, and it is corrected *beside* rather than in place — which is
 
 ## Done when
 
-- [ ] Every site above states the measured figure and names what it was measured over. Not a bare
+- [x] Every site above states the measured figure and names what it was measured over. Not a bare
       number: "130 of 893 scored out-of-fold rows" says which evidence, and that is the property
       the old sentence lacked
-- [ ] Each site says where the number comes from, so the next session re-measures rather than
+- [x] Each site says where the number comes from, so the next session re-measures rather than
       re-types — `TemperatureSupport.above()` over `reports/model/model-out-of-fold.csv`
-- [ ] The card prose and the runbook are struck through rather than overwritten where the old
+- [x] The card prose and the runbook are struck through rather than overwritten where the old
       number was load-bearing to an argument, the way #81's own *Done when* does it
-- [ ] `grep -rn "39 test rows" hydms/ tests/ docs/ kanban-hardening/` returns nothing that reads as
+- [x] `grep -rn "39 test rows" hydms/ tests/ docs/ kanban-hardening/` returns nothing that reads as
       a current fact
-- [ ] Nothing under `REPORT.md` or `Machine_Model/` is touched
+- [x] Nothing under `REPORT.md` or `Machine_Model/` is touched — moot: #107 removed both the same day
 
 ## Runnable check
 
@@ -84,3 +84,7 @@ conda run -n Project python -m pytest tests/test_figures.py
   That is the failure mode a constant in prose always has and a measurement never does, which is
   why `hydms.figures.charts.TemperatureSupport` takes counts rather than carrying one — the chart
   is now immune to this card, and the docstrings around it are not. (by @assistant)
+- 2026-10-15: Closed with #107. Every live site now says "130 of 893 out-of-fold rows" and names
+  `TemperatureSupport` as what measures it; `TemperatureSupport`'s and `test_figures.py`'s own
+  docstrings drop the 39-vs-130 history, which only made sense beside a `REPORT.md` that no longer
+  exists. Card #44 is archived and was left as written. (by @assistant)

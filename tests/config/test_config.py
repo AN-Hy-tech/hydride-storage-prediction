@@ -95,7 +95,7 @@ def test_paths_follow_an_overridden_root(tmp_path: Path) -> None:
 
     assert cfg.root == tmp_path
     assert cfg.paths.processed == tmp_path / "data" / "processed"
-    assert cfg.paths.raw == tmp_path / "Machine_Model" / "data" / "raw"
+    assert cfg.paths.raw == tmp_path / "data" / "raw"
 
 
 def test_a_bogus_hydms_root_is_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

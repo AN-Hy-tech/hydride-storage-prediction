@@ -450,9 +450,7 @@ def test_the_domain_strips_band_runs_along_the_capacity_axis(
 def test_the_sweep_reports_the_thinning_it_measured_not_a_remembered_number(
     support: TemperatureSupport,
 ) -> None:
-    """REPORT.md's ``n = 39`` is the archival 247-row test split's, and this project no
-    longer has that split. The committed out-of-fold table scores 893 rows and 130 of them
-    sit above 500 K; the *claim* the card makes survives and only its number was inherited."""
+    """The committed out-of-fold table scores 893 rows and 130 of them sit above 500 K."""
     assert support.rows == 893
     assert support.above(THINNING_K) == 130
     figure = temperature_sweep(

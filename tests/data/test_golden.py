@@ -8,8 +8,8 @@ failing somewhere in a hundred.
 Two kinds of fact live here, and the difference is the point:
 
   - **Facts that must not move.** 1279 rows, 1149 formula strings, 1115 compositions, ten
-    alloy classes. These are what makes ``REPORT.md``'s numbers still attributable: the
-    rewrite reads the same dataset the archived scripts read.
+    alloy classes. The dataset itself is fixed input; if one of these moves, the data
+    changed, not the code.
   - **Facts that moved, on purpose, with the movement pinned too.** The split is 893/131/255
     where the published one was 896/136/247, because the unit is now the canonical
     composition; screening removes two rows the archival pipeline kept. Both are recorded

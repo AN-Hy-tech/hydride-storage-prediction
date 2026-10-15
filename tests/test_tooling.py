@@ -1,10 +1,9 @@
 """Regression tests for the test tooling itself.
 
-These exist because two of the guarantees card #69 sets up are invisible: nothing about a
-green run tells you that the legacy-script interlock is still configured. If someone widens
-`testpaths` or drops `norecursedirs`, every other test in this suite keeps passing — right up
-until CI collects `Machine_Model/tests/test_catboost_smogn.py` and runs a hyperparameter study
-inside the fast lane.
+These exist because the guarantees card #69 sets up are invisible: nothing about a green run
+tells you that test discovery is still confined to `tests/`. If someone widens `testpaths` or
+drops pytest's own `norecursedirs` defaults, every other test keeps passing while pytest
+starts collecting files that are not this project's tests.
 
 Card #69.
 """
@@ -26,15 +25,6 @@ except ModuleNotFoundError:  # pragma: no cover - depends on the interpreter, no
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Files matching pytest's default discovery pattern that must never be collected. Neither is
-# a test: the first runs an Optuna study at module scope, the second asserts against a
-# gitignored SQLite database that no clean clone has.
-HAZARDOUS = (
-    Path("Machine_Model/tests/test_catboost_smogn.py"),
-    Path("Machine_Model/tests/test_check_database.py"),
-)
-
-
 @pytest.fixture(scope="module")
 def pytest_config() -> dict:
     raw = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -43,16 +33,8 @@ def pytest_config() -> dict:
 
 def test_testpaths_is_limited_to_the_tests_directory(pytest_config: dict) -> None:
     assert pytest_config["testpaths"] == ["tests"], (
-        "testpaths must stay ['tests']. Widening it lets pytest discover "
-        "Machine_Model/tests/, which contains training scripts, not tests."
-    )
-
-
-def test_machine_model_is_excluded_from_recursion(pytest_config: dict) -> None:
-    assert "Machine_Model" in pytest_config["norecursedirs"], (
-        "Machine_Model must stay in norecursedirs. It is the archival pipeline behind "
-        "REPORT.md and the Phase H freeze denies edits to it, so the two non-test files "
-        "it contains cannot be fixed in place — they can only be excluded here."
+        "testpaths must stay ['tests']. Widening it lets pytest discover files "
+        "outside the suite, such as the vendored skill tests under .claude/."
     )
 
 
@@ -71,29 +53,6 @@ def test_pytest_defaults_were_not_dropped_from_norecursedirs(pytest_config: dict
         f"norecursedirs dropped pytest's own defaults: {sorted(missing)}. "
         "The key replaces the defaults; it does not extend them."
     )
-
-
-def test_the_hazardous_legacy_files_are_still_hazardous() -> None:
-    """If these were ever made safe, the interlock could be relaxed. Until then, it cannot.
-
-    Deliberately asserts the *problem* still exists rather than assuming it. The day someone
-    turns these into real tests, this fails and points at the interlock as now removable.
-    """
-    present = [p for p in HAZARDOUS if (REPO_ROOT / p).is_file()]
-    if not present:
-        pytest.skip("legacy test files are absent from this checkout")
-
-    smogn = REPO_ROOT / HAZARDOUS[0]
-    if smogn.is_file():
-        source = smogn.read_text(encoding="utf-8", errors="replace")
-        assert "def test_" not in source, (
-            f"{HAZARDOUS[0]} now defines test functions. Re-check whether the "
-            "norecursedirs interlock is still needed."
-        )
-        assert ".optimize(" in source, (
-            f"{HAZARDOUS[0]} no longer runs a study at import. The interlock's justification "
-            "has changed; revisit it rather than leaving a stale comment in pyproject.toml."
-        )
 
 
 def test_collected_tests_come_only_from_this_directory(pytest_config: dict) -> None:

@@ -102,9 +102,8 @@ def repo_root() -> Path:
 class Paths:
     """Every directory the pipeline reads or writes, relative to the repository root.
 
-    Stored relative in YAML and exposed absolute here. `raw` points into `Machine_Model/`
-    because that is where the archival dataset lives; it is read-only input, and the Phase H
-    freeze denies writes there.
+    Stored relative in YAML and exposed absolute here. `raw` is the committed source data and
+    is read-only input; everything else is written by the pipeline and gitignored.
     """
 
     raw: Path
@@ -135,8 +134,8 @@ class Columns:
 class Split:
     """The train/val/test protocol.
 
-    Fractions are 0.20 / 0.10 as `split_data.py` actually used, not the 70/15/15 that
-    `REPORT.md` §2.6 and the README both claim. The documented target is 896/136/247, but
+    Fractions are 0.20 / 0.10 as the earlier pipeline's `split_data.py` actually used (its
+    report said 70/15/15, which was wrong). That pipeline's split was 896/136/247, but
     that was produced by grouping on the raw formula string; grouping on the canonical
     composition key (card #87) moves it slightly, and that movement is the fix working.
     """
@@ -200,7 +199,8 @@ class Domain:
     """The bounds outside which the surrogate refuses to answer (card #77).
 
     The temperature span is what the dataset actually covers, measured. Coverage inside it
-    is not uniform — only 39 test rows sit above 500 K — which is why the applicability
+    is not uniform — only 130 of 893 out-of-fold rows sit above 500 K, as
+    :class:`~hydms.figures.TemperatureSupport` measures them — which is why the applicability
     domain (card #48) is a separate check rather than just this interval.
 
     The three thresholds below are that check's, and card #48 measured every one of them.

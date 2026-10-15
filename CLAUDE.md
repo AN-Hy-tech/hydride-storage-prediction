@@ -29,10 +29,11 @@ A higher row wins **within its own subject**.
 | 2 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | Scope, claim, acceptance criteria, risks, rejected alternatives — **of the frozen programme** | Day-to-day state |
 | 3 | [research/](research/) memos | Any cited fact — physics, methods, libraries, DOIs | Decisions |
 | 4 | `.claude/skills/materials-science-specialist/` | Fast domain recall | Facts the memos corrected (grounding memo §5) |
-| 5 | [REPORT.md](REPORT.md), [README.md](README.md) | The forward model **as published** | Whether those numbers are *valid* |
+| 5 | `reports/` (generated tables and `.md` summaries) | Every current number — procedure, transfer and artifact scores | Why a number is what it is |
 | 6 | `graphify-out/` | Where things are and how they connect | Ground truth; it goes stale |
 
-**Row 5 is history, not status.** Cite REPORT.md's numbers as "as published", never as current.
+**Only `reports/` numbers are current.** `REPORT.md` and `Machine_Model/` were removed (card #107); they
+are at git tag `machine-model-archive` and are never quoted as results.
 
 ## Document map
 
@@ -45,7 +46,6 @@ A higher row wins **within its own subject**.
 | [docs/RUNNING-THE-FIT.md](docs/RUNNING-THE-FIT.md) | Before running `hydms.surrogate.train` / `evaluate` / `loco` — operator commands, in order |
 | [CONTEXT.md](CONTEXT.md) | Before writing a number or noun for readers outside the room — the glossary |
 | [docs/chapter1-revision.md](docs/chapter1-revision.md) | Quoting a current number in prose (hand-written; check its evidence table) |
-| [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md) | Before quoting any REPORT.md number — **generated**, never edit |
 | [docs/API.md](docs/API.md), [docs/REFUSALS.md](docs/REFUSALS.md) | The HTTP contract; every refusal sentence — **generated**, never edit |
 | [docs/QA-PROTOCOL.md](docs/QA-PROTOCOL.md) | Writing a card's tests; the lint lane's no-install rule (§6) |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Touching an environment file, or a rebuild fails |
@@ -99,8 +99,8 @@ A hit is a pointer to verify, never the answer. Freshness: `graphify-out/cost.js
   that stops being true, the plan changes.
 - **Interpreter:** the conda env `Project`, **not** `C:\Python313` (a different NumPy major). Pins:
   [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
-- **Two code trees.** New work is in `hydms/`. `Machine_Model/src/` is the archival record behind
-  REPORT.md and is never rewritten (PRD §7.2).
+- **One code tree.** All code is in `hydms/`. A citation of `Machine_Model/...` resolves at git tag
+  `machine-model-archive` (`git show machine-model-archive:<path>`).
 - **The promoted model is on one machine.** `artifacts/` is gitignored, so a fresh clone has no
   model and the service refuses to start (#7).
 - **Grouping uses the canonical composition key**, `hydms.data.canonical.group_keys`, called and
@@ -118,9 +118,9 @@ A hit is a pointer to verify, never the answer. Freshness: `graphify-out/cost.js
 
 ## Session anti-patterns
 
-- Quoting REPORT.md's scores as current. They are expected to fall (risk R4); the evidence is
-  [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md).
-- Working the frozen board, or editing the PRD, `research/`, `REPORT.md` or `Machine_Model/`.
+- Quoting the old `REPORT.md` scores at all. They were never reproduced; current numbers are in
+  `reports/`.
+- Working the frozen board, or editing the PRD or `research/`.
 - Moving a card to `doing` while a `blocked_by` id is unfinished.
 - Re-opening a decision PRD §7 settled (generative models, descriptor inversion,
   Optuna-for-pymoo, patching the old pipeline) without new evidence.

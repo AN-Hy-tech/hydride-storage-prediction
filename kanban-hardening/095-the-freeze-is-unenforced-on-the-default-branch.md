@@ -113,3 +113,6 @@ enforcement this extends
   the card: branch protection returns **403** on this plan, so "a branch-protection rule" is not
   something anyone here can choose. Recorded in the box rather than in a handoff, because the next
   person to reach this card would otherwise spend the same request finding out. (by @assistant)
+- 2026-10-15: #107 changed the deny-list (`REPORT.md` and `Machine_Model/**` left it, by recorded
+  decision). Nothing about this card moved: `main` still carries no `check_freeze.py`, and the
+  hardening branch is the GitHub default. (by @assistant)

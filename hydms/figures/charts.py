@@ -650,14 +650,10 @@ class Figure:
 class TemperatureSupport:
     """How many training rows back each part of the temperature range -- measured, not recalled.
 
-    The card this type serves says "only 39 test rows sit above 500 K". That number is
-    :file:`REPORT.md`'s, over the archival pipeline's 247-row test split, and it does not
-    describe the evidence this project now has: the committed out-of-fold table
-    (``reports/model/model-out-of-fold.csv``) scores **893** rows and **130** of them sit
-    above 500 K. The proportion is close -- 15.8% then, 14.6% now -- so the *claim* the card
-    makes survives intact and only its number was inherited. Which is exactly why this type
-    takes counts rather than carrying a constant: a chart whose thinning claim is typed in is
-    a chart that keeps being right about the wrong split.
+    The committed out-of-fold table (``reports/model/model-out-of-fold.csv``) scores **893**
+    rows and **130** of them sit above 500 K. This type takes counts rather than carrying that
+    as a constant: a chart whose thinning claim is typed in keeps being right about whatever
+    evidence it was typed from, even after that evidence is replaced.
 
     Attributes:
         edges: Bin edges, ascending, length ``len(counts) + 1``.

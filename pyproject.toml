@@ -177,7 +177,7 @@ Repository = "https://github.com/AN-Hy-tech/hydride-storage-prediction"
 
 [tool.setuptools.packages.find]
 include = ["hydms*"]
-exclude = ["Machine_Model*", "tests*", "scripts*"]
+exclude = ["tests*", "scripts*"]
 
 [tool.setuptools.package-data]
 # Element-property tables ship inside the package: the descriptor layer must not depend on
@@ -192,7 +192,7 @@ exclude = ["Machine_Model*", "tests*", "scripts*"]
 # command produces.
 # `pipeline/smoke-fixture.csv` ships for the third variation on the same reason. It is the
 # sampled fixture the end-to-end smoke run reads (card #73), and the run exists to answer "does
-# the chain connect" on a machine that may have no `Machine_Model/` in it at all — a container,
+# the chain connect" on a machine that may have no `data/raw/` in it at all — a container,
 # a CI runner, an installed wheel. It is generated rather than curated:
 # `python -m hydms.pipeline.smoke --emit` rewrites it from the curated data, and a test asserts
 # the committed bytes are what that command produces.
@@ -218,24 +218,19 @@ hydms = [
 # ---------------------------------------------------------------------------------------
 # Test discovery
 #
-# `testpaths` and `norecursedirs` are not tidiness — they are a safety interlock.
-# Machine_Model/tests/ holds two files that match pytest's default `test_*.py` pattern and
-# are not tests: `test_catboost_smogn.py` calls optuna.create_study(...).optimize() at module
-# scope, so collecting it *runs a hyperparameter study*; and `test_check_database.py` asserts
-# against a gitignored SQLite file that is absent from a clean clone. Neither can be fixed in
-# place — Machine_Model/ is the archival record behind REPORT.md and the Phase H freeze denies
-# edits to it — so they are excluded here instead. Card #69.
+# `testpaths` keeps discovery inside tests/, so nothing else in the repository that happens to
+# match `test_*.py` is collected. Card #69.
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
 # NOTE: setting this key *replaces* pytest's defaults, it does not extend them. The first
 # nine entries are those defaults, restored verbatim — dropping `.*` alone is enough to make
-# `pytest .` start collecting the vendored skill suites under .claude/. Only the last two are
-# this project's own additions.
+# `pytest .` start collecting the vendored skill suites under .claude/. Only the last one is
+# this project's own addition.
 norecursedirs = [
   "*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}",
-  "Machine_Model", "graphify-out",
+  "graphify-out",
 ]
 addopts = "-q --strict-markers --strict-config --import-mode=importlib"
 markers = [
@@ -249,7 +244,7 @@ filterwarnings = ["error::DeprecationWarning:hydms.*"]
 line-length = 100
 target-version = "py310"
 src = ["hydms", "tests"]
-extend-exclude = ["Machine_Model", "graphify-out"]
+extend-exclude = ["graphify-out"]
 
 [tool.ruff.lint]
 select = [
@@ -275,7 +270,7 @@ ignore = [
 [tool.mypy]
 python_version = "3.10"
 files = ["hydms"]
-exclude = ["Machine_Model/", "build/"]
+exclude = ["build/"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true

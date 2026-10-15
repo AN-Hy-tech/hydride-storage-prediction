@@ -42,8 +42,7 @@ ACTIVE_BOARD = "kanban-hardening"
 FROZEN_BOARD = "kanban"
 BOARDS = (ACTIVE_BOARD, FROZEN_BOARD)
 
-# Prose whose links are checked. Machine_Model/ is excluded on purpose: it is the frozen
-# archival record behind REPORT.md, and is not maintained.
+# Prose whose links are checked: the documents this project maintains.
 LINKED_PROSE = ("README.md", "CLAUDE.md", "docs", "kanban", "kanban-hardening", "research")
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")

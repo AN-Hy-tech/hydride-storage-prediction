@@ -1938,7 +1938,7 @@ Every number this service returns is **gravimetric hydrogen capacity of the mate
 
 A material at 6 wt% is not a system at 6 wt%, and a claim that it meets a 5.5 wt% system target because 6 > 5.5 is wrong twice over. If a number from this service is going into a comparison with a target, say which basis each side is on.
 
-The second thing not to inherit: the published figures in `REPORT.md` were produced by a pipeline with known validation leaks and are **history, not current performance**. Do not quote them beside a number from this service.
+The second thing not to inherit: the figures once published in `REPORT.md` were produced by a pipeline with known validation leaks and could not be reproduced. Both were removed from the repository (they survive at the git tag `machine-model-archive`). Do not quote them beside a number from this service.
 
 ## The other door: calling the library directly
 

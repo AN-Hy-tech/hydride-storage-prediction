@@ -56,7 +56,7 @@ FIXTURE = DATA / "cbfv_statistics_reference.csv"
 GORDY = "dev_Gordy_electonegativity"
 EUROPIUM_ROW = "Eu1Ni5"
 
-#: Measured over `Machine_Model/data/raw/hydride_data.csv`. 265 rows lose Gordy alone and
+#: Measured over `data/raw/hydride_data.csv`. 265 rows lose Gordy alone and
 #: `Eu1Ni5` loses seven features at once, so the batch refuses 266. Drop Gordy and the
 #: remaining 21 features cover all but the europium row — that number is the trade #24 and
 #: #25 make, so it is pinned rather than described.

@@ -35,7 +35,8 @@ property of the candidates.
 
 **The temperature window is an outer bound and nothing more.** It says a candidate is not
 being asked about at 1200 K. It does *not* say the model is trustworthy at 760 K: coverage
-inside the range is badly uneven -- only 39 test rows sit above 500 K -- which is exactly why
+inside the range is badly uneven -- only 130 of 893 out-of-fold rows sit above 500 K, as
+:class:`~hydms.figures.TemperatureSupport` measures them -- which is exactly why
 the learned applicability domain (#48) exists and why this screen must never be quoted as
 one. ``hydms/config/pipeline.yaml`` says the same thing where the two numbers are set.
 

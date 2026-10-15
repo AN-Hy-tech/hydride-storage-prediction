@@ -1,6 +1,6 @@
 ---
 id: 107
-status: backlog
+status: done
 priority: P1
 blocked_by: []
 assignee: "@amirhossein"
@@ -37,3 +37,11 @@ tags: [ph, l0]
   docstrings) and **#95** (the freeze is unenforced on `main`; partly addressed this session by
   making this branch the GitHub default, but `main` itself still carries no `check_freeze.py`).
   (by @assistant)
+- 2026-10-15: Done, after the maintainer approved amending the deny-list. Tagged `machine-model-archive`
+  at e92539b. **The handoff missed one thing:** `hydms` read its input data from
+  `Machine_Model/data/raw/`, so the four source files moved to `data/raw/` rather than going with
+  the rest. The reconciliation module, its test and `docs/REPORT-RECONCILIATION.md` went with
+  `REPORT.md`, since they had nothing left to reconcile; the model card cites them at the tag.
+  Card #2 lives in `archived/`, not the frozen board, so `kanban/**` was never touched; the PRD's
+  §7.2 row is recorded as superseded in `FREEZE.md` rather than edited, because the PRD stays
+  frozen. #99 closed in the same change; #95 is unaffected. (by @assistant)
