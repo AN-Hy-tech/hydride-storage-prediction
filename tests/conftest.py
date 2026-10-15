@@ -105,7 +105,8 @@ def trained_temperature_range() -> tuple[float, float]:
     """The temperature span the dataset actually covers, in kelvin.
 
     The refusal path (#77) declines anything outside it. Note the coverage is not uniform:
-    only 39 test rows sit above 500 K, which the temperature-sweep chart (#81) must not hide.
+    130 of the 893 scored out-of-fold rows sit above 500 K (measured by `tests/test_figures.py`),
+    which the temperature-sweep chart (#81) must not hide.
     """
     return (195.0, 773.0)
 

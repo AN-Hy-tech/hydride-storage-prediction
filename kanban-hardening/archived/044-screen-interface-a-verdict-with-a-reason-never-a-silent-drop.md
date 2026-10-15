@@ -100,8 +100,8 @@ python -m pytest tests/screens/test_protocol.py -q
   `temperature_window()` reads `domain.temperature_min_k/max_k` and `columns.temperature` from
   config, so tightening it is a config change — the property #48's ceiling is required to have, now
   demonstrated once. It admits all 1,279 curated rows, which is the arithmetic check that the bounds
-  really are the measured span. It is an **outer bound only**: coverage inside is uneven (39 test
-  rows above 500 K) and the module docstring says so, because the way this screen fails the thesis
+  really are the measured span. It is an **outer bound only**: coverage inside is uneven (~~39 test
+  rows above 500 K~~ — REPORT.md's archival split; 130 of 893 scored out-of-fold rows, #99) and the module docstring says so, because the way this screen fails the thesis
   is somebody quoting it as an applicability domain.
 
   Boxes left elsewhere: #48 and #49 (how to declare a vocabulary and where evidence columns go),

@@ -200,7 +200,8 @@ class Domain:
     """The bounds outside which the surrogate refuses to answer (card #77).
 
     The temperature span is what the dataset actually covers, measured. Coverage inside it
-    is not uniform — only 39 test rows sit above 500 K — which is why the applicability
+    is not uniform — 130 of the 893 scored out-of-fold rows sit above 500 K, measured by
+    `TemperatureSupport.above()` over `reports/model/model-out-of-fold.csv` — which is why the applicability
     domain (card #48) is a separate check rather than just this interval.
 
     The three thresholds below are that check's, and card #48 measured every one of them.

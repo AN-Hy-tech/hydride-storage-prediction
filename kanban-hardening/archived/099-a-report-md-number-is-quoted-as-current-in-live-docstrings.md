@@ -1,6 +1,6 @@
 ---
 id: 99
-status: backlog
+status: done
 priority: P1
 blocked_by: []
 assignee: "@amirhossein"
@@ -54,16 +54,16 @@ freeze denies it, and it is corrected *beside* rather than in place — which is
 
 ## Done when
 
-- [ ] Every site above states the measured figure and names what it was measured over. Not a bare
+- [x] Every site above states the measured figure and names what it was measured over. Not a bare
       number: "130 of 893 scored out-of-fold rows" says which evidence, and that is the property
       the old sentence lacked
-- [ ] Each site says where the number comes from, so the next session re-measures rather than
+- [x] Each site says where the number comes from, so the next session re-measures rather than
       re-types — `TemperatureSupport.above()` over `reports/model/model-out-of-fold.csv`
-- [ ] The card prose and the runbook are struck through rather than overwritten where the old
+- [x] The card prose and the runbook are struck through rather than overwritten where the old
       number was load-bearing to an argument, the way #81's own *Done when* does it
-- [ ] `grep -rn "39 test rows" hydms/ tests/ docs/ kanban-hardening/` returns nothing that reads as
+- [x] `grep -rn "39 test rows" hydms/ tests/ docs/ kanban-hardening/` returns nothing that reads as
       a current fact
-- [ ] Nothing under `REPORT.md` or `Machine_Model/` is touched
+- [x] Nothing under `REPORT.md` or `Machine_Model/` is touched
 
 ## Runnable check
 
@@ -78,6 +78,13 @@ conda run -n Project python -m pytest tests/test_figures.py
 
 ## Narrative
 
+- 2026-10-15: Closed. Re-measured before writing, not copied from this card: `tests/test_figures.py`
+  asserts `support.rows == 893` and `support.above(500.0) == 130` over the committed
+  `reports/model/model-out-of-fold.csv`, and passes. The five code sites now say "130 of the 893
+  scored out-of-fold rows" and name what measures it; the #44 card's sentence is struck through
+  with the correction beside it. The README's #44 summary no longer carries the sentence, so it
+  needed no edit. What `grep -rn "39 test rows"` still returns is the sentence *quoted in order to
+  correct it* (`hydms/figures/charts.py`, #81, this card), which is not a site. (by @assistant)
 - 2026-09-12: Filed by #81, which was told by its own card that "only 39 test rows sit above 500 K"
   and measured the premise before building the chart that reports it. The number was not wrong when
   it was written; it was inherited across a change of protocol that removed the thing it counted.

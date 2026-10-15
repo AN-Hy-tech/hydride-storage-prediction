@@ -70,7 +70,8 @@ measurements from underrepresented regimes flatters every metric that follows. T
 supplies the physics: sloping plateaus make measured capacity depend on measurement pressure,
 and pressure is not a column in this dataset. So a row CleanLab calls a label issue is often a
 *correct* measurement taken under conditions the features cannot express -- and the
-high-temperature regime, where only 39 test rows sit above 500 K, is exactly where those rows
+high-temperature regime, where 130 of the 893 scored out-of-fold rows sit above 500 K
+(measured by `TemperatureSupport.above()` over `reports/model/model-out-of-fold.csv`), is exactly where those rows
 live. Every removal is reported with its reason so the Chapter 1 revision (#37) can say how
 many, of what kind, and from where.
 
