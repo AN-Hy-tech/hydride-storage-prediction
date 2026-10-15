@@ -53,7 +53,7 @@ def columns_for(elem_prop: str, sample: pd.DataFrame) -> list[str]:
     """Column names CBFV emits for one table, using the original script's exact arguments.
 
     `extend_features=True` and `drop_duplicates=False` are not incidental: they are what
-    `Machine_Model/src/extract_features_cbfv.py:31` passed, and changing either changes the
+    the archival `src/extract_features_cbfv.py:31` (tag `machine-model-archive`) passed, and changing either changes the
     emitted column set. Reproducing the call is the whole point of the spike.
     """
     from CBFV.composition import generate_features

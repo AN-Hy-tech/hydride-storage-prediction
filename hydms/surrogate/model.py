@@ -1,6 +1,6 @@
 """L3 -- the capacity model, its quantile heads, and the rows allowed to stop it.
 
-Two changes from ``Machine_Model/src/Catboostmodel.py``, and both are structural rather than
+Two changes from the archival ``src/Catboostmodel.py`` (tag ``machine-model-archive``), and both are structural rather than
 remembered.
 
 **The eval set is never the scored set (leaks L1 and L5).** ``:604-606`` fitted the final
@@ -227,7 +227,7 @@ class Hyperparameter:
         return trial.suggest_float(self.name, float(self.low), float(self.high), log=self.log)
 
 
-#: The search space: ported from ``Machine_Model/src/Catboostmodel.py:545-563`` -- the *live*
+#: The search space: ported from the archival ``src/Catboostmodel.py:545-563`` -- the *live*
 #: study at ``:542``, not the two commented-out earlier ones above it -- with **one bound
 #: changed**, and the change is a measurement.
 #:

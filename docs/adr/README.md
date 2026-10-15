@@ -14,7 +14,7 @@ Format: `NNNN-slug.md`, following `.claude/skills/domain-modeling/ADR-FORMAT.md`
 | 0001 | *reserved* — optimise in composition space; never invert descriptors | | #36 |
 | 0002 | *reserved* — reimplement the featuriser rather than depend on unlicensed CBFV (**and** the ElMD licence, which is the same finding with the opposite sign) | | #36 |
 | 0003 | *reserved* — rank by conformalised LCB, not predicted mean | | #36 |
-| 0004 | *reserved* — new `hydms/` package; `Machine_Model/src/` archived rather than rewritten | | #36 |
+| 0004 | *reserved* — new `hydms/` package; the archival pipeline archived rather than rewritten (deleted by #107; tag `machine-model-archive`) | | #36 |
 | 0005 | *reserved* — pymoo with the element subset fixed per run, over mixed-integer encoding | | #36 |
 | [0006](0006-the-delivery-seam.md) | The delivery seam: the API owns no ML logic, and the library owns no I/O | The one hard-to-reverse decision of the delivery layer | #85 |
 | [0007](0007-evidence-is-served-not-read-by-the-page.md) | Evidence is served, not read by the page | How committed evidence reaches the model-card page, and why it is read once at startup | #83, #105 |

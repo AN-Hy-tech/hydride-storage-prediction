@@ -5,10 +5,10 @@ What a card must prove before it may be called done.
 This exists because every card on the board carries a `## Runnable check`, and nothing otherwise says
 what that check has to *cover*. Without a standard, a check degenerates into `import hydms` and the
 phase ships a green build over untested code — which is close to what happened before: the archival
-pipeline has two files named `test_*.py` and neither is a test.
+pipeline had two files named `test_*.py` and neither was a test.
 
-Scope: `hydms/`, `tests/`, `app/` and `scripts/`. `Machine_Model/` is archival and out of scope
-([FREEZE.md](FREEZE.md)).
+Scope: `hydms/`, `tests/`, `app/` and `scripts/`. The archival pipeline was deleted by card #107
+(tag `machine-model-archive`).
 
 ---
 

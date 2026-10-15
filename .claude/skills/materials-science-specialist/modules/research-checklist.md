@@ -33,8 +33,8 @@ The workflow that produced the current content, and the one to repeat before ext
   subsection is domain knowledge, not retrieved sources** — the least-sourced part of the skill.
 - `modules/generative-ai-inverse-design.md` — derived from `research/inverse-design-methods.md`,
   a DOI-cited memo written against primary sources on 2026-08-29.
-- `modules/project-context.md` — read directly from this repo's `README.md`, `REPORT.md` and
-  `Machine_Model/src/` on 2026-08-29.
+- `modules/project-context.md` — read directly from this repo's `README.md`, `REPORT.md` and the
+  archival `src/` on 2026-08-29; marked history-only by card #107.
 
 Both memos live in `research/`. They are the citation authority; these modules summarise them. When they
 disagree, the memo wins — and fix the module.

@@ -1,8 +1,8 @@
 """HydMS — inverse design of metal-hydride compositions.
 
-All new work lives in this package. ``Machine_Model/src/`` is the frozen archival record
-behind ``REPORT.md`` and is never modified — rewriting it would orphan every published
-number (PRD §7.2).
+All work lives in this package. The archival pipeline behind the old ``REPORT.md`` was
+deleted by card #107; it and the report are recoverable at git tag ``machine-model-archive``,
+which is where every ``src/<file>.py:<line>`` citation in this package points.
 
 Layers own knowledge, not phases. Each subpackage below owns exactly one kind of
 knowledge, and nothing outside it needs to know that knowledge; see ``kanban/README.md``

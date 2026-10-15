@@ -10,7 +10,7 @@ Reproduce with `python scripts/spike_feature_provenance.py --check-all-22`.
 
 **The committed featurisation script is not what produced these features.**
 
-`Machine_Model/src/extract_features_cbfv.py:31` calls `generate_features(..., elem_prop='magpie')`.
+The archival `src/extract_features_cbfv.py:31` (git tag `machine-model-archive`) calls `generate_features(..., elem_prop='magpie')`.
 Magpie produces **none** of the 21 descriptors. Not one. The selected set is a mix of two other
 tables:
 

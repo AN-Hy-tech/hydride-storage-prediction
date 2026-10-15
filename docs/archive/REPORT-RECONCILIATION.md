@@ -2,7 +2,7 @@
 
 > **Archived 2026-10-15 by card #107; frozen from here on.** `REPORT.md`, the `Machine_Model/` files
 > this page quotes, its generator `hydms/evidence/reconciliation.py` and its test were deleted. All
-> of them are at commit `6f2eeb9` (local tag `machine-model-archive`). The paragraph below describes
+> of them are at git tag `machine-model-archive` (commit `e92539b`). The paragraph below describes
 > the page as it was generated; nothing regenerates it now. Its *current* column is frozen at this
 > date: current performance is on the model card, not here.
 

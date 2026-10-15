@@ -21,7 +21,7 @@ real trade-off:
 1. Optimise in composition space; never invert descriptors
 2. Reimplement the featuriser rather than depend on unlicensed CBFV
 3. Rank by conformalised LCB, not predicted mean
-4. New `hydms/` package; `Machine_Model/src/` archived rather than rewritten
+4. New `hydms/` package; the archival pipeline archived rather than rewritten (deleted by #107; tag `machine-model-archive`)
 5. pymoo with the element subset fixed per run, over mixed-integer encoding
 
 ## Done when

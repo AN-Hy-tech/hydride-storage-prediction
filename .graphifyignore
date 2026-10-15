@@ -1,10 +1,4 @@
 # Scope for the knowledge graph. The corpus is the project, not its tooling.
-#
-# Machine_Model/reports/ -- 122 archival matplotlib figures behind REPORT.md. They are
-# the published forward model's plots; each image costs its own vision subagent and none
-# carries prose the graph can route on. The code that produced them (Machine_Model/src/)
-# is kept: AST extraction is free and needs no LLM.
-Machine_Model/reports/
 
 # .claude/skills/ -- installed skill prose: ask-matt, backend-development, ui-ux-pro-max,
 # and ~30 more. 77k words of generic tooling documentation whose vocabulary this project

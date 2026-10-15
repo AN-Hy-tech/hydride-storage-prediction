@@ -18,7 +18,7 @@ The objective is a **user-facing interface that predicts gravimetric capacity** 
 cannot defend.
 
 [PRD-inverse-design.md](PRD-inverse-design.md) §2.2 records three validation leaks. A fresh audit of
-`Machine_Model/src/` found **thirteen**, plus three findings worse than "optimistic by an unknown
+the archival pipeline's `src/` found **thirteen**, plus three findings worse than "optimistic by an unknown
 margin". Those three are stated in [FREEZE.md](FREEZE.md) § Why; the full leak inventory is §1 below.
 
 **Outcome:** a reproducible pipeline, a calibrated surrogate reporting an interval and a domain
@@ -29,8 +29,8 @@ that fails the build if any leak reappears.
 
 ## 1. The leak inventory
 
-This table is the definition of done for stages S2–S4. Line numbers refer to the archival pipeline in
-`Machine_Model/src/`, which is **read, never rewritten** (PRD §7.2).
+This table is the definition of done for stages S2–S4. Line numbers refer to the archival pipeline's
+`src/`, deleted by card #107 and recoverable at git tag `machine-model-archive`.
 
 | # | Site | Effect |
 |---|---|---|
@@ -283,7 +283,8 @@ conda run -n Project streamlit run app/main.py
 - **Scope:** ≈ 50 developer-days for one developer. A rebuild, not a patch — the honest cost of the
   chosen scope, in tension with the word *emergency*.
 - **Out of scope:** HYDPARK's ΔH/ΔS columns and `database/combined_dataset.csv` (frozen
-  thermodynamics, #38–#43). `Machine_Model/**`, `REPORT.md` and the PRD are read, never rewritten.
+  thermodynamics, #38–#43). The PRD is read, never rewritten; the archival pipeline and
+  `REPORT.md` were deleted by #107 (tag `machine-model-archive`).
 - **Nothing this phase ships has been seen by CI:** `artifacts/` is gitignored (#7). **Check that a
   file reaches CI before writing a check that reads it.**
 - **A gate can be green over a sentinel whose subject moved** — measured once, for 5 h 21 min.

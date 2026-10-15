@@ -3,7 +3,7 @@
 **The archival selector, and what this is a port of.** ``REPORT.md`` 3.3 describes five
 stages: ``VarianceThreshold``, a correlation filter at ``|r| > 0.1``, RandomForest importance
 above 0.005, Boruta, then SHAP and VIF. **That selector does not exist.** There is no
-correlation filter and no 0.005 threshold anywhere in ``Machine_Model/src/``, and SHAP is
+correlation filter and no 0.005 threshold anywhere in the archival ``src/``, and SHAP is
 computed after the fact for the report, never used as a filter. Two selectors exist:
 
   - ``Boruta_FeatEng.py`` -- the live one, and what this module ports. Three stages:

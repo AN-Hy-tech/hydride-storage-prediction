@@ -14,18 +14,20 @@ frontmatter is the mechanical act, but it is only honest once every condition be
 
 ## Why
 
-The forward model's published numbers cannot be defended. Three findings decided this:
+The forward model's published numbers cannot be defended. Three findings decided this. Card #107
+has since deleted the report and its pipeline; every path below resolves at git tag
+`machine-model-archive` (commit `e92539b`), under the pipeline's own directory.
 
 1. **The published numbers are contradicted by CSVs committed in this repository.**
-   [REPORT.md](../REPORT.md) claims the stacking ensemble scores Val R² 0.939 / Test R² 0.892.
-   `Machine_Model/reports/benchmarked_model/stacking_results.csv` records CV 0.344 / Val 0.377 /
+   `REPORT.md` claims the stacking ensemble scores Val R² 0.939 / Test R² 0.892.
+   `reports/benchmarked_model/stacking_results.csv` records CV 0.344 / Val 0.377 /
    Test 0.376. REPORT §4.4's paired t-test (t = −2.102, p = 0.037) is recorded in
    `ttest_best_vs_ensemble_abs_error.csv` as t = −8.168, p = 1.65e-14, against a different best model.
    §3.2's CleanLab row counts (886/131/239) are refuted by
    `temperature_subgroup_performance_expanded.csv`, which sums to the full 247 test rows.
    **The published pipeline is not the committed pipeline.**
 
-2. **`Machine_Model/src/CleanLab.py:90` overwrites validation and test ground-truth labels with the
+2. **`src/CleanLab.py:90` overwrites validation and test ground-truth labels with the
    model's own predictions.** It is inert today only because nothing reads its output. Card #14 as
    originally written would have wired it in.
 
@@ -59,11 +61,11 @@ The inverse-design programme: thermodynamics (PT), screen-and-rank (PA) and the 
 | `docs/PRD-inverse-design.md` | The frozen programme's specification |
 | `research/**` | New memos are research effort spent outside the phase |
 
-**Removed 2026-10-15, by the maintainer's decision:** `REPORT.md` and `Machine_Model/**`. Both
-were protected as the archival record behind the published numbers. That record is shown wrong
-(§Why) and is reconciled beside it ([archive/REPORT-RECONCILIATION.md](archive/REPORT-RECONCILIATION.md)), so
-card #107 deletes the pipeline and the results built on it, after tagging the last commit that
-has them so every citation stays recoverable. **Only the deny-list changed:** Phase H stays in
+**Removed 2026-10-15, by the maintainer's decision:** `REPORT.md` and the archival pipeline's
+directory. Both were protected as the archival record behind the published numbers. That record
+is shown wrong (§Why) and is reconciled beside it ([archive/REPORT-RECONCILIATION.md](archive/REPORT-RECONCILIATION.md)), so
+card #107 deleted the pipeline and the results built on it; tag `machine-model-archive` names the
+last commit holding them intact, so every citation stays recoverable. **Only the deny-list changed:** Phase H stays in
 force, and the three paths above stay frozen.
 
 ### Everything else is allowed

@@ -78,8 +78,8 @@ as they pass through it. Porting the `manage_outliers` behaviour is not in scope
       exactly. It passes #9's schema (a positive amount on a real element), it passes CBFV, and its
       feature vector is that of pure magnesium rather than of a Mg-Ni-La alloy. Found by #87, whose
       key surfaced it as the only fraction in either raw file below 1e-4. Decide what screening does
-      with it — flag, drop, or correct in a documented correction layer, since `Machine_Model/` is
-      read-only under the freeze — and say so out loud; do **not** repair it silently in a loader
+      with it — flag, drop, or correct in a documented correction layer, since the raw files in
+      `data/raw/` are kept byte-identical to their source (#107) — and say so out loud; do **not** repair it silently in a loader
 
 - [x] **Both decided rows land in `train` under #13's split, so the stage is entitled to act.**
       Measured, not assumed — and the general case is a real code path with a test: a finding on a

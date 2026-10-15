@@ -46,7 +46,7 @@ Order and dtype
 The order the published model was actually *trained* in was ``selected_cols_final`` -- the
 survivors of Boruta and iterative VIF, in the order CBFV emitted them
 (``Boruta_FeatEng.py:112``) -- and that order is nowhere in this repository.
-``Machine_Model/data/processed_data/`` was never committed, and every committed listing of
+The archival ``data/processed_data/`` was never committed, and every committed listing of
 the 22 is sorted by something else: ``feature_selection_report.csv`` by SHAP descending,
 ``feature_importance.csv`` alphabetically, ``feature_target_pearson_corr.csv`` by
 correlation. So this module *chooses* the SHAP-descending order, because that is the one a
