@@ -1,6 +1,6 @@
 ---
 id: 108
-status: backlog
+status: done
 priority: P1
 blocked_by: []
 assignee: "@amirhossein"
@@ -23,3 +23,13 @@ tags: [ph, l0]
   --emit` and commit the regenerated contract, per the gate's own error message — but verify the
   lowercase form is actually correct before committing it, not just the one that makes the diff go
   away. Hygiene (board, freeze, ruff, mypy) is unaffected and still green. (by @assistant)
+- 2026-10-15: Done. Root cause: CI installs from `pyproject.toml` ranges, not the lock, and got
+  Pydantic 2.14.1 (the lock pinned 2.12.5). Verified the lowercase form is the correct one, not
+  just the one that clears the diff: a minimal `Literal[True]`/`Literal[False]` discriminated
+  union, run under both versions, dumps `{"refused":true}` on the wire under each, and only 2.14
+  maps the key `"true"` to it — 2.12's `"True"` could never match a real payload. Regenerated
+  `openapi.json` under CI's versions (4 keys change, nothing else), raised the api extra to
+  `pydantic>=2.14` so an older install cannot write the old keys back, and moved the lock's
+  pydantic/pydantic-core to the 2.14.1/2.50.1 pair CI ran. **The `Project` conda env still has
+  2.12.5:** run `pip install pydantic==2.14.1 pydantic-core==2.50.1` in it, or HG-3 fails
+  locally. (by @assistant)
