@@ -149,8 +149,8 @@ pulp==2.9.0
 pure-eval==0.2.3
 pyarrow==14.0.2
 pycaret==3.3.2
-pydantic==2.12.5
-pydantic-core==2.41.5
+pydantic==2.14.1
+pydantic-core==2.50.1
 pydantic-settings==2.9.1
 pydash==8.0.5
 pydeck==0.9.3

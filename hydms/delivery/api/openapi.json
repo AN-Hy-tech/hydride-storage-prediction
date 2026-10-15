@@ -28,8 +28,8 @@
             "items": {
               "discriminator": {
                 "mapping": {
-                  "False": "#/components/schemas/PredictionResultBody",
-                  "True": "#/components/schemas/RefusalBody"
+                  "false": "#/components/schemas/PredictionResultBody",
+                  "true": "#/components/schemas/RefusalBody"
                 },
                 "propertyName": "refused"
               },
@@ -1186,8 +1186,8 @@
                 "schema": {
                   "discriminator": {
                     "mapping": {
-                      "False": "#/components/schemas/PredictionResultBody",
-                      "True": "#/components/schemas/RefusalBody"
+                      "false": "#/components/schemas/PredictionResultBody",
+                      "true": "#/components/schemas/RefusalBody"
                     },
                     "propertyName": "refused"
                   },

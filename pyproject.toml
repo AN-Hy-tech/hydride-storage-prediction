@@ -132,7 +132,10 @@ parity = ["CBFV==1.1.0"]
 api = [
   "fastapi>=0.115,<1.0",
   "uvicorn>=0.30",
-  "pydantic>=2.7",
+  # 2.14 is a floor, not a preference: older releases write a bool discriminator's mapping keys
+  # as Python's "True"/"False" rather than JSON's "true"/"false", and the committed openapi.json
+  # (gate HG-3) is generated with the JSON form. Card #108.
+  "pydantic>=2.14",
 ]
 
 # The test and hygiene toolchain. Installed by CI's `suite` job and by anyone running the
