@@ -38,16 +38,14 @@ DENIED = (
     "kanban/",
     "docs/PRD-inverse-design.md",
     "research/",
-    "REPORT.md",
-    "Machine_Model/",
 )
+# `REPORT.md` and `Machine_Model/` were removed 2026-10-15 by the maintainer's decision, so card
+# #107 can delete the archival pipeline and the numbers it produced. See docs/FREEZE.md.
 
 WHY = {
     "kanban/": "the frozen board — no card may be added, edited or deleted",
     "docs/PRD-inverse-design.md": "the frozen programme's specification",
     "research/": "new memos are research effort spent outside the phase",
-    "REPORT.md": "the archival record; correct it beside, not in place (card #89)",
-    "Machine_Model/": "the archival pipeline; rewriting it orphans every published number (PRD 7.2)",
 }
 
 

@@ -58,15 +58,20 @@ The inverse-design programme: thermodynamics (PT), screen-and-rank (PA) and the 
 | `kanban/**` | The frozen board. No card may be created, edited, or moved off `backlog` |
 | `docs/PRD-inverse-design.md` | The frozen programme's specification |
 | `research/**` | New memos are research effort spent outside the phase |
-| `REPORT.md` | The archival record of the forward model *as published*. It is history, not status, and is corrected **beside** rather than in place — see `docs/REPORT-RECONCILIATION.md` (card #89) |
-| `Machine_Model/**` | The archival pipeline behind REPORT.md. Rewriting it orphans every published number (PRD §7.2) |
+
+**Removed 2026-10-15, by the maintainer's decision:** `REPORT.md` and `Machine_Model/**`. Both
+were protected as the archival record behind the published numbers. That record is shown wrong
+(§Why) and is reconciled beside it ([REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md)), so
+card #107 deletes the pipeline and the results built on it, after tagging the last commit that
+has them so every citation stays recoverable. **Only the deny-list changed:** Phase H stays in
+force, and the three paths above stay frozen.
 
 ### Everything else is allowed
 
 **The deny-list above is the whole of the freeze** (decided 2026-09-12, card #72), and it is short
 on purpose: an allow-list would have to be widened every time hardening work reached an unlisted
 file, turning the one document meant to resist widening into the most-widened one. **Do not add to
-`DENIED` to express a preference** — a protected path needs a reason of the same kind as the five:
+`DENIED` to express a preference** — a protected path needs a reason of the same kind as the three:
 it belongs to the frozen programme or to the published record.
 
 **#44, #48 and #49 were pulled out of the freeze.** They were tagged `pa`, but they are what lets

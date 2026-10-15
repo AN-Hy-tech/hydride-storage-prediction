@@ -11,6 +11,14 @@ tags: [ph, l0]
 
 ## Narrative
 
+- 2026-10-15: **The blocker is lifted, and only that one.** By the maintainer's decision,
+  `REPORT.md` and `Machine_Model/` are off `DENIED` in `scripts/check_freeze.py`, recorded in
+  `docs/FREEZE.md` § Denied paths. Phase H stays in force. Two consequences for this card's list:
+  `docs/PRD-inverse-design.md` is **still denied**, so its §7.2 row cannot be repointed here (say so
+  beside it, or bring that decision back to the maintainer); and `CLAUDE.md`'s anti-pattern line
+  "editing … `REPORT.md` or `Machine_Model/`" is now stale and is one of the addresses to repoint.
+  The card still lacks *Done when* and *Runnable check*; write them before moving it to `doing`.
+  (by @assistant)
 - 2026-10-15: Handoff for next session, written after making the repo public. `Machine_Model/` is
   the wrong pipeline — confirmed by this branch's own audit (`docs/FREEZE.md`,
   `docs/REPORT-RECONCILIATION.md`): it produced the numbers `REPORT.md` quotes, those numbers

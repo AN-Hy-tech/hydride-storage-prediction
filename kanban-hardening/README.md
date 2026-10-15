@@ -7,13 +7,14 @@ that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md))
 
 > ## ▶ Next action — as of 2026-10-15 (#108 and #99 closed; #83, #100, #104 `doing`)
 >
-> **Take the open findings in band order, cheapest first:** **#96** (P1, 0.25 d; redirecting
+> **After #107, take the open findings in band order, cheapest first:** **#96** (P1, 0.25 d; redirecting
 > `calibrate --report` silently fits CatBoost defaults), then **#94** (P2, 0.25 d; one crossed
 > band still fails a whole `predict_many` batch). The ranked list is
 > [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
-> **#107** (P1, drop `Machine_Model/`) waits on **the maintainer's decision** to lift the freeze's
-> deny-list for `Machine_Model/` and `REPORT.md`; that decision is recorded in
-> [../docs/FREEZE.md](../docs/FREEZE.md) first, never taken by an edit that CI then rejects.
+> **#107** (P1, drop `Machine_Model/`) is **next session's card**, by the maintainer's choice.
+> Its blocker is gone: `Machine_Model/` and `REPORT.md` left the freeze's deny-list on 2026-10-15
+> ([../docs/FREEZE.md](../docs/FREEZE.md)). The PRD is still frozen. Write the card's *Done when*
+> first; its newest narrative note says what changed in its list.
 > **#83** waits on the per-row width table (its population is a decision) and on #104's repeat.
 >
 > **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
