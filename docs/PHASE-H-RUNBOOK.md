@@ -121,12 +121,12 @@ from 2026-09-26). What is still open is ranked in [PHASE-H-FINDINGS.md](PHASE-H-
 | **S5** — Guard rails | #44, #48, #49 | The screen interface — a verdict with a reason, never a silent drop — the applicability-domain ceiling, and the ElMD novelty distance | `hydms/screens/` |
 | **S6** — Delivery: contract + API | #75–#80, #90 | The request/result/refusal contract, `predict_capacity` over an **immutable artifact bundle**, gate HG-2 (never a bare number), the FastAPI service, HG-3 transport parity, and the published `docs/API.md` | `hydms/delivery/`, [API.md](API.md) |
 | **S7** — Delivery: interface | #81, #82, #84 · **#83 open** | Streamlit is an **HTTP client**, so the API stays the single prediction path and HG-3 covers the UI. The chart vocabulary (a chart is a *description* that cannot be built dishonest), the prediction page, and batch CSV screening over `predict_many` (limit 4,096 rows) | `hydms/figures/`, `app/`, `hydms/delivery/` |
-| **S8** — Evidence and close | #89, #85, #86, #35, #37, #103 · **#36 open** | The REPORT reconciliation (twelve disagreements), ADR 0006 (the delivery seam), HG-4 and the CI fast lane, the glossary, the Chapter 1 revision, and the committed artifact score | [REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md), [chapter1-revision.md](chapter1-revision.md), [adr/](adr/) |
+| **S8** — Evidence and close | #89, #85, #86, #35, #37, #103 · **#36 open** | The REPORT reconciliation (twelve disagreements), ADR 0006 (the delivery seam), HG-4 and the CI fast lane, the glossary, the Chapter 1 revision, and the committed artifact score | [REPORT-RECONCILIATION.md](archive/REPORT-RECONCILIATION.md), [chapter1-revision.md](chapter1-revision.md), [adr/](adr/) |
 
 **Still owed by S7 and S8.**
 
 - [ ] **#83** model card. Must carry the material-vs-system caveat (PRD §4.4) and the link to
-      `docs/REPORT-RECONCILIATION.md`; both are on it. Owed: the per-row width table and the
+      `docs/archive/REPORT-RECONCILIATION.md`; both are on it. Owed: the per-row width table and the
       one-run-or-spread question, which waits on #104's repeat.
 - [ ] **#36** the five ADRs, into `0001`–`0005` (`docs/adr/README.md` records the reservation).
 - [ ] **Lift the freeze:** set `freeze: lifted` in [FREEZE.md](FREEZE.md) with the closing date. All

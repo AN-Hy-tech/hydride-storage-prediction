@@ -45,7 +45,7 @@ A higher row wins **within its own subject**.
 | [docs/RUNNING-THE-FIT.md](docs/RUNNING-THE-FIT.md) | Before running `hydms.surrogate.train` / `evaluate` / `loco` — operator commands, in order |
 | [CONTEXT.md](CONTEXT.md) | Before writing a number or noun for readers outside the room — the glossary |
 | [docs/chapter1-revision.md](docs/chapter1-revision.md) | Quoting a current number in prose (hand-written; check its evidence table) |
-| [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md) | Before quoting any REPORT.md number — **generated**, never edit |
+| [docs/archive/REPORT-RECONCILIATION.md](docs/archive/REPORT-RECONCILIATION.md) | Why the old published numbers were wrong — **archived, frozen**, never edit |
 | [docs/API.md](docs/API.md), [docs/REFUSALS.md](docs/REFUSALS.md) | The HTTP contract; every refusal sentence — **generated**, never edit |
 | [docs/QA-PROTOCOL.md](docs/QA-PROTOCOL.md) | Writing a card's tests; the lint lane's no-install rule (§6) |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Touching an environment file, or a rebuild fails |
@@ -119,7 +119,7 @@ A hit is a pointer to verify, never the answer. Freshness: `graphify-out/cost.js
 ## Session anti-patterns
 
 - Quoting REPORT.md's scores as current. They are expected to fall (risk R4); the evidence is
-  [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md).
+  [docs/archive/REPORT-RECONCILIATION.md](docs/archive/REPORT-RECONCILIATION.md).
 - Working the frozen board, or editing the PRD, `research/`, `REPORT.md` or `Machine_Model/`.
 - Moving a card to `doing` while a `blocked_by` id is unfinished.
 - Re-opening a decision PRD §7 settled (generative models, descriptor inversion,

@@ -46,7 +46,7 @@ __all__ = [
 
 #: Where the previously published figures are reconciled against the committed evidence. A
 #: repository path: the page is a client and does not serve the document itself.
-RECONCILIATION: Final = "docs/REPORT-RECONCILIATION.md"
+RECONCILIATION: Final = "docs/archive/REPORT-RECONCILIATION.md"
 
 #: The limits no route serves, each recomputed from its source by the test suite.
 LIMIT_FACTS: Final[Mapping[str, Any]] = {
@@ -577,7 +577,7 @@ def _published() -> Section:
         key="published",
         title="The previously published figures",
         paragraphs=(
-            "The forward model's earlier results in `REPORT.md` were produced by a pipeline with "
+            "The forward model's earlier published results (the former `REPORT.md`) came from a pipeline with "
             "thirteen named validation leaks, and committed tables contradict its headline "
             "numbers. They are history, not current performance, and this page does not "
             f"inherit them. Every disagreement, with the honest number beside the published "

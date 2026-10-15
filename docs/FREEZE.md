@@ -61,7 +61,7 @@ The inverse-design programme: thermodynamics (PT), screen-and-rank (PA) and the 
 
 **Removed 2026-10-15, by the maintainer's decision:** `REPORT.md` and `Machine_Model/**`. Both
 were protected as the archival record behind the published numbers. That record is shown wrong
-(§Why) and is reconciled beside it ([REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md)), so
+(§Why) and is reconciled beside it ([archive/REPORT-RECONCILIATION.md](archive/REPORT-RECONCILIATION.md)), so
 card #107 deletes the pipeline and the results built on it, after tagging the last commit that
 has them so every citation stays recoverable. **Only the deny-list changed:** Phase H stays in
 force, and the three paths above stay frozen.

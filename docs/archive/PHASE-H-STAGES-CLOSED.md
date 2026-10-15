@@ -1554,7 +1554,7 @@ and the PA/PB board resumes.
 
 **Three of four hold as of 2026-09-12.** The one that remains is the Chapter 1 revision, **#37**.
 It waited on **#89**, and #89 closed on 2026-09-24:
-[REPORT-RECONCILIATION.md](../REPORT-RECONCILIATION.md) exists, so **#37 is unblocked**. Nothing left
+[REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md) exists, so **#37 is unblocked**. Nothing left
 in this condition needs a fit, a decision, or a run of the pipeline.
 
 **#37 was drafted on 2026-09-24** ([chapter1-revision.md](../chapter1-revision.md)), and the bullet

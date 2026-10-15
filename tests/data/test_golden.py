@@ -60,7 +60,7 @@ from hydms.surrogate.select import COSTLY_FEATURE  # noqa: E402
 
 #: What the data layer produces, as of card #15. Every value is measured by :func:`measure`
 #: below, not copied from a document -- where a document disagrees, the document is what is
-#: wrong (``docs/REPORT-RECONCILIATION.md``, card #89).
+#: wrong (``docs/archive/REPORT-RECONCILIATION.md``, card #89).
 GOLDEN: dict[str, object] = {
     # --- the sources, unchanged since the archival pipeline read them -------------------
     "hydride_data.rows": 1279,

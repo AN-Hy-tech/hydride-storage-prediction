@@ -17,7 +17,7 @@ The pipeline covers everything from raw data ingestion through multi-library fea
 > **These are the historical, as-published numbers — not current, verified performance.** A Phase H
 > audit found the committed pipeline doesn't reproduce them: see
 > [docs/FREEZE.md](docs/FREEZE.md) for why the programme is frozen, and
-> [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md) for the row-by-row disagreement
+> [docs/archive/REPORT-RECONCILIATION.md](docs/archive/REPORT-RECONCILIATION.md) for the row-by-row disagreement
 > between this table, `REPORT.md`, and the artifacts committed under `Machine_Model/`.
 
 | Model | Val R² | Test R² | Test MAE |
