@@ -5,17 +5,26 @@
 that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md)). Closed cards are in
 [archived/](archived/), same ids, same frontmatter.
 
-> ## ▶ Next action — as of 2026-10-15 (#108 and #99 closed; #83, #100, #104 `doing`)
+> ## ▶ Next action — as of 2026-10-15 (#107 `doing`, steps 1–3 of 5 pushed; #83, #100, #104 `doing`)
 >
-> **After #107, take the open findings in band order, cheapest first:** **#96** (P1, 0.25 d; redirecting
-> `calibrate --report` silently fits CatBoost defaults), then **#94** (P2, 0.25 d; one crossed
-> band still fails a whole `predict_many` batch). The ranked list is
-> [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
-> **#107** (P1, drop `Machine_Model/`) is **next session's card**, by the maintainer's choice.
-> Its blocker is gone: `Machine_Model/` and `REPORT.md` left the freeze's deny-list on 2026-10-15
-> ([../docs/FREEZE.md](../docs/FREEZE.md)). The PRD is still frozen. Write the card's *Done when*
-> first; its newest narrative note says what changed in its list.
-> **#83** waits on the per-row width table (its population is a decision) and on #104's repeat.
+> **Finish #107, then #96 (P1), then #94 (P2).** Steps 1–3 are pushed (`6f2eeb9`, `50e5480`,
+> `8d17a70`): the raw data now lives byte-identical in `data/raw/` (`paths.raw` repointed), the
+> feature-selection report is `tests/descriptors/data/feature_selection_report.csv`, and the
+> reconciliation page is frozen at `docs/archive/REPORT-RECONCILIATION.md` with its generator
+> deleted. **Step 4:** `git rm -r Machine_Model REPORT.md`; drop their exclusions from
+> `pyproject.toml` (packages, `norecursedirs`, ruff, mypy, the #69 comment), `.graphifyignore`,
+> the comment in `scripts/check_board.py`, and `tests/test_tooling.py` (`HAZARDOUS`, its two
+> tests, the testpaths message); then repoint the live prose that still says the tree exists —
+> `docs/FREEZE.md` §Why (name commit `6f2eeb9` once), runbook lines 21/33/286, `QA-PROTOCOL.md:10`,
+> `docs/adr/README.md:17`, `chapter1-revision.md:23` (the maintainer has approved edits there), and
+> the four `materials-science-specialist` modules. **Step 5:** rewrite `README.md` to report only
+> what `hydms/` produces; repoint `CLAUDE.md` row 5, the "Two code trees" invariant and the
+> anti-pattern line; leave the frozen PRD §7.2 alone and say so on the card. Verify with the card's
+> runnable check, and run the gates with the **pinned** ruff 0.8.4 first on `PATH` — a newer
+> system ruff turns HG-4 and four `test_cli` tests red locally and nowhere else. The
+> `machine-model-archive` tag exists only in the session that made it (the proxy refuses tag
+> pushes): the maintainer pushes it, or citations name `6f2eeb9`. CI run 225 on `8d17a70` was in
+> progress at handoff. **#83** still waits on the per-row width table and on #104's repeat.
 >
 > **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
 > other, on an idle machine with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10). Run A writes
