@@ -13,12 +13,58 @@ the board's `▶ Next action` block, that block wins. Read these for *intent* �
 the way it was — and never for a current number. The superseded-values table under
 "Reading the handoffs" below is the list of numbers already known to have moved.
 
-**Reading order.** Blocks 000 and 00 were added 2026-10-15 (newest first), blocks 0 and 0b 2026-09-26; then two blocks, each newest-first, in the order they appeared in the README:
+**Reading order.** Blocks 0000, 000 and 00 were added 2026-10-15 (newest first), blocks 0 and 0b 2026-09-26; then two blocks, each newest-first, in the order they appeared in the README:
 
 1. **The `Start here` accretion** (2026-09-12 → 2026-09-06) — handoffs that were written into the
    board's opening section instead of its log, and that the `▶ Next action` block replaced.
 2. **The handoff log proper** (2026-09-13 → 2026-09-03), with its own preamble and the
    superseded-values table.
+
+---
+
+## 0000. The `▶ Next action` block retired 2026-10-15 (night)
+
+Moved verbatim when #107 closed; links re-pointed only. Carried out: #107's steps 4–5 and the
+graph regeneration. Not carried out: #96, #94, the LOACO repeat, handed over in the block that
+replaced it.
+
+> ## ▶ Next action — as of 2026-10-15 (#107 `doing`, steps 1–4 of 5 pushed; #83, #100, #104 `doing`)
+>
+> **Finish #107, then #96 (P1), then #94 (P2).** Steps 1–4 are pushed: `Machine_Model/` and
+> `REPORT.md` are deleted, recoverable at the pushed tag `machine-model-archive` (`e92539b`), and
+> every live citation names the tag. **Step 5:** rewrite `README.md` to report only what `hydms/`
+> produces (its two `REPORT.md` links were repointed to `docs/chapter1-revision.md` as a stopgap);
+> repoint `CLAUDE.md` row 5 properly, the "Two code trees" invariant and the anti-pattern line;
+> update `docs/PHASE-H-FINDINGS.md` row #107 and `known-gaps.md:115`; leave the frozen PRD §7.2
+> alone and say so on the card. **Decision owed by the maintainer:** `graphify-out/` holds 261
+> `Machine_Model` hits — regenerate it, or add it to the runnable check's exclusions. Verify with
+> the card's runnable check, gates under the **pinned** ruff 0.8.4. The fast suite shows 9
+> failures (`test_cli` ×4, L13 ×5) in a scratch 3.11 venv, identical before and after step 4;
+> confirm against CI before blaming #107. **#83** still waits on the per-row width table and on
+> #104's repeat.
+>
+> **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
+> other, on an idle machine with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10). Run A writes
+> the committed tables, run B a gitignored scratch directory, then the diff. Only
+> `loco-chosen.csv`'s `seconds` column may differ. **Anything else moving is a new #104 finding,
+> not a failed run.** Commit A's tables either way, then the regeneration chain in Step 10.
+>
+> ```powershell
+> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity | Tee-Object -FilePath .\reports\_loco-run-a.log
+> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity --report .\reports\_loco-b | Tee-Object -FilePath .\reports\_loco-run-b.log
+> foreach ($t in 'loco-per-class','loco-summary','loco-out-of-fold','loco-chosen') { git diff --no-index --stat "reports/loco/$t.csv" "reports/_loco-b/$t.csv" }
+> ```
+>
+> **Traps.** CI's `suite` lane installs **unpinned**, so a library release can move a generated
+> file there and nowhere else (#108: pydantic 2.14). Before re-emitting to make CI green, emit
+> under the pin *and* under latest and see which one moved. `apidoc-examples.json` stores the
+> over-limit request *shortened*, with `candidates_total` beside it; do not "fix" it back to 4,097
+> rows. Any change to a table the Evidence Reader serves changes `evidence_sha256`: re-run
+> `apidoc --probe --emit` after `loco --emit` or `evaluate`.
+>
+> **This block is one handoff, never a log.** Replace it when you close a card, and move the one it
+> replaces to the top of [../docs/archive/HANDOFFS-PHASE-H.md](HANDOFFS-PHASE-H.md)
+> in the same commit. The cards win on sight.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 id: 107
-status: doing
+status: done
 priority: P1
 blocked_by: []
 assignee: "@amirhossein"
@@ -43,7 +43,7 @@ delete would break it:
       trees" invariant and its anti-pattern line are repointed.
 - [x] `docs/PRD-inverse-design.md` §7.2 is **not** edited (still frozen); the PRD's stale reference
       is named in this card instead.
-- [ ] `git grep -n Machine_Model` returns only archive prose, the frozen PRD, `research/` and
+- [x] `git grep -n Machine_Model` returns only archive prose, the frozen PRD, `research/` and
       `graphify-out/` (generated; it mirrors this card's own text).
 
 ## Runnable check
@@ -58,6 +58,11 @@ delete would break it:
 
 ## Narrative
 
+- 2026-10-15: **Closed.** The grep half of the runnable check is empty after the move to
+  `archived/`. CI's fast lane is green on `225eeae` (steps 4–5 and the graph). The local fast
+  suite in a Linux `uv` venv still fails HG-4 and four `test_cli` tests on ruff and mypy, with
+  CI green on the same tree. That is an environment difference, recorded in the `▶` block, and
+  not caused by this card, which changes no `.py` file in step 5. (by @assistant)
 - 2026-10-15: **Step 5 done, and the graph regenerated** (maintainer's choice of the two). graphify
   0.9.91 `update . --force` re-extracted code by AST; its `Machine_Model` hits fall from 257 to the
   ones mirroring this card, so `graphify-out/` joins the runnable check's exclusions after all — a
