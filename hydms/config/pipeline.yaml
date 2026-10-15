@@ -8,18 +8,16 @@
 # matching field in hydms/config/__init__.py, and vice versa — the loader refuses any
 # drift between the two, in either direction.
 #
-# Provenance: every value below is either read out of the archival pipeline or measured
-# against the real data. Nothing here is invented. Where a value contradicts REPORT.md,
-# the comment says so, because the code is what produced the published numbers.
+# Provenance: every value below is either read out of the earlier pipeline (git tag
+# machine-model-archive) or measured against the real data. Nothing here is invented.
 
 # The one seed. Everything stochastic derives from it: splits, folds, Boruta, Optuna,
 # CatBoost. AC-1 requires that the same seed reproduces identical metrics.
 seed: 42
 
 paths:
-  # Read-only input. Machine_Model/ is the archival tree behind REPORT.md and the Phase H
-  # freeze denies writes there; the raw dataset simply happens to live inside it.
-  raw: Machine_Model/data/raw
+  # Read-only input: the four committed source files (card #107 moved them here).
+  raw: data/raw
 
   # Everything below is written by the new pipeline and gitignored.
   interim: data/interim
@@ -39,8 +37,8 @@ columns:
   citation: Citation
 
 split:
-  # split_data.py:63-64 uses 0.20 / 0.10. REPORT.md 2.6 and README.md both say "70/15/15";
-  # they are wrong, and the 896/136/247 split they report is what 0.20/0.10 produces.
+  # 0.20 / 0.10, as the earlier pipeline's split_data.py:63-64 used (its report said
+  # "70/15/15", which was wrong).
   test_fraction: 0.20
   val_fraction: 0.10
 

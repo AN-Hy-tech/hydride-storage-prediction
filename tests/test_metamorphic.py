@@ -310,7 +310,7 @@ def test_the_temperature_response_is_recorded_not_assumed(surrogate: Surrogate) 
     **not constant** and that it is non-decreasing *for this fixture* -- a fact about this fit,
     stated as one, not a claim that the deployed model is monotone in temperature. Monotonicity
     is not a property this layer can promise: `hydride_data.csv` is not a controlled sweep, only
-    39 test rows sit above 500 K, and nothing in the fit constrains the direction.
+    130 of 893 out-of-fold rows sit above 500 K, and nothing in the fit constrains the direction.
     """
     kelvin = np.linspace(TRAINED_K[0], TRAINED_K[1], 40)
     sweep = _sweep(surrogate, kelvin)

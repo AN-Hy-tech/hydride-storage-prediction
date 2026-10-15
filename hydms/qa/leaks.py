@@ -29,7 +29,7 @@ class Leak:
         id: ``"L1"`` .. ``"L13"``. The addressing scheme every card, sentinel and narrative
             note uses.
         site: Where it lives in the archival pipeline, as ``file.py:lines``. Read, never
-            rewritten -- ``Machine_Model/`` is denied by the freeze.
+            rewritten; the pipeline is at git tag ``machine-model-archive`` (card #107).
         effect: What it does to the reported numbers, in one line.
         stage: The runbook stage that removes it, or ``"--"`` for a leak no stage ports the
             code of.

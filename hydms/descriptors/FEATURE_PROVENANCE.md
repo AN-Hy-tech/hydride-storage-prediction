@@ -2,7 +2,8 @@
 
 **Card #8, the provenance spike. Status: STOP GATE PASSED — all 22 accounted for.**
 Resolved empirically on 2026-08-30 under the pinned `Project` environment (CBFV 1.1.0).
-Reproduce with `python scripts/spike_feature_provenance.py --check-all-22`.
+The spike script and the pipeline it read are at git tag `machine-model-archive` (card #107): check out the tag and run
+`python scripts/spike_feature_provenance.py --check-all-22` to reproduce.
 
 ---
 

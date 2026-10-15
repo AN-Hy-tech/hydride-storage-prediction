@@ -575,7 +575,6 @@ after `--emit`, and then regenerate what reads them, in this order:
 ```powershell
 & C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.screens.domain --emit          # transfers into the screen reference
 & C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.delivery.refusals --emit       # docs/REFUSALS.md quotes Mg's transfer
-& C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.evidence.reconciliation --emit # reads loco-summary.csv
 & C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.delivery.apidoc --probe        # needs artifacts/; examples carry the transfers
 & C:\Users\Asus\miniconda3\envs\Project\python.exe -m hydms.delivery.apidoc --emit
 ```

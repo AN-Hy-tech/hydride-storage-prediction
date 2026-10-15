@@ -35,6 +35,7 @@ from hydms.figures import Figure
 from hydms.figures.charts import FigureError, ParityPoint, parity
 
 __all__ = [
+    "ARCHIVE_TAG",
     "LIMIT_FACTS",
     "RECONCILIATION",
     "CardPageError",
@@ -44,8 +45,10 @@ __all__ = [
     "model_card_view",
 ]
 
-#: Where the previously published figures are reconciled against the committed evidence. A
-#: repository path: the page is a client and does not serve the document itself.
+#: Where the previously published figures are reconciled against the evidence they cited. It
+#: is a path *at the git tag* below, not in the working tree: card #107 removed the pipeline,
+#: the report and the reconciliation together, and the tag keeps all three recoverable.
+ARCHIVE_TAG: Final = "machine-model-archive"
 RECONCILIATION: Final = "docs/REPORT-RECONCILIATION.md"
 
 #: The limits no route serves, each recomputed from its source by the test suite.
@@ -577,11 +580,12 @@ def _published() -> Section:
         key="published",
         title="The previously published figures",
         paragraphs=(
-            "The forward model's earlier results in `REPORT.md` were produced by a pipeline with "
-            "thirteen named validation leaks, and committed tables contradict its headline "
-            "numbers. They are history, not current performance, and this page does not "
-            f"inherit them. Every disagreement, with the honest number beside the published "
-            f"one, is in `{RECONCILIATION}` in the repository.",
+            "The forward model's earlier results (`REPORT.md`) were produced by a pipeline with "
+            "thirteen named validation leaks, and the tables committed beside them contradicted "
+            "their headline numbers. They could not be reproduced, so they were removed from "
+            "the repository, and this page does not inherit them. Every disagreement, with the "
+            f"honest number beside the published one, is in `{RECONCILIATION}` at the git tag "
+            f"`{ARCHIVE_TAG}`.",
         ),
     )
 

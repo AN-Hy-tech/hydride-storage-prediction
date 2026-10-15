@@ -27,7 +27,7 @@ from hydms.gates.ac2_featuriser_parity import GATE, TOLERANCE
 
 pytestmark = pytest.mark.gate
 
-#: Measured on this card over `Machine_Model/data/raw/hydride_data.csv`, against CBFV 1.1.0.
+#: Measured on this card over `data/raw/hydride_data.csv`, against CBFV 1.1.0.
 #: 1,279 curated rows less the single europium one, which neither side can answer honestly.
 CURATED_ROWS = 1279
 COMPARED_ROWS = 1278

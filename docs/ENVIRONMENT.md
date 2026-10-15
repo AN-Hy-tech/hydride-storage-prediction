@@ -2,7 +2,7 @@
 
 **Use the conda environment `Project`. Do not use the machine's default Python.**
 
-Every number in `REPORT.md` was produced under `Project`. Running the pipeline under anything
+Every number in `reports/` was produced under `Project`. Running the pipeline under anything
 else does not reproduce them, and in the case of the default interpreter does not run at all.
 
 | | `Project` (correct) | Machine default (wrong) |
@@ -69,7 +69,7 @@ conda run -n Project python -m pip install -e .
 conda run -n Project python -c "import CBFV, catboost, sklearn, numpy; print(numpy.__version__)"
 
 # Run anything in it
-conda run -n Project python scripts/spike_feature_provenance.py --check-all-22
+conda run -n Project python -m hydms.pipeline.smoke
 ```
 
 The whole rebuild takes about 7 minutes with a warm package cache and appreciably longer cold;

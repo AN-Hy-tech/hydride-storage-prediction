@@ -806,9 +806,10 @@ def document(captured: Mapping[str, Any] | None = None) -> str:
     )
     write("")
     write(
-        "The second thing not to inherit: the published figures in `REPORT.md` were produced "
-        "by a pipeline with known validation leaks and are **history, not current "
-        "performance**. Do not quote them beside a number from this service."
+        "The second thing not to inherit: the figures once published in `REPORT.md` were produced "
+        "by a pipeline with known validation leaks and could not be reproduced. Both were removed "
+        "from the repository (they survive at the git tag `machine-model-archive`). Do not quote "
+        "them beside a number from this service."
     )
     write("")
 

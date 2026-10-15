@@ -297,7 +297,7 @@ Moved verbatim from the top of the board README when it was compacted to one han
 > Streamlit pin (the maintainer's, because it fights the lock) and two API additions.**
 >
 > **#89 closed as a generated page:
-> [../docs/REPORT-RECONCILIATION.md](../REPORT-RECONCILIATION.md).** It lists twelve
+> `docs/REPORT-RECONCILIATION.md` (at tag `machine-model-archive`).** It lists twelve
 > disagreements, not eight, because the audit's "eight" were never written down and had to be
 > re-measured. Every quotation is tested to occur in `REPORT.md` verbatim, and every refuting value
 > is read from its CSV at emit time. The headline: **two committed CSVs describe two different

@@ -2,7 +2,7 @@
 
 Three CSV files are loaded here, each with its own column names and conventions::
 
-    hydride_data.csv            1279 x  6   the curated dataset behind REPORT.md
+    hydride_data.csv            1279 x  6   the curated dataset
     hydride_prefeaturizing.csv  1279 x  6   the same rows with the target replaced by log1p
     ML-HYDPARK_v0.0.5.csv        772 x 13   the upstream ML-HydPARK release
 
@@ -284,8 +284,8 @@ class SourceSchema:
         return tuple(spec.name for spec in self.columns)
 
 
-# Measured against the files in `Machine_Model/data/raw/`, which are read-only archival
-# input under the Phase H freeze. Card #9's done-criteria name the two row counts.
+# Measured against the files in `data/raw/`, which are read-only input. Card #9's
+# done-criteria name the two row counts.
 HYDRIDE_DATA_ROWS = 1279
 PREFEATURIZED_ROWS = 1279
 ML_HYDPARK_ROWS = 772
@@ -321,7 +321,7 @@ _MAX_TEMPERATURE_K = 5000.0
 
 
 def hydride_data_schema(columns: Columns | None = None) -> SourceSchema:
-    """The schema of ``hydride_data.csv`` -- the curated dataset behind REPORT.md.
+    """The schema of ``hydride_data.csv`` -- the curated dataset.
 
     Column names come from ``pipeline.yaml`` so they are spelled once in the project; they
     contain spaces, a percent sign and parentheses, and the archival scripts re-spelled

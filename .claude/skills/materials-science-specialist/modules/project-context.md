@@ -2,6 +2,10 @@
 
 **Confidence**: 🟢 High — read directly from the repo's own `README.md`, `REPORT.md` and `Machine_Model/src/` on 2026-08-29.
 
+> **Superseded 2026-10-15 (card #107).** `Machine_Model/` and `REPORT.md` were removed: their numbers
+> were not reproducible. They are at git tag `machine-model-archive`. The project is now `hydms/`; current numbers are in
+> `reports/`. Read the pipeline description below as history, never quote its scores.
+
 Master's thesis, Faculty of Metallurgical and Materials Engineering, Shiraz University.
 Predicting **maximum H₂ storage capacity (wt%)** of hydride alloys from **chemical formula + temperature alone**.
 
@@ -56,10 +60,10 @@ All 22 are composition-averaged statistics (`avg_*`, `dev_*`, `range_*`) plus te
 
 ## Working on this repo
 
-- Prose conventions: `README.md` and `REPORT.md` at root document the built model. `research/` holds
+- Prose conventions: `README.md` at root documents the project. `research/` holds
   literature reviews and design memos for work that does not exist yet.
 - `.claude/` is gitignored — skills and research notes there are not tracked.
-- The datasets live in `Machine_Model/data/raw/`; reports and figures in `Machine_Model/reports/`.
+- The datasets live in `data/raw/`; generated results in `reports/`.
 
 ## How to be useful here
 

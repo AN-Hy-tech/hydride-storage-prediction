@@ -56,9 +56,6 @@ from hydms.descriptors.stats import STATISTICS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CBFV_OLIYNYK = Path(__file__).parent / "data" / "cbfv_oliynyk_reference.csv"
-SELECTION_REPORT = (
-    REPO_ROOT / "Machine_Model" / "reports" / "feature_selection" / "feature_selection_report.csv"
-)
 
 #: REPORT.md 3.2, the 22 in the order the thesis prints them. Written out rather than read
 #: from the module under test: a contract that agrees with itself proves nothing.
@@ -142,17 +139,6 @@ def frame_matching_contract() -> pd.DataFrame:
 def test_the_contract_is_the_published_twenty_two() -> None:
     assert len(CONTRACT) == 22
     assert CONTRACT.names == PUBLISHED
-
-
-def test_the_order_is_report_md_s() -> None:
-    """Asserted against the published artifact, not against a list retyped here.
-
-    ``feature_selection_report.csv`` is SHAP-descending and is what REPORT.md 3.2 prints.
-    The order the model was *trained* in is not recoverable -- see this module's docstring.
-    """
-    with SELECTION_REPORT.open(encoding="utf-8", newline="") as handle:
-        published = tuple(row["Feature"] for row in csv.DictReader(handle))
-    assert CONTRACT.names == published
 
 
 def test_fifteen_oliynyk_six_jarvis_and_one_passthrough() -> None:

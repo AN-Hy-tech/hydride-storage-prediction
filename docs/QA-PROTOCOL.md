@@ -7,8 +7,7 @@ what that check has to *cover*. Without a standard, a check degenerates into `im
 phase ships a green build over untested code — which is close to what happened before: the archival
 pipeline has two files named `test_*.py` and neither is a test.
 
-Scope: `hydms/`, `tests/`, `app/` and `scripts/`. `Machine_Model/` is archival and out of scope
-([FREEZE.md](FREEZE.md)).
+Scope: `hydms/`, `tests/`, `app/` and `scripts/`.
 
 ---
 

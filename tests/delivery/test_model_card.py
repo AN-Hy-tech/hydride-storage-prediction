@@ -30,6 +30,7 @@ pytest.importorskip("ElMD", reason="the `novelty` extra; it is on the prediction
 from hydms.delivery.client import ServiceClient  # noqa: E402
 from hydms.delivery.modelcard_page import (  # noqa: E402
     LIMIT_FACTS,
+    ARCHIVE_TAG,
     RECONCILIATION,
     CardPageError,
     model_card_view,
@@ -168,9 +169,9 @@ def test_the_material_versus_system_caveat_is_on_the_page(view) -> None:
     assert "material" in text and "system" in text and "DOE" in text and "twice" in text
 
 
-def test_the_reconciliation_is_linked_and_the_link_resolves(view, repo_root: Path) -> None:
-    assert RECONCILIATION in view.text
-    assert (repo_root / RECONCILIATION).is_file()
+def test_the_reconciliation_is_cited_at_the_archive_tag(view) -> None:
+    """It lives only at the tag (card #107); citing it without the tag would be a dead path."""
+    assert f"`{RECONCILIATION}` at the git tag `{ARCHIVE_TAG}`" in view.text
 
 
 def test_the_limits_include_pressure_filler_stability_the_bad_label_ambient_and_the_band(view) -> None:

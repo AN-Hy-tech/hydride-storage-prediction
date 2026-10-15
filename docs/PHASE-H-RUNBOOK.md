@@ -30,7 +30,7 @@ that fails the build if any leak reappears.
 ## 1. The leak inventory
 
 This table is the definition of done for stages S2–S4. Line numbers refer to the archival pipeline in
-`Machine_Model/src/`, which is **read, never rewritten** (PRD §7.2).
+`Machine_Model/src/`, now at git tag `machine-model-archive` (card #107).
 
 | # | Site | Effect |
 |---|---|---|
@@ -121,7 +121,7 @@ from 2026-09-26). What is still open is ranked in [PHASE-H-FINDINGS.md](PHASE-H-
 | **S5** — Guard rails | #44, #48, #49 | The screen interface — a verdict with a reason, never a silent drop — the applicability-domain ceiling, and the ElMD novelty distance | `hydms/screens/` |
 | **S6** — Delivery: contract + API | #75–#80, #90 | The request/result/refusal contract, `predict_capacity` over an **immutable artifact bundle**, gate HG-2 (never a bare number), the FastAPI service, HG-3 transport parity, and the published `docs/API.md` | `hydms/delivery/`, [API.md](API.md) |
 | **S7** — Delivery: interface | #81, #82, #84 · **#83 open** | Streamlit is an **HTTP client**, so the API stays the single prediction path and HG-3 covers the UI. The chart vocabulary (a chart is a *description* that cannot be built dishonest), the prediction page, and batch CSV screening over `predict_many` (limit 4,096 rows) | `hydms/figures/`, `app/`, `hydms/delivery/` |
-| **S8** — Evidence and close | #89, #85, #86, #35, #37, #103 · **#36 open** | The REPORT reconciliation (twelve disagreements), ADR 0006 (the delivery seam), HG-4 and the CI fast lane, the glossary, the Chapter 1 revision, and the committed artifact score | [REPORT-RECONCILIATION.md](REPORT-RECONCILIATION.md), [chapter1-revision.md](chapter1-revision.md), [adr/](adr/) |
+| **S8** — Evidence and close | #89, #85, #86, #35, #37, #103 · **#36 open** | The REPORT reconciliation (twelve disagreements), ADR 0006 (the delivery seam), HG-4 and the CI fast lane, the glossary, the Chapter 1 revision, and the committed artifact score | `docs/REPORT-RECONCILIATION.md` (at tag `machine-model-archive`), [chapter1-revision.md](chapter1-revision.md), [adr/](adr/) |
 
 **Still owed by S7 and S8.**
 
@@ -283,7 +283,7 @@ conda run -n Project streamlit run app/main.py
 - **Scope:** ≈ 50 developer-days for one developer. A rebuild, not a patch — the honest cost of the
   chosen scope, in tension with the word *emergency*.
 - **Out of scope:** HYDPARK's ΔH/ΔS columns and `database/combined_dataset.csv` (frozen
-  thermodynamics, #38–#43). `Machine_Model/**`, `REPORT.md` and the PRD are read, never rewritten.
+  thermodynamics, #38–#43). The PRD is read, never rewritten; `Machine_Model/**` and `REPORT.md` were removed by #107.
 - **Nothing this phase ships has been seen by CI:** `artifacts/` is gitignored (#7). **Check that a
   file reaches CI before writing a check that reads it.**
 - **A gate can be green over a sentinel whose subject moved** — measured once, for 5 h 21 min.
