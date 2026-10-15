@@ -30,14 +30,14 @@ delete would break it:
 
 ## Done when
 
-- [ ] Tag `machine-model-archive` names the last commit holding `Machine_Model/` and `REPORT.md`,
+- [x] Tag `machine-model-archive` names the last commit holding `Machine_Model/` and `REPORT.md`,
       and is pushed; every archived citation can name it.
 - [x] Raw data moved byte-identical (`sha256` before = after); `paths.raw` and every reader repointed;
       the suite reads the same 1,279 rows.
 - [x] The feature-selection report is a test fixture and `test_contract.py` reads it there.
 - [x] `REPORT-RECONCILIATION.md` is in `docs/archive/`, unchanged except a header naming the tag;
       its generator and tests are gone, and nothing links the old path.
-- [ ] `Machine_Model/` and `REPORT.md` are deleted; `pyproject.toml`, `.graphifyignore`,
+- [x] `Machine_Model/` and `REPORT.md` are deleted; `pyproject.toml`, `.graphifyignore`,
       `scripts/check_board.py` and `tests/test_tooling.py` carry no exclusion for them.
 - [ ] `README.md` reports only what `hydms/` produces; `CLAUDE.md`'s authority row 5, its "Two code
       trees" invariant and its anti-pattern line are repointed.
@@ -57,6 +57,22 @@ delete would break it:
 
 ## Narrative
 
+- 2026-10-15: **Step 4 done.** The maintainer pushed tag `machine-model-archive` at `e92539b`,
+  not `6f2eeb9`; `Machine_Model/` and `REPORT.md` are byte-identical in both, so the tag stands
+  and every citation now names the tag. The tree and the report are deleted; their exclusions
+  are gone from `pyproject.toml`, `.graphifyignore`, `scripts/check_board.py` and
+  `tests/test_tooling.py`. One citation form replaces the path everywhere live: "the archival
+  `src/<file>.py:<line>` (tag `machine-model-archive`)". It reached further than the handoff
+  listed: six `hydms/` docstrings, `FEATURE_PROVENANCE.md`, the spike script, cards #014 and
+  #036. The deletion broke three `REPORT.md` links that `check_board.py` checks, in `README.md`
+  and `CLAUDE.md` row 5. They point at `docs/chapter1-revision.md` and the tag for now; step 5
+  replaces both properly. **Left for step 5:** `README.md` (9 hits), `CLAUDE.md` (2),
+  `docs/PHASE-H-FINDINGS.md` row #107, the `▶` block, `known-gaps.md:115` (an edit there was
+  refused by the session's permission check), and `graphify-out/` (261 hits, generated:
+  regenerate it, or exclude it from the runnable check; the maintainer decides). Fast suite: 9
+  failures (`test_cli` ×4, L13 ×5), the same 9 on the commit before this step's first commit, in
+  a Python 3.11 scratch venv rather than the pinned env. Not caused by this card.
+  (by @assistant)
 - 2026-10-15: **The blocker is lifted, and only that one.** By the maintainer's decision,
   `REPORT.md` and `Machine_Model/` are off `DENIED` in `scripts/check_freeze.py`, recorded in
   `docs/FREEZE.md` § Denied paths. Phase H stays in force. Two consequences for this card's list:

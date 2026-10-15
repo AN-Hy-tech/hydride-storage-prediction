@@ -29,7 +29,7 @@ A higher row wins **within its own subject**.
 | 2 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | Scope, claim, acceptance criteria, risks, rejected alternatives — **of the frozen programme** | Day-to-day state |
 | 3 | [research/](research/) memos | Any cited fact — physics, methods, libraries, DOIs | Decisions |
 | 4 | `.claude/skills/materials-science-specialist/` | Fast domain recall | Facts the memos corrected (grounding memo §5) |
-| 5 | [REPORT.md](REPORT.md), [README.md](README.md) | The forward model **as published** | Whether those numbers are *valid* |
+| 5 | [README.md](README.md); `REPORT.md` at git tag `machine-model-archive` | The forward model **as published** | Whether those numbers are *valid* |
 | 6 | `graphify-out/` | Where things are and how they connect | Ground truth; it goes stale |
 
 **Row 5 is history, not status.** Cite REPORT.md's numbers as "as published", never as current.

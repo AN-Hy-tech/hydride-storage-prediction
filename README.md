@@ -1,6 +1,6 @@
 # HydMS — Hydrogen Storage Capacity Prediction via Machine Learning
 
-**[Read the full project report →](REPORT.md)**
+**[Read the revised chapter →](docs/chapter1-revision.md)** — the numbers below are the old report's, as published, and are shown wrong ([docs/FREEZE.md](docs/FREEZE.md)); rewritten by card #107.
 
 > **Master's Thesis Project** · Faculty of Metallurgical and Materials Engineering · Shiraz University
 Researcher: Amirhossein Nasiri
@@ -137,7 +137,7 @@ Alternatively, explore the pipeline interactively through the notebooks in `Mach
 
 This project was developed as a **Master's thesis** in the **Department of Metallurgy and Materials Engineering** at **Shiraz University**. It demonstrates that physics-informed compositional descriptors, combined with modern ML methods, can predict hydrogen storage capacity with high accuracy — reducing the need for costly experimental screening.
 
-For the complete methodology, results tables, statistical tests, and SHAP analysis, see **[REPORT.md](REPORT.md)**.
+For the complete methodology, results tables, statistical tests, and SHAP analysis, see **[docs/chapter1-revision.md](docs/chapter1-revision.md)**; the old `REPORT.md` is at git tag `machine-model-archive`.
 
 ---
 

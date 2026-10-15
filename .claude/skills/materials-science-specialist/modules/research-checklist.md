@@ -11,8 +11,9 @@ The workflow that produced the current content, and the one to repeat before ext
 3. **Mark unverified claims `**unverified**` inline.** A smaller honest module beats a padded one.
    Never invent a DOI or a figure to fill a gap.
 4. **Date anything time-sensitive.** Package versions, database sizes, "current" targets, API details.
-5. **Prefer the repo's own numbers over recollection.** `REPORT.md` and `Machine_Model/reports/` are the
-   authority on this project's results. Check before quoting.
+5. **Prefer the repo's own numbers over recollection.** `docs/chapter1-revision.md` and the tables
+   `hydms/` writes under `reports/` are the authority on this project's results. The old `REPORT.md` is
+   history (git tag `machine-model-archive`), never current. Check before quoting.
 
 ## Before extending a module
 
