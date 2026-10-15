@@ -29,8 +29,8 @@ pytest.importorskip("ElMD", reason="the `novelty` extra; it is on the prediction
 
 from hydms.delivery.client import ServiceClient  # noqa: E402
 from hydms.delivery.modelcard_page import (  # noqa: E402
-    LIMIT_FACTS,
     ARCHIVE_TAG,
+    LIMIT_FACTS,
     RECONCILIATION,
     CardPageError,
     model_card_view,

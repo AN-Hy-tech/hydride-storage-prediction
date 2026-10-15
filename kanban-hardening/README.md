@@ -5,11 +5,10 @@
 that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md)). Closed cards are in
 [archived/](archived/), same ids, same frontmatter.
 
-> ## ▶ Next action — as of 2026-09-26 (the docs compaction; #83 and #104 `doing`)
+> ## ▶ Next action — as of 2026-10-15 (#107, #108 and #99 closed; #83 and #104 `doing`)
 >
-> **Take the open findings in band order, cheapest first:** **#99** (P1, 0.25 d), then **#96**
-> (P1, 0.25 d), then **#94** (P2, 0.25 d; one crossed band still fails a whole `predict_many`
-> batch). The ranked list is [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
+> **Take the open findings in band order, cheapest first:** **#96** (P1, 0.25 d), then **#94**
+> (P2, 0.25 d; one crossed band still fails a whole `predict_many` batch). The ranked list is [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
 > **#83** waits on the per-row width table (its population is a decision) and on #104's repeat.
 >
 > **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
