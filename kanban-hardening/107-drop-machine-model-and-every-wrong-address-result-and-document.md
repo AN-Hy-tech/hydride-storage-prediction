@@ -39,16 +39,17 @@ delete would break it:
       its generator and tests are gone, and nothing links the old path.
 - [x] `Machine_Model/` and `REPORT.md` are deleted; `pyproject.toml`, `.graphifyignore`,
       `scripts/check_board.py` and `tests/test_tooling.py` carry no exclusion for them.
-- [ ] `README.md` reports only what `hydms/` produces; `CLAUDE.md`'s authority row 5, its "Two code
+- [x] `README.md` reports only what `hydms/` produces; `CLAUDE.md`'s authority row 5, its "Two code
       trees" invariant and its anti-pattern line are repointed.
-- [ ] `docs/PRD-inverse-design.md` §7.2 is **not** edited (still frozen); the PRD's stale reference
+- [x] `docs/PRD-inverse-design.md` §7.2 is **not** edited (still frozen); the PRD's stale reference
       is named in this card instead.
-- [ ] `git grep -n Machine_Model` returns only archive prose, the frozen PRD and `research/`.
+- [ ] `git grep -n Machine_Model` returns only archive prose, the frozen PRD, `research/` and
+      `graphify-out/` (generated; it mirrors this card's own text).
 
 ## Runnable check
 
 ```bash
-! git grep -n "Machine_Model" -- . ':!docs/archive' ':!docs/PRD-inverse-design.md' ':!research' ':!kanban-hardening/archived' && python -m pytest -m "not slow" -q
+! git grep -n "Machine_Model" -- . ':!docs/archive' ':!docs/PRD-inverse-design.md' ':!research' ':!kanban-hardening/archived' ':!graphify-out' && python -m pytest -m "not slow" -q
 ```
 
 ## Traces to
@@ -57,6 +58,19 @@ delete would break it:
 
 ## Narrative
 
+- 2026-10-15: **Step 5 done, and the graph regenerated** (maintainer's choice of the two). graphify
+  0.9.91 `update . --force` re-extracted code by AST; its `Machine_Model` hits fall from 257 to the
+  ones mirroring this card, so `graphify-out/` joins the runnable check's exclusions after all — a
+  generated mirror of the corpus can never be cleaner than the card it indexes. Docs edited since
+  2026-09-12 keep their old semantic nodes, and 151 communities carry hub names, not LLM labels.
+  `README.md` is rewritten as a front page that quotes no scores and points at their owners.
+  `CLAUDE.md`: row 5 now names only the tag, the README is "owner of nothing", "Two code trees"
+  became "One code tree", and the anti-pattern drops the two deleted paths. `known-gaps.md` repointed.
+  **The PRD's stale references, not edited (the file is still denied):** §7.2 row "Rewrite
+  `Machine_Model/src/` in place" (line 204), plus `REPORT.md` as the written record (line 35), in
+  the out-of-scope list (line 180) and in the §7.2 re-benchmark row (line 205). They now read as history; a repoint waits on the
+  freeze lifting for the PRD. The last box is ticked in the commit that archives the card: in the
+  top folder the card's own text is a hit, and the check was run after the move. (by @assistant)
 - 2026-10-15: **Step 4 done.** The maintainer pushed tag `machine-model-archive` at `e92539b`,
   not `6f2eeb9`; `Machine_Model/` and `REPORT.md` are byte-identical in both, so the tag stands
   and every citation now names the tag. The tree and the report are deleted; their exclusions

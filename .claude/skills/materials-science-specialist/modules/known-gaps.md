@@ -114,7 +114,7 @@ of §2. (Previously updated 2026-08-29, when the memo was first written.)
   mechanism, sourced hysteresis and degradation, and DOIs throughout.
 - 2026-08-29 — Corrected two factual errors in `research/inverse-design-methods.md`, both verified against the
   pipeline's own outputs first:
-  - **`StandardScaler` → `RobustScaler`** (2 places). Every live path in `Machine_Model/src/` uses
+  - **`StandardScaler` → `RobustScaler`** (2 places). Every live path in the archival `src/` (tag `machine-model-archive`) uses
     `RobustScaler`; the only `StandardScaler` occurrences are commented-out dead code in `Catboostmodel.py`.
   - **"12 selected descriptors" → "22"** (4 places). `feature_selection_report.csv` is 23 lines = header + 22,
     matching `REPORT.md` §3.3.
