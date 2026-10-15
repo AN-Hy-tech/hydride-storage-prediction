@@ -25,7 +25,10 @@ red on a push.
 **A dependency upgrade can move it, and that is not a false alarm.** FastAPI and pydantic
 generate this document; a version bump that changes it changes what a client reads, so it is a
 contract change whoever ran the upgrade should see and approve. The pins in
-``requirements-lock.txt`` are what stop it moving on its own.
+``requirements-lock.txt`` are what stop it moving on its own -- except in CI's ``suite`` lane,
+which installs unpinned. A spelling a library changes without changing meaning is therefore owned
+by the service instead: :func:`~hydms.delivery.api.service.create_app` writes boolean
+discriminator keys as JSON (``"true"``), which pydantic before 2.14 wrote as ``"True"`` (#108).
 
 Card #79.
 """

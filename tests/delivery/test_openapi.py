@@ -62,6 +62,28 @@ def test_an_answer_and_a_refusal_are_told_apart_by_one_documented_key() -> None:
     assert "422" in responses
 
 
+def test_the_discriminator_is_keyed_by_the_json_value_a_client_receives() -> None:
+    """``refused`` arrives as JSON ``true``/``false``; ``"True"`` is pydantic<2.14's str(True).
+
+    Asserted on whatever pydantic is installed, which is the point: the spelling is owned by
+    the service, so the pinned environment and the unpinned CI lane emit one contract (#108).
+    """
+    ok = openapi.document()["paths"]["/v1/predict"]["post"]["responses"]["200"]
+    mapping = ok["content"]["application/json"]["schema"]["discriminator"]["mapping"]
+
+    assert sorted(mapping) == ["false", "true"]
+    assert mapping["true"].endswith("/RefusalBody")
+
+
+def test_a_mapping_holding_both_spellings_of_one_value_is_refused() -> None:
+    from hydms.delivery.api.service import _json_discriminator_keys
+    from hydms.delivery.predict import DeliveryError
+
+    clash = {"discriminator": {"mapping": {"True": "#/a", "true": "#/b"}}}
+    with pytest.raises(DeliveryError, match="both 'True' and 'true'"):
+        _json_discriminator_keys(clash)
+
+
 def test_emit_writes_the_document_and_leaves_nothing_to_compare(
     monkeypatch, tmp_path: Path
 ) -> None:

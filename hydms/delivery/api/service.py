@@ -555,5 +555,45 @@ def create_app(
     )
     application.add_exception_handler(RequestValidationError, _validation_handler)
     application.include_router(_router(max_batch_rows))
+    generated = application.openapi
+    application.openapi = lambda: _json_discriminator_keys(generated())  # type: ignore[method-assign,unused-ignore]
     return application
+
+
+#: How pydantic before 2.14 spells a boolean discriminator value in ``mapping``, and how JSON
+#: spells it. A client matches the key against the ``refused`` it received, which is JSON
+#: ``true``; ``"True"`` is Python's ``str(True)`` leaking into the contract.
+_BOOLEAN_KEYS = {"True": "true", "False": "false"}
+
+
+def _json_discriminator_keys(node: Any) -> Any:
+    """Rewrite every boolean ``discriminator.mapping`` key to its JSON spelling, in place.
+
+    Pydantic 2.14 changed ``"True"`` to ``"true"``, so without this the document -- and the
+    committed snapshot gate HG-3 compares it to -- depended on which pydantic was installed:
+    the pinned environment and an unpinned CI lane disagreed on eight bytes (card #108).
+    Owning the spelling here makes the contract a function of the code alone. Idempotent:
+    FastAPI caches the document, and a second pass finds nothing left to rewrite.
+
+    Raises:
+        DeliveryError: a mapping holds both spellings of one value, which this rewrite would
+            silently merge.
+    """
+    if isinstance(node, dict):
+        mapping = node.get("discriminator", {}).get("mapping")
+        if isinstance(mapping, dict):
+            for python, json_ in _BOOLEAN_KEYS.items():
+                if python in mapping:
+                    if json_ in mapping:
+                        raise DeliveryError(
+                            f"a discriminator mapping holds both {python!r} and {json_!r}; "
+                            f"they are one JSON value and only one target can be published."
+                        )
+                    mapping[json_] = mapping.pop(python)
+        for value in node.values():
+            _json_discriminator_keys(value)
+    elif isinstance(node, list):
+        for value in node:
+            _json_discriminator_keys(value)
+    return node
 
