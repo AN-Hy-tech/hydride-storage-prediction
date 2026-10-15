@@ -14,6 +14,13 @@ The pipeline covers everything from raw data ingestion through multi-library fea
 
 ### Key results
 
+> **Under audit — not yet reproduced.** The numbers below are what `Machine_Model/` originally
+> published. An in-progress review (PR #6, "Freeze the inverse-design programme; open Phase H
+> hardening") found the committed `stacking_results.csv` records **CV 0.344 / Val 0.377 / Test
+> 0.376** for the same run — far below the table here — plus a label-leak bug and a pipeline that
+> does not currently run end to end as committed. Read these as the historical, as-published
+> figures, not as current, verified performance.
+
 | Model | Val R² | Test R² | Test MAE |
 |-------|--------|---------|----------|
 | Stacking Ensemble *(best overall)* | **0.939** | 0.892 | 0.229 wt% |
