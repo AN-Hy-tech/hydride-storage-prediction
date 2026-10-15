@@ -19,6 +19,13 @@
       "output_tokens": 0,
       "files": 23,
       "note": "retry of the 20 router documents the previous run lost to a rate limit, plus card #77 and the runbook edited since. Corpus now fully extracted: 0 files unstamped. Token figure is both agents combined (input+output)."
+    },
+    {
+      "date": "2026-10-15T00:00:00+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 263,
+      "note": "graphify 0.9.91 `update . --force`: AST re-extraction of code only, no LLM. Drops the deleted Machine_Model/ and REPORT.md nodes (#107). Docs edited since 2026-09-12 keep their old semantic nodes; 151 communities renamed by hub, not by LLM (`graphify label` not run)."
     }
   ],
   "total_input_tokens": 621930,

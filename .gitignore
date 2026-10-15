@@ -109,6 +109,10 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/cache/
 graphify-out/manifest.json
+# Written by `graphify update`: dated backups of the previous graph, and label bookkeeping.
+graphify-out/20*/
+graphify-out/.graphify_labels.pending.json
+graphify-out/.graphify_labels.json.sig
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
