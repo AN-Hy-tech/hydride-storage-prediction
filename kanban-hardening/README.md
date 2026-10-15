@@ -5,11 +5,15 @@
 that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md)). Closed cards are in
 [archived/](archived/), same ids, same frontmatter.
 
-> ## ▶ Next action — as of 2026-09-26 (the docs compaction; #83 and #104 `doing`)
+> ## ▶ Next action — as of 2026-10-15 (#108 and #99 closed; #83, #100, #104 `doing`)
 >
-> **Take the open findings in band order, cheapest first:** **#99** (P1, 0.25 d), then **#96**
-> (P1, 0.25 d), then **#94** (P2, 0.25 d; one crossed band still fails a whole `predict_many`
-> batch). The ranked list is [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
+> **Take the open findings in band order, cheapest first:** **#96** (P1, 0.25 d; redirecting
+> `calibrate --report` silently fits CatBoost defaults), then **#94** (P2, 0.25 d; one crossed
+> band still fails a whole `predict_many` batch). The ranked list is
+> [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
+> **#107** (P1, drop `Machine_Model/`) waits on **the maintainer's decision** to lift the freeze's
+> deny-list for `Machine_Model/` and `REPORT.md`; that decision is recorded in
+> [../docs/FREEZE.md](../docs/FREEZE.md) first, never taken by an edit that CI then rejects.
 > **#83** waits on the per-row width table (its population is a decision) and on #104's repeat.
 >
 > **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
@@ -24,10 +28,12 @@ that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md))
 > foreach ($t in 'loco-per-class','loco-summary','loco-out-of-fold','loco-chosen') { git diff --no-index --stat "reports/loco/$t.csv" "reports/_loco-b/$t.csv" }
 > ```
 >
-> **Traps.** `apidoc-examples.json` stores the over-limit request *shortened*, with
-> `candidates_total` beside it; do not "fix" it back to 4,097 rows. Any change to a table the
-> Evidence Reader serves changes `evidence_sha256`: re-run `apidoc --probe --emit` after
-> `loco --emit` or `evaluate`.
+> **Traps.** CI's `suite` lane installs **unpinned**, so a library release can move a generated
+> file there and nowhere else (#108: pydantic 2.14). Before re-emitting to make CI green, emit
+> under the pin *and* under latest and see which one moved. `apidoc-examples.json` stores the
+> over-limit request *shortened*, with `candidates_total` beside it; do not "fix" it back to 4,097
+> rows. Any change to a table the Evidence Reader serves changes `evidence_sha256`: re-run
+> `apidoc --probe --emit` after `loco --emit` or `evaluate`.
 >
 > **This block is one handoff, never a log.** Replace it when you close a card, and move the one it
 > replaces to the top of [../docs/archive/HANDOFFS-PHASE-H.md](../docs/archive/HANDOFFS-PHASE-H.md)
@@ -47,12 +53,12 @@ that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md))
 
 | Directory | Ids | State |
 |---|---|---|
-| `kanban-hardening/` (+ `archived/`) | 1–37, 44, 48, 49, 68–106 | **Active** |
+| `kanban-hardening/` (+ `archived/`) | 1–37, 44, 48, 49, 68–108 | **Active** |
 | `../kanban/` | 38–43, 45–47, 50–67 | **Frozen** — every card stays `backlog` |
 
 `blocked_by` reaches across both; `scripts/check_board.py` loads them, subfolders included, as one
 graph. Ids were preserved when cards migrated. #44, #48 and #49 were pulled out of the frozen PA
-phase because they are what lets the interface refuse. **Next free id: #107** (2026-09-26) —
+phase because they are what lets the interface refuse. **Next free id: #109** (2026-10-15) —
 scan both directories for `max(id) + 1` rather than trust this line.
 
 ## Layers
@@ -82,7 +88,7 @@ L5 Search is entirely frozen: proposing candidates is inverse design.
 | **S6** Delivery: contract + API | 75, 76, 77, 78, 79, 80 | 5 |
 | **S7** Delivery: interface | 81, 82, 83, 84, 100 | 3.5 |
 | **S8** Evidence & close | 89, 85, 86, 35, 36, 37, 99, 101, 102, 103 | 5 |
-| **No stage** | 1, 2, 4, 6, 7, 8, 68, 73, 74, 90, 91, 92, 93, 94, 95, 96 | — |
+| **No stage** | 1, 2, 4, 6, 7, 8, 68, 73, 74, 90, 91, 92, 93, 94, 95, 96, 107, 108 | — |
 
 Days are the original plan, deliberately not re-added. **Cards from #90 on were found during the
 phase, and none is an unfreeze condition.** The stage is the bold line under a card's title; the

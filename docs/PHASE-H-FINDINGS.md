@@ -21,7 +21,6 @@ P4→P2, #68 P1→P4 (its prose half is fixed).
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **108** | CI's unpinned lane resolved pydantic 2.14, which spells a boolean discriminator key `"true"` where the pin wrote `"True"`: HG-3 red on the default branch (16 tests). The service now owns the spelling | 0.25 d | `doing`. Owed: CI green after the push |
 | **96** | `calibrate --report` is an output **and** an input path: redirecting it silently fits CatBoost defaults, and `--save` persists that as the deployed fit. Has produced a wrong correction once | 0.25 d | `backlog`, unblocked |
 | **104** | The seeded LOACO run is **not reproducible**: two runs moved three families (Mg −0.338 → −0.508, macro 0.273 → 0.256). Cause fixed 2026-09-26 (the label screen's forest now runs on one thread); AC-1 still matches `v3` | probes + 2 × 5 h | `doing`. Owed: a `train` probe pair and **the maintainer's** LOACO repeat (board `▶` block) |
 

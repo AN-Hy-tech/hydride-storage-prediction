@@ -1,6 +1,6 @@
 ---
 id: 108
-status: doing
+status: done
 priority: P1
 blocked_by: []
 assignee: "@amirhossein"
@@ -35,7 +35,7 @@ is JSON `true`. `"True"` was Python leaking into the contract.
 - [x] `openapi.json` re-emitted; `python -m hydms.delivery.api.openapi` reports *current* under
       both versions. `docs/API.md` re-emitted, unchanged.
 - [x] A test asserts the JSON spelling on whatever pydantic is installed.
-- [ ] `Suite — pytest and the fast gates` green on the default branch after the push.
+- [x] `Suite — pytest and the fast gates` green on the default branch after the push.
 
 ## Runnable check
 
@@ -49,6 +49,11 @@ HG-3 (#79). Not an unfreeze condition.
 
 ## Narrative
 
+- 2026-10-15: Closed. CI run 221 on `d256a74` (this fix plus #99's prose) is green, both jobs;
+  run 220 on `bd14013` alone was cancelled by that push (`cancel-in-progress`), so 221 is the
+  evidence. Locally the fast lane under py3.12 + current libraries also fails `test_cli.py`,
+  `test_inventory.py`, `test_l13_class_survival.py` and one novelty test: pandas 3 and float
+  noise, identical on the code before this change, unreachable from CI's py3.10. (by @assistant)
 - 2026-10-15: Fixed at the source rather than by re-emitting under 2.14 (would turn the pinned
   environment red) or capping `pydantic<2.14` (would keep the wrong spelling). Isolated by
   emitting under four installs: fastapi 0.115.0 with pydantic 2.12.5 and 2.13.5 → `"True"`;
