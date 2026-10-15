@@ -50,15 +50,18 @@ __all__ = [
 ]
 
 DOCUMENT = repo_root() / "docs" / "REPORT-RECONCILIATION.md"
-REPORT = "REPORT.md"
+#: REPORT.md and the committed tables it contradicts, kept together once `Machine_Model/` was
+#: removed (card #107). The page quotes the report and reads the tables from here.
+PUBLISHED = "evidence/as-published"
+REPORT = f"{PUBLISHED}/REPORT.md"
 
-_BENCH = "Machine_Model/reports/benchmarked_model"
+_BENCH = f"{PUBLISHED}/benchmarked_model"
 _STACKING = f"{_BENCH}/stacking_results.csv"
 _IMPROVED = f"{_BENCH}/improved_benchmark_results.csv"
 _TTEST = f"{_BENCH}/ttest_best_vs_ensemble_abs_error.csv"
 _PAIRWISE = f"{_BENCH}/pairwise_ttest_vs_best.csv"
 _SUBGROUPS = f"{_BENCH}/temperature_subgroup_performance_expanded.csv"
-_RAW = "Machine_Model/data/raw/hydride_data.csv"
+_RAW = "data/raw/hydride_data.csv"
 _EVALUATION = "reports/model/evaluation-metrics.csv"
 _LOCO = "reports/loco/loco-summary.csv"
 
@@ -451,14 +454,14 @@ def document(root: Path | None = None) -> str:
         "",
         "## Read this first",
         "",
-        "**`REPORT.md` is preserved unedited.** It is the archival record of the forward model "
-        "*as published*, and every number in it is cited somewhere -- in a draft, a slide, a "
-        "conversation. Correcting it in place would make those citations point at text that "
-        "no longer says what was cited. So it is corrected *beside* itself, here, and the "
-        "freeze (`docs/FREEZE.md`) denies edits to it outright.",
+        "**`REPORT.md` is preserved unedited, as evidence.** It is the record of the forward "
+        "model *as published*, and its numbers are not the project's results. It lives in "
+        f"`{PUBLISHED}/` beside the committed tables quoted below, which were moved there "
+        "unchanged when the pipeline that produced them, `Machine_Model/`, was removed "
+        "(card #107; last present at commit `4348f6ff96`).",
         "",
         "**The published pipeline is not the committed pipeline.** Row 1 is the evidence in "
-        "one line: two files committed under `Machine_Model/reports/` describe two different "
+        f"one line: two committed files under `{_BENCH}/` describe two different "
         "ensembles, and the report quotes one of them. The pipeline also cannot be re-run to "
         "settle which: `jarvis_filtered_features.csv` has no producer in the repository or its "
         "history, and `merge_datasets.py:46` joins its feature frames by position "
