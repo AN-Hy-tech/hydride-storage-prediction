@@ -29,10 +29,11 @@ A higher row wins **within its own subject**.
 | 2 | [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) | Scope, claim, acceptance criteria, risks, rejected alternatives — **of the frozen programme** | Day-to-day state |
 | 3 | [research/](research/) memos | Any cited fact — physics, methods, libraries, DOIs | Decisions |
 | 4 | `.claude/skills/materials-science-specialist/` | Fast domain recall | Facts the memos corrected (grounding memo §5) |
-| 5 | [REPORT.md](REPORT.md), [README.md](README.md) | The forward model **as published** | Whether those numbers are *valid* |
+| 5 | [evidence/as-published/REPORT.md](evidence/as-published/REPORT.md) | The forward model **as first published** | Whether those numbers are *valid* |
 | 6 | `graphify-out/` | Where things are and how they connect | Ground truth; it goes stale |
 
 **Row 5 is history, not status.** Cite REPORT.md's numbers as "as published", never as current.
+[README.md](README.md) links to current evidence and quotes no number itself.
 
 ## Document map
 
@@ -99,8 +100,9 @@ A hit is a pointer to verify, never the answer. Freshness: `graphify-out/cost.js
   that stops being true, the plan changes.
 - **Interpreter:** the conda env `Project`, **not** `C:\Python313` (a different NumPy major). Pins:
   [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
-- **Two code trees.** New work is in `hydms/`. `Machine_Model/src/` is the archival record behind
-  REPORT.md and is never rewritten (PRD §7.2).
+- **One code tree:** `hydms/`. The old pipeline, `Machine_Model/`, was removed (#107); cite it at
+  commit `4348f6ff96`. Source data is `data/raw/`; REPORT.md and the tables that disprove it are
+  `evidence/as-published/`, kept unedited as evidence.
 - **The promoted model is on one machine.** `artifacts/` is gitignored, so a fresh clone has no
   model and the service refuses to start (#7).
 - **Grouping uses the canonical composition key**, `hydms.data.canonical.group_keys`, called and
@@ -120,7 +122,7 @@ A hit is a pointer to verify, never the answer. Freshness: `graphify-out/cost.js
 
 - Quoting REPORT.md's scores as current. They are expected to fall (risk R4); the evidence is
   [docs/REPORT-RECONCILIATION.md](docs/REPORT-RECONCILIATION.md).
-- Working the frozen board, or editing the PRD, `research/`, `REPORT.md` or `Machine_Model/`.
+- Working the frozen board, or editing the PRD, `research/` or `evidence/as-published/`.
 - Moving a card to `doing` while a `blocked_by` id is unfinished.
 - Re-opening a decision PRD §7 settled (generative models, descriptor inversion,
   Optuna-for-pymoo, patching the old pipeline) without new evidence.

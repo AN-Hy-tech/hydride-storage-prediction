@@ -85,7 +85,7 @@ EXIT_BAD_INVOCATION = 2
 
 #: The committed fixture, beside this module and shipped as package data -- the same choice
 #: ``hydms/screens/domain-reference.json`` makes, and for the same reason: the smoke run must
-#: work in a container that has no ``Machine_Model/`` in it.
+#: work in a container that has no ``data/raw/`` in it.
 FIXTURE_FILE = Path(__file__).with_name("smoke-fixture.csv")
 
 #: How many rows :func:`emit` aims for. Chosen against the budget, not for tidiness: the whole

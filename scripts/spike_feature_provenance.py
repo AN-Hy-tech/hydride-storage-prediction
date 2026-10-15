@@ -40,8 +40,8 @@ ELEM_PROPS = ["magpie", "oliynyk", "jarvis", "mat2vec", "onehot"]
 STATISTICS = ("avg_", "dev_", "range_", "sum_", "max_", "min_", "mode_", "var_")
 
 REPO = Path(__file__).resolve().parent.parent
-RAW = REPO / "Machine_Model" / "data" / "raw" / "hydride_prefeaturizing.csv"
-SELECTED = REPO / "Machine_Model" / "reports" / "feature_selection" / "feature_selection_report.csv"
+RAW = REPO / "data" / "raw" / "hydride_prefeaturizing.csv"
+SELECTED = REPO / "evidence" / "as-published" / "feature_selection_report.csv"
 
 
 def load_selected() -> list[str]:

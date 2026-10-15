@@ -284,8 +284,8 @@ class SourceSchema:
         return tuple(spec.name for spec in self.columns)
 
 
-# Measured against the files in `Machine_Model/data/raw/`, which are read-only archival
-# input under the Phase H freeze. Card #9's done-criteria name the two row counts.
+# Measured against the files in `data/raw/`, which are read-only input (moved byte-identical
+# from `Machine_Model/data/raw/` by card #107). Card #9's done-criteria name the two row counts.
 HYDRIDE_DATA_ROWS = 1279
 PREFEATURIZED_ROWS = 1279
 ML_HYDPARK_ROWS = 772

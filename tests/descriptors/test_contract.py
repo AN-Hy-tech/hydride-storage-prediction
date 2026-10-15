@@ -57,7 +57,7 @@ from hydms.descriptors.stats import STATISTICS
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CBFV_OLIYNYK = Path(__file__).parent / "data" / "cbfv_oliynyk_reference.csv"
 SELECTION_REPORT = (
-    REPO_ROOT / "Machine_Model" / "reports" / "feature_selection" / "feature_selection_report.csv"
+    REPO_ROOT / "evidence" / "as-published" / "feature_selection_report.csv"
 )
 
 #: REPORT.md 3.2, the 22 in the order the thesis prints them. Written out rather than read

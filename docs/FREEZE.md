@@ -17,7 +17,7 @@ frontmatter is the mechanical act, but it is only honest once every condition be
 The forward model's published numbers cannot be defended. Three findings decided this:
 
 1. **The published numbers are contradicted by CSVs committed in this repository.**
-   [REPORT.md](../REPORT.md) claims the stacking ensemble scores Val R² 0.939 / Test R² 0.892.
+   [REPORT.md](../evidence/as-published/REPORT.md) claims the stacking ensemble scores Val R² 0.939 / Test R² 0.892.
    `Machine_Model/reports/benchmarked_model/stacking_results.csv` records CV 0.344 / Val 0.377 /
    Test 0.376. REPORT §4.4's paired t-test (t = −2.102, p = 0.037) is recorded in
    `ttest_best_vs_ensemble_abs_error.csv` as t = −8.168, p = 1.65e-14, against a different best model.
@@ -58,15 +58,20 @@ The inverse-design programme: thermodynamics (PT), screen-and-rank (PA) and the 
 | `kanban/**` | The frozen board. No card may be created, edited, or moved off `backlog` |
 | `docs/PRD-inverse-design.md` | The frozen programme's specification |
 | `research/**` | New memos are research effort spent outside the phase |
-| `REPORT.md` | The archival record of the forward model *as published*. It is history, not status, and is corrected **beside** rather than in place — see `docs/REPORT-RECONCILIATION.md` (card #89) |
-| `Machine_Model/**` | The archival pipeline behind REPORT.md. Rewriting it orphans every published number (PRD §7.2) |
+
+**`REPORT.md` and `Machine_Model/**` left this list on 2026-10-15** (card #107, by the
+maintainer's decision). Both were protected as the published record; git now keeps that record,
+so removing them orphans nothing: every citation to either resolves at commit `4348f6ff96`, the
+last that contains them. The source data moved byte-identical to `data/raw/`, and REPORT.md with
+the committed tables that contradict it moved to `evidence/as-published/`, so
+`docs/REPORT-RECONCILIATION.md` still regenerates.
 
 ### Everything else is allowed
 
 **The deny-list above is the whole of the freeze** (decided 2026-09-12, card #72), and it is short
 on purpose: an allow-list would have to be widened every time hardening work reached an unlisted
 file, turning the one document meant to resist widening into the most-widened one. **Do not add to
-`DENIED` to express a preference** — a protected path needs a reason of the same kind as the five:
+`DENIED` to express a preference** — a protected path needs a reason of the same kind as the three:
 it belongs to the frozen programme or to the published record.
 
 **#44, #48 and #49 were pulled out of the freeze.** They were tagged `pa`, but they are what lets

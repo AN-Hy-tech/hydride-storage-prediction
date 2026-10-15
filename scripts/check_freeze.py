@@ -38,16 +38,12 @@ DENIED = (
     "kanban/",
     "docs/PRD-inverse-design.md",
     "research/",
-    "REPORT.md",
-    "Machine_Model/",
 )
 
 WHY = {
     "kanban/": "the frozen board — no card may be added, edited or deleted",
     "docs/PRD-inverse-design.md": "the frozen programme's specification",
     "research/": "new memos are research effort spent outside the phase",
-    "REPORT.md": "the archival record; correct it beside, not in place (card #89)",
-    "Machine_Model/": "the archival pipeline; rewriting it orphans every published number (PRD 7.2)",
 }
 
 
@@ -152,7 +148,7 @@ def main() -> int:
         for problem in problems:
             print(f"  - {problem}")
         print(
-            "\n  The freeze protects these five paths and nothing else, and the reason for "
+            "\n  The freeze protects these three paths and nothing else, and the reason for "
             "each\n  is the denied-paths table in docs/FREEZE.md. It is a deny-list: every "
             "other path\n  in the repository is editable, and DENIED is short on purpose "
             "(card #72)."

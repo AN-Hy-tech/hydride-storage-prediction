@@ -5,29 +5,29 @@
 that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md)). Closed cards are in
 [archived/](archived/), same ids, same frontmatter.
 
-> ## ▶ Next action — as of 2026-09-26 (the docs compaction; #83 and #104 `doing`)
+> ## ▶ Next action — as of 2026-10-15 (#107 and #108 closed; PR open from `claude/cleanup-check-in-edpri3`)
 >
-> **Take the open findings in band order, cheapest first:** **#99** (P1, 0.25 d), then **#96**
-> (P1, 0.25 d), then **#94** (P2, 0.25 d; one crossed band still fails a whole `predict_many`
-> batch). The ranked list is [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md).
-> **#83** waits on the per-row width table (its population is a decision) and on #104's repeat.
+> **First, land the cleanup PR** (`claude/cleanup-check-in-edpri3` → `feat/phase-h-emergency-hardening`;
+> CI green on both commits). It closes **#108** (CI now installs with `-c requirements-lock.txt`)
+> and **#107** (`Machine_Model/` removed; data in `data/raw/`; REPORT.md and the tables that disprove
+> it in `evidence/as-published/`; README rewritten). Two loose ends from it, both the maintainer's:
+> push the archive tag the session's proxy refused
+> (`git tag machine-model-archive 4348f6ff96 && git push origin machine-model-archive`), and decide
+> whether [../docs/chapter1-revision.md](../docs/chapter1-revision.md) §1.R.1 should stop saying
+> `Machine_Model/src/` is kept.
 >
-> **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
-> other, on an idle machine with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10). Run A writes
-> the committed tables, run B a gitignored scratch directory, then the diff. Only
-> `loco-chosen.csv`'s `seconds` column may differ. **Anything else moving is a new #104 finding,
-> not a failed run.** Commit A's tables either way, then the regeneration chain in Step 10.
+> **Then the open findings in band order, cheapest first:** **#99** (P1, 0.25 d), **#96** (P1,
+> 0.25 d), **#94** (P2, 0.25 d). The ranked list is
+> [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md). **#83** waits on the per-row width
+> table and on #104's repeat.
 >
-> ```powershell
-> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity | Tee-Object -FilePath .\reports\_loco-run-a.log
-> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity --report .\reports\_loco-b | Tee-Object -FilePath .\reports\_loco-run-b.log
-> foreach ($t in 'loco-per-class','loco-summary','loco-out-of-fold','loco-chosen') { git diff --no-index --stat "reports/loco/$t.csv" "reports/_loco-b/$t.csv" }
-> ```
+> **The LOACO repeat (#104; heavy, the maintainer runs it)** is unchanged from the block this one
+> replaces, now in [../docs/archive/HANDOFFS-PHASE-H.md](../docs/archive/HANDOFFS-PHASE-H.md) §0:
+> two ~5 h runs, then the diff; only `loco-chosen.csv`'s `seconds` column may differ.
 >
-> **Traps.** `apidoc-examples.json` stores the over-limit request *shortened*, with
-> `candidates_total` beside it; do not "fix" it back to 4,097 rows. Any change to a table the
-> Evidence Reader serves changes `evidence_sha256`: re-run `apidoc --probe --emit` after
-> `loco --emit` or `evaluate`.
+> **Traps.** Moving a contract-generating dependency (FastAPI, pydantic) is a lock bump **plus**
+> `python -m hydms.delivery.api.openapi --emit` in one commit; CI follows the lock, not pyproject's
+> floors. The previous block's traps (`apidoc-examples.json`, `evidence_sha256`) still hold.
 >
 > **This block is one handoff, never a log.** Replace it when you close a card, and move the one it
 > replaces to the top of [../docs/archive/HANDOFFS-PHASE-H.md](../docs/archive/HANDOFFS-PHASE-H.md)
