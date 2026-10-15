@@ -32,9 +32,9 @@ delete would break it:
 
 - [ ] Tag `machine-model-archive` names the last commit holding `Machine_Model/` and `REPORT.md`,
       and is pushed; every archived citation can name it.
-- [ ] Raw data moved byte-identical (`sha256` before = after); `paths.raw` and every reader repointed;
+- [x] Raw data moved byte-identical (`sha256` before = after); `paths.raw` and every reader repointed;
       the suite reads the same 1,279 rows.
-- [ ] The feature-selection report is a test fixture and `test_contract.py` reads it there.
+- [x] The feature-selection report is a test fixture and `test_contract.py` reads it there.
 - [ ] `REPORT-RECONCILIATION.md` is in `docs/archive/`, unchanged except a header naming the tag;
       its generator and tests are gone, and nothing links the old path.
 - [ ] `Machine_Model/` and `REPORT.md` are deleted; `pyproject.toml`, `.graphifyignore`,

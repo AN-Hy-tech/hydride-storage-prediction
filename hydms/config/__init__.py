@@ -102,9 +102,8 @@ def repo_root() -> Path:
 class Paths:
     """Every directory the pipeline reads or writes, relative to the repository root.
 
-    Stored relative in YAML and exposed absolute here. `raw` points into `Machine_Model/`
-    because that is where the archival dataset lives; it is read-only input, and the Phase H
-    freeze denies writes there.
+    Stored relative in YAML and exposed absolute here. `raw` is the committed dataset under
+    `data/raw/`; it is read-only input. The other directories are written and gitignored.
     """
 
     raw: Path

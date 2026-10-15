@@ -55,7 +55,7 @@ from hydms.data.load import (  # noqa: E402
 )
 from hydms.qa import LeakDetected, assert_disjoint_groups  # noqa: E402
 
-# Measured on `Machine_Model/data/raw/hydride_data.csv`, 1279 rows. Every number here is
+# Measured on `data/raw/hydride_data.csv`, 1279 rows. Every number here is
 # reproduced by `tests/data/test_canonical.py` itself; none is copied from a document.
 RAW_STRINGS = 1149
 AFTER_WHITESPACE = 1142

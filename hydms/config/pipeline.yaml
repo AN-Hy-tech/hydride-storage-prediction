@@ -17,9 +17,9 @@
 seed: 42
 
 paths:
-  # Read-only input. Machine_Model/ is the archival tree behind REPORT.md and the Phase H
-  # freeze denies writes there; the raw dataset simply happens to live inside it.
-  raw: Machine_Model/data/raw
+  # Read-only input: the committed raw dataset and its upstream sources. Moved byte-identical
+  # out of the archival tree by card #107.
+  raw: data/raw
 
   # Everything below is written by the new pipeline and gitignored.
   interim: data/interim

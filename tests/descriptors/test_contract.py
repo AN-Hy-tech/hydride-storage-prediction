@@ -54,11 +54,10 @@ from hydms.descriptors.contract import (
 from hydms.descriptors.element_data import TABLES, load_table
 from hydms.descriptors.stats import STATISTICS
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 CBFV_OLIYNYK = Path(__file__).parent / "data" / "cbfv_oliynyk_reference.csv"
-SELECTION_REPORT = (
-    REPO_ROOT / "Machine_Model" / "reports" / "feature_selection" / "feature_selection_report.csv"
-)
+#: The archival pipeline's feature-selection report, kept as a fixture when that pipeline was
+#: deleted (card #107): an independent witness that the 22 are the ones it selected.
+SELECTION_REPORT = Path(__file__).parent / "data" / "feature_selection_report.csv"
 
 #: REPORT.md 3.2, the 22 in the order the thesis prints them. Written out rather than read
 #: from the module under test: a contract that agrees with itself proves nothing.
