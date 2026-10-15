@@ -34,7 +34,7 @@ classifiers = [
 # used live in the optional groups below and are installed by the card that first needs them.
 dependencies = [
   "numpy>=1.26,<2.0",
-  # <3: pandas 3 changes string dtypes (select_dtypes(object) stops meaning "the text columns"),
+  # <3: pandas 3 changes string dtypes (select_dtypes(object) no longer selects only the text columns),
   # which breaks leak sentinel L13 and the artifact store. CI runs 3.10 and so never installs
   # pandas 3; a 3.11+ install would, silently. Card #108.
   "pandas>=2.0,<3.0",
