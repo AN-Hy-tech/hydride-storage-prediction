@@ -1,0 +1,2 @@
+payload,correction_model_space,confidence_level,lower_head,median_head,upper_head,calibration_rows,fitted_on,symmetric,mapie_version
+conformal,0.03735492530223672,0.8,q0.1,q0.5,q0.9,172,final fit,True,1.5.0

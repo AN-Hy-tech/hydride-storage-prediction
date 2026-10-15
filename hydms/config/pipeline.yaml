@@ -1,0 +1,200 @@
+# HydMS pipeline configuration — card #3.
+#
+# Every path, seed and threshold the pipeline uses. Nothing else may hard-code them.
+# Paths are relative to the repository root, which hydms.config.repo_root() locates by
+# walking up for pyproject.toml + hydms/ (override with HYDMS_ROOT).
+#
+# Unknown keys raise. So do missing ones. If you add a setting here you must add the
+# matching field in hydms/config/__init__.py, and vice versa — the loader refuses any
+# drift between the two, in either direction.
+#
+# Provenance: every value below is either read out of the archival pipeline or measured
+# against the real data. Nothing here is invented. Where a value contradicts REPORT.md,
+# the comment says so, because the code is what produced the published numbers.
+
+# The one seed. Everything stochastic derives from it: splits, folds, Boruta, Optuna,
+# CatBoost. AC-1 requires that the same seed reproduces identical metrics.
+seed: 42
+
+paths:
+  # Read-only input: the committed raw dataset and its upstream sources. Moved byte-identical
+  # out of the archival tree by card #107.
+  raw: data/raw
+
+  # Everything below is written by the new pipeline and gitignored.
+  interim: data/interim
+  processed: data/processed
+  splits: data/splits
+  artifacts: artifacts
+  reports: reports
+
+# Column names in hydride_data.csv (1279 x 6). They contain spaces, a percent sign and
+# parentheses, so they are named once here rather than re-spelled at each use.
+columns:
+  formula: Composition
+  alloy_class: Alloy_class
+  dataset: Dataset
+  target: "H2_W% (max)"
+  temperature: temperature(K)
+  citation: Citation
+
+split:
+  # split_data.py:63-64 uses 0.20 / 0.10. REPORT.md 2.6 and README.md both say "70/15/15";
+  # they are wrong, and the 896/136/247 split they report is what 0.20/0.10 produces.
+  test_fraction: 0.20
+  val_fraction: 0.10
+
+  # KBinsDiscretizer(n_bins=5, strategy='quantile') on target and temperature, combined
+  # into one stratification key (split_data.py:75-82).
+  target_bins: 5
+  temperature_bins: 5
+
+  # Strata smaller than this are merged into the nearest bin by Euclidean distance in
+  # (temperature_bin, target_bin) space (split_data.py:88-111).
+  min_stratum_size: 5
+
+selection:
+  # Boruta_FeatEng.py:57 — note the code uses 0.001 while its own comment says 0.01.
+  variance_threshold: 0.001
+
+  # Iterative VIF, dropping until the maximum falls to this (Boruta_FeatEng.py:78-112).
+  vif_threshold: 30.0
+
+  # BorutaPy over a RandomForest of this depth (Boruta_FeatEng.py:66-68).
+  boruta_max_iter: 2000
+  boruta_max_depth: 6
+
+  # Force-kept through variance filtering and VIF. The archival selector re-adds this
+  # column twice by hand; it is the only non-composition feature in the set.
+  must_keep:
+    - temperature(K)
+
+model:
+  # CatBoost MultiQuantile returns one column per alpha IN THE ORDER GIVEN. Position is the
+  # only thing identifying P10 / P50 / P90, so this order is a contract — the loader
+  # rejects an unsorted or repeating list. See docs/LIBRARY-APIS.md and card #26.
+  quantiles: [0.1, 0.5, 0.9]
+
+  # Used with use_best_model=True against the VALIDATION split. CatBoost raises at fit time
+  # on an empty eval_set, which is the mechanical guard against leak L1 — the archival code
+  # passed the test set here (Catboostmodel.py:604-606).
+  #
+  # 500, not the archival 5000, and the difference is wall time rather than model. Measured
+  # on a real inner fold: at 5000 the fit costs 26.9 s, at 500 it costs 6.9 s and at 200 it
+  # costs 5.4 s, and all three return THE SAME MODEL — best iteration 1042 in every case,
+  # R² 0.7050 to four decimals. od_wait is a multiplier on the iterations grown after the
+  # optimum and nothing else, so 5000 was paying 4x for trees use_best_model then discards.
+  # 500 is the smallest tested value with margin: 200 already recovered the same optimum.
+  early_stopping_rounds: 500
+
+  # Catboostmodel.py:588 used 300; benchmark_model_selection.py used 100 for the published
+  # run and 200 in its later rewrite.
+  #
+  # 25, and the arithmetic is card #26's to defend. The budget is a product — cv_folds x
+  # inner_cv_folds x this — and 300 makes it 4,500 fits. Measured across the ported search
+  # space on a real inner fold, a fit costs between 7 s and 397 s and averages about 75 s;
+  # with the median pruner that is ~105 s a trial, so 300 trials is 43.7 hours and 25 is
+  # about 3.6. The nesting is NOT what gets cut to afford it: three inner folds tuned and
+  # scored in one pass is leak L4 coming back. If 25 trials over nine dimensions proves too
+  # thin, the next lever is the search space — whose low-learning-rate corner costs 60x the
+  # fast one and scores worse — and not this ratio.
+  optuna_trials: 25
+
+  # Outer folds of the nested, group-aware protocol in card #88. The archival code used a
+  # row-level StratifiedKFold with no grouping, which is leak L7. Keep this at or below
+  # split.min_stratum_size: every stratum holds at least that many compositions, and
+  # StratifiedGroupKFold cannot divide a stratum that has fewer members than folds.
+  cv_folds: 5
+
+  # Inner folds, cut inside each outer fold's training rows — where the hyperparameter
+  # search runs. It is a separate number from cv_folds because the cost is the product:
+  # 5 x 3 x optuna_trials fits. Three is the smallest that still averages.
+  inner_cv_folds: 3
+
+  # The early-stopping slice is one fold of this many, cut out of the rows a fit already
+  # owns by the same group-aware generator every other fold uses. Five means the slice is a
+  # fifth of them. It exists because a fit inside the training split has no `val` to stop
+  # on and reaching for `test` is leak L1 (Catboostmodel.py:604-606); the final fit, which
+  # does have `val`, uses that instead. Keep it at or below split.min_stratum_size, for the
+  # reason cv_folds carries above.
+  stopping_folds: 5
+
+  # The conformal calibration slice is one fold of this many, cut out of the TRAINING rows by
+  # the same generator (card #27). Five means ~179 of the ~893 training rows go to
+  # calibration and never to the trees.
+  #
+  # It is not `val`: val chose the stopping iteration, so conformalising on it would recycle
+  # data the model has already been selected against and the coverage guarantee would be a
+  # claim rather than a guarantee. It is not a fourth entry in `SPLIT_NAMES` either -- that
+  # would reach back into card #13 and move every split-size number in the docs.
+  #
+  # **State the cost**: the deployed model then grows on ~714 rows where the cross-validation
+  # that estimated its performance fitted on ~893. That asymmetry is real and is reported,
+  # not hidden. Keep it at or below split.min_stratum_size, for the reason cv_folds carries.
+  calibration_folds: 5
+
+conformal:
+  # MAPIE 1.x takes confidence_level, NOT alpha. 0.8 means an 80% interval; passing 0.2 here
+  # would silently produce a 20% one. The loader range-checks it for that reason.
+  #
+  # 0.80, not the 0.90 this file shipped with, and the change is a correction rather than a
+  # preference. MAPIE's conformalized quantile regression in `prefit` mode has an exact
+  # contract on the heads it is handed: lower = (1 - confidence_level) / 2, upper =
+  # (1 + confidence_level) / 2, median = 0.5. `model.quantiles` above is [0.1, 0.5, 0.9],
+  # which is an 80% band; 0.90 here told MAPIE to expect heads at 0.05 and 0.95, which the
+  # model does not have. The two keys asserted incompatible things and nothing read either
+  # of them, so nothing raised.
+  #
+  # The confidence level moves rather than the heads because moving the heads would refit the
+  # model and invalidate card #26's measured 64.4% raw coverage, which is the baseline card
+  # #27 exists to close and gate AC-3 is scored against. `_validate` now refuses a
+  # configuration where the two disagree, so this pair cannot drift apart again.
+  confidence_level: 0.80
+
+domain:
+  # Measured span of temperature(K) across all 1279 rows: min 195, max 773. The refusal path
+  # (card #77) declines anything outside it. Coverage inside is not uniform — only 39 test
+  # rows sit above 500 K — so the learned applicability domain (card #48) does the real work
+  # and this is only the outer bound.
+  temperature_min_k: 195.0
+  temperature_max_k: 773.0
+
+  # --- the applicability-domain ceiling (card #48) ------------------------------------
+  #
+  # Every one of these is measured. The derivation is `hydms/screens/domain.py`'s module
+  # docstring; the short version is that the ceiling the card asked for is NOT a chemical
+  # distance. Per-class transfer R² does not correlate with how isolated a family is, in
+  # element-fraction space (Spearman -0.27) or in the model's own 14-feature space (-0.28),
+  # so there is no curve for a distance threshold to be calibrated against.
+
+  # The lower bound on H/M when computing a composition's physical capacity ceiling,
+  # wt%_max = H/M * 1.008 / mean atomic mass * 100. It is a FLOOR, not the value: the
+  # element-wise maximum of `hydms.screens.domain.HM_MAX` wins where it is larger, because
+  # the rare earths form trihydrides and Th4H15 reaches 3.75.
+  #
+  # 2.5 is Sahlberg et al. 2016 (doi:10.1038/srep36770) — lattice strain in a BCC solid
+  # solution opens both tetrahedral and octahedral sites. Measured over the 1,278 curated
+  # rows, the card's prescribed flat 2.0 puts 31 REAL MATERIALS above their own ceiling and
+  # a flat 2.5 puts 9 there; max(2.5, element-wise) leaves 4, of which 3 are Ce-Ni AB5 rows
+  # implying H/M 3.3-3.8 (data defects, boxed on #14) and one is over by 0.006 wt%.
+  capacity_ceiling_hm_floor: 2.5
+
+  # A calibrated interval wider than this is reported HIGH_UNCERTAINTY. 1.12 wt% is the
+  # standard deviation of the training target itself: a band wider than the marginal spread
+  # has told the caller nothing they did not know before asking. The deployed fit's mean
+  # calibrated width is 0.8951 wt% (reports/model/conformal-coverage.csv), so a typical
+  # prediction passes with margin.
+  #
+  # It is a REPORT about the band and never a stand-in for the domain verdict. #30 measured
+  # the two coming apart in both directions: Mg is the worst family and has the worst
+  # coverage, but SS is the BEST family by R² (0.7780) with the second-worst coverage
+  # (0.2329), and HEA is second worst by R² with the best coverage (0.8824).
+  max_interval_width_wt_pct: 1.12
+
+  # An alloy class whose measured leave-one-class-out R² is below this is UNTRUSTED_FAMILY —
+  # the second, independent domain signal, reading the label and nothing else. Zero is not a
+  # taste: R² below zero means the model does worse on that family than predicting the mean,
+  # which is the point past which "prediction" is the wrong word. Measured (reports/loco/):
+  # Mg -0.5084 and HEA -0.0723 fall below it; the other eight classes do not (the same two in
+  # both seeded runs, 2026-09-06 and 2026-09-25, though Mg's score moved -- card #104).
+  min_transfer_r2: 0.0

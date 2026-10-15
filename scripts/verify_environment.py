@@ -4,7 +4,7 @@ Card #1's acceptance test. It builds a throwaway environment from `environment.l
 plus `requirements-lock.txt` and imports the packages the pipeline cannot run without.
 
 Recreation is two stages, and the reason is not stylistic: the pip half must be installed
-with `--no-deps`, because these 208 pins accreted incrementally and pip's resolver cannot
+with `--no-deps`, because these 209 pins accreted incrementally and pip's resolver cannot
 prove them consistent. A lockfile is already the resolved closure, so re-deriving it is
 both unnecessary and, here, impossible. `--no-deps` is not a valid directive inside a
 requirements file, so it cannot live in conda's `pip:` block — hence two files and two

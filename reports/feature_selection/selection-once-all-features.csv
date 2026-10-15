@@ -1,0 +1,2 @@
+run,rows_offered,rows_fitted,removed,flagged,held_out,selected,features
+training-split,700,629,71,70,313,16,"dev_Zunger_radii_sum, dev_Pauling_Electronegativity, avg_valence_d, dev_atom_mass_mult_therm_cond, avg_is_alkaline, dev_bp_divi_atom_mass, dev_specific_heat_(J/g_K)_, dev_gilmor_number_of_valence_electron, range_Mulliken_EN, range_specific_heat_(J/g_K)_, range_heat_of_vaporization_(kJ/mol)_, range_Mendeleev_Number, dev_voro_coord_divi_mol_vol, dev_heat_of_vaporization_(kJ/mol)_, avg_Number_of_unfilled_s_valence_electrons, temperature(K)"

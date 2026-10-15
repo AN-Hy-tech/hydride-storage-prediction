@@ -1,13 +1,16 @@
 # This Project: HydMS
 
-**Confidence**: 🟢 High — read directly from the repo's own `README.md`, `REPORT.md` and `Machine_Model/src/` on 2026-08-29.
+**Confidence**: 🟠 History only — read from `README.md`, `REPORT.md` and the archival pipeline's `src/` on
+2026-08-29. Phase H showed that pipeline's published numbers wrong (`docs/FREEZE.md` § Why), and card #107
+deleted it and `REPORT.md`; both are at git tag `machine-model-archive`. The project is `hydms/`; current
+numbers are in `docs/chapter1-revision.md`, not here.
 
 Master's thesis, Faculty of Metallurgical and Materials Engineering, Shiraz University.
 Predicting **maximum H₂ storage capacity (wt%)** of hydride alloys from **chemical formula + temperature alone**.
 
-## The pipeline as actually built
+## The archival pipeline, as it was built
 
-Scripts in `Machine_Model/src/`, run in this order:
+Scripts in the archival `src/` (tag `machine-model-archive`), run in this order:
 
 | # | Script | Does |
 |---|---|---|
@@ -31,7 +34,7 @@ Scripts in `Machine_Model/src/`, run in this order:
 - **Ensemble**: `StackingRegressor` over the top-4 by `Val_Weighted_Orig`; meta-learner is a tuned Ridge.
 - **Weighted score**: `0.6 × R²_orig + 0.4 / MAE_orig`.
 
-### Headline results
+### Headline results, as published (shown wrong — never quote as current)
 
 | Model | Val R² | Test R² | Test MAE |
 |---|---|---|---|
@@ -56,10 +59,9 @@ All 22 are composition-averaged statistics (`avg_*`, `dev_*`, `range_*`) plus te
 
 ## Working on this repo
 
-- Prose conventions: `README.md` and `REPORT.md` at root document the built model. `research/` holds
-  literature reviews and design memos for work that does not exist yet.
-- `.claude/` is gitignored — skills and research notes there are not tracked.
-- The datasets live in `Machine_Model/data/raw/`; reports and figures in `Machine_Model/reports/`.
+- Prose conventions: `CLAUDE.md` routes to the owner of each fact. `research/` holds literature reviews
+  and design memos.
+- The raw datasets live in `data/raw/`; `hydms/` writes its reports and figures under `reports/`.
 
 ## How to be useful here
 

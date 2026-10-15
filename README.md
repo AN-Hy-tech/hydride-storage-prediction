@@ -1,120 +1,112 @@
 # HydMS — Hydrogen Storage Capacity Prediction via Machine Learning
 
-**[Read the full project report →](REPORT.md)**
-
 > **Master's Thesis Project** · Faculty of Metallurgical and Materials Engineering · Shiraz University
 Researcher: Amirhossein Nasiri
 ---
 
 ## What is this?
 
-Metal hydrides can store hydrogen inside their crystal lattice — a promising path toward solid-state hydrogen energy storage. But measuring storage capacity experimentally is slow and expensive. This project builds a machine learning pipeline that predicts the **maximum H₂ storage capacity (wt%)** of any hydride alloy from its **chemical formula and operating temperature alone**.
+Metal hydrides store hydrogen inside their crystal lattice, a path toward solid-state hydrogen
+storage. Measuring storage capacity experimentally is slow and expensive. HydMS predicts the
+**maximum material H₂ storage capacity (wt%)** of a hydride alloy from its **chemical formula and
+temperature alone**, and extends that forward model to the inverse question: which alloys should
+we make?
 
-The pipeline covers everything from raw data ingestion through multi-library feature extraction, outlier detection, feature selection, model benchmarking (13 algorithms), Bayesian hyperparameter optimization, and a stacking ensemble.
+A prediction from HydMS is never a bare number. Every answer carries a **conformal prediction
+interval** and an **applicability-domain verdict**, and a composition outside the domain is
+refused with a stated reason rather than answered. Validation groups rows by canonical composition
+and holds out whole alloy families, so the reported scores say how well the model transfers, not
+how well it remembers.
 
-### Key results
+**Status.** The project is in Phase H (hardening). Work outside it is frozen; see
+[docs/FREEZE.md](docs/FREEZE.md) and [docs/PHASE-H-FINDINGS.md](docs/PHASE-H-FINDINGS.md).
 
-**Retracted, pending audit.** This project originally published validation/test R² figures here and
-in `REPORT.md`. An in-progress review (PR #6, "Freeze the inverse-design programme; open Phase H
-hardening") found the committed `stacking_results.csv` records substantially lower scores for the
-same run, plus a label-leak bug and a pipeline that does not currently run end to end as committed.
-The numbers are dropped from both files until they're reproduced; see PR #6 for the audit and
-`kanban-hardening/` for the fix in progress.
+## Results
+
+This README quotes no scores: each number has one owner, and a copy here would go stale.
+
+| What | Where it lives |
+|---|---|
+| Current numbers, in prose, each with its evidence | [docs/chapter1-revision.md](docs/chapter1-revision.md) |
+| Grouped-CV fit, held-out evaluation, conformal coverage | [reports/model/](reports/model/) — summary in [evaluation.md](reports/model/evaluation.md) |
+| Leave-one-alloy-class-out transfer | [reports/loco/](reports/loco/) — summary in [loco.md](reports/loco/loco.md) |
+| Feature selection inside the folds | [reports/feature_selection/](reports/feature_selection/) |
+| The model card a running service reports | `GET /v1/model` and `GET /v1/evidence` ([docs/API.md](docs/API.md)) |
+
+The first version of this work published higher scores from an earlier pipeline. Those scores
+were not reproducible and are withdrawn; [docs/archive/REPORT-RECONCILIATION.md](docs/archive/REPORT-RECONCILIATION.md)
+records why. The old pipeline and its report are kept, unedited, at git tag
+`machine-model-archive`.
 
 ---
 
 ## Project Structure
 
 ```
-Hydride_Machine_learning_project/
-└── Machine_Model/              # ML pipeline (training, evaluation, analysis)
-    ├── src/                    # Source scripts — run these in order
-    │   ├── merge_datasets.py           # 1. Merge HyStor + ML-HYDPARK datasets
-    │   ├── log_transform_target.py     # 2. Log-transform the H₂ wt% target
-    │   ├── extract_features_cbfv.py    # 3. CBFV featurisation (Magpie + JARVIS)
-    │   ├── CleanLab.py                 # 4. CleanLab outlier removal
-    │   ├── Boruta_FeatEng.py           # 5a. Boruta + SHAP feature engineering
-    │   ├── Feature_selection.py        # 5b. VIF + correlation feature selection
-    │   ├── split_data.py               # 6. Stratified train/val/test split
-    │   ├── benchmark_model_selection.py # 7. 13-model benchmark + Optuna tuning
-    │   └── Catboostmodel.py            # 8. Dedicated CatBoost optimisation
-    ├── notebooks/              # Exploratory analysis & visualisation
-    ├── data/raw/               # Raw datasets (HyStor, ML-HYDPARK)
-    └── reports/                # Generated CSVs and TXT summaries
+hydride-storage-prediction/
+├── hydms/                  # The project package
+│   ├── data/               # Loaders, curation, canonical composition keys
+│   ├── descriptors/        # Composition featuriser (element tables ship in the package)
+│   ├── surrogate/          # Fit, calibrate, evaluate, LOACO, promote, predict
+│   ├── screens/            # Applicability domain and physics screens
+│   ├── search/             # Inverse-design search seam (frozen programme; not yet built)
+│   ├── delivery/           # HTTP API, refusals, model card
+│   ├── gates/              # Executable acceptance gates (AC-*, HG-*)
+│   └── evidence/, figures/, thermo/, qa/, pipeline/, artifacts/, config/
+├── app/                    # Streamlit client of the HTTP API
+├── data/raw/               # HyStor + ML-HydPARK raw data
+├── reports/                # Committed evidence tables (model/, loco/, feature_selection/)
+├── tests/                  # The test suite
+├── docs/                   # Runbook, API, environment, ADRs, findings
+├── kanban-hardening/       # The active board (Phase H)
+└── kanban/                 # The frozen inverse-design board
 ```
 
 ---
 
 ## Quickstart
 
-### Requirements
+### Step 1 — Environment
 
-- Python 3.9+
-- [Conda](https://docs.conda.io/) recommended for scientific packages
-
-### Step 1 — Install dependencies
+Use the conda environment `Project` (Python 3.10, NumPy 1.x). The machine's default Python will
+not work. Rebuild instructions and why the pins matter: [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
 
 ```bash
-cd Machine_Model
-pip install -r requirements.txt
+conda env create -f environment.lock.yml -n Project
+conda run -n Project python -m pip install -e .
 ```
 
-Some packages are best installed via conda:
+### Step 2 — Fit the model
+
+The fit is several hours and its operator steps are ordered; follow
+[docs/RUNNING-THE-FIT.md](docs/RUNNING-THE-FIT.md). In outline:
 
 ```bash
-conda install -c conda-forge matminer pymatgen rdkit
+conda run -n Project python -m hydms.surrogate.train --target capacity      # grouped-CV fit
+conda run -n Project python -m hydms.surrogate.calibrate --target capacity --save
+conda run -n Project python -m hydms.surrogate.evaluate --emit              # intervals and coverage
+conda run -n Project python -m hydms.surrogate.promote --dry-run            # gate check before promotion
 ```
 
-### Step 2 — Run the ML pipeline
+`artifacts/` is gitignored, so a fresh clone has no promoted model and the service below refuses
+to start until you have run these steps.
 
-Execute the scripts in `Machine_Model/src/` in order:
+### Step 3 — Serve and use it
 
 ```bash
-cd Machine_Model
-
-# 1. Merge raw datasets
-python src/merge_datasets.py
-
-# 2. Log-transform the target variable
-python src/log_transform_target.py
-
-# 3. Extract compositional features (CBFV: Magpie + JARVIS)
-python src/extract_features_cbfv.py
-
-# 4. Remove label noise with CleanLab
-python src/CleanLab.py
-
-# 5. Feature engineering and selection (run both)
-python src/Boruta_FeatEng.py
-python src/Feature_selection.py
-
-# 6. Stratified train / validation / test split
-python src/split_data.py
-
-# 7. Benchmark 13 models + Optuna hyperparameter tuning
-python src/benchmark_model_selection.py
-
-# 8. Optimise CatBoost specifically
-python src/Catboostmodel.py
+conda run -n Project uvicorn hydms.delivery.api:app --port 8000
+conda run -n Project streamlit run app/main.py
 ```
 
-Alternatively, explore the pipeline interactively through the notebooks in `Machine_Model/notebooks/` (run them in alphabetical order).
+The HTTP contract is [docs/API.md](docs/API.md); every refusal sentence is in
+[docs/REFUSALS.md](docs/REFUSALS.md).
 
----
+### Checks
 
-## Methodology at a Glance
-
-| Stage | Detail |
-|-------|--------|
-| **Datasets** | HyStor + ML-HYDPARK — 1,279 samples after merging & cleaning |
-| **Featurisation** | CBFV (Magpie + JARVIS) + Matminer (Miedema + WenAlloys) → 282 features |
-| **Outlier removal** | CleanLab `CleanLearning` wrapping `HistGradientBoostingRegressor` |
-| **Feature selection** | VarianceThreshold → correlation filter → RandomForest → Boruta → SHAP → VIF → **22 features** |
-| **Data split** | Stratified 70 / 10.6 / 19.3 % (train / val / test) — 896 / 136 / 247 samples |
-| **Benchmarking** | 13 regressors + Stacking Ensemble; scored on log-scale and original wt% |
-| **Optimisation** | Optuna (100 trials, TPE sampler) for 5 top models |
-| **Ensemble** | StackingRegressor: ExtraTrees + CatBoost + GradientBoosting + RandomForest; Ridge meta-learner |
-| **Interpretability** | SHAP TreeExplainer, Pearson & MI correlations, temperature subgroup analysis |
+```bash
+conda run -n Project python -m hydms.gates list
+conda run -n Project python -m pytest -m "not slow" -q
+```
 
 ---
 
@@ -122,17 +114,18 @@ Alternatively, explore the pipeline interactively through the notebooks in `Mach
 
 | File | Description |
 |------|-------------|
-| `Machine_Model/data/raw/hydride_data.csv` | Primary merged hydride dataset |
-| `Machine_Model/data/raw/ML-HYDPARK_v0.0.5.csv` | ML-HYDPARK benchmark dataset |
-| `Machine_Model/data/raw/HyStor_27_7_24 (1).xlsx` | HyStor experimental database |
+| `data/raw/hydride_data.csv` | Primary merged hydride dataset |
+| `data/raw/ML-HYDPARK_v0.0.5.csv` | ML-HydPARK benchmark dataset |
+| `data/raw/HyStor_27_7_24 (1).xlsx` | HyStor experimental database |
+| `data/raw/hydride_prefeaturizing.csv` | The same rows with the target log1p-transformed; a test fixture, never a source |
 
 ---
 
 ## About
 
-This project was developed as a **Master's thesis** in the **Department of Metallurgy and Materials Engineering** at **Shiraz University**. It demonstrates that physics-informed compositional descriptors, combined with modern ML methods, can predict hydrogen storage capacity with high accuracy — reducing the need for costly experimental screening.
-
-For the complete methodology, results tables, statistical tests, and SHAP analysis, see **[REPORT.md](REPORT.md)**.
+This project was developed as a **Master's thesis** in the **Department of Metallurgy and
+Materials Engineering** at **Shiraz University**. Terms used across the repository are defined in
+[CONTEXT.md](CONTEXT.md); the thesis statement is [docs/PRD-inverse-design.md](docs/PRD-inverse-design.md) §4.
 
 ---
 

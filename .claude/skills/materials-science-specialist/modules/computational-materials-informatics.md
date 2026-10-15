@@ -105,5 +105,6 @@ Cross-reference `modules/generative-ai-inverse-design.md` and `research/inverse-
 
 **Provenance discipline for a thesis:** pin package versions; record which database snapshot and which date;
 keep the fitted scaler and feature list as artefacts, not as things to be recomputed. This repo's habit of
-writing every stage's output to `Machine_Model/reports/` is the right instinct — the numbers in the report can
-be traced to the run that produced them.
+writing every stage's output under `reports/` is the right instinct — but only if the published numbers are
+then checked against those files. The archival pipeline's were not, and disagreed with them
+(`docs/archive/REPORT-RECONCILIATION.md`).

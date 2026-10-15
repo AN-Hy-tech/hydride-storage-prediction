@@ -1,0 +1,21 @@
+# Deployed model v3, scored once on the held-out test split by the gates recorded in its manifest.
+# manifest sha256 ae913ab03045a2661b22e6610920b400fcfb2107d65debee77b3fb1aa2909673; gate run 2026-09-12T17:34:30+00:00.
+# Generated from reports/model/artifact-gates.json by `python -m hydms.evidence.artifact_score --emit`; do not edit.
+quantity,value,unit,gate,split,rows,description
+r2,0.707064,,AC-1,test,254,"R² of the median head, computed in wt% (not log1p)"
+rmse,0.542028,wt%,AC-1,test,254,RMSE of the median head
+mae,0.311710,wt%,AC-1,test,254,MAE of the median head
+pinball,0.106554,wt%,AC-1,test,254,pinball loss averaged over every head
+interval_coverage,0.779528,fraction,AC-1,test,254,"calibrated band coverage, on the refit"
+interval_width,0.862991,wt%,AC-1,test,254,"calibrated band mean width, on the refit"
+crossings,0.000000,fraction,AC-1,test,254,rows with any adjacent pair of heads out of order
+coverage_calibrated,0.7795,fraction,AC-3,test,254,"calibrated band coverage, stored model -- the AC-3 criterion"
+width_calibrated,0.8630,wt%,AC-3,test,254,"calibrated band mean width, stored model"
+coverage_raw,0.6575,fraction,AC-3,test,254,the same heads with no conformal correction
+width_raw,0.6485,wt%,AC-3,test,254,the same heads with no conformal correction
+coverage_nominal,0.8,fraction,AC-3,test,254,the level the stored correction was calibrated for
+coverage_standard_error,0.0251,fraction,AC-3,test,254,binomial standard error at this n and the nominal level
+conformal_correction,+0.037355,log1p wt%,AC-1,test,254,constant added to the outer heads before expm1
+trees,2584,count,AC-1,test,254,trees grown
+rows_grown_on,701,rows,AC-1,test,254,training rows the deployed model grew on
+rows_calibration,172,rows,AC-1,test,254,"rows carved out before fitting, for the conformal correction"

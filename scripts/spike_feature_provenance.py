@@ -40,8 +40,8 @@ ELEM_PROPS = ["magpie", "oliynyk", "jarvis", "mat2vec", "onehot"]
 STATISTICS = ("avg_", "dev_", "range_", "sum_", "max_", "min_", "mode_", "var_")
 
 REPO = Path(__file__).resolve().parent.parent
-RAW = REPO / "Machine_Model" / "data" / "raw" / "hydride_prefeaturizing.csv"
-SELECTED = REPO / "Machine_Model" / "reports" / "feature_selection" / "feature_selection_report.csv"
+RAW = REPO / "data" / "raw" / "hydride_prefeaturizing.csv"
+SELECTED = REPO / "tests" / "descriptors" / "data" / "feature_selection_report.csv"
 
 
 def load_selected() -> list[str]:
@@ -53,7 +53,7 @@ def columns_for(elem_prop: str, sample: pd.DataFrame) -> list[str]:
     """Column names CBFV emits for one table, using the original script's exact arguments.
 
     `extend_features=True` and `drop_duplicates=False` are not incidental: they are what
-    `Machine_Model/src/extract_features_cbfv.py:31` passed, and changing either changes the
+    the archival `src/extract_features_cbfv.py:31` (tag `machine-model-archive`) passed, and changing either changes the
     emitted column set. Reproducing the call is the whole point of the spike.
     """
     from CBFV.composition import generate_features

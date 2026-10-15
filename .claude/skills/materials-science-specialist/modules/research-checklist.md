@@ -11,8 +11,9 @@ The workflow that produced the current content, and the one to repeat before ext
 3. **Mark unverified claims `**unverified**` inline.** A smaller honest module beats a padded one.
    Never invent a DOI or a figure to fill a gap.
 4. **Date anything time-sensitive.** Package versions, database sizes, "current" targets, API details.
-5. **Prefer the repo's own numbers over recollection.** `REPORT.md` and `Machine_Model/reports/` are the
-   authority on this project's results. Check before quoting.
+5. **Prefer the repo's own numbers over recollection.** `docs/chapter1-revision.md` and the tables
+   `hydms/` writes under `reports/` are the authority on this project's results. The old `REPORT.md` is
+   history (git tag `machine-model-archive`), never current. Check before quoting.
 
 ## Before extending a module
 
@@ -33,8 +34,8 @@ The workflow that produced the current content, and the one to repeat before ext
   subsection is domain knowledge, not retrieved sources** — the least-sourced part of the skill.
 - `modules/generative-ai-inverse-design.md` — derived from `research/inverse-design-methods.md`,
   a DOI-cited memo written against primary sources on 2026-08-29.
-- `modules/project-context.md` — read directly from this repo's `README.md`, `REPORT.md` and
-  `Machine_Model/src/` on 2026-08-29.
+- `modules/project-context.md` — read directly from this repo's `README.md`, `REPORT.md` and the
+  archival `src/` on 2026-08-29; marked history-only by card #107.
 
 Both memos live in `research/`. They are the citation authority; these modules summarise them. When they
 disagree, the memo wins — and fix the module.

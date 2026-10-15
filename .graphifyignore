@@ -1,0 +1,16 @@
+# Scope for the knowledge graph. The corpus is the project, not its tooling.
+
+# .claude/skills/ -- installed skill prose: ask-matt, backend-development, ui-ux-pro-max,
+# and ~30 more. 77k words of generic tooling documentation whose vocabulary this project
+# never uses, and which would dominate community detection. This also drops
+# materials-science-specialist, which IS written for this thesis -- accepted, because
+# CLAUDE.md's authority table puts that skill at row 4 and research/ at row 3, and every
+# fact it holds that survives the memos' corrections is in research/, which is indexed.
+# graphify's ignore parser has no gitignore negation (`!`), so a carve-out for one skill
+# is not expressible here; a literal `!path` line would silently match nothing.
+# The kanban-ai and graphify scripts under .claude are code and stay free.
+.claude/skills/
+
+# Derived or generated, never ground truth.
+graphify-out/
+catboost_info/

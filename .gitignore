@@ -6,10 +6,38 @@ papers/
 *.pptx
 *.rar
 Plan.docx
+research/PHASE-H-PERSONAL-REPORT.md
 
 # ── Root-level duplicate output directories (kept locally, not in repo) ─────
 /models/
-/reports/
+# `/reports/*` rather than `/reports/`, because git does not descend into an excluded
+# directory and a negation under one has no effect. Card #25 publishes the old-22-vs-new-N
+# comparison and the tables it is generated from: an hour of Boruta is not a diff, so the run
+# output in reports/selection/ stays local, but the evidence behind the declared feature
+# contract is versioned with it — that is the whole of what went wrong with REPORT.md.
+/reports/*
+!/reports/feature_selection/
+# And `reports/model/` on the same reasoning, decided by card #29. Every headline number in
+# this layer — the nested R², the conformal coverage, the interval bounds Chapter 1 quotes —
+# lived only in card prose and in docstrings, and `git ls-files reports/` returned nothing but
+# the line above: on a fresh clone they were unverifiable. The tables are the evidence, they
+# cost a 3.5-hour run to regenerate, and #37 must quote committed ones rather than somebody's
+# local run. That is the whole of what went wrong with REPORT.md.
+#
+# **What belongs here is the real run's output, not a probe's.** `train.py --trials` prints
+# `These numbers are a cost check, not a result` for exactly this reason; a probe's CSV is the
+# same shape as a result's. Stage the files by name — never `git add -A` in this directory.
+!/reports/model/
+# And `reports/loco/` on the same reasoning again, decided by card #30. AC-6's gate reads the
+# committed leave-one-alloy-class-out tables rather than re-running a 4.7-hour protocol, so
+# ignoring this directory would leave the gate looking at nothing in CI — a criterion that can
+# only ever be established on somebody's laptop. The same trap was found and closed the same
+# day on `artifacts/current.json`, which is ignored and therefore cannot carry a CI-enforced
+# rule at all (card #34).
+#
+# The probe caution above applies here twice over: `loco-run.csv` records `probe`, AC-6 refuses
+# a probe's tables by reading it, and the run costs about twice what `train` does.
+!/reports/loco/
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
@@ -42,8 +70,26 @@ conda-meta/
 catboost_info/
 temp/
 
+# Everything the new pipeline writes. hydms/config/pipeline.yaml already claimed these were
+# gitignored; four of the five were not, and the first `python -m hydms.gates run` would have
+# dropped artifacts/gate-results.json into the working tree as an untracked file. Card #5.
+/artifacts/
+/data/interim/
+/data/processed/
+/data/splits/
+
 # ── Test cache ────────────────────────────────────────────────────────────────
 .pytest_cache/
+.mypy_cache/
+
+# Coverage data, written by `pytest --cov` (card #86). It is a measurement of one run on one
+# machine, so committing it would put a machine-specific artifact in the tree — and gate HG-4
+# reads it, which is exactly why it must be the *local* run's file and never a stale committed
+# one. `coverage.xml` and `htmlcov/` are the other shapes the same tool writes.
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
 # ── IDE / tool settings ───────────────────────────────────────────────────────
 .vscode/
@@ -63,6 +109,10 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/cache/
 graphify-out/manifest.json
+# Written by `graphify update`: dated backups of the previous graph, and label bookkeeping.
+graphify-out/20*/
+graphify-out/.graphify_labels.pending.json
+graphify-out/.graphify_labels.json.sig
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store

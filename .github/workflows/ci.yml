@@ -1,0 +1,179 @@
+# The fast lane — what runs on every push.
+#
+# Two jobs, and the split is the point (card #6). Lint and type checks need none of the
+# project's dependencies — mypy reads `pyproject.toml` and the scientific stack is stubbed out
+# by its `ignore_missing_imports` overrides — so `hygiene` builds no environment and reports in
+# under a minute even when the environment is broken, unpinned or absent. Card #68 established
+# that principle and `docs/QA-PROTOCOL.md` §6 states it. Only `suite` pays for an environment,
+# and only because the test suite imports the scientific stack. The two report independently:
+# a failed install in one must not be able to hide a failure in the other.
+#
+# This workflow absorbs the former `integrity.yml`. Its two stdlib-only checks are now the
+# first two steps of `hygiene` — a separate workflow meant a second checkout and a second queue
+# wait for a fifteen-second answer, and card #6's job table names them here.
+#
+# `suite` does NOT rebuild the pinned `Project` environment, and on this runner it cannot.
+# `environment.lock.yml` pins conda build strings and is win-64 by construction (`vc`,
+# `vs2015_runtime`, `m2w64`, `ucrt`, and 85 Windows build strings), and `requirements-lock.txt`
+# carries `pywin32`; `docs/ENVIRONMENT.md` says so outright — "on a different OS the solve will
+# fail". Rebuilding it needs a `windows-latest` runner, which bills at 2× on a private
+# repository, for an 8.2 GB environment against a 10 GB per-repository cache budget. The pinned
+# environment exists to reproduce the *published numbers*, and reproducing those is the slow
+# lane's job (card #7), which retrains. This lane runs unit tests and the gates answerable
+# without a retrain, so it installs what `pyproject.toml` declares. Card #6's narrative records
+# the measurement and what it costs.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# A superseded push has nothing useful left to say; cancel it and keep the queue short.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hygiene:
+    name: Hygiene — board, freeze, ruff, mypy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # A branch in this repository is already covered by its own push event, so the
+    # pull_request event would only duplicate it. Forks are the case that needs it: their
+    # pushes never reach this repository.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # check_freeze.py diffs against the base ref; a shallow clone cannot resolve it.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Both checks are stdlib-only by design and run before any install, so a broken pip
+      # cannot hide a freeze violation.
+      - name: Check board and prose integrity
+        run: python scripts/check_board.py --root .
+
+      - name: Check the Phase H implementation freeze
+        run: python scripts/check_freeze.py --base "origin/${{ github.base_ref || github.event.repository.default_branch }}"
+
+      # EXACT pins, not the `dev` extra's floors, and this is not caution — the first run of
+      # this workflow failed on it. `ruff>=0.6` resolved to a newer ruff than the machine lane
+      # runs, which warned that `PD901` had been removed from under [tool.ruff.lint]'s ignore
+      # list and raised SIM905, RUF005 and RUF100 on code the local ruff passes. RUF100 makes
+      # the two versions mutually unsatisfiable: it calls `# noqa: E402` unused in
+      # tests/data/test_canonical.py, where the older ruff needs it. A lint lane on a floor is
+      # not a check, it is a check plus whatever was released this week, and card #6's claim
+      # that the local command "fails on exactly what CI will fail on" is only true if the
+      # versions match. Bumping these is a deliberate commit that fixes what the new version
+      # finds; keep them equal to `ruff --version` and `mypy --version` on the machine lane.
+      #
+      # types-PyYAML is deliberately not installed: the `yaml` entry in [tool.mypy]'s overrides
+      # exists precisely to keep mypy runnable on a bare interpreter.
+      - name: Install the lint tools
+        run: python -m pip install --disable-pip-version-check "ruff==0.8.4" "mypy==1.13.0"
+
+      - name: ruff
+        run: ruff check hydms/ tests/ scripts/
+
+      - name: mypy
+        run: mypy
+
+  suite:
+    name: Suite — pytest and the fast gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # 3.10 is the pinned interpreter (docs/ENVIRONMENT.md); pyproject requires <3.13
+          # because 3.13 forces NumPy 2.x.
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # The `parity` extra is deliberately absent: CBFV carries no licence and must never be
+      # installed as a dependency of a GPL-3.0 deliverable. The tests that diff against it use
+      # importorskip and therefore skip here; card #21 owns proving parity, in an environment
+      # that has it.
+      #
+      # `uq` IS installed, and the asymmetry with `parity` is the point. MAPIE is BSD-3, a
+      # 555 kB pure-Python wheel needing only numpy and scikit-learn, which this lane already
+      # has. It is installed because of what the tests that need it assert: that the conformal
+      # constant card #27 stores reproduces MAPIE's own `predict_interval` to 1e-12, and that
+      # MAPIE reads its prefit estimator list as [lower, upper, median]. Both are the only
+      # checks of a number whose wrongness is otherwise invisible — it under- or over-covers
+      # by a few points, which is precisely and only what gate AC-3 measures — so letting them
+      # `importorskip` away in CI would leave the guarantee unchecked on every push.
+      #
+      # `novelty` IS installed, and for a stronger reason than `uq`. MAPIE is a fit-time
+      # dependency that nothing on the prediction path can reach; ElMD is *on* the prediction
+      # path — a candidate formula has to be parsed onto the Pettifor scale before any distance
+      # exists, and AC-7 says no candidate is published without one. It is also GPL-3.0, which
+      # is the licence this project already carries, so it costs nothing that `parity` costs.
+      # And the tests that need it are the only check of two facts that are invisible when
+      # skipped: that the batched `cdist` path is ElMD's own metric to 1e-12 rather than an
+      # approximation of it, and that `hydms.screens.novelty` normalises a composition the same
+      # way in every process where ElMD does not (card #49).
+      #
+      # `api` IS installed, and it is the third variation on the same argument. FastAPI, uvicorn
+      # and pydantic are permissively licensed pure-Python wheels already pinned in
+      # `requirements-lock.txt`, and without them *nothing* about the transport runs here: the
+      # service cannot be built, so `tests/delivery/test_api.py` skips itself away and gate HG-3
+      # reports SKIPPED instead of comparing the committed OpenAPI document to the one the code
+      # produces. That document is the one thing a client author reads and it changes as a side
+      # effect of editing a model, so the snapshot comparison is the half of HG-3 that has to
+      # run on every push — this lane has no artifact on disk, so it is also the only half that
+      # *can* (card #79).
+      - name: Install hydms and its test dependencies
+        run: python -m pip install --disable-pip-version-check -e ".[dev,uq,novelty,api,figures]"
+
+      # `-m "not slow"` is what makes this lane fit in its own timeout, and it is what
+      # `pyproject.toml` has said the marker means since card #69 wrote it: "slow: takes more
+      # than a few seconds; **excluded from the CI fast lane**". This workflow never excluded
+      # them, and the bill came due — the full suite was measured at 24 m 58 s on 2026-09-07
+      # against this job's 20-minute cap, and the three pushes before card #86 all died here
+      # with "The job has exceeded the maximum execution time of 20m0s". Nothing was wrong
+      # with the code in any of them.
+      #
+      # The four deselected tests are a ~15-minute tail: an 11-minute Boruta-budget
+      # equivalence (`tests/selection/test_selection.py`), two real fits for AC-1 (~3 min),
+      # the deployed CleanLab screening count (~18 s) and the LOCO fold supports. Every one
+      # of them needs a real fit or a real search, which is the definition of the slow lane.
+      #
+      # WHAT THIS COSTS, stated rather than buried: those four guarantees are now checked on
+      # NO push until card #7's slow lane runs them. #7 carries that as an explicit box. This
+      # is a worse position than a lane that ran them, and a better one than a lane that timed
+      # out before reaching the gates at all, which is what was actually happening.
+      #
+      # `--cov` is what enforces the coverage floor, and this step is where it is enforced.
+      # `[tool.coverage.report] fail_under` is read from pyproject, so the number has one
+      # owner and this line does not repeat it. Card #86 settled a decision deferred twice:
+      # `pytest-cov` is in the `dev` extra installed above, and it is now in the `Project`
+      # environment too, so the same floor is answerable on the maintainer's machine before a
+      # push rather than only here. Gate HG-4 below reads the data this step leaves behind.
+      - name: pytest — fast lane, with the coverage floor
+        run: python -m pytest -m "not slow" --cov
+
+      # Exits 1 on FAILED or ERRORED. A *lane* run does not fail on SKIPPED — an unimplemented
+      # gate would otherwise hold CI red for the length of the phase and be ignored. The
+      # asymmetry between a lane and a named gate is documented on `GateReport.ok` (card #5).
+      #
+      # `--summary` appends one line to the job summary naming every gate that was not green.
+      # Before card #86 `summarise()` existed and nothing called it, so a red lane said only
+      # that *something* failed — and its own test could not tell, because the line named a
+      # gate solely by echoing the name you had asked for. It now names them, and this is the
+      # consumer that made it worth fixing.
+      - name: Gates — fast lane
+        run: python -m hydms.gates run --fast --summary "$GITHUB_STEP_SUMMARY"

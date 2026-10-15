@@ -1,0 +1,2 @@
+model,features,feature_set,selection_refitted_per_fold,tuned_on_folds,scored_on_folds,crossings,interval_coverage,interval_width,mae,pinball,r2,rmse,rows_fitted,rows_scored
+catboost-multiquantile,14,hydms.descriptors.contract.SELECTED,False,15,5,0.0,0.6284652934689604,0.629035685378316,0.3329165828877715,0.11980635760020479,0.7458807790248206,0.5571824252560468,547.8,178.6

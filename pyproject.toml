@@ -39,6 +39,18 @@ dependencies = [
   "scikit-learn>=1.5",
   "catboost>=1.2",
   "cleanlab>=2.7",
+  # The two the feature selector is a port of (card #24). Both were already present in the
+  # `Project` environment for the archival pipeline, so naming them here adds nothing to it
+  # and the lock files stay valid; what changes is that they become declared rather than
+  # incidental. Boruta 0.4 is the floor because 0.3 still calls the NumPy aliases removed in
+  # 1.20 and cannot import under the pinned 1.26.
+  "Boruta>=0.4",
+  "statsmodels>=0.14",
+  # The hyperparameter search card #26 ports from Catboostmodel.py:542. Already present in
+  # the `Project` environment for the archival pipeline, so naming it here adds nothing to
+  # that environment and the lock files stay valid; what changes is that it becomes declared
+  # rather than incidental.
+  "optuna>=3.0",
   "PyYAML>=6.0",
   "joblib>=1.3",
 ]
@@ -47,32 +59,314 @@ dependencies = [
 # Conformal calibration of the surrogate's prediction intervals. The >=1.0 floor is not
 # cosmetic: 0.x exposes MapieRegressor(...).predict(X, alpha=...), while 1.x replaced it with
 # fit() / conformalize() / predict_interval(confidence_level=...). See docs/LIBRARY-APIS.md.
+#
+# Installed into `Project` by card #27, which is what first needed it: 1.5.0, and pip resolved
+# it against the existing pins without moving one of them — MAPIE needs only numpy>=1.23 and
+# scikit-learn>=1.4, both already there. `requirements-lock.txt` carries the pin.
+#
+# It stays OPTIONAL deliberately, and that is a design statement rather than caution. MAPIE is
+# a **fit-time** dependency: `hydms.surrogate.conformal` imports it lazily inside the function
+# that fits, a calibrated artifact stores the conformal constant as a float rather than a
+# pickled calibrator, and nothing on the prediction path can reach it. A service that only
+# predicts therefore never installs it, and a MAPIE upgrade cannot change what a saved `v1`
+# does. `tests/surrogate/test_conformal.py` proves the import claim in a subprocess.
 uq = ["mapie>=1.0"]
 
 # NSGA-II on the composition simplex, plus the hypervolume and convergence diagnostics.
 search = ["pymoo>=0.6"]
 
 # Element Mover's Distance — turns "novel" into a measured number.
+#
+# ElMD is **GPL-3.0** (`LICENSE.txt` in the sdist; note that its own trove classifier says
+# LGPLv3 and its `setup.py` says GPL3 — the licence file is the one that governs). That is
+# compatible with this project's GPL-3.0-or-later and is a decided, recorded choice, not a
+# thing to be revisited by mistake: card #49 and ADR 2 both carry it.
+#
+# Installed into `Project` by card #49, which first needed it: **0.5.15**, and pip resolved it
+# without moving a single existing pin — its requirements (numba, numpy, scipy, setuptools,
+# flit) were all already satisfied there, so `requirements-lock.txt` gained one line and
+# nothing else. Pinned in that file.
+#
+# Unlike `uq`, this extra is **not** a fit-time-only dependency, and CI installs it. A
+# candidate formula must be parsed onto the modified-Pettifor scale before any distance
+# exists, so ElMD is on the prediction path that AC-7 obliges to report a distance.
+#
+# The `>=0.5` floor resolves to 0.5.15. Do not pin `==0.5.0`: that sdist's metadata declares
+# itself version 0.4.25, so pip discards it as inconsistent and the pin is unsatisfiable.
 novelty = ["ElMD>=0.5"]
 
-# Streamlit screening and Pareto-front pages.
-app = ["streamlit>=1.30"]
+# The chart vocabulary (card #81). matplotlib is the only plotting library this project
+# draws with, and it is already in both lock files -- `matplotlib-base=3.9.2` in
+# environment.lock.yml and `matplotlib==3.10.1` in requirements-lock.txt, both leftovers of
+# the archival pipeline -- so the `>=3.8` floor names a version the `Project` environment
+# already satisfies and the locks stay valid.
+#
+# It is its own extra rather than part of `app` because `hydms.figures.render` is the only
+# module that imports it and the app is not the only caller: the thesis figure set is written
+# from a script, and `tests/test_figures.py` must be able to check the *descriptions* with no
+# plotting library present at all. CI installs it (see .github/workflows/ci.yml), which is the
+# point -- an extra CI skips is a guarantee nobody checks.
+figures = ["matplotlib>=3.8"]
+
+# Streamlit screening and Pareto-front pages. It draws what `hydms.figures` describes, so it
+# takes the figures extra with it rather than leaving a page to discover the gap at runtime.
+#
+# Both bounds are measured, against the lock (card #82, 2026-09-24). The ceiling: 1.57.0 is
+# the first release to require `starlette>=0.40`, and the locked `fastapi` 0.115.0 accepts only
+# `starlette<0.39` -- an unbounded install resolved 1.64.0 and moved starlette to 1.7.0 and
+# protobuf to 7.x. The floor: below 1.40.0 streamlit caps `pillow<11` (and `tenacity<9` below
+# 1.39), and the lock holds pillow 11.0.0 and tenacity 9.0.0. Inside the range nothing locked
+# moves: 1.56.0, the version in requirements-lock.txt, installs six new packages and changes
+# none. Widening either bound is a lock decision; see docs/ENVIRONMENT.md.
+app = ["hydms[figures]", "streamlit>=1.40,<1.57"]
 
 # CBFV is the featuriser being *replaced*, kept only so the parity gate can diff against it.
 # It is unlicensed (all rights reserved by default), which is precisely why the descriptor
 # layer is being reimplemented — so it must never become a runtime dependency.
 parity = ["CBFV==1.1.0"]
 
-dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10"]
+# The prediction service. Every pin here is already present in requirements-lock.txt as a
+# leftover of the removed N8N service (docs/ENVIRONMENT.md calls that pollution), so this
+# extra names versions the `Project` environment already satisfies rather than pulling
+# anything new into it — and the lock file must not be regenerated to "tidy" that up.
+api = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn>=0.30",
+  "pydantic>=2.7",
+]
+
+# The test and hygiene toolchain. Installed by CI's `suite` job and by anyone running the
+# suite outside the pinned `Project` environment.
+#
+# `pytest-cov` is here and is now also installed into `Project` — card #86's decision, made
+# 2026-09-12 after the gap had been deferred twice. Measured before deciding: it resolves to
+# `pytest-cov 7.1.0` and `coverage 7.16.0` and **moves no existing pin**, every other
+# requirement already being satisfied, so `requirements-lock.txt` gains two lines and nothing
+# else. The reason to install it rather than leave the floor to CI is that gate HG-4 reads the
+# coverage data, and a gate that can only ever answer in CI is a gate the maintainer cannot ask
+# before pushing. It is also categorically unlike `uq` and `novelty`: coverage is a measurement
+# tool that no fit and no prediction can reach, so installing it cannot move a published number.
+#
+# **ruff and mypy are pinned exactly, not floored, and that is load-bearing.**
+# `.github/workflows/ci.yml` installs `ruff==0.8.4` and `mypy==1.13.0` by hand in the hygiene
+# job, because the first run of that workflow failed when `>=0.6` resolved to a newer ruff that
+# raised RUF100 on a `# noqa` the older one needs — the two versions are mutually
+# unsatisfiable. Those exact pins were then contradicted by the floors that used to live here,
+# which matters because CI's `suite` job installs *this* extra and runs gate HG-4, which runs
+# ruff and mypy itself: a floor here could have turned HG-4 red against a ruff the hygiene job
+# never runs. `tests/test_tooling.py` asserts these two stay equal to the workflow's.
+# Bumping them is a deliberate commit that fixes what the new version finds, in both places.
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "httpx>=0.27",      # the FastAPI TestClient transport
+  "tomli>=2.0; python_version < '3.11'",   # tomllib is 3.11+; the pinned interpreter is 3.10
+  "types-PyYAML>=6.0",                     # PyYAML is core; these are its stubs
+  "ruff==0.8.4",
+  "mypy==1.13.0",
+]
 
 [project.urls]
 Repository = "https://github.com/AN-Hy-tech/hydride-storage-prediction"
 
 [tool.setuptools.packages.find]
 include = ["hydms*"]
-exclude = ["Machine_Model*", "tests*", "scripts*"]
+exclude = ["tests*", "scripts*"]
 
 [tool.setuptools.package-data]
 # Element-property tables ship inside the package: the descriptor layer must not depend on
 # the repository layout to find the data it reimplements.
-hydms = ["descriptors/data/*.csv", "config/*.yaml"]
+#
+# `screens/domain-reference.json` ships for the same reason and one more. It holds the
+# measured facts the applicability-domain ceiling judges against — the trained capacity range,
+# the 5.19 wt% cross-family level, the fourteen feature spans and the ten per-class transfer
+# figures (card #48) — and the refusal path must work in a container that has neither the
+# curated CSVs nor `reports/loco/`. Regenerate it with
+# `python -m hydms.screens.domain --emit`; a test asserts the committed bytes are what that
+# command produces.
+# `pipeline/smoke-fixture.csv` ships for the third variation on the same reason. It is the
+# sampled fixture the end-to-end smoke run reads (card #73), and the run exists to answer "does
+# the chain connect" on a machine that may have no curated data in it at all — a container,
+# a CI runner, an installed wheel. It is generated rather than curated:
+# `python -m hydms.pipeline.smoke --emit` rewrites it from the curated data, and a test asserts
+# the committed bytes are what that command produces.
+# `delivery/api/openapi.json` ships for a fourth variation on it. It is the published contract
+# gate HG-3 compares the served document against, generated by
+# `python -m hydms.delivery.api.openapi --emit`, and the gate must be answerable in a container
+# that holds an installed wheel and no repository around it. A test asserts the committed bytes
+# are what that command produces.
+# `delivery/apidoc-examples.json` ships for the fifth and last variation. It holds the real
+# request/response exchanges `docs/API.md` publishes, captured against a promoted artifact by
+# `python -m hydms.delivery.apidoc --probe` (card #80). It is package data because `--emit` and
+# its test must run where there is no artifact and no repository — `artifacts/` is gitignored,
+# so a generator that needed a live model would be a check that silently never runs.
+hydms = [
+  "descriptors/data/*.csv",
+  "config/*.yaml",
+  "screens/*.json",
+  "pipeline/*.csv",
+  "delivery/*.json",
+  "delivery/api/*.json",
+]
+
+# ---------------------------------------------------------------------------------------
+# Test discovery
+#
+# `testpaths = ["tests"]` keeps collection inside the suite. It was first a safety interlock
+# (card #69) against two non-test `test_*.py` files in the archival pipeline; card #107 deleted
+# that pipeline (tag `machine-model-archive`); the narrow root stays because the vendored skill
+# suites under .claude/ are not this project's tests.
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# NOTE: setting this key *replaces* pytest's defaults, it does not extend them. The first
+# nine entries are those defaults, restored verbatim — dropping `.*` alone is enough to make
+# `pytest .` start collecting the vendored skill suites under .claude/. Only the last one is
+# this project's own addition.
+norecursedirs = [
+  "*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}",
+  "graphify-out",
+]
+addopts = "-q --strict-markers --strict-config --import-mode=importlib"
+markers = [
+  "slow: takes more than a few seconds; excluded from the CI fast lane",
+  "leak: a leak sentinel — it passes only because a named leak is absent (gate HG-1)",
+  "gate: an acceptance-criteria or hardening gate check",
+]
+filterwarnings = ["error::DeprecationWarning:hydms.*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["hydms", "tests"]
+extend-exclude = ["graphify-out"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",    # pycodestyle
+  "F",         # pyflakes
+  "I",         # import order
+  "B",         # bugbear
+  "UP",        # pyupgrade
+  "SIM",       # simplify
+  "RUF",       # ruff-specific
+  "NPY",       # numpy legacy-API misuse, which is exactly what the 1.26 pin exists to avoid
+  "PD",        # pandas antipatterns, including inplace= and chained assignment
+]
+ignore = [
+  "E501",      # line length is formatted, not linted
+  "PD901",     # `df` is the conventional name throughout this codebase
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may shadow builtins in fixtures and assert on private helpers.
+"tests/**" = ["B011", "PD011"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["hydms"]
+exclude = ["build/"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+# The scientific stack ships incomplete or absent stubs. Silencing the import errors keeps
+# mypy useful on our own code rather than drowning it in third-party noise.
+#
+# NumPy is handled separately, below, because it is a different problem: it ships *real*
+# stubs and they are what breaks.
+[[tool.mypy.overrides]]
+module = [
+  "catboost.*", "cleanlab.*", "mapie.*", "pymoo.*", "ElMD.*", "CBFV.*", "optuna.*",
+  "sklearn.*", "scipy.*", "streamlit.*", "shap.*", "boruta.*", "statsmodels.*",
+  # pandas ships no inline types either; pandas-stubs is a separate distribution and the
+  # conda-free lint lane installs nothing (card #68).
+  "pandas",
+  # PyYAML ships no inline types. types-PyYAML is in the dev extra and takes precedence
+  # when installed; this keeps mypy runnable on a bare CI interpreter when it is not.
+  "yaml",
+  # joblib ships neither inline types nor a py.typed marker, and the conda-free lint lane
+  # does not install it at all. It is the artifact store's persistence mechanism (card #4).
+  "joblib",
+  # The delivery stack (cards #78, #79) and coverage (card #86). These are a different case
+  # from every entry above: fastapi and pydantic ship *good* inline types, so nothing here is
+  # a complaint about their stubs. They are listed because the lint lane installs nothing and
+  # they are therefore simply absent from it — which is the same reason `yaml` is listed.
+  #
+  # This was found the hard way. CI's hygiene job failed with six `import-not-found` errors
+  # while `mypy` on the maintainer's machine reported success, because the machine
+  # interpreter happens to have fastapi and pydantic installed and the runner does not. A
+  # green local mypy was therefore not evidence about CI at all. Reproduced on 2026-09-12 by
+  # running mypy 1.13.0 in a bare venv, which is what the lane actually is; card #86's
+  # narrative records the reproduction, and `docs/QA-PROTOCOL.md` §6 is the rule it broke.
+  #
+  # Both spellings of each are listed on purpose: `fastapi.*` does not cover `fastapi`
+  # itself, and the `pandas` entry above is the comment explaining what listing only one of
+  # them costs.
+  "fastapi", "fastapi.*",
+  "uvicorn", "uvicorn.*",
+  "pydantic", "pydantic.*",
+  "coverage", "coverage.*",
+  # matplotlib (card #81). Same case again: it ships no py.typed marker, and the conda-free
+  # lint lane installs nothing, so it is simply absent there. Only `hydms.figures.render`
+  # imports it, and it does so inside the function.
+  "matplotlib", "matplotlib.*",
+]
+ignore_missing_imports = true
+
+# NumPy. This block is a deliberate trade made on card #16 and it costs something real, so
+# the cost is written here rather than left to be rediscovered.
+#
+# The problem: mypy runs OUTSIDE the `Project` environment by design — the conda-free lint
+# lane, card #68, docs/QA-PROTOCOL.md §6 — so it resolves numpy from the machine's Python
+# 3.13 site-packages, whose `__init__.pyi` uses PEP 695 `type` statements. Under
+# `python_version = "3.10"` those are a *syntax* error, which aborts the entire run rather
+# than one file: `Found 1 error in 1 file (errors prevented further checking)`.
+# `ignore_missing_imports` does not suppress a syntax error, because the import resolves.
+# Cards #71 and #11 both sidestepped it — stdlib `random`, `math.log1p` — and the descriptor
+# layer cannot: composition statistics over 55 elements are array code.
+#
+# `follow_imports = "skip"` makes mypy accept the import without parsing the stub at all.
+#
+# THE COST: numpy becomes `Any`. mypy no longer checks dtype or shape mistakes in the layer
+# that has the most array code in the project — exactly where it would be most useful. That
+# is the same trade already made above for pandas, scipy and scikit-learn, but it is a worse
+# one, because those ship no usable types while numpy's are good. Two better answers exist
+# and were both rejected as bigger than this card: vendoring numpy stubs pinned to the 1.26
+# line (a new committed dependency, and it drifts), and a second mypy target run inside
+# `Project` (which breaks the conda-free lane's promise to report when the environment is
+# broken). If the lint lane ever moves onto a 3.10 interpreter with numpy 1.26 installed,
+# this block should be deleted and the real stubs used.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+ignore_missing_imports = true
+
+# The delivery layer is the boundary users meet, so it is held to a stricter standard than
+# the research code behind it: no implicit Any may cross the prediction contract.
+[[tool.mypy.overrides]]
+module = "hydms.delivery.*"
+disallow_any_generics = true
+warn_return_any = true
+
+[tool.coverage.run]
+source = ["hydms"]
+branch = true
+omit = ["*/__init__.py"]
+
+[tool.coverage.report]
+# The floor is a ratchet, not a target. It rises as layers land; card #86 is what turns it
+# into a build failure in CI. Lowering it to make a build pass is a review conversation.
+fail_under = 80
+show_missing = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]
