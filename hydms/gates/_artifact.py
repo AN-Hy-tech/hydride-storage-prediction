@@ -86,7 +86,8 @@ def candidate(cfg: Config, *, store: Path | None = None) -> Candidate:
         A :class:`Candidate`.
 
     Raises:
-        NoCandidate: the store holds no version with a manifest. A gate turns this into a
+        NoCandidate: the store holds no version with a manifest, or holds one whose payloads
+            are Git LFS pointers not yet pulled. A gate turns this into a
             ``SKIPPED`` carrying the message, because a criterion nobody could answer is not a
             criterion anybody established.
         GatesIncomplete: never -- the bundle is loaded with ``require_gates=False`` on purpose.
@@ -108,7 +109,12 @@ def candidate(cfg: Config, *, store: Path | None = None) -> Candidate:
         )
     pinned = artifacts.current(store=root)
     resolved = pinned if pinned is not None else known[-1]
-    bundle = artifacts.load(resolved, store=root, require_gates=False)
+    try:
+        bundle = artifacts.load(resolved, store=root, require_gates=False)
+    except artifacts.PayloadNotFetched as exc:
+        # A clone without `git lfs pull` -- the CI fast lane is one, by choice. The version's
+        # bytes exist; they are not here, which is an absent model, not a broken one (card #7).
+        raise NoCandidate(f"{exc} A gate over no artifact is not a pass.") from exc
     return Candidate(
         surrogate=surrogate_from(bundle),
         bundle=bundle,

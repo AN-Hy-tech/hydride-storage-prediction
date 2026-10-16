@@ -19,6 +19,7 @@ from hydms.artifacts import (
     GatesIncomplete,
     Manifest,
     PayloadCorrupt,
+    PayloadNotFetched,
     VersionNotFound,
     WaiverRefused,
     current,
@@ -365,6 +366,45 @@ def test_a_tampered_payload_is_refused_rather_than_unpickled(
 def test_a_missing_payload_file_is_refused(store: Path, green: Manifest) -> None:
     (store / "v1" / "scaler.joblib").unlink()
     with pytest.raises(PayloadCorrupt, match="scaler"):
+        load("v1", store=store)
+
+
+LFS_POINTER = (
+    b"version https://git-lfs.github.com/spec/v1\n"
+    b"oid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\n"
+    b"size 12345\n"
+)
+
+
+def test_an_lfs_pointer_is_not_fetched_rather_than_corrupt(store: Path, green: Manifest) -> None:
+    """Card #7. A clone without `git lfs pull` holds pointers; the fix is a pull, not a refit."""
+    for name in ("model", "scaler"):
+        (store / "v1" / f"{name}.joblib").write_bytes(LFS_POINTER)
+    with pytest.raises(PayloadNotFetched, match="git lfs pull") as raised:
+        load("v1", store=store)
+    assert not isinstance(raised.value, PayloadCorrupt)
+    assert "model.joblib, scaler.joblib are Git LFS pointers" in str(raised.value)
+
+
+def test_the_pre_release_lfs_pointer_spelling_is_recognised(store: Path, green: Manifest) -> None:
+    (store / "v1" / "model.joblib").write_bytes(
+        LFS_POINTER.replace(b"git-lfs.github.com", b"hawser.github.com")
+    )
+    with pytest.raises(PayloadNotFetched, match="model.joblib is a Git LFS pointer"):
+        load("v1", store=store)
+
+
+def test_a_small_payload_that_is_not_a_pointer_still_loads(store: Path, green: Manifest) -> None:
+    """The fixture's pickles are far under the 1024-byte pointer cap; size alone decides nothing."""
+    assert (store / "v1" / "model.joblib").stat().st_size < 1024
+    assert load("v1", store=store)["model"] == {"trees": 100}
+
+
+def test_a_pointer_does_not_get_past_the_gate_check(store: Path, contract: dict[str, Any]) -> None:
+    """An unpromotable version says so first; fetching its bytes would not make it loadable."""
+    save({"model": 1}, contract=contract, gates=report(("AC-2", "FAILED")), store=store)
+    (store / "v1" / "model.joblib").write_bytes(LFS_POINTER)
+    with pytest.raises(GatesIncomplete):
         load("v1", store=store)
 
 
