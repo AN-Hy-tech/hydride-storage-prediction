@@ -249,6 +249,12 @@ calibrates it, explains it, and saves it.
 **You can run this without running Step 4**, as long as `reports/model/model-chosen.csv` is on disk.
 It is committed, so on a fresh checkout it already is.
 
+**`--report` here is an input as well as an output.** It names the directory the tables are
+written to *and* the one `model-chosen.csv` is read from, so pointing it at a scratch directory
+makes the fit use CatBoost's own defaults — a smoke test, which is allowed — and makes `--save`
+refuse with exit code 2 before anything is fitted (card #96). To keep a probe's tables apart,
+copy `model-chosen.csv` into the scratch directory first.
+
 **What you should see:**
 
 ```text
@@ -663,6 +669,7 @@ commit **of the emit**, not of the run; the run's own date is the `Run date:` li
 | `run: unknown` in Step 6 | No `model-run.csv` beside the tables | You are pointed at the wrong directory, or at output from before this feature existed |
 | `run: PROBE ...` in Step 6 | Those tables came from a reduced run | Point `--report` at the real directory |
 | Exit code 3 from Step 5 | The fit and its calibration worked; SHAP did not | Keep the calibration. Raise the SHAP failure separately |
+| `refusing --save: no deployed configuration was read from ...` in Step 5 | `--report` points at a directory without `model-chosen.csv`, so the fit would use CatBoost's defaults | Drop `--report`, or copy `model-chosen.csv` into that directory. Without `--save` the defaults run is a smoke test |
 | `ArtifactError: ... v1 already exists` | You ran Step 5 with `--save` twice | Expected — a version is written once. Save again and it writes `v2`, or drop `--save` |
 | `GatesIncomplete` from anything that predicts | The saved version carries no gate report | Correct behaviour, not a fault. Card #34 records the gates |
 | It has printed nothing for an hour | Normal (see Step 4) | Check CPU is climbing in a second window |

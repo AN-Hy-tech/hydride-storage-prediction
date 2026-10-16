@@ -34,12 +34,20 @@ state for a model nobody has certified: it cannot be promoted and
 Exit codes:
 
     0   the run finished and the tables were written
-    2   the invocation itself was wrong (unreadable config, unknown target, unwritable path)
+    2   the invocation itself was wrong (unreadable config, unknown target, unwritable path,
+        or ``--save`` with no deployed configuration to fit at -- card #96)
     3   the fit and its calibration were written, but the deployed fit could not be
         explained -- the SHAP and partial-dependence tables are empty and everything else
         is there
 
-Cards #27 and #34.
+**``--report`` is an input as well as an output** (card #96). It is where the tables are
+written *and* where :data:`~hydms.surrogate.deploy.CHOSEN` -- the configuration
+``hydms.surrogate.train`` chose -- is read from. Redirected to a directory without that table,
+the fit falls back to CatBoost's own defaults. That is a legitimate smoke test, so the run is
+allowed; what is refused is ``--save`` on it, **before** anything is fitted, because a manifest
+cannot say its model came from a default and a version that does not say so will be promoted.
+
+Cards #27, #34 and #96.
 """
 
 from __future__ import annotations
@@ -64,6 +72,7 @@ from hydms.surrogate.conformal import (
     compare_metrics,
 )
 from hydms.surrogate.deploy import (
+    CHOSEN,
     DeployedFit,
     deployed_fit,
     deployed_params,
@@ -125,14 +134,17 @@ def _parser() -> argparse.ArgumentParser:
         "--report",
         type=Path,
         default=None,
-        help="a directory to write the CSV tables into; defaults to the configured reports path",
+        help=f"the directory the CSV tables are written to AND the one {CHOSEN} is read from; "
+        "defaults to the configured reports path. Redirected to a directory without that "
+        "table, the fit uses CatBoost's own defaults and --save is refused (card #96)",
     )
     parser.add_argument(
         "--save",
         action="store_true",
         help="persist the deployed fit as a new artifact version — the model, its conformal "
         "correction and the scaler. The version carries no gate report, so it cannot be "
-        "promoted and predict() refuses it until one is recorded (card #34)",
+        "promoted and predict() refuses it until one is recorded (card #34). Refused, before "
+        "anything is fitted, when no deployed configuration was read (card #96)",
     )
     return parser
 
@@ -255,6 +267,21 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         )
 
     destination = _destination(cfg, args.report)
+    # Read before anything is stamped or fitted (card #96). `destination` is an input here as
+    # well as the output: a scratch `--report` holds no CHOSEN table, the fit falls back to
+    # CatBoost's defaults, and that is a smoke test -- never a version. Refused now rather
+    # than after the fit, so the operator loses seconds instead of the run.
+    params, chosen_from = deployed_params(destination, stream)
+    if args.save and params is None:
+        print(
+            f"refusing --save: no deployed configuration was read from "
+            f"{destination / CHOSEN}, so this fit would use CatBoost's own defaults, and an "
+            f"artifact version cannot record that. --report is also where that table is read "
+            f"from: point it at the directory `python -m hydms.surrogate.train` wrote "
+            f"(by default {cfg.paths.reports / REPORTS}), or drop --save for a smoke test.",
+            file=sys.stderr,
+        )
+        return EXIT_BAD_INVOCATION
     # Stamped before the fit (card #105). Which search chose the configuration is the train
     # record's `run_id`, read now because `deployed_params` reads the same directory.
     stamp = provenance.begin(
@@ -279,7 +306,6 @@ def main(argv: list[str] | None = None, out: TextIO | None = None) -> int:
         file=stream,
     )
 
-    params, chosen_from = deployed_params(destination, stream)
     log = FitLog()
     started = time.perf_counter()
     try:
