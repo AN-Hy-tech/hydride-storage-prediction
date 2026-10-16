@@ -32,3 +32,9 @@
 *.svg binary
 *.pptx binary
 *.rar binary
+
+# Model payloads go through Git LFS (card #7). Only the pickles: `manifest.json` and
+# `current.json` stay plain text so a clone that never ran `git lfs pull` (the CI fast lane)
+# still reads what a version is and whether its gates passed. `-text` because a pickle is bytes,
+# and the `* text=auto` above must not touch them.
+artifacts/v[0-9]*/*.joblib filter=lfs diff=lfs merge=lfs -text

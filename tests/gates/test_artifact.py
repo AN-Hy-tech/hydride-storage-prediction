@@ -121,3 +121,26 @@ def test_an_empty_store_names_the_command_that_fills_it(deployed, tmp_path: Path
         candidate(empty)
     assert "hydms.surrogate.calibrate" in str(absent.value)
     assert "A gate over no artifact is not a pass" in str(absent.value)
+
+
+def test_a_clone_without_lfs_payloads_has_no_candidate_rather_than_a_broken_one(
+    deployed, tmp_path: Path
+) -> None:
+    """Card #7. The CI fast lane checks out without `git lfs pull`: SKIPPED, not ERRORED."""
+    from hydms.descriptors.contract import FeatureContract
+
+    cfg, _settings, _frame, _split, fit = deployed
+    store = tmp_path / "artifacts"
+    artifacts.save(
+        fit.payloads,
+        contract=FeatureContract.from_names(fit.model.feature_names),
+        gates=_green(),
+        store=store,
+    )
+    for payload in (store / "v1").glob("*.joblib"):
+        payload.write_bytes(b"version https://git-lfs.github.com/spec/v1\noid sha256:00\nsize 1\n")
+    pointed = replace(cfg, paths=replace(cfg.paths, artifacts=store))
+    with pytest.raises(NoCandidate) as absent:
+        candidate(pointed)
+    assert "git lfs pull" in str(absent.value)
+    assert isinstance(absent.value.__cause__, artifacts.PayloadNotFetched)

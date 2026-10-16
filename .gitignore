@@ -73,7 +73,16 @@ temp/
 # Everything the new pipeline writes. hydms/config/pipeline.yaml already claimed these were
 # gitignored; four of the five were not, and the first `python -m hydms.gates run` would have
 # dropped artifacts/gate-results.json into the working tree as an untracked file. Card #5.
-/artifacts/
+#
+# Except the versions and the pointer (card #7). Ignoring all of `artifacts/` left the promoted
+# model on one machine, and a fresh clone could not start the service. A version is write-once,
+# so tracking it costs one commit per version, never a churning file. Its `.joblib` payloads go
+# through Git LFS (`.gitattributes`); the two JSON files stay plain text. Still ignored: the
+# gate report, which `hydms.gates run` rewrites on every run, and the `.vN.partial` staging
+# directory that `save()` renames into place. `tests/artifacts/test_portability.py` pins all four.
+/artifacts/*
+!/artifacts/current.json
+!/artifacts/v[0-9]*/
 /data/interim/
 /data/processed/
 /data/splits/

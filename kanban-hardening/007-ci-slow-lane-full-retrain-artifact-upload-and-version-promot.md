@@ -1,6 +1,6 @@
 ---
 id: 7
-status: backlog
+status: doing
 priority: P2
 blocked_by: [4, 6]
 assignee: "@amirhossein"
@@ -137,6 +137,22 @@ one-line change, not a retrain.
 
       Not an unfreeze condition.
 
+- [x] **The promoted version travels with the repository, through Git LFS** (P2 half, decided
+      2026-10-16 by @amirhossein: LFS over a Release asset, a raw commit or a workflow artifact).
+      `.gitignore` admits `artifacts/current.json` and `artifacts/v<N>/`, still ignores
+      `gate-results.json` and `save()`'s `.v<N>.partial` staging; `.gitattributes` sends
+      `artifacts/v<N>/*.joblib` through LFS and leaves both JSON files plain text. `load()` raises
+      `PayloadNotFetched` ("run `git lfs pull`") on an LFS pointer instead of `PayloadCorrupt`
+      ("re-run the pipeline"), and the gates' `candidate()` maps it to `NoCandidate`, so the fast
+      lane, which checks out without LFS, stays SKIPPED rather than ERRORED.
+      `tests/artifacts/test_portability.py` pins the routing against the store's own names and,
+      once a version is committed, checks that every payload is a pointer, not a raw pickle.
+- [ ] **Commit `v3` from the maintainer's machine** — the only copy. `git lfs install`, then
+      `git add artifacts/current.json artifacts/v3` and push. The three skipped tests in
+      `test_portability.py` then run. Afterwards: load `v3` on Linux from a fresh clone (it was
+      pickled on Windows under CatBoost 1.2.8), and rewrite CLAUDE.md's *promoted model is on one
+      machine* invariant
+
 ## Runnable check
 
 ```bash
@@ -148,6 +164,16 @@ gh workflow run retrain.yml --ref main
 `docs/PRD-inverse-design.md` — S1
 
 ## Narrative
+
+- 2026-10-16: Portable-artifact half. Chose LFS for the payloads and plain git for the JSON
+  because the two have different readers: `read_manifest` and `current()` run on a bare
+  interpreter in CI, and must not need an LFS fetch to say what a version is. An unfetched
+  pointer had been indistinguishable from tampering, because both fail the digest check; the
+  `PayloadCorrupt` message then told the reader to retrain, which is the wrong fix. That is why it
+  is a separate exception. **The risk left open:** a machine without `git lfs install` commits the
+  pickle raw, and git raises no error. `test_every_committed_payload_is_an_lfs_pointer` is the
+  only thing that catches it. The `v[0-9]*` rule admits *every* version, including one that is
+  not promoted; nothing refuses that commit except review. (by @assistant)
 
 - 2026-09-26: Moved verbatim from `CONTEXT.md`, entry **Artifact version**, where it stood as a *State of the term* block. The glossary now holds definitions only; card state lives here. (by @assistant)
 

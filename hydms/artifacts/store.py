@@ -12,6 +12,14 @@ Layout, under the configured artifacts directory (``paths.artifacts`` in ``pipel
       v2/
         ...
 
+**What git carries, and how** (card #7). ``current.json`` and every ``v<N>/`` are tracked;
+``gate-results.json`` and a ``.v<N>.partial`` staging directory are not. A ``.joblib`` payload
+travels through Git LFS, while ``manifest.json`` and ``current.json`` stay plain text, so a
+clone that never ran ``git lfs pull`` can still read what a version is and whether it passed.
+It cannot load one: :func:`load` finds an LFS pointer where a pickle should be and raises
+:class:`PayloadNotFetched`, which says what to run. ``tests/artifacts/test_portability.py``
+pins those four routing rules against ``.gitignore`` and ``.gitattributes``.
+
 Four properties hold, and each corresponds to a way the archival pipeline lost its own work.
 
 **A version is written once and never edited.** :func:`save` refuses an existing version and
@@ -76,8 +84,9 @@ Three properties hold it shut:
 Whether a waiver is *legitimate* -- whether the criterion really does belong to a frozen phase
 rather than to work somebody skipped -- is a question about the board, and this module has no
 business knowing what a board is. It is not answered here and it is not answered by inspecting
-``current.json`` either: ``artifacts/`` is gitignored, so a pointer file never reaches CI and a
-rule written against one would be a guarantee nothing ever checks.
+``current.json`` either: when this was written ``artifacts/`` was gitignored, so a pointer file
+never reached CI. Card #7 now commits it, but the answer below derives the waivable set from the
+repository and does not depend on one.
 
 It is answered instead by ``tests/artifacts/test_waiver_scope.py``, which derives the waivable
 set from the repository rather than from anyone's memory: it reads each registered gate's card
@@ -116,6 +125,7 @@ __all__ = [
     "Artifacts",
     "GatesIncomplete",
     "PayloadCorrupt",
+    "PayloadNotFetched",
     "VersionNotFound",
     "WaiverRefused",
     "current",
@@ -142,6 +152,16 @@ _PAYLOAD_KEY = re.compile(r"^[a-z][a-z0-9_]*$")
 _SUFFIX = ".joblib"
 
 
+def staging_name(version: str) -> str:
+    """The directory :func:`save` writes ``version`` into before renaming it into place.
+
+    Named here, not inline, because ``.gitignore`` must keep it out of git while admitting
+    ``v<N>/`` itself, and the test that pins that rule asks this function rather than
+    repeating the spelling (card #7).
+    """
+    return f".{version}.partial"
+
+
 class VersionNotFound(ArtifactError, LookupError):
     """No such artifact version, or the promotion pointer names one that is gone."""
 
@@ -164,6 +184,35 @@ class WaiverRefused(ArtifactError, ValueError):
 
 class PayloadCorrupt(ArtifactError):
     """A stored file does not match the digest its manifest recorded for it."""
+
+
+class PayloadNotFetched(ArtifactError):
+    """A payload is a Git LFS pointer: the clone has the version's record but not its bytes.
+
+    Not a :class:`PayloadCorrupt`, because the fix is the opposite one. A corrupt payload says
+    "re-run the pipeline, do not trust this"; an unfetched one says "run ``git lfs pull``" --
+    the bytes exist and the manifest's digest will verify them once they arrive. A caller that
+    treats an absent model as absent rather than broken (the gates' :class:`NoCandidate`) can
+    catch this one alone.
+    """
+
+
+#: Every Git LFS pointer opens with this line (the LFS spec, v1). ``hawser`` is the spec's
+#: pre-release name, and git-lfs still accepts pointers written with it.
+_LFS_POINTER_HEADS = (
+    b"version https://git-lfs.github.com/spec/v1",
+    b"version https://hawser.github.com/spec/v1",
+)
+
+#: The spec caps a pointer at 1024 bytes, so anything larger is a real payload and is not read.
+_LFS_POINTER_MAX_BYTES = 1024
+
+
+def _is_lfs_pointer(path: Path) -> bool:
+    if path.stat().st_size > _LFS_POINTER_MAX_BYTES:
+        return False
+    head = path.read_bytes()
+    return head.startswith(_LFS_POINTER_HEADS)
 
 
 # --------------------------------------------------------------------------------------
@@ -509,6 +558,7 @@ def load(
         VersionNotFound: no such version, or nothing has been promoted and none was named.
         GatesIncomplete: ``require_gates`` and the version's gates are not all passing.
         PayloadCorrupt: a stored file no longer matches its recorded digest.
+        PayloadNotFetched: a payload is a Git LFS pointer, not yet pulled.
         ManifestError: the manifest is unreadable or written in an unknown schema.
     """
     root = _store(store)
@@ -530,6 +580,19 @@ def load(
         _require_established(manifest, directory, waived=frozenset(standing))
 
     import joblib
+
+    unfetched = [
+        record.file
+        for record in manifest.payloads
+        if (directory / record.file).is_file() and _is_lfs_pointer(directory / record.file)
+    ]
+    if unfetched:
+        raise PayloadNotFetched(
+            f"{version} is checked out but its payloads are not: {', '.join(unfetched)} "
+            f"{'is a Git LFS pointer' if len(unfetched) == 1 else 'are Git LFS pointers'}, "
+            f"not the pickled object. Run `git lfs install` once, then `git lfs pull`; the "
+            f"manifest's digests verify the bytes when they arrive."
+        )
 
     objects: dict[str, Any] = {}
     for record in manifest.payloads:
@@ -648,7 +711,7 @@ def save(
 
     # Staged under a dotted name and renamed into place, so a run that dies part-way through
     # leaves nothing that `versions()` will offer and nothing a later run can half-read.
-    staging = root / f".{version}.partial"
+    staging = root / staging_name(version)
     if staging.exists():
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
