@@ -368,6 +368,24 @@ def test_a_value_it_cannot_read_is_a_rejection(
     assert not verdict.loc[0, "passed"]
 
 
+def test_a_crossed_band_is_a_rejection_not_the_narrowest_band(
+    screen: ApplicabilityDomain,
+) -> None:
+    """Card #94. A negative width is a crossing, and it must not compare as a narrow band.
+
+    Zero is the boundary: a band whose heads meet is degenerate but ordered, so it is judged
+    like any other width. Below zero the rule cannot run, which is ``indeterminate`` -- the
+    code a missing width already gets -- and the sentence says *crossed*, not *missing*.
+    """
+    batch = candidates(**{FORMULA: "LaNi5", PREDICTION: 1.4, WIDTH: [0.0, -0.094422]})
+    verdict = screen.verdict(batch)
+
+    assert list(verdict["passed"]) == [True, False]
+    assert verdict.loc[1, "code"] == INDETERMINATE
+    assert "crossed" in verdict.loc[1, "reason"]
+    assert "0.094422 wt% below" in verdict.loc[1, "reason"]
+
+
 def test_an_unparseable_formula_is_indeterminate(screen: ApplicabilityDomain) -> None:
     verdict = screen.verdict(
         candidates(**{FORMULA: ["!!not a formula!!"], PREDICTION: [1.4]})

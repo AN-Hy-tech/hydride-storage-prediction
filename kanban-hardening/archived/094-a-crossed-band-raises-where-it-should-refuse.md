@@ -1,6 +1,6 @@
 ---
 id: 94
-status: backlog
+status: done
 priority: P2
 blocked_by: []
 assignee: "@amirhossein"
@@ -57,22 +57,49 @@ check exists to find. Measure before adding.
 
 ## Done when
 
-- [ ] **Measure it.** On a real fit, how many rows cross, and how many of those are *already*
+- [x] **Measure it.** On a real fit, how many rows cross, and how many of those are *already*
       refused by the domain ceiling or the novelty screen? If the answer is "all of them", the fix
       is ordering — make sure the screens run before an `Interval` is constructed — and no new
       code is declared. If some cross while passing every screen, that is the case a reason has to
       cover
-- [ ] **Decide and record**: a new reason code, an existing verdict, or an ordering guarantee.
+      — **Measured 2026-10-16, on a local fit at the deployed configuration** (`calibrate --save`
+      from the committed `model-chosen.csv`; correction +0.038060, not `v3`'s +0.037355 — #104's
+      thread nondeterminism): **zero rows cross**, in the 1,278 corpus pairs, in #93's `Ti1Fe1`
+      / `Mg2Ni1` at 298 K, and in 9,422 random 2–4-element compositions over the corpus's
+      elements at 195–773 K (two seeds). The narrowest band was 0.352 wt%; no median fell
+      outside its band. So "all already refused" is vacuously true on this fit, and crossing is
+      a property of a *weak* fit — the delivery fixture's 80-iteration one is where #93 saw it.
+      Worse than vacuous: a crossed band that *did* arrive would pass the width rule, because
+      `widths > max_interval_width` reads a negative width as the narrowest band of all. So the
+      ordering already held (`Interval` is built only for admitted rows) and guarded nothing
+- [x] **Decide and record**: a new reason code, an existing verdict, or an ordering guarantee.
       Whichever it is, `docs/REFUSALS.md` is **generated** (`hydms.delivery.refusals --emit`) —
       regenerate it, never edit it
-- [ ] No declared-but-unreachable code is added. See
+      — **An existing verdict: `indeterminate`, from the domain screen's width rule.** A crossed
+      band is a band that rule cannot judge, exactly as a missing width is, and it already
+      answers a missing width with `indeterminate` — so `hydms/screens/domain.py` now treats
+      `width < 0` the same way, with its own sentence ("the calibrated band is crossed — its
+      upper head is … wt% below its lower one"). Not a new code: on the real fit nothing could
+      reach it. Not `high-uncertainty`: its sentence would call a negative number "wide". Not
+      at `Interval`: the contract keeps raising on an inverted band, because by then it is a
+      bug. `docs/REFUSALS.md` regenerated with a `crossed-band` probe (frame door)
+- [x] No declared-but-unreachable code is added. See
       [[enumerate-the-vocabulary-when-the-prose-cannot-go-red]]: a reason nothing can reach passes
       every shape check and means nothing
-- [ ] A test drives a crossed band through the **delivery** path, not the surrogate path, and
+      — none added; the vocabulary is unchanged
+- [x] A test drives a crossed band through the **delivery** path, not the surrogate path, and
       asserts what the caller is told. The surrogate half is already pinned by
       `test_a_crossed_band_reaches_the_caller_unclipped`
-- [ ] The batch page (#84) and the API (#78) are checked against the decision: one crossed row
+      — `tests/delivery/test_batch.py::test_one_crossed_band_refuses_its_own_row_and_not_the_batch`,
+      over the fixture deployment with one formula's outer heads swapped (which candidates
+      cross is machine-dependent, #93, so the crossing is stated). The screen half is
+      `tests/screens/test_applicability.py::test_a_crossed_band_is_a_rejection_not_the_narrowest_band`.
+      All four new tests fail on the old code
+- [x] The batch page (#84) and the API (#78) are checked against the decision: one crossed row
       must not cost a batch, and must not become a 500
+      — `/v1/predict/batch` answers 200 with the middle row refused; `/v1/predict` alone answers
+      422 with a readable body (the runbook's refusal status). `screening()` renders
+      answered / refused / answered. Both in `tests/delivery/test_batch.py`
 
 ## Runnable check
 
@@ -88,6 +115,12 @@ card #90 owns the catalogue any new reason lands in
 
 ## Narrative
 
+- 2026-10-16: Closed. The card's framing assumed crossed rows would be the ones another screen
+  already refuses; the measurement found no crossed rows at all on the real configuration, and
+  found instead that the width rule would have *admitted* one. The fix is therefore in the screen
+  that owns the band, not in the delivery path or the contract, and the existing code was the
+  right one. The local fit and the script are throwaway (scratchpad); the numbers are in the
+  first box. (by @assistant)
 - 2026-09-26: #84 made the batch path one call, and that sharpens this card without deciding it.
   `predict_many` builds every answer from one screened frame, so a crossed band on any row raises
   `ContractError` out of the whole call. That means a `POST /v1/predict/batch` of up to 4,096 rows,

@@ -408,6 +408,13 @@ PROBES: tuple[Probe, ...] = (
         alloy_class="Perovskite",
     ),
     Probe(
+        name="crossed-band",
+        purpose="a band whose upper head came back below its lower one -- the width #93 "
+        "measured on a CI runner. Nothing keeps a multiquantile fit's heads in order (#94)",
+        expects="indeterminate",
+        interval_width=-0.094422,
+    ),
+    Probe(
         name="above-physical-ceiling",
         purpose="more hydrogen than this composition can hold -- physics, not evidence",
         expects="above-physical-ceiling",

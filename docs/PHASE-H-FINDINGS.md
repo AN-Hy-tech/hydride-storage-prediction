@@ -27,7 +27,6 @@ P4→P2, #68 P1→P4 (its prose half is fixed).
 
 | # | Finding | Cost | State |
 |---|---|---|---|
-| **94** | A crossed band **raises** where it should refuse, so one crossed row fails a whole `predict_many` call — a batch request or a page chunk of up to 4,096 rows | 0.25 d | `backlog`, unblocked |
 | **7** *(half)* | **No portable artifact:** `artifacts/` is gitignored, so `v3` exists on one machine and a fresh clone's service refuses to start | part of #7 | `backlog`, unblocked |
 | **83** | Model card. Built and served (`/v1/evidence`, `app/pages/1_Model_card.py`, the transfer interval) | 1.5 d | `doing`. Owed: the per-row width table (its population is a decision) and the one-run-or-spread question, which waits on #104's repeat |
 

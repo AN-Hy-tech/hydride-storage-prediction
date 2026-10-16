@@ -745,6 +745,23 @@ class ApplicabilityDomain:
                         f"{self.width} is missing or not a finite number, so the band could "
                         f"not be judged -- and a rule that could not run does not admit"
                     )
+            # A crossed band (card #94) is a band this rule cannot judge, exactly as a missing
+            # one is: its "width" is the upper head's shortfall below the lower one, and
+            # comparing that to the ceiling would admit it as the narrowest band of all. The
+            # surrogate hands it on unclipped on purpose (#93), so this is the first place
+            # that reads the sign -- and it must, because `Interval` raises on an admitted
+            # one and that raise takes the whole `predict_many` batch with it.
+            crossed = np.zeros(len(index), dtype=bool)
+            crossed[readable] = widths[readable] < 0.0
+            unreadable |= crossed
+            for position in np.flatnonzero(crossed):
+                if not notes[INDETERMINATE][position]:
+                    notes[INDETERMINATE][position] = (
+                        f"the calibrated band is crossed -- its upper head is "
+                        f"{_number(-widths[position])} wt% below its lower one -- so it has no "
+                        f"width to judge. The quantile heads are fitted jointly and nothing "
+                        f"keeps them in order, and a rule that could not run does not admit"
+                    )
             wide = np.zeros(len(index), dtype=bool)
             wide[readable] = widths[readable] > self.max_interval_width
             flags[HIGH_UNCERTAINTY] = wide

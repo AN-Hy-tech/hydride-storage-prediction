@@ -36,7 +36,7 @@ Nothing is trained: no model, scaler or split is on disk. The screens read a pre
 | `above-physical-ceiling` | `domain` | `above-physical-ceiling` |
 | `beyond-known-chemistry` | `novelty` | `beyond-known-chemistry` |
 | `high-uncertainty` | `domain` | `high-uncertainty` |
-| `indeterminate` | `temperature`, `domain`, `novelty` | `unreadable-formula`, `unmeasured-class` |
+| `indeterminate` | `temperature`, `domain`, `novelty` | `unreadable-formula`, `unmeasured-class`, `crossed-band` |
 | `out-of-domain` | `domain` | `out-of-domain` |
 | `outside-feature-range` | `domain` | `outside-feature-range` |
 | `outside-window` | `temperature` | `too-cold`, `too-hot` |
@@ -68,6 +68,7 @@ One row per probe: which door can state it, what was asked, the code the caller 
 | `too-hot` | `request` | `temperature(K)` = 1000 | `outside-window` | temperature(K) = 1000 K is above the trained temperature range 195-773 K; temperature(K) = 1000 is outside the trained span 195 to 773 |
 | `unreadable-formula` | `request` | `Composition` = LaNi5Xx2 | `indeterminate` | 'LaNi5Xx2' could not be given a physical capacity ceiling -- it does not parse, or it names an element the 'oliynyk' table has no mass for; 'LaNi5Xx2' names 'Xx', which is not a chemical element. ElMD does not raise on it -- it drops the symbols it cannot read and measures whatever is left, if anything -- so it is refused here rather than answered as some other alloy. There is no distance to report, and a screen that cannot judge does not admit. |
 | `unmeasured-class` | `frame` | `Alloy_class` = Perovskite | `indeterminate` | Alloy_class = 'Perovskite' is not one of the 10 classes leave-one-class-out measured, so no transfer estimate exists for it |
+| `crossed-band` | `frame` | `interval_width` = -0.094422 | `indeterminate` | the calibrated band is crossed -- its upper head is 0.094422 wt% below its lower one -- so it has no width to judge. The quantile heads are fitted jointly and nothing keeps them in order, and a rule that could not run does not admit |
 | `above-physical-ceiling` | `frame` | `q0.5` = 4.5 | `above-physical-ceiling` | q0.5 = 4.5 wt% is above the 4.19638 wt% this composition can hold at H/M 3 |
 | `out-of-domain` | `frame` | `Composition` = TiAl; `q0.5` = 6; `Alloy_class` = AB | `out-of-domain` | q0.5 = 6 wt% is above 5.19 wt%, the highest capacity more than one alloy class reaches in training: above it the corpus holds 21 row(s) and they are all Mg, whose measured transfer is -0.508384 |
 | `untrusted-family` | `frame` | `Composition` = Mg2Ni; `Alloy_class` = Mg | `untrusted-family` | class Mg transfers at R2 -0.508384, below the 0 this project will predict across |
@@ -98,6 +99,7 @@ Every `request`-door row above, with the answer `predict_capacity()` gives it. T
 - **`too-hot`** -- above the trained temperature range -- and outside its feature span too, which is why this row shows two screens rejecting and one code.
 - **`unreadable-formula`** -- card #49's own string -- a real alloy with a symbol appended that names no element. The sentence this row carries is the one that was wrong.
 - **`unmeasured-class`** -- a family leave-one-class-out never measured, so no transfer estimate exists.
+- **`crossed-band`** -- a band whose upper head came back below its lower one -- the width #93 measured on a CI runner. Nothing keeps a multiquantile fit's heads in order (#94).
 - **`above-physical-ceiling`** -- more hydrogen than this composition can hold -- physics, not evidence.
 - **`out-of-domain`** -- above the capacity level more than one family reaches in training, on a composition whose physical ceiling is high enough that only this signal fires.
 - **`untrusted-family`** -- a family whose measured transfer is below zero: the label alone rejects, whatever the composition and the prediction say.
@@ -132,6 +134,9 @@ The table above shows what one caller receives. This one shows what each screen 
 | `unmeasured-class` | `temperature` | yes | `admitted` | inside the trained temperature range 195-773 K |
 | `unmeasured-class` | `domain` | no | `indeterminate` | Alloy_class = 'Perovskite' is not one of the 10 classes leave-one-class-out measured, so no transfer estimate exists for it |
 | `unmeasured-class` | `novelty` | yes | `admitted` | within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
+| `crossed-band` | `temperature` | yes | `admitted` | inside the trained temperature range 195-773 K |
+| `crossed-band` | `domain` | no | `indeterminate` | the calibrated band is crossed -- its upper head is 0.094422 wt% below its lower one -- so it has no width to judge. The quantile heads are fitted jointly and nothing keeps them in order, and a rule that could not run does not admit |
+| `crossed-band` | `novelty` | yes | `admitted` | within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |
 | `above-physical-ceiling` | `temperature` | yes | `admitted` | inside the trained temperature range 195-773 K |
 | `above-physical-ceiling` | `domain` | no | `above-physical-ceiling` | q0.5 = 4.5 wt% is above the 4.19638 wt% this composition can hold at H/M 3 |
 | `above-physical-ceiling` | `novelty` | yes | `admitted` | within the corpus's own spread: no known alloy is more than 11.73 from its nearest neighbour. |

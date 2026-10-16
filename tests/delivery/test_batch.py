@@ -273,6 +273,99 @@ def test_the_batch_route_answers_each_row_as_the_single_route_does(store: Path) 
             _close(batch[position], alone, f"row {position}")
 
 
+# --------------------------------------------------------------------------------------
+# A crossed band (card #94)
+# --------------------------------------------------------------------------------------
+
+
+class _Crossing:
+    """The fixture's surrogate, with the outer heads of every ``crossed`` formula swapped.
+
+    Which candidates cross is a property of a fit and differs between machines (#93), so the
+    crossing is stated rather than hoped for. Everything else is the real surrogate's output;
+    the width is recomputed from the swapped heads, which is how a real crossing arrives --
+    as a negative width, unclipped (``test_a_crossed_band_reaches_the_caller_unclipped``).
+    """
+
+    def __init__(self, inner: Any, crossed: set[str], heads: tuple[str, str, str]) -> None:
+        self._inner, self._crossed, self._heads = inner, crossed, heads
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    def predict(self, formulas: Any, temperatures: Any) -> Any:
+        from hydms.delivery.predict import WIDTH_COLUMN
+
+        frame = self._inner.predict(formulas, temperatures)
+        lower, _, upper = self._heads
+        hit = formulas.isin(self._crossed).to_numpy()
+        frame.loc[hit, [lower, upper]] = frame.loc[hit, [upper, lower]].to_numpy()
+        frame[WIDTH_COLUMN] = frame[upper] - frame[lower]
+        return frame
+
+
+@pytest.fixture()
+def crossing(bundle: Any) -> Any:
+    """The fixture deployment, with ``KNOWN``'s band crossed and ``OTHER``'s left alone."""
+    import dataclasses
+
+    surrogate = _Crossing(bundle._surrogate, {KNOWN}, bundle._heads)
+    return dataclasses.replace(bundle, _surrogate=surrogate)
+
+
+def _crossed_batch() -> list[PredictionRequest]:
+    return [
+        PredictionRequest(OTHER, 350.0),
+        PredictionRequest(KNOWN, WARM),
+        PredictionRequest(OTHER, 350.0),
+    ]
+
+
+def test_one_crossed_band_refuses_its_own_row_and_not_the_batch(crossing: Any) -> None:
+    """Card #94. Before it, the crossed row reached ``Interval`` and its raise lost the batch."""
+    from hydms.delivery.predict import predict_many
+    from hydms.screens.protocol import INDETERMINATE
+
+    answers = predict_many(_crossed_batch(), bundle=crossing)
+
+    assert [answer.refused for answer in answers] == [False, True, False]
+    assert answers[1].code == INDETERMINATE
+    assert "crossed" in answers[1].explanation
+    assert answers[0].interval.width > 0 and answers[2].interval.width > 0
+
+
+def test_a_crossed_band_is_a_refusal_on_the_batch_route_and_not_a_500(crossing: Any) -> None:
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    from hydms.delivery.api.service import create_app
+
+    with TestClient(create_app(resolve=lambda: crossing)) as client:
+        body = {"candidates": [request.to_dict() for request in _crossed_batch()]}
+        response = client.post("/v1/predict/batch", json=body)
+        lone = client.post("/v1/predict", json=_crossed_batch()[1].to_dict())
+
+    assert response.status_code == 200, response.json()
+    answers = response.json()["answers"]
+    assert [answer["refused"] for answer in answers] == [False, True, False]
+    # The single route answers a refusal with 422 by the runbook's rule -- a readable body,
+    # never a 500 -- and the batch row carries that same body.
+    assert lone.status_code == 422
+    _close(lone.json(), answers[1], "the lone crossed row")
+
+
+def test_a_crossed_band_is_one_refused_row_on_the_screening_page(crossing: Any) -> None:
+    from hydms.delivery.predict import predict_many
+
+    upload = read_upload(
+        f"formula,temperature_k\n{OTHER},350\n{KNOWN},{WARM:g}\n{OTHER},350\n"
+    )
+    answers = predict_many(upload.requests(), bundle=crossing)
+    table = screening(upload, answers, version=crossing.version)
+
+    assert [record["status"] for record in table.records] == [ANSWERED, REFUSED, ANSWERED]
+
+
 def test_the_published_limit_is_the_re_measured_one() -> None:
     """256 was one-row frames at ~75 ms; the batched route is ~1 ms a row (service docstring)."""
     pytest.importorskip("fastapi")

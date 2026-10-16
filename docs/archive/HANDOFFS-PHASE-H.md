@@ -13,12 +13,55 @@ the board's `▶ Next action` block, that block wins. Read these for *intent* �
 the way it was — and never for a current number. The superseded-values table under
 "Reading the handoffs" below is the list of numbers already known to have moved.
 
-**Reading order.** Block 00000 was added 2026-10-16; blocks 0000, 000 and 00 2026-10-15 (newest first), blocks 0 and 0b 2026-09-26; then two blocks, each newest-first, in the order they appeared in the README:
+**Reading order.** Blocks 000000 and 00000 were added 2026-10-16; blocks 0000, 000 and 00 2026-10-15 (newest first), blocks 0 and 0b 2026-09-26; then two blocks, each newest-first, in the order they appeared in the README:
 
 1. **The `Start here` accretion** (2026-09-12 → 2026-09-06) — handoffs that were written into the
    board's opening section instead of its log, and that the `▶ Next action` block replaced.
 2. **The handoff log proper** (2026-09-13 → 2026-09-03), with its own preamble and the
    superseded-values table.
+
+---
+
+## 000000. The `▶ Next action` block retired 2026-10-16 (later)
+
+Moved verbatim when #94 closed; links re-pointed only. Carried out: #94. Not carried out: the
+LOACO repeat, handed over in the block that replaced it.
+
+> ## ▶ Next action — as of 2026-10-16 (#96 closed; #83, #100, #104 `doing`)
+>
+> **Take #94 (P2, 0.25 d).** One crossed band still fails a whole `predict_many` batch. The ranked
+> list is [../docs/PHASE-H-FINDINGS.md](../PHASE-H-FINDINGS.md). #96 is archived:
+> `calibrate --save` now refuses, before the fit, when no `model-chosen.csv` was read from
+> `--report`. In a Linux `uv` venv the fast suite needs `setuptools<81` (ElMD imports
+> `pkg_resources`) and `pandas==2.3.1` (pandas 3 turns five L13 tests red with a
+> `Pandas4Warning`); even then HG-4, and with it four `test_cli` tests, fails there on ruff and
+> mypy (`hydms/config/__init__.py:280` unused ignore), and
+> `test_novelty.py::test_the_committed_reference_is_what_emit_measures` differs in a last digit.
+> Unexplained; CI is the arbiter. **#83** still waits on the per-row width table and on #104's
+> repeat.
+>
+> **The LOACO repeat (#104; heavy, the maintainer runs it).** About five hours each, one after the
+> other, on an idle machine with sleep disabled (`docs/RUNNING-THE-FIT.md` Step 10). Run A writes
+> the committed tables, run B a gitignored scratch directory, then the diff. Only
+> `loco-chosen.csv`'s `seconds` column may differ. **Anything else moving is a new #104 finding,
+> not a failed run.** Commit A's tables either way, then the regeneration chain in Step 10.
+>
+> ```powershell
+> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity | Tee-Object -FilePath .\reports\_loco-run-a.log
+> & "C:\Users\Asus\miniconda3\envs\Project\python.exe" -u -m hydms.surrogate.loco --target capacity --report .\reports\_loco-b | Tee-Object -FilePath .\reports\_loco-run-b.log
+> foreach ($t in 'loco-per-class','loco-summary','loco-out-of-fold','loco-chosen') { git diff --no-index --stat "reports/loco/$t.csv" "reports/_loco-b/$t.csv" }
+> ```
+>
+> **Traps.** CI's `suite` lane installs **unpinned**, so a library release can move a generated
+> file there and nowhere else (#108: pydantic 2.14). Before re-emitting to make CI green, emit
+> under the pin *and* under latest and see which one moved. `apidoc-examples.json` stores the
+> over-limit request *shortened*, with `candidates_total` beside it; do not "fix" it back to 4,097
+> rows. Any change to a table the Evidence Reader serves changes `evidence_sha256`: re-run
+> `apidoc --probe --emit` after `loco --emit` or `evaluate`.
+>
+> **This block is one handoff, never a log.** Replace it when you close a card, and move the one it
+> replaces to the top of [../docs/archive/HANDOFFS-PHASE-H.md](../archive/HANDOFFS-PHASE-H.md)
+> in the same commit. The cards win on sight.
 
 ---
 

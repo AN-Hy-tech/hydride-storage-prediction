@@ -5,15 +5,16 @@
 that still carries an unticked box (a *finding*, [../CONTEXT.md](../CONTEXT.md)). Closed cards are in
 [archived/](archived/), same ids, same frontmatter.
 
-> ## ▶ Next action — as of 2026-10-16 (#96 closed; #83, #100, #104 `doing`)
+> ## ▶ Next action — as of 2026-10-16 (#94 closed; #83, #100, #104 `doing`)
 >
-> **Take #94 (P2, 0.25 d).** One crossed band still fails a whole `predict_many` batch. The ranked
-> list is [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md). #96 is archived:
-> `calibrate --save` now refuses, before the fit, when no `model-chosen.csv` was read from
-> `--report`. In a Linux `uv` venv the fast suite needs `setuptools<81` (ElMD imports
-> `pkg_resources`) and `pandas==2.3.1` (pandas 3 turns five L13 tests red with a
-> `Pandas4Warning`); even then HG-4, and with it four `test_cli` tests, fails there on ruff and
-> mypy (`hydms/config/__init__.py:280` unused ignore), and
+> **Take #7's portable-artifact half (P2).** `artifacts/` is gitignored, so `v3` exists on one
+> machine and a fresh clone's service refuses to start. The ranked list is
+> [../docs/PHASE-H-FINDINGS.md](../docs/PHASE-H-FINDINGS.md). #94 is archived: a crossed band is
+> now `indeterminate` from the domain screen's width rule, so it refuses its own row instead of
+> raising out of the batch; on a local fit at the deployed configuration no row crossed at all.
+> In a Linux `uv` venv the fast suite needs `setuptools<81` (ElMD imports `pkg_resources`) and
+> `pandas==2.3.1` (pandas 3 turns five L13 tests red with a `Pandas4Warning`); even then HG-4,
+> and with it four `test_cli` tests, fails there, and
 > `test_novelty.py::test_the_committed_reference_is_what_emit_measures` differs in a last digit.
 > Unexplained; CI is the arbiter. **#83** still waits on the per-row width table and on #104's
 > repeat.
